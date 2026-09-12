@@ -1,0 +1,17 @@
+# Flutter
+.dart_tool/
+.packages
+build/
+*.iml
+.idea/
+.vscode/
+*.lock
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+
+# Generated
+*.g.dart
+*.freezed.dart

@@ -1,0 +1,55 @@
+[Unit]
+Description=SWARM OS Desktop (labwc compositor + Flutter hex-grid shell)
+After=systemd-user-sessions.service NetworkManager.service seatd.service systemd-logind.service
+Wants=NetworkManager.service seatd.service
+Conflicts=getty@tty1.service
+StartLimitBurst=3
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+User=swarm
+Group=swarm
+# Explicitly set all device groups so they are active regardless of PAM group lookup timing.
+SupplementaryGroups=seat video render input audio
+WorkingDirectory=/home/swarm
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Environment=XDG_SEAT=seat0
+Environment=XDG_VTNR=1
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=XDG_SESSION_TYPE=wayland
+Environment=XDG_CURRENT_DESKTOP=labwc
+# labwc uses libseat for DRM/input device access. PAMName=login registers a
+# real logind session on seat0/vt1 before ExecStart runs, so libseat can claim
+# it via the logind backend (see SWARM_AI_FEATURES.md for the history of the
+# seatd-vs-logind fix this project already went through once).
+Environment=LIBSEAT_BACKEND=logind
+# If Flutter's GTK3 embedder has trouble with GDK's native-Wayland backend,
+# uncomment this to force it through XWayland instead (xorg-xwayland package
+# provides the compat layer; libxkbcommon-x11 handles its keyboard input):
+#Environment=GDK_BACKEND=x11
+# NOTE: Do NOT set LIBGL_ALWAYS_SOFTWARE or GALLIUM_DRIVER=softpipe here.
+# softpipe only supports OpenGL 3.3 — Flutter needs ES 3.2+ and will SIGSEGV.
+# llvmpipe supports ES 3.1 and is the correct software fallback if no GPU is
+# found. On real hardware (vulkan-intel here, since this targets integrated
+# graphics) Mesa auto-selects the right driver.
+ExecStartPre=+/usr/bin/mkdir -p /run/user/1000
+ExecStartPre=+/usr/bin/chown -R swarm:swarm /run/user/1000
+ExecStartPre=+/usr/bin/chmod 0700 /run/user/1000
+ExecStartPre=+/usr/bin/mkdir -p /mnt/Lucy/logs
+# labwc starts the compositor; its autostart script (~/.config/labwc/autostart)
+# launches the Flutter shell as a normal Wayland client inside it.
+ExecStart=/usr/bin/labwc
+ExecStopPost=+/usr/bin/bash -c 'journalctl -u swarm-ui.service -b --no-pager > /mnt/Lucy/logs/swarm-ui-$(date +%%Y%%m%%d-%%H%%M%%S).log 2>&1 || true'
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target graphical.target

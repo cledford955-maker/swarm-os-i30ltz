@@ -1,0 +1,66 @@
+# =============================================================================
+# ARCH LINUX · Trans Am GRUB Theme
+# 1999 Electric Blue Pontiac Trans Am WS6 · Night scene
+# Palette: #e85c0a Arch orange · #ffffff title · #06091a night sky
+# Font: Unifont (menus) — title text is baked into background.png
+# =============================================================================
+
+desktop-image: "background.png"
+desktop-color: "#06091a"
+
+terminal-font: "Unifont Regular 16"
+terminal-left: "0%"
+terminal-top: "0%"
+terminal-width: "100%"
+terminal-height: "100%"
+terminal-border: "0"
+
+# ── BOOT MENU (left panel, below the ARCH LINUX baked title art) ─────────────
++ boot_menu {
+    left = 4%
+    top  = 57%
+    width  = 25%
+    height = 30%
+
+    item_font           = "Unifont Regular 20"
+    selected_item_font  = "Unifont Regular 22"
+
+    item_color          = "#a06040"
+    selected_item_color = "#ffffff"
+
+    icon_width   = 40
+    icon_height  = 40
+    item_height  = 68
+    item_padding = 14
+    item_spacing = 6
+
+    selected_item_pixmap_style = "select_*.png"
+    menu_pixmap_style          = ""
+}
+
+# ── AUTO-BOOT PROGRESS BAR ───────────────────────────────────────────────────
++ progress_bar {
+    id           = "__timeout__"
+    left         = 4%
+    top          = 89%
+    width        = 25%
+    height       = 6
+    show_text    = true
+    font         = "Unifont Regular 14"
+    text_color   = "#e85c0a"
+    align        = "center"
+    bg_color     = "#1a0a04"
+    fg_color     = "#e85c0a"
+    border_color = "#5a2000"
+}
+
+# ── NAV HINTS ────────────────────────────────────────────────────────────────
++ label {
+    top = 94%
+    left = 0%
+    width = 100%
+    align = "center"
+    text = "[ ^ / v ]  Navigate   ·   [ ENTER ]  Boot   ·   [ E ]  Edit   ·   [ C ]  Console"
+    color = "#5a3010"
+    font = "Unifont Regular 15"
+}

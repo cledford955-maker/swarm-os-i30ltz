@@ -1,0 +1,176 @@
+# -----------------------------------------------
+# SWARM OS — Package List
+# Base system + Cage kiosk + Flutter runtime deps
+# -----------------------------------------------
+
+# ===== Core System =====
+base
+linux
+linux-firmware
+amd-ucode
+intel-ucode
+sudo
+zsh
+vim
+nano
+less
+man-db
+man-pages
+
+# ===== Boot =====
+grub
+efibootmgr
+plymouth
+thermald
+btrfs-progs
+dosfstools
+
+# ===== .NET Runtime =====
+aspnet-runtime-10.0
+
+# ===== Networking =====
+networkmanager
+openssh
+iwd
+wireless-regdb
+wireless_tools
+wpa_supplicant
+bind
+nmap
+openvpn
+
+# ===== Desktop compositor (labwc) + Flutter hex-grid shell =====
+# Reverted from the Slint/backend-linuxkms detour (see SWARM_AI_FEATURES.md
+# architecture pivot note, 2026-09-11) — the existing Flutter app already
+# implements the intended honeycomb hex-grid desktop; it just needs a real
+# compositor so Chrome/Antigravity/Claude/etc can run alongside it as normal
+# windows, which backend-linuxkms could never do (no compositor at all).
+# lightweight wlroots floating-window compositor
+labwc
+# provides libseat.so — used via LIBSEAT_BACKEND=logind
+seatd
+libxkbcommon
+# XWayland keyboard handling — safety net if Flutter's GTK embedder needs
+# the X11 fallback path (see swarm-ui.service)
+libxkbcommon-x11
+libinput
+libdrm
+# EGL/Wayland platform for Mesa — needed for GTK/Flutter GL context creation
+# when running natively under a Wayland compositor
+egl-wayland
+libglvnd
+wayland
+wayland-protocols
+# X11 compatibility layer under labwc, in case Flutter's GTK3 embedder's
+# native-Wayland GDK backend has issues (uncomment GDK_BACKEND=x11 in
+# swarm-ui.service to force this path)
+xorg-xwayland
+mesa
+vulkan-icd-loader
+vulkan-radeon
+vulkan-intel
+intel-media-driver
+libva-mesa-driver
+zram-generator
+nftables
+bc
+
+# ===== Flutter Linux Runtime Dependencies =====
+gtk3
+pango
+cairo
+glib2
+harfbuzz
+fontconfig
+freetype2
+libepoxy
+libx11
+libxcursor
+libxinerama
+libxrandr
+at-spi2-core
+mpv
+ffmpeg
+gstreamer
+gst-plugins-base
+gst-plugins-good
+cmake
+clang
+pkg-config
+ninja
+
+# ===== Audio / Bluetooth =====
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+alsa-utils
+bluez
+bluez-utils
+
+# ===== Storage & Hardware =====
+nvme-cli
+smartmontools
+hdparm
+usbutils
+dmidecode
+cryptsetup
+lvm2
+
+# ===== Containers (rootless Podman) / Sandboxing / Hardening =====
+# Task #2 (Podman rootless containers) + Task #3 (harden baseline) from the
+# SWARM OS journey roadmap. shadow (in base) already ships newuidmap/newgidmap
+# on Arch, so no separate "uidmap" package is needed for user namespaces.
+podman
+# provides /usr/bin/docker shim so DOCKER_HOST tooling "just works"
+podman-docker
+crun
+fuse-overlayfs
+slirp4netns
+netavark
+aardvark-dns
+catatonit
+# sandbox isolation for GUI apps launched from the hex desktop
+firejail
+# MAC confinement for gaming-agent/lucy-server + apps
+apparmor
+# tailscale — REMOVED 2026-09-11: not in [core]/[extra] (this profile's
+# pacman.conf has no AUR/CachyOS repos), AUR-only on vanilla Arch. Adding it
+# broke pacstrap ("failed to install packages to new root") on the first real
+# build attempt after this session's changes. The nftables.conf iif
+# "tailscale0" rule stays a no-op until tailscale is installed some other way
+# — e.g. a first-boot script running tailscale's own install.sh, same pattern
+# as swarm-ollama-pull.sh in install_swarm_os.sh — not via packages.x86_64.
+# kept installed for manual/ad-hoc use; NOT enabled by default — nftables.conf
+# is the real firewall (default-drop, see file); enabling ufw's own backend
+# alongside it would fight over the same netfilter tables
+ufw
+
+# ===== General Utilities =====
+rsync
+tmux
+htop
+curl
+wget
+unzip
+git
+diffutils
+gptfdisk
+parted
+reflector
+mkinitcpio
+
+# ===== Live ISO Boot Requirements =====
+mkinitcpio-archiso
+mkinitcpio-nfs-utils
+arch-install-scripts
+syslinux
+memtest86+
+memtest86+-efi
+edk2-shell
+
+os-prober
+
+# Sealed-secret unsealing at boot (swarm-secrets.service, 2026-09-12).
+# Explicit rather than relying on it arriving as a pacman dependency.
+gnupg

@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/test_engine.dir/link.d CMakeFiles/test_engine.dir/tests/test_engine.cpp.o -o test_engine  liblucille_engine_lib.a /usr/lib/libcrypto.so /usr/lib/libsqlite3.so -lstdc++fs -lm -lrt

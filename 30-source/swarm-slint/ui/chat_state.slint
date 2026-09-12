@@ -1,0 +1,11 @@
+export struct ChatBubble {
+    role: string,      // "user" | "assistant"
+    content: string,
+}
+
+export global ChatState {
+    in property <[ChatBubble]> messages: [];
+    in property <bool> is-streaming: false;
+
+    callback send-message(string);
+}

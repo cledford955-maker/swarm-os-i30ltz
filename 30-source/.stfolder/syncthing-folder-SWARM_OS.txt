@@ -1,0 +1,6 @@
+# This directory is a Syncthing folder marker.
+# Do not delete.
+
+folderID: SWARM_OS
+created: 2026-09-12T01:27:40-04:00
+recreated-after: LUCILLE mount moved from /run/media/i30ltz/LUCILLE to /mnt/Lucy

@@ -1,0 +1,171 @@
+import { SwarmTheme } from "../globals.slint";
+import { GameCard, GenreChipData } from "../gaming_state.slint";
+
+export component StatTile inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+
+    background: SwarmTheme.card;
+    border-radius: SwarmTheme.radius;
+    border-width: 1px;
+    border-color: SwarmTheme.border;
+
+    VerticalLayout {
+        alignment: center;
+        padding: 10px;
+        spacing: 2px;
+        Text {
+            text: value;
+            color: SwarmTheme.accent;
+            font-size: 22px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: label;
+            color: SwarmTheme.text-dim;
+            font-size: 10px;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+export component GenreChip inherits TouchArea {
+    in property <string> label;
+    in property <bool> active: false;
+    callback toggled;
+
+    height: 30px;
+    width: self.preferred-width;
+
+    clicked => { root.toggled(); }
+
+    Rectangle {
+        background: active ? SwarmTheme.accent : SwarmTheme.card;
+        border-radius: 15px;
+        border-width: 1px;
+        border-color: active ? SwarmTheme.accent : SwarmTheme.border;
+
+        Text {
+            text: label;
+            color: active ? #0d0d0d : SwarmTheme.text;
+            font-size: 12px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component SubTabButton inherits TouchArea {
+    in property <string> label;
+    in property <bool> active: false;
+    callback selected;
+
+    clicked => { root.selected(); }
+
+    Rectangle {
+        background: active ? SwarmTheme.card : transparent;
+        border-radius: SwarmTheme.radius;
+        border-width: active ? 1px : 0px;
+        border-color: SwarmTheme.accent;
+
+        Text {
+            text: label;
+            color: active ? SwarmTheme.accent : SwarmTheme.text-dim;
+            font-size: 12px;
+            font-weight: active ? 700 : 400;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component GameCardWidget inherits Rectangle {
+    in property <GameCard> card;
+    callback favorite-clicked;
+    callback card-clicked;
+
+    width: 200px;
+    height: 140px;
+    background: SwarmTheme.card;
+    border-radius: SwarmTheme.radius;
+    border-width: 1px;
+    border-color: ta.has-hover ? SwarmTheme.accent : SwarmTheme.border;
+    clip: true;
+
+    ta := TouchArea {
+        clicked => { root.card-clicked(); }
+    }
+
+    VerticalLayout {
+        // Header placeholder block (real image loading is a follow-up task)
+        Rectangle {
+            height: 90px;
+            background: card.on-gfn ? #1a2e0a : #1a1a1a;
+
+            if card.on-gfn : Rectangle {
+                x: parent.width - 34px; y: 6px;
+                width: 28px; height: 16px;
+                background: SwarmTheme.accent;
+                border-radius: 3px;
+                Text {
+                    text: "GFN";
+                    color: #0d0d0d;
+                    font-size: 8px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            if card.on-sale : Rectangle {
+                x: 6px; y: 6px;
+                width: 34px; height: 16px;
+                background: SwarmTheme.warn;
+                border-radius: 3px;
+                Text {
+                    text: "SALE";
+                    color: #0d0d0d;
+                    font-size: 8px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            heart := TouchArea {
+                x: parent.width - 28px; y: parent.height - 28px;
+                width: 24px; height: 24px;
+                clicked => { root.favorite-clicked(); }
+                Rectangle {
+                    background: heart.has-hover ? #00000080 : transparent;
+                    border-radius: 4px;
+                    Text {
+                        text: card.is-favorite ? "♥" : "♡";
+                        color: card.is-favorite ? SwarmTheme.danger : SwarmTheme.text-dim;
+                        font-size: 16px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        VerticalLayout {
+            padding: 8px;
+            spacing: 2px;
+            Text {
+                text: card.name;
+                color: SwarmTheme.text-bright;
+                font-size: 12px;
+                font-weight: 600;
+                overflow: elide;
+            }
+            Text {
+                text: card.playtime-label;
+                color: SwarmTheme.text-dim;
+                font-size: 10px;
+            }
+        }
+    }
+}

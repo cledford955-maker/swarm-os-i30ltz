@@ -1,0 +1,17 @@
+export struct ProcessRow {
+    pid: int,
+    name: string,
+    memory-label: string,
+}
+
+export global MonitorState {
+    // Pre-formatted by Rust from LucyServer's actual SystemStats shape
+    // (CpuUsagePercentage / TotalMemoryMb / UsedMemoryMb / FreeMemoryMb —
+    // there is NO disk-usage field on LucyServer today, so none is shown here).
+    in property <string> cpu-label: "CPU  --%";
+    in property <string> ram-label: "RAM  --/-- MB";
+
+    in property <[ProcessRow]> processes: [];
+
+    callback kill-process(int);
+}

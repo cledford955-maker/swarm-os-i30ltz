@@ -1,0 +1,24 @@
+[Unit]
+Description=SWARM OS Google Workspace Service (.NET)
+# Must not start before the API keys are unsealed into /run.
+After=swarm-secrets.service
+Wants=swarm-secrets.service
+After=lucy-server.service
+
+[Service]
+Type=simple
+User=swarm
+WorkingDirectory=/opt/swarm_os/GoogleWorkspaceService
+ExecStart=/usr/bin/dotnet /opt/swarm_os/GoogleWorkspaceService/GoogleWorkspaceService.dll
+Restart=on-failure
+RestartSec=5
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://0.0.0.0:8399
+# Secrets live only in tmpfs, unsealed at boot by swarm-secrets.service.
+# The leading '-' is deliberate: an ISO built with no keys, or one where
+# the passphrase was skipped, still starts — the service reports AI
+# features unavailable instead of refusing to run.
+EnvironmentFile=-/run/swarm_os.env
+
+[Install]
+WantedBy=multi-user.target

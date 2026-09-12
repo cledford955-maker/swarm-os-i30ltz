@@ -1,0 +1,6 @@
+/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/lucille_engine_lib.dir
+/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/lucille-core.dir
+/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/test_engine.dir
+/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/test.dir
+/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/edit_cache.dir
+/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,6 @@
+# SWARM OS crypttab
+#
+# Slick — uncensored vault (nvme0n1p6, LUKS2)
+# noauto: systemd will NOT prompt for the passphrase at boot.
+# Unlock manually: sudo unlock_slick.sh  (or sudo cryptsetup open ...)
+luks-019a3cd8-46c5-4a19-a760-8e0c1096b248  UUID=019a3cd8-46c5-4a19-a760-8e0c1096b248  none  luks,noauto

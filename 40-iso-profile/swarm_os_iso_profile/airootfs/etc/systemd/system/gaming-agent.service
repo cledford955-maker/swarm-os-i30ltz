@@ -1,0 +1,28 @@
+[Unit]
+Description=SWARM OS Gaming Agent (Go)
+# Must not start before the API keys are unsealed into /run.
+After=swarm-secrets.service
+Wants=swarm-secrets.service
+StartLimitBurst=3
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+User=swarm
+WorkingDirectory=/opt/swarm_os/GamingAgent
+# gaming.db lives under /etc/swarm_os — nothing else provisions that directory,
+# and the service runs as unprivileged `swarm`, so create+chown it before every start.
+ExecStartPre=+/usr/bin/mkdir -p /etc/swarm_os
+ExecStartPre=+/usr/bin/chown swarm:swarm /etc/swarm_os
+ExecStart=/opt/swarm_os/GamingAgent/gaming-agent
+Restart=on-failure
+RestartSec=5
+Environment=ASPNETCORE_URLS=http://0.0.0.0:8401
+# Secrets live only in tmpfs, unsealed at boot by swarm-secrets.service.
+# The leading '-' is deliberate: an ISO built with no keys, or one where
+# the passphrase was skipped, still starts — the service reports AI
+# features unavailable instead of refusing to run.
+EnvironmentFile=-/run/swarm_os.env
+
+[Install]
+WantedBy=multi-user.target

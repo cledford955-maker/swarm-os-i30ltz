@@ -1,0 +1,49 @@
+import { SwarmTheme } from "../globals.slint";
+
+export component NavButton inherits TouchArea {
+    in property <string>  label;
+    in property <string>  icon;      // short text glyph or emoji
+    in property <bool>    active: false;
+
+    callback selected;
+
+    height: 70px;
+    width: SwarmTheme.sidebar-w;
+
+    clicked => { root.selected(); }
+
+    // Active accent bar
+    Rectangle {
+        x: 0; y: 0;
+        width: 3px;
+        height: parent.height;
+        background: active ? SwarmTheme.accent : transparent;
+    }
+
+    // Button background
+    Rectangle {
+        x: 3px; y: 0;
+        width: parent.width - 3px;
+        height: parent.height;
+        background: active ? #76b90015 : (root.has-hover ? #ffffff08 : transparent);
+
+        VerticalLayout {
+            alignment: center;
+            padding: 4px;
+            spacing: 4px;
+
+            Text {
+                text: icon;
+                color: active ? SwarmTheme.accent : SwarmTheme.text-dim;
+                font-size: 20px;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: label;
+                color: active ? SwarmTheme.accent : SwarmTheme.text-dim;
+                font-size: 9px;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}

@@ -1,0 +1,136 @@
+package services
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+
+	"swarm-os/gaming-agent/db"
+	"swarm-os/gaming-agent/models"
+)
+
+type GamesService struct {
+	gfn   *GfnService
+	steam *SteamService
+	db    *sql.DB
+	cs    *http.Client
+}
+
+func NewGamesService(gfn *GfnService, steam *SteamService, database *sql.DB) *GamesService {
+	return &GamesService{
+		gfn:   gfn,
+		steam: steam,
+		db:    database,
+		cs:    &http.Client{Timeout: 10 * time.Second},
+	}
+}
+
+func (s *GamesService) GetIntersection() ([]models.EnrichedGame, error) {
+	steamGames, err := s.steam.GetLibrary()
+	if err != nil {
+		return nil, fmt.Errorf("steam library: %w", err)
+	}
+	gfnGames, err := s.gfn.GetCatalog()
+	if err != nil {
+		return nil, fmt.Errorf("gfn catalog: %w", err)
+	}
+	favs, err := db.GetFavorites(s.db)
+	if err != nil {
+		return nil, fmt.Errorf("favorites: %w", err)
+	}
+
+	// Build GFN lookup by steamAppId + normalised title
+	bySteamId := make(map[int]*models.GfnGame, len(gfnGames))
+	byTitle := make(map[string]*models.GfnGame, len(gfnGames))
+	for i := range gfnGames {
+		g := &gfnGames[i]
+		if g.SteamAppId != 0 {
+			bySteamId[g.SteamAppId] = g
+		}
+		byTitle[NormalizeTitle(g.Title)] = g
+	}
+
+	result := make([]models.EnrichedGame, 0, len(steamGames))
+	for _, sg := range steamGames {
+		var gfn *models.GfnGame
+		if g, ok := bySteamId[sg.AppId]; ok {
+			gfn = g
+		} else if g, ok := byTitle[NormalizeTitle(sg.Name)]; ok {
+			gfn = g
+		}
+
+		fav := favs[sg.AppId]
+
+		eg := models.EnrichedGame{
+			AppId:           sg.AppId,
+			Name:            sg.Name,
+			OnGfn:           gfn != nil,
+			PlaytimeMinutes: sg.PlaytimeMinutes,
+			HeaderImage:     fmt.Sprintf("https://cdn.akamai.steamstatic.com/steam/apps/%d/header.jpg", sg.AppId),
+			CapsuleImage:    fmt.Sprintf("https://cdn.akamai.steamstatic.com/steam/apps/%d/capsule_616x353.jpg", sg.AppId),
+			SteamUrl:        fmt.Sprintf("https://store.steampowered.com/app/%d/", sg.AppId),
+			IsFavorite:      fav.IsFavorite,
+			IsPinned:        fav.IsPinned,
+			Genres:          []string{},
+		}
+		if gfn != nil {
+			eg.GfnId = gfn.Id
+			eg.GfnUrl = fmt.Sprintf("https://play.geforcenow.com/games?game-id=%s", gfn.Id)
+			eg.Description = gfn.Description
+			eg.Publisher = gfn.Publisher
+			if gfn.Genres != nil {
+				eg.Genres = gfn.Genres
+			}
+		}
+		result = append(result, eg)
+	}
+	return result, nil
+}
+
+func (s *GamesService) GetGenres() ([]string, error) {
+	games, err := s.gfn.GetCatalog()
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]bool)
+	var genres []string
+	for _, g := range games {
+		for _, genre := range g.Genres {
+			if genre != "" && !seen[genre] {
+				seen[genre] = true
+				genres = append(genres, genre)
+			}
+		}
+	}
+	return genres, nil
+}
+
+func (s *GamesService) GetPrices(appId string) (*models.CheapSharkGameDetail, error) {
+	url := fmt.Sprintf("https://www.cheapshark.com/api/1.0/games?steamAppID=%s&limit=1", appId)
+	resp, err := s.cs.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var games []struct {
+		GameID string `json:"gameID"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&games); err != nil || len(games) == 0 {
+		return nil, fmt.Errorf("cheapshark: no results for appId %s", appId)
+	}
+
+	detail, err := s.cs.Get(fmt.Sprintf("https://www.cheapshark.com/api/1.0/games?id=%s", games[0].GameID))
+	if err != nil {
+		return nil, err
+	}
+	defer detail.Body.Close()
+
+	var gd models.CheapSharkGameDetail
+	if err := json.NewDecoder(detail.Body).Decode(&gd); err != nil {
+		return nil, err
+	}
+	return &gd, nil
+}

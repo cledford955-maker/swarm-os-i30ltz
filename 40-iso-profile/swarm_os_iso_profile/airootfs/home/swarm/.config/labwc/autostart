@@ -1,0 +1,10 @@
+#!/bin/sh
+# Launched by labwc as soon as the compositor session starts.
+#
+# Flutter shell — full desktop: wallpaper, app drawer, floating window manager,
+# voice HUD, overlays. Runs as a GTK3 Wayland client.
+/opt/swarm_os/swarm_flutter/swarm_flutter &
+#
+# Lucille panel — lightweight Slint companion window: gaming dashboard,
+# AI chat, system monitor. Runs as a winit Wayland client.
+/opt/swarm_os/swarm-slint/swarm-slint &

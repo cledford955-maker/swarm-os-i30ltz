@@ -1,0 +1,30 @@
+[Unit]
+Description=SWARM OS Lucy Server (Go)
+# Must not start before the API keys are unsealed into /run.
+After=swarm-secrets.service
+Wants=swarm-secrets.service
+StartLimitBurst=3
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+User=swarm
+WorkingDirectory=/opt/swarm_os/LucyServer
+# Provision the state directory before every start — same pattern as gaming-agent.service.
+# LucyServer-go writes chat history, RAG store, WebAuthn credentials, VM metadata, etc.
+# under /etc/swarm_os/lucy/ (overridable via LUCY_STATE_DIR).  The directory must exist
+# and be owned by swarm before the unprivileged binary starts.
+ExecStartPre=+/usr/bin/mkdir -p /etc/swarm_os/lucy
+ExecStartPre=+/usr/bin/chown swarm:swarm /etc/swarm_os/lucy
+ExecStart=/opt/swarm_os/LucyServer/lucy-server
+Restart=on-failure
+RestartSec=5
+Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
+# Secrets live only in tmpfs, unsealed at boot by swarm-secrets.service.
+# The leading '-' is deliberate: an ISO built with no keys, or one where
+# the passphrase was skipped, still starts — the service reports AI
+# features unavailable instead of refusing to run.
+EnvironmentFile=-/run/swarm_os.env
+
+[Install]
+WantedBy=multi-user.target
