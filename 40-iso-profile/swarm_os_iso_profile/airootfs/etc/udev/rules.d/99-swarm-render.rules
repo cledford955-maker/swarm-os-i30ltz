@@ -1,0 +1,7 @@
+# -----------------------------------------------------------------------------
+# SWARM OS — GPU Render & DRM Seat Permissions
+# -----------------------------------------------------------------------------
+# Grant render and video groups read/write permissions (0660) to DRM card and render nodes
+SUBSYSTEM=="drm", KERNEL=="card[0-9]*", GROUP="video", MODE="0660", TAG+="uaccess", TAG+="seat", ENV{DEVTYPE}=="drm_minor"
+SUBSYSTEM=="drm", KERNEL=="renderD[0-9]*", GROUP="render", MODE="0660", TAG+="uaccess", ENV{DEVTYPE}=="drm_minor"
+SUBSYSTEM=="kfd", GROUP="render", MODE="0660", TAG+="uaccess"

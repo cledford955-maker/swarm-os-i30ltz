@@ -1,0 +1,18 @@
+[Unit]
+Description=SWARM OS — enable lingering for the primary desktop user (rootless Podman)
+# Rootless Podman's user-level podman.socket only starts if systemd's user
+# instance for that UID is running, which normally requires an active login
+# session. `loginctl enable-linger` starts/keeps that user instance running
+# from boot regardless of login state. Looks up whoever holds uid 1000
+# instead of hardcoding "swarm" so this works unchanged on both the live ISO
+# (user: swarm) and an installed system (user: i30ltz, see install_swarm_os.sh).
+After=systemd-logind.service
+Wants=systemd-logind.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'u=$(getent passwd 1000 | cut -d: -f1); [ -n "$u" ] && loginctl enable-linger "$u"'
+
+[Install]
+WantedBy=multi-user.target

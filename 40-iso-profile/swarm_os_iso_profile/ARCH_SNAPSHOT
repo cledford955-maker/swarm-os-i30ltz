@@ -1,0 +1,16 @@
+# SWARM OS — pinned Arch Linux repository snapshot
+# v1.0.0 · 2026-09-12
+#
+# Every ISO build resolves [core] and [extra] against THIS date only, via
+# archive.archlinux.org. Two builds from the same commit + same snapshot get
+# byte-identical package sets — that is the whole point. Without it, "rebuild
+# the ISO" silently means "rebuild against whatever Arch shipped this morning",
+# and a shell that worked yesterday can break today with nothing changed here.
+#
+# Format: YYYY/MM/DD — one line, no trailing slash, no quotes.
+# Bumping: change the date, run 70-scripts/check_snapshot.sh to prove every
+# package in packages.x86_64 still resolves, then rebuild. Never bump blind.
+#
+# Snapshots are published daily and kept indefinitely by the Arch project.
+# Do not pin "today" — the day's snapshot is not complete until it is closed.
+2026/09/11

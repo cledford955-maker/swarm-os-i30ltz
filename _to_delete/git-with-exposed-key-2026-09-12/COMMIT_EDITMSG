@@ -1,0 +1,14 @@
+Initial commit - SWARM OS v6.2.42 baseline (2026-09-12)
+
+Baseline of the Luccile-v+ project tree at VERSION 6.2.42.
+
+Tracked: 30-source, 40-iso-profile configs, 50-backends, 50-boot,
+60-boltz-brain, 70-scripts, 20-runtime, swarm_flutter, LucyServer,
+GoogleWorkspaceService and top-level docs.
+
+Excluded per .gitignore v1.0.0: build output (swarm_os_build_work,
+**/target), release ISOs, vendored flutter-sdk, ISO airootfs payload,
+compiled binaries and all credential file patterns.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01HWoLSJUTycDUKa2JcMvm3v

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.5/rc">
+
+  <core>
+    <gap>4</gap>
+    <adaptiveSync>yes</adaptiveSync>
+  </core>
+
+  <theme>
+    <!-- Minimal dark chrome; swarm-slint draws its own top bar -->
+    <cornerRadius>0</cornerRadius>
+    <font place="ActiveWindow">
+      <name>Inter</name>
+      <size>9</size>
+    </font>
+    <font place="InactiveWindow">
+      <name>Inter</name>
+      <size>9</size>
+    </font>
+  </theme>
+
+  <keyboard>
+    <keybind key="A-F4">
+      <action name="Close"/>
+    </keybind>
+    <keybind key="A-Tab">
+      <action name="NextWindow"/>
+    </keybind>
+    <keybind key="A-S-Tab">
+      <action name="PreviousWindow"/>
+    </keybind>
+    <!-- Super+Return: foot terminal (lightweight, no Electron) -->
+    <keybind key="W-Return">
+      <action name="Execute">
+        <command>foot</command>
+      </action>
+    </keybind>
+  </keyboard>
+
+  <windowRules>
+    <!-- Flutter desktop shell: full-screen, no compositor title bar (Flutter draws its own top bar) -->
+    <windowRule title="SWARM OS*" serverDecoration="no" maximized="yes"/>
+    <!-- Lucille panel (swarm-slint): floating companion, no compositor title bar -->
+    <windowRule title="Lucille" serverDecoration="no"/>
+  </windowRules>
+
+</openbox_config>

@@ -1,0 +1,12 @@
+// SWARM OS sync ignores v1.0.0 2026-09-07
+*.iso
+*.qcow2
+*.tar.gz
+*.zip
+.env
+*.pdb
+index/
+logs/
+**/build/
+**/obj/
+**/.dart_tool/

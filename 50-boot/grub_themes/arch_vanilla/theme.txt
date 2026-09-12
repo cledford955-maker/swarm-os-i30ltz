@@ -1,0 +1,92 @@
+# =============================================================================
+# SWARM OS · GRUB Theme (ARCH Vanilla)
+# High-DPI, Controller-Friendly, Nvidia Green (#76B900) UI
+# =============================================================================
+
+# Desktop Background
+desktop-image: "background.png"
+desktop-color: "#05070a"
+
+# Global Font Defaults
+terminal-font: "Unifont Regular 16"
+terminal-left: "0%"
+terminal-top: "0%"
+terminal-width: "100%"
+terminal-height: "100%"
+terminal-border: "0"
+
+# Header Title Label
++ label {
+    top = 8%
+    left = 0%
+    width = 100%
+    align = "center"
+    text = "ARCH Vanilla"
+    color = "#76B900"
+    font = "DejaVu Sans Bold 28"
+}
+
+# Header Subtitle Label
++ label {
+    top = 13%
+    left = 0%
+    width = 100%
+    align = "center"
+    text = "Autonomous Kernel Environment · High Performance Architecture"
+    color = "#99CC33"
+    font = "DejaVu Sans Bold 16"
+}
+
+# Central Controller-Friendly Boot Menu Box
++ boot_menu {
+    left = 22%
+    top = 22%
+    width = 56%
+    height = 54%
+    
+    # Large 18-20pt Typography
+    item_font = "DejaVu Sans Bold 18"
+    selected_item_font = "DejaVu Sans Bold 20"
+    
+    # Colors (Nvidia Green & High Contrast White)
+    item_color = "#76B900"
+    selected_item_color = "#FFFFFF"
+    
+    # Big Icons & High Spacing for Gamepad/Controller Visibility
+    icon_width = 48
+    icon_height = 48
+    item_height = 56
+    item_padding = 12
+    item_spacing = 10
+    
+    # 9-Slice Selection Highlight Box
+    selected_item_pixmap_style = "select_*.png"
+    menu_pixmap_style = ""
+}
+
+# Countdown Timer / Timeout Progress Bar
++ progress_bar {
+    id = "__timeout__"
+    left = 28%
+    top = 80%
+    width = 44%
+    height = 14
+    show_text = true
+    font = "DejaVu Sans Bold 14"
+    text_color = "#76B900"
+    align = "center"
+    bg_color = "#101820"
+    fg_color = "#76B900"
+    border_color = "#76B900"
+}
+
+# Footer Navigation Hints (Controller & Keyboard Friendly)
++ label {
+    top = 88%
+    left = 0%
+    width = 100%
+    align = "center"
+    text = "[ ▲ / ▼ ] Navigate   •   [ ✛ D-PAD ] Controller   •   [ ENTER / Ⓐ ] Boot   •   [ E ] Edit Entry   •   [ C ] Console"
+    color = "#76B900"
+    font = "DejaVu Sans Bold 16"
+}

@@ -1,0 +1,34 @@
+# SWARM OS — AppArmor confinement for GamingAgent-go (Task #3, hardening)
+# Enforcing profile: this daemon's entire filesystem footprint is its own
+# binary, /etc/swarm_os.env, and /etc/swarm_os/gaming.db (+ SQLite WAL/SHM
+# siblings) — see 30-source/GamingAgent-go/db/db.go. It talks outbound HTTPS
+# to Steam/NVIDIA GFN/CheapShark/Nemotron and serves HTTP on :8401. Nothing
+# else is legitimate, so this is a real deny-by-default confinement, not an
+# audit-only placeholder.
+#include <tunables/global>
+
+/opt/swarm_os/GamingAgent/gaming-agent {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+
+  /opt/swarm_os/GamingAgent/gaming-agent mr,
+  /etc/swarm_os.env r,
+  /etc/ssl/certs/** r,
+  /etc/resolv.conf r,
+
+  /etc/swarm_os/ w,
+  /etc/swarm_os/gaming.db  rwk,
+  /etc/swarm_os/gaming.db-wal rwk,
+  /etc/swarm_os/gaming.db-shm rwk,
+  /etc/swarm_os/gaming.db-journal rwk,
+
+  # Go runtime needs
+  /proc/sys/net/core/somaxconn r,
+  owner @{PROC}/@{pid}/status r,
+  owner @{PROC}/@{pid}/stat r,
+}

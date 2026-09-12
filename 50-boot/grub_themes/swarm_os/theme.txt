@@ -1,0 +1,88 @@
+# =============================================================================
+# SWARM OS · GRUB Theme
+# Electric cyan on void-black · Hex-grid kiosk aesthetic
+# Palette: #000507 bg · #00c8f0 primary · #ffffff title · #00d4ff accent
+# Font: Orbitron (title) · Unifont (terminal/menu)
+# =============================================================================
+
+desktop-image: "background.png"
+desktop-color: "#000507"
+
+terminal-font: "Unifont Regular 16"
+terminal-left: "0%"
+terminal-top: "0%"
+terminal-width: "100%"
+terminal-height: "100%"
+terminal-border: "0"
+
+# ── MAIN TITLE ───────────────────────────────────────────────────────────────
++ label {
+    top = 6%
+    left = 0%
+    width = 100%
+    align = "center"
+    text = "SWARM_OS"
+    color = "#ffffff"
+    font = "Orbitron Bold 54"
+}
+
+# ── SUBTITLE ─────────────────────────────────────────────────────────────────
++ label {
+    top = 27%
+    left = 0%
+    width = 100%
+    align = "center"
+    text = "AUTONOMOUS KERNEL ENVIRONMENT  ·  HIVE INTELLIGENCE  ·  v6.2"
+    color = "#00c8f0"
+    font = "Unifont Regular 16"
+}
+
+# ── BOOT MENU ────────────────────────────────────────────────────────────────
++ boot_menu {
+    left = 27%
+    top = 35%
+    width = 46%
+    height = 42%
+
+    item_font           = "Unifont Regular 20"
+    selected_item_font  = "Unifont Regular 22"
+
+    item_color          = "#0088aa"
+    selected_item_color = "#ffffff"
+
+    icon_width   = 48
+    icon_height  = 48
+    item_height  = 72
+    item_padding = 16
+    item_spacing = 8
+
+    selected_item_pixmap_style = "select_*.png"
+    menu_pixmap_style          = ""
+}
+
+# ── AUTO-BOOT PROGRESS BAR ───────────────────────────────────────────────────
++ progress_bar {
+    id           = "__timeout__"
+    left         = 27%
+    top          = 80%
+    width        = 46%
+    height       = 8
+    show_text    = true
+    font         = "Unifont Regular 15"
+    text_color   = "#00c8f0"
+    align        = "center"
+    bg_color     = "#001828"
+    fg_color     = "#00c8f0"
+    border_color = "#004466"
+}
+
+# ── NAV HINTS ────────────────────────────────────────────────────────────────
++ label {
+    top = 92%
+    left = 0%
+    width = 100%
+    align = "center"
+    text = "[ ^ / v ]  Navigate   ·   [ ENTER ]  Boot   ·   [ E ]  Edit   ·   [ C ]  Console"
+    color = "#006688"
+    font = "Unifont Regular 15"
+}

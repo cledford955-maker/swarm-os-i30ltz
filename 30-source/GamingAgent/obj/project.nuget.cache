@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "dgSpecHash": "VLTuH4rYgsw=",
+  "success": true,
+  "projectFilePath": "/mnt/Lucy/30-source/GamingAgent/GamingAgent.csproj",
+  "expectedPackageFiles": [
+    "/home/i30ltz/.nuget/packages/microsoft.aspnetcore.openapi/10.0.11/microsoft.aspnetcore.openapi.10.0.11.nupkg.sha512",
+    "/home/i30ltz/.nuget/packages/microsoft.data.sqlite/10.0.12/microsoft.data.sqlite.10.0.12.nupkg.sha512",
+    "/home/i30ltz/.nuget/packages/microsoft.data.sqlite.core/10.0.12/microsoft.data.sqlite.core.10.0.12.nupkg.sha512",
+    "/home/i30ltz/.nuget/packages/microsoft.openapi/2.7.5/microsoft.openapi.2.7.5.nupkg.sha512",
+    "/home/i30ltz/.nuget/packages/sqlitepclraw.bundle_e_sqlite3/2.1.12/sqlitepclraw.bundle_e_sqlite3.2.1.12.nupkg.sha512",
+    "/home/i30ltz/.nuget/packages/sqlitepclraw.core/2.1.12/sqlitepclraw.core.2.1.12.nupkg.sha512",
+    "/home/i30ltz/.nuget/packages/sqlitepclraw.lib.e_sqlite3/2.1.12/sqlitepclraw.lib.e_sqlite3.2.1.12.nupkg.sha512",
+    "/home/i30ltz/.nuget/packages/sqlitepclraw.provider.e_sqlite3/2.1.12/sqlitepclraw.provider.e_sqlite3.2.1.12.nupkg.sha512",
+    "/home/i30ltz/.nuget/packages/microsoft.aspnetcore.app.ref/10.0.11/microsoft.aspnetcore.app.ref.10.0.11.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,64 @@
+// Shared data types + global state for the Gaming dashboard.
+// Rust owns all filtering/formatting logic and pushes ready-to-render data here;
+// Slint stays purely presentational.
+
+export struct GameCard {
+    app-id: int,
+    name: string,
+    on-gfn: bool,
+    genres: string,
+    playtime-label: string,
+    is-favorite: bool,
+    is-pinned: bool,
+    on-sale: bool,
+}
+
+export struct GameRow {
+    cards: [GameCard],
+}
+
+export struct GenreChipData {
+    name: string,
+    active: bool,
+}
+
+export global GamingState {
+    // Stats bar (pre-formatted strings — Rust does the counting)
+    in property <string> stat-gfn-count: "0";
+    in property <string> stat-library-count: "0";
+    in property <string> stat-favorites-count: "0";
+    in property <string> stat-onsale-count: "0";
+
+    // 0 = GFN Games, 1 = My Library, 2 = Favorites
+    in-out property <int> sub-tab: 0;
+
+    in property <[GenreChipData]> genre-list: [];
+
+    in property <[GameRow]> display-rows: [];
+    in property <[GameRow]> pinned-rows: [];
+    in property <[GameRow]> onsale-rows: [];
+
+    in property <bool> is-loading: false;
+
+    // Lucille panel
+    in property <bool>     lucille-loading: false;
+    in property <string>   lucille-summary: "";
+    in property <[string]> action-badges: [];
+    in property <[string]> system-suggestions: [];
+    in property <bool>     lucille-active: false;
+
+    // Deal modal
+    in property <bool>     show-deal-modal: false;
+    in property <string>   deal-game-name: "";
+    in property <[string]> deal-prices: [];
+    in property <bool>     deal-loading: false;
+
+    callback sub-tab-changed(int);
+    callback genre-toggled(string);
+    callback favorite-toggled(int);
+    callback card-clicked(int);
+    callback close-deal-modal();
+    callback lucille-eval-requested();
+    callback lucille-reset-requested();
+    callback refresh-requested();
+}

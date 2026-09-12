@@ -1,0 +1,5 @@
+# This directory is a Syncthing folder marker.
+# Do not delete.
+
+folderID: LUCILLE
+created: 2026-09-07T06:04:39-04:00

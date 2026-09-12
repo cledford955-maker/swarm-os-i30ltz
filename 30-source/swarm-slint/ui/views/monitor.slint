@@ -1,0 +1,139 @@
+import { SwarmTheme } from "../globals.slint";
+import { MonitorState } from "../monitor_state.slint";
+
+component ProcessRowWidget inherits Rectangle {
+    in property <int> pid;
+    in property <string> name;
+    in property <string> memory-label;
+    callback kill-clicked;
+
+    height: 32px;
+    background: ta.has-hover ? #ffffff08 : transparent;
+
+    ta := TouchArea {}
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+
+        Text {
+            text: pid;
+            color: SwarmTheme.text-dim;
+            font-size: 11px;
+            width: 70px;
+            vertical-alignment: center;
+        }
+        Text {
+            text: name;
+            color: SwarmTheme.text;
+            font-size: 12px;
+            horizontal-stretch: 1;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text {
+            text: memory-label;
+            color: SwarmTheme.text-dim;
+            font-size: 11px;
+            width: 90px;
+            vertical-alignment: center;
+        }
+
+        kill-ta := TouchArea {
+            width: 60px;
+            clicked => { root.kill-clicked(); }
+            Rectangle {
+                background: kill-ta.has-hover ? SwarmTheme.danger : SwarmTheme.card;
+                border-radius: 4px;
+                Text {
+                    text: "Kill";
+                    color: kill-ta.has-hover ? #ffffff : SwarmTheme.text-dim;
+                    font-size: 10px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}
+
+export component MonitorView inherits Rectangle {
+    background: SwarmTheme.bg;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        Text {
+            text: "System Monitor";
+            color: SwarmTheme.accent;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        // ── Stat tiles ───────────────────────────────────────────────────────
+        HorizontalLayout {
+            height: 60px;
+            spacing: 10px;
+
+            Rectangle {
+                background: SwarmTheme.card;
+                border-radius: SwarmTheme.radius;
+                border-width: 1px;
+                border-color: SwarmTheme.border;
+                Text {
+                    text: MonitorState.cpu-label;
+                    color: SwarmTheme.text;
+                    font-size: 15px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+            Rectangle {
+                background: SwarmTheme.card;
+                border-radius: SwarmTheme.radius;
+                border-width: 1px;
+                border-color: SwarmTheme.border;
+                Text {
+                    text: MonitorState.ram-label;
+                    color: SwarmTheme.text;
+                    font-size: 15px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // ── Process list ─────────────────────────────────────────────────────
+        Text {
+            text: "Processes";
+            color: SwarmTheme.text-dim;
+            font-size: 11px;
+        }
+
+        Rectangle {
+            height: 24px;
+            HorizontalLayout {
+                padding-left: 8px;
+                padding-right: 8px;
+                Text { text: "PID";    color: SwarmTheme.text-dim; font-size: 10px; width: 70px; }
+                Text { text: "NAME";   color: SwarmTheme.text-dim; font-size: 10px; horizontal-stretch: 1; }
+                Text { text: "MEM";    color: SwarmTheme.text-dim; font-size: 10px; width: 90px; }
+                Rectangle { width: 60px; }
+            }
+        }
+
+        Flickable {
+            vertical-stretch: 1;
+            proc-col := VerticalLayout {
+                for p[i] in MonitorState.processes : ProcessRowWidget {
+                    pid: p.pid;
+                    name: p.name;
+                    memory-label: p.memory-label;
+                    kill-clicked => { MonitorState.kill-process(p.pid); }
+                }
+            }
+            viewport-height: proc-col.preferred-height;
+        }
+    }
+}

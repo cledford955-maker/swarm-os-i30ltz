@@ -1,0 +1,75 @@
+# SWARM OS / Luccile-v+ — .gitignore
+# v1.0.0 · 2026-09-12
+# Tracks source, scripts, configs and docs. Excludes build output,
+# vendored SDKs, ISO payloads and anything holding credentials.
+
+# --- release + build artifacts -------------------------------------
+10-releases/
+swarm_os_build_work/
+99-archive/
+logs/
+lost+found/
+*.iso
+*.sfs
+*.img
+*.qcow2
+*.fd
+
+# --- ISO profile payload (configs kept, bundled apps excluded) ------
+40-iso-profile/*/airootfs/opt/
+40-iso-profile/*/airootfs/usr/lib/
+40-iso-profile/*/airootfs/var/cache/
+
+# --- vendored SDKs / nested repos -----------------------------------
+30-source/flutter-sdk/
+
+# --- language build output ------------------------------------------
+**/target/
+**/node_modules/
+**/.dart_tool/
+**/.gradle/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# --- binaries -------------------------------------------------------
+*.apk
+*.aab
+*.jar
+*.so
+*.a
+*.o
+*.zst
+*.pack
+
+# --- media blobs ----------------------------------------------------
+images/
+
+# --- credentials — never commit -------------------------------------
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+.env
+.env.*
+**/secrets/
+**/service-account*.json
+**/credentials*.json
+**/client_secret*.json
+.claude/settings.local.json
+
+# --- compiled binaries (rebuildable) --------------------------------
+*.zip
+*.dll
+30-source/GamingAgent-go/gaming-agent
+30-source/LucyServer-go/lucy-server
+
+# --- credential-bearing app settings (v1.1.0 · 2026-09-12) ----------
+# appsettings.Development.json carries a live OpenRouterApiKey.
+appsettings.Development.json
+**/appsettings.Development.json
+appsettings.*.Development.json
+# runaway recursive publish output (nests 21 levels deep)
+20-runtime/LucyServer/publish/
+**/publish/publish/

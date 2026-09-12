@@ -1,0 +1,15 @@
+# SWARM OS live fstab
+# The root filesystem is mounted by the live boot environment — do not add it here.
+
+# LUCILLE working drive — auto-mount at /mnt/Lucy (nofail: boots without it)
+UUID=62f0e009-43c2-4760-8d6c-d7c445f5f3df  /mnt/Lucy  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2
+
+# i30ltz-brains — Lucille memory & identity (nvme0n1p5, always present)
+UUID=fba1b27f-407b-4385-9dfa-851833f249db  /mnt/brains  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2
+
+# i30ltz-AI backup drive (sdb8, ext4, mounted on demand by sync script)
+UUID=689e6547-b439-4e7f-93c9-a6dcfabed46b  /mnt/boltz  ext4  defaults,noatime,noauto,nofail,x-systemd.device-timeout=5  0 2
+
+# Slick — encrypted uncensored vault (nvme0n1p6). Manual unlock via unlock_slick.sh.
+# Mounted only after explicit LUKS open; see /etc/crypttab for the device entry.
+/dev/mapper/luks-019a3cd8-46c5-4a19-a760-8e0c1096b248  /mnt/slick  ext4  defaults,noauto,nofail,x-systemd.device-timeout=5  0 2
