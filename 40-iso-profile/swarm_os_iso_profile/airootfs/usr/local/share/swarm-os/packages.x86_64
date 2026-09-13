@@ -115,3 +115,4 @@ memtest86+
 memtest86+-efi
 edk2-shell
 os-prober
+gnupg

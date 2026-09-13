@@ -326,12 +326,9 @@ grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=SWARM
 cat > /etc/grub.d/40_custom <<'CUSTOMEOF'
 #!/bin/sh
 exec tail -n +3 \$0
-menuentry "Arch Linux (CachyOS) — /dev/sda" --class arch --class gnu-linux --class gnu --class os {
-    insmod part_gpt
-    insmod fat
-    insmod chain
-    search --no-floppy --fs-uuid --set=root 585D-4590
-    chainloader /EFI/ubuntu/shimx64.efi
+menuentry "CachyOS (chainload)" --class cachyos --class gnu-linux --class os {
+  search --no-floppy --fs-uuid --set=root A367-87E3
+  chainloader /EFI/cachyos/grubx64.efi
 }
 menuentry "UEFI Firmware Settings" --class firmware {
     fwsetup

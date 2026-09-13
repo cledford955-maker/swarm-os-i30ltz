@@ -127,6 +127,10 @@ if [ ! -f "$PROFILE_PACKAGES" ]; then
   echo "Expected: /usr/local/share/swarm-os/packages.x86_64"
   exit 1
 fi
+PROFILE_ROOT="$SCRIPT_DIR/swarm_os_iso_profile"
+if [ ! -d "$PROFILE_ROOT/airootfs" ]; then
+  PROFILE_ROOT="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile"
+fi
 PROFILE_PACMAN_CONF="/usr/local/share/swarm-os/pacman.conf"
 if [ ! -f "$PROFILE_PACMAN_CONF" ]; then
   PROFILE_PACMAN_CONF="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile/pacman.conf"
@@ -185,13 +189,13 @@ fi
 info "fstab written"
 
 banner "Copying custom airootfs files..."
-if [ -d "$SCRIPT_DIR/swarm_os_iso_profile/airootfs/" ]; then
+if [ -d "$PROFILE_ROOT/airootfs/" ]; then
     # Backup base system auth files before copying airootfs
     cp -a "$MOUNT_POINT/etc/passwd" "$MOUNT_POINT/etc/passwd.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/group" "$MOUNT_POINT/etc/group.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/shadow" "$MOUNT_POINT/etc/shadow.sys" 2>/dev/null || true
 
-    cp -a "$SCRIPT_DIR/swarm_os_iso_profile/airootfs/"* "$MOUNT_POINT/"
+    cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
 
     # Restore pristine system auth files (so users and render groups exist)
     [ -f "$MOUNT_POINT/etc/passwd.sys" ] && mv "$MOUNT_POINT/etc/passwd.sys" "$MOUNT_POINT/etc/passwd"
@@ -245,6 +249,28 @@ fi
 # Get UUID of the raw root partition
 ROOT_UUID=$(blkid -s UUID -o value "$TARGET_ROOT")
 info "Root UUID: $ROOT_UUID"
+
+# Leave a durable, non-secret record on the installed root so recovery tools
+# can identify exactly which SWARM OS build was installed on this partition.
+BUILD_RELEASE_FILE="$MOUNT_POINT/etc/swarm-release"
+BUILD_VERSION=$(sed -n 's/^SWARM_VERSION=//p' "$BUILD_RELEASE_FILE" 2>/dev/null | head -n1 || true)
+BUILD_COMMIT=$(sed -n 's/^SWARM_COMMIT=//p' "$BUILD_RELEASE_FILE" 2>/dev/null | head -n1 || true)
+BUILD_DATE=$(sed -n 's/^SWARM_DATE=//p' "$BUILD_RELEASE_FILE" 2>/dev/null | head -n1 || true)
+BUILD_VERSION=${BUILD_VERSION:-unknown}
+BUILD_COMMIT=${BUILD_COMMIT:-unknown}
+BUILD_DATE=${BUILD_DATE:-unknown}
+cat > "$MOUNT_POINT/etc/swarm-build-info" <<BUILDINFO
+# SWARM OS installed-build record. No secrets are stored here.
+SWARM_VERSION=$BUILD_VERSION
+SWARM_COMMIT=$BUILD_COMMIT
+SWARM_BUILD_DATE=$BUILD_DATE
+INSTALL_DATE=$(date -Is)
+INSTALL_TARGET_DISK=$DISK
+INSTALL_TARGET_ROOT=$TARGET_ROOT
+INSTALL_ROOT_UUID=$ROOT_UUID
+BUILDINFO
+chmod 0644 "$MOUNT_POINT/etc/swarm-build-info"
+info "Installed build record written to /etc/swarm-build-info"
 
 # Capture existing password hash for i30ltz from host if available
 HOST_PW_HASH=$(grep '^i30ltz:' /etc/shadow 2>/dev/null | cut -d: -f2 || true)
@@ -326,12 +352,9 @@ grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=SWARM
 cat > /etc/grub.d/40_custom <<'CUSTOMEOF'
 #!/bin/sh
 exec tail -n +3 \$0
-menuentry "Arch Linux (CachyOS) — /dev/sda" --class arch --class gnu-linux --class gnu --class os {
-    insmod part_gpt
-    insmod fat
-    insmod chain
-    search --no-floppy --fs-uuid --set=root 585D-4590
-    chainloader /EFI/ubuntu/shimx64.efi
+menuentry "CachyOS (chainload)" --class cachyos --class gnu-linux --class os {
+  search --no-floppy --fs-uuid --set=root A367-87E3
+  chainloader /EFI/cachyos/grubx64.efi
 }
 menuentry "UEFI Firmware Settings" --class firmware {
     fwsetup

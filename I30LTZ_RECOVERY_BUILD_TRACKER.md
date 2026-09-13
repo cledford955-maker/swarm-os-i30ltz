@@ -9,7 +9,7 @@ Auto-refreshed by `70-scripts/update_build_tracker.sh`. Run it after every build
 
 ## Component Registry
 
-_Last updated: 2026-09-12 13:23_
+_Last updated: 2026-09-12 20:30_
 
 ### UI Layer
 
@@ -32,7 +32,7 @@ _Last updated: 2026-09-12 13:23_
 
 | Component | Version | Date | Notes |
 |---|---|---|---|
-| SWARM OS ISO | 6.2.44 | 2026-09-12 13:23 | `10-releases/` — auto-bumped on build |
+| SWARM OS ISO | 6.2.44 | 2026-09-12 20:30 | `10-releases/` — auto-bumped on build |
 | Arch packages.x86_64 | — | 2026-09-12 | aspnet-runtime-10.0 added |
 
 ### Scripts
