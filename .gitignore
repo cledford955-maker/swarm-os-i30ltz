@@ -73,3 +73,6 @@ appsettings.*.Development.json
 # runaway recursive publish output (nests 21 levels deep)
 20-runtime/LucyServer/publish/
 **/publish/publish/
+
+# quarantine holding area - never commit
+_to_delete/
