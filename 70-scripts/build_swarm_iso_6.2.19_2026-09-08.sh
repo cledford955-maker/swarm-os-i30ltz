@@ -44,6 +44,7 @@ FLUTTER_DIR="$LUCY/30-source/frontend"
 SLINT_DIR="$LUCY/30-source/swarm-slint"
 SOURCE_DIR="$LUCY/30-source"
 LUCY_SERVER_GO_DIR="$SOURCE_DIR/LucyServer-go"
+GOOGLE_WORKSPACE_DIR="$SOURCE_DIR/GoogleWorkspaceService"
 WORK_DIR="$LUCY/swarm_os_build_work"
 OUT_DIR="$LUCY/10-releases"
 
@@ -157,6 +158,12 @@ echo -e "\n${CYAN}[3/8] Compiling LucyServer Subsystem (Go)...${NC}"
 (cd "$LUCY_SERVER_GO_DIR" && go build -o lucy-server .)
 echo -e "  ${GREEN}✓ LucyServer (Go) compiled.${NC}"
 
+echo -e "\n  Compiling Google Workspace Service (.NET)..."
+rm -rf "$WORK_DIR/google-workspace-publish"
+mkdir -p "$WORK_DIR/google-workspace-publish"
+(cd "$GOOGLE_WORKSPACE_DIR" && dotnet publish -c Release -o "$WORK_DIR/google-workspace-publish" --self-contained false)
+echo -e "  ${GREEN}✓ Google Workspace Service published.${NC}"
+
 # -----------------------------------------------------------------------------
 # Step 4: Stage Bundles, Themes, and Backgrounds into airootfs
 # -----------------------------------------------------------------------------
@@ -184,6 +191,14 @@ mkdir -p "$AIROOTFS/opt/swarm_os/LucyServer"
 cp -f "$LUCY_SERVER_GO_DIR/lucy-server" "$AIROOTFS/opt/swarm_os/LucyServer/lucy-server"
 chmod +x "$AIROOTFS/opt/swarm_os/LucyServer/lucy-server"
 echo -e "  ${GREEN}✓ LucyServer (Go) staged to /opt/swarm_os/LucyServer/.${NC}"
+
+# 4b1. Google Workspace Service -> /opt/swarm_os/GoogleWorkspaceService/
+# OAuth credentials are runtime state and must never be copied from the build host.
+rm -rf "$AIROOTFS/opt/swarm_os/GoogleWorkspaceService"
+mkdir -p "$AIROOTFS/opt/swarm_os/GoogleWorkspaceService"
+cp -a "$WORK_DIR/google-workspace-publish/." "$AIROOTFS/opt/swarm_os/GoogleWorkspaceService/"
+chmod +x "$AIROOTFS/opt/swarm_os/GoogleWorkspaceService/GoogleWorkspaceService"
+echo -e "  ${GREEN}✓ Google Workspace Service staged to /opt/swarm_os/GoogleWorkspaceService/.${NC}"
 
 # 4b2. GamingAgent -> /opt/swarm_os/GamingAgent/ (Go — replaces .NET build)
 GAMING_DIR="$SOURCE_DIR/GamingAgent-go"

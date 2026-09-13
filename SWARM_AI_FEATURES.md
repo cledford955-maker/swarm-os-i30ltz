@@ -229,15 +229,21 @@ All code written and `flutter analyze` clean (0 errors, 0 warnings). Not yet tes
 - [ ] App definitions file — hardcoded in `HexDesktopPage`; make editable from settings
 
 ### Active: Boot / ISO Verification
+- [x] **CachyOS GRUB chainload** — ISO GRUB menus and installed NVMe GRUB now chainload `/EFI/cachyos/grubx64.efi` from EFI UUID `A367-87E3`; active menu regenerated and verified on `/dev/nvme0n1p2` (2026-09-12)
 - [ ] Full ISO boot test — ISO builds but boot + install flow not yet verified on real hardware
 - [x] **Ventoy install path fixed** — live ISO now stages `packages.x86_64` beside `install_swarm_os.sh`; the installer no longer depends on the source profile tree being mounted. Boot the ISO from Ventoy, switch to a TTY, and run `sudo /usr/local/bin/install_swarm_os.sh` (`30-source/install_swarm_os.sh`, `70-scripts/build_swarm_iso_6.2.19_2026-09-08.sh`)
 - [x] **Install tile in live desktop** — SYSTEM space exposes an Install tile that opens the real installer in a terminal; it remains a harmless unavailable message on an installed system (`30-source/frontend/lib/pages/hex_desktop_page.dart`, `30-source/frontend/lib/services/system_launcher.dart`)
 - [x] **Fixed NVMe install target** — the desktop Install tile passes `--disk /dev/nvme0n1`, producing `/dev/nvme0n1p1` EFI and `/dev/nvme0n1p2` SWARM OS root (`30-source/frontend/lib/services/system_launcher.dart`)
+- [x] **Installed build identity recorded on root** — installer writes `/etc/swarm-build-info` on the target root with SWARM version, commit, build date, install timestamp, target disk, and root UUID; no secrets are included (`30-source/install_swarm_os.sh`)
+- [x] **SWARM OS installed to NVMe** — installed build `6.2.44` / commit `529dc998` to `/dev/nvme0n1p2` with EFI on `/dev/nvme0n1p1`; verified binaries, service units, Btrfs mounts, crypttab, GRUB theme, and no plaintext API-key patterns (2026-09-12)
+- [x] **Installer profile lookup hardened** — installer now finds the ISO profile when launched from `30-source`, preventing a partial install that omits service and application payloads (`30-source/install_swarm_os.sh`)
 - [x] **Installer manifest included in profile** — tracked `/usr/local/share/swarm-os/packages.x86_64` fallback prevents the live installer from failing when build-time staging is absent (`40-iso-profile/swarm_os_iso_profile/airootfs/usr/local/share/swarm-os/packages.x86_64`)
+- [x] **Installer manifest parity verified** — fallback now includes `gnupg`, matching the profile's sealed-secret dependency; normalized package sets match and all 118 entries pass the pinned snapshot preflight (`40-iso-profile/swarm_os_iso_profile/{packages.x86_64,airootfs/usr/local/share/swarm-os/packages.x86_64}`, verified 2026-09-12)
 - [x] **Installer Mesa conflict fixed** — `pacstrap` now uses the ISO profile's official Arch `core`/`extra` pacman configuration instead of inheriting the CachyOS live host config, preventing `mesa` versus `mesa-git` conflicts (`30-source/install_swarm_os.sh`, build staging)
 - [x] **Installer mount cleanup hardened** — unmounts EFI, subvolumes, and root explicitly before formatting, then refuses to run if `/dev/nvme0n1p2` remains mounted (`30-source/install_swarm_os.sh`)
 - [x] **Installer chroot output fixed** — replaces outer-shell `banner`/`info` function calls inside the `arch-chroot` heredoc with portable `echo` output (`30-source/install_swarm_os.sh`)
 - [x] **Ollama pull script path fixed** — creates `/opt/swarm_os` inside the target before writing `swarm-ollama-pull.sh`, avoiding the chroot `No such file or directory` failure (`30-source/install_swarm_os.sh`)
+- [ ] **Automated VM boot gate blocked on host dependency** — latest ISO exists, but `vm_boot_gate.sh` cannot run until `qemu-img` is installed; `qemu-system-x86_64` is present. Real hardware UI and WebAuthn checks remain outstanding.
 - [x] Toolchains installed and both projects compile clean. `GamingAgent-go`: clean `go build`/`go vet`/`gofmt -l`. `swarm-slint`: clean `cargo build`/`cargo clippy` (verified 2026-09-11 after backend-winit pivot — `backend-linuxkms` removed, `no-frame`/preferred-size kiosk props removed, confirmed no warnings).
 
 ### Active: Security Hardening — **PRIORITY #1** (Journey reordered 2026-09-12: Security → Boot → Gaming → Coding)
@@ -337,7 +343,7 @@ WebAuthn endpoints stay in place — they work if a FIDO2 key is ever added late
 - [ ] App definitions file (name, icon, exec command) editable from Lucille settings tab
 
 ### SWARM OS / ISO
-- [ ] **`GoogleWorkspaceService` is never staged by the build script** — found 2026-09-11 while auditing file permissions: `70-scripts/build_swarm_iso_*.sh` has no step that builds/copies it, yet the full published .NET binary+DLLs are already sitting hand-copied in `airootfs/opt/swarm_os/GoogleWorkspaceService/` (dated Sep 8, untouched by any script), alongside `google-workspace.service` baked and enabled in `multi-user.target.wants/`. Works *today* only because someone manually staged it once. A clean checkout of the repo without that pre-staged directory, or any future rebuild of the service, has no automated path back into the ISO. Wire real staging into the build script (mirroring the `GamingAgent`/`LucyServer` steps) so it isn't silently relying on stale hand-copied binaries forever.
+- [x] **`GoogleWorkspaceService` build and staging automated** — `70-scripts/build_swarm_iso_6.2.19_2026-09-08.sh` now publishes from `30-source/GoogleWorkspaceService` into an out-of-tree build directory and stages the fresh output on every ISO build; runtime OAuth credentials are not copied from the host. `dotnet publish` verified successfully 2026-09-12.
 - [ ] Google OAuth flow for GoogleWorkspaceService in LucyServer
 - [ ] Android Companion app — build.gradle.kts version stamp wired but app not tested
 - [ ] Snapshot/restore: btrfs subvolume snapshot before each build run so bad builds are recoverable
@@ -379,6 +385,10 @@ WebAuthn endpoints stay in place — they work if a FIDO2 key is ever added late
 
 /run/media/i30ltz/lucy-master/      ← READ-ONLY source mirror — NEVER write here
 ```
+
+**Workspace tooling**
+
+- [x] Added workspace-scoped VS Code agent `.github/agents/vs-file-watcher.agent.md` for evidence-driven Linux file-watcher diagnosis; scope confirmed workspace-only (2026-09-12).
 
 **Target stack (post-rewrite):**
 
