@@ -28,6 +28,7 @@ file_permissions=(
   ["/opt/swarm_os/swarm_flutter"]="1000:1000:755"
   ["/opt/swarm_os/LucyServer"]="1000:1000:755"
   ["/usr/local/bin/install_swarm_os.sh"]="0:0:755"
+  ["/usr/local/bin/swarm-snapshot.sh"]="0:0:755"
   ["/usr/bin/lucille-core"]="0:0:755"
   # Sealed secrets (2026-09-12, v1.0.0). The plaintext /etc/swarm_os.env is
   # gone for good — it used to put every API key in every ISO. Only the

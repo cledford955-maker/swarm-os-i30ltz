@@ -414,6 +414,7 @@ systemctl enable nftables || true
 systemctl enable apparmor || true
 systemctl enable swarm-podman-linger.service || true
 systemctl enable swarm-ui.service || true
+systemctl enable swarm-snapshot.service || true
 
 # Install GRUB as UEFI bootloader
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=SWARM_OS --recheck

@@ -1,0 +1,17 @@
+[Unit]
+Description=SWARM OS — snapshot root before this session modifies it
+Documentation=file:///usr/local/bin/swarm-snapshot.sh
+# Run early in boot so the snapshot captures the previous session's clean state.
+# Skips gracefully on the live ISO (UUID mismatch check in the script).
+After=local-fs.target
+Before=swarm-ui.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/swarm-snapshot.sh
+# Don't fail the whole boot if snapshotting fails (disk full, btrfs error, etc.)
+SuccessExitStatus=0 1
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

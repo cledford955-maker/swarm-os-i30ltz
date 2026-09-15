@@ -11,12 +11,15 @@
   - Voice: Male Pro Voice — Fish Audio Pro Slax (`fish:slax`) / Deep Narrator (`fish:markiplier`) / Christopher (`en-US-ChristopherNeural`) / Ryan (`en-GB-RyanNeural`).
 
 ## 2. SWARM OS ARCHITECTURE
-* **Base OS:** Arch Linux x86_64 kernel, systemd init, Cage Wayland kiosk.
-* **Frontend GUI:** Flutter Linux desktop client located at `/opt/swarm_os/swarm_flutter`.
-* **Backend Engine:** LucyServer .NET 8 Web API located at `/opt/swarm_os/LucyServer`.
+* **Base OS:** Arch Linux x86_64 kernel, systemd init, **labwc** Wayland compositor (NOT Cage kiosk — pivot 2026-09-11).
+* **Frontend GUI:** Flutter Linux desktop shell at `/opt/swarm_os/swarm_flutter` + Rust/Slint Lucille panel at `/opt/swarm_os/swarm-slint`. Both run as Wayland clients under labwc.
+* **Backend Engine:** LucyServer **Go** binary at `/opt/swarm_os/LucyServer/lucy-server` (port 5000). .NET is gone.
+* **Gaming Backend:** GamingAgent Go binary at `/opt/swarm_os/GamingAgent/gaming-agent` (port 8401).
 * **Daemons & Services:**
-  - `swarm-ui.service`: Launches cage kiosk running the Flutter desktop interface.
-  - `lucy-server.service`: Runs the ASP.NET Core LucyServer API.
+  - `swarm-ui.service`: Launches labwc; autostart runs Flutter shell + Lucille panel.
+  - `lucy-server.service`: Runs the Go LucyServer API (port 5000).
+  - `gaming-agent.service`: Runs the Go GamingAgent API (port 8401).
+  - `swarm-snapshot.service`: Snapshots the root Btrfs subvolume at every boot (see §7).
   - `NetworkManager` & `bluetooth`: Core connectivity services.
 
 ## 3. LIVE ISO & VENTOY BOOT INSTRUCTIONS
@@ -84,9 +87,39 @@
   - Run full installer directly from phone terminal.
 
 ## 6. EMERGENCY RECOVERY & SYSTEM COMMANDS
-* **Restart UI Kiosk:** `sudo systemctl restart swarm-ui`
+* **Restart UI:** `sudo systemctl restart swarm-ui`
 * **Restart Backend:** `sudo systemctl restart lucy-server`
 * **View Logs:** `journalctl -u swarm-ui -e` or `journalctl -u lucy-server -e`
-* **Run UI Manually:** `cage -d /opt/swarm_os/swarm_flutter`
+* **Run Flutter manually (Wayland):** `WAYLAND_DISPLAY=wayland-1 /opt/swarm_os/swarm_flutter/swarm_flutter`
 * **Storage Inspection:** `lsblk -f`
-* **GRUB Config Regeneration:** `sudo arch-chroot /mnt/swarm_os grub-mkconfig -o /boot/grub/grub.cfg`
+
+## 7. SNAPSHOT & ROLLBACK SYSTEM
+
+Every clean boot automatically snapshots `@` → `@snapshots/swarm-YYYYMMDD-HHMMSS` via `swarm-snapshot.service`. Snapshots appear as boot entries in the GRUB menu instantly (no grub-mkconfig needed). 5 snapshots kept; oldest auto-pruned.
+
+**Manual snapshot before a risky change (from CachyOS):**
+```bash
+# Desktop shortcut — double-click:
+# /home/i30ltz/Desktop/swarm-snapshot.desktop
+# (Right-click → Allow Launching on first use)
+
+# Or terminal:
+sudo /mnt/Lucy/70-scripts/snapshot_before_update.sh [optional-label]
+```
+
+**Enable on existing install (one-time, from CachyOS):**
+```bash
+sudo cp /mnt/Lucy/40-iso-profile/swarm_os_iso_profile/airootfs/usr/local/bin/swarm-snapshot.sh \
+     /mnt/swarm/@/usr/local/bin/
+sudo chmod +x /mnt/swarm/@/usr/local/bin/swarm-snapshot.sh
+sudo cp /mnt/Lucy/40-iso-profile/swarm_os_iso_profile/airootfs/etc/systemd/system/swarm-snapshot.service \
+     /mnt/swarm/@/etc/systemd/system/
+sudo ln -sf /etc/systemd/system/swarm-snapshot.service \
+     /mnt/swarm/@/etc/systemd/system/multi-user.target.wants/swarm-snapshot.service
+```
+
+**Rollback:** reboot → GRUB → pick `"SWARM OS — Snapshot YYYY-MM-DD HH:MM"`.
+
+> **Keep desktop script current:** the `.desktop` file calls `snapshot_before_update.sh`
+> by absolute path. If the script moves, update the `Exec=` line in
+> `/home/i30ltz/Desktop/swarm-snapshot.desktop`.

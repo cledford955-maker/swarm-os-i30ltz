@@ -177,7 +177,35 @@ sudo systemctl restart lucy-server gaming-agent
 
 ---
 
-## 14. Syncthing (verify phone ↔ SWARM sync)
+## 14. Enable Auto-Snapshot Service (if not already active)
+
+`swarm-snapshot.service` should be enabled by the installer. Verify:
+
+```bash
+systemctl is-enabled swarm-snapshot.service
+```
+
+If it says `disabled` or `not-found`, enable it now:
+
+```bash
+sudo cp /mnt/Lucy/40-iso-profile/swarm_os_iso_profile/airootfs/usr/local/bin/swarm-snapshot.sh \
+     /usr/local/bin/
+sudo chmod +x /usr/local/bin/swarm-snapshot.sh
+sudo cp /mnt/Lucy/40-iso-profile/swarm_os_iso_profile/airootfs/etc/systemd/system/swarm-snapshot.service \
+     /etc/systemd/system/
+sudo systemctl enable swarm-snapshot.service
+```
+
+The service snapshots `@` at every boot and adds a GRUB rollback entry automatically.
+Keeps the 5 most recent snapshots. Rollback: reboot → GRUB → pick a Snapshot entry.
+
+**Desktop shortcut (CachyOS):** `/home/i30ltz/Desktop/swarm-snapshot.desktop`
+Right-click → **Allow Launching** on first use. Runs a manual snapshot for risky changes.
+> Keep it current: if `snapshot_before_update.sh` moves, update the `Exec=` line in the `.desktop` file.
+
+---
+
+## 15. Syncthing (verify phone ↔ SWARM sync)
 
 ```bash
 systemctl status syncthing@swarm
@@ -197,4 +225,4 @@ echo "Both servers OK"
 
 ---
 
-*Generated 2026-09-12. Source of truth: `/mnt/Lucy/SWARM_AI_FEATURES.md`*
+*Updated 2026-09-15. Source of truth: `/mnt/Lucy/SWARM_AI_FEATURES.md`*

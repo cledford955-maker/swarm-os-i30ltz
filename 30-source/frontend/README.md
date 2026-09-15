@@ -29,6 +29,33 @@ flutter pub get
 flutter run -d linux   # or: -d macos / -d windows / -d chrome
 ```
 
+## Before Deploying to the Installed System
+
+Always snapshot first so you can roll back if the Flutter update breaks something:
+
+```bash
+# Option A — desktop shortcut (double-click)
+# /home/i30ltz/Desktop/swarm-snapshot.desktop
+# Right-click → Allow Launching if it opens as text on first use.
+
+# Option B — terminal
+sudo /mnt/Lucy/70-scripts/snapshot_before_update.sh pre-flutter-update
+```
+
+Then deploy the built bundle:
+
+```bash
+sudo cp -a /mnt/Lucy/30-source/frontend/build/linux/x64/release/bundle/. \
+     /mnt/swarm/@/opt/swarm_os/swarm_flutter/
+```
+
+Rollback: reboot → GRUB menu → pick a **Snapshot** entry.
+
+> **Keep desktop script current:** if `snapshot_before_update.sh` changes,
+> the `.desktop` file at `/home/i30ltz/Desktop/swarm-snapshot.desktop` just
+> calls that script by path — no edit needed. Only update the `.desktop` if
+> you move the script.
+
 ## Controls
 - **Click** card → Select agent
 - **Double-click** card → Open detail window
