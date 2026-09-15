@@ -13,3 +13,12 @@ UUID=689e6547-b439-4e7f-93c9-a6dcfabed46b  /mnt/boltz  ext4  defaults,noatime,no
 # Slick — encrypted uncensored vault (nvme0n1p6). Manual unlock via unlock_slick.sh.
 # Mounted only after explicit LUKS open; see /etc/crypttab for the device entry.
 /dev/mapper/luks-019a3cd8-46c5-4a19-a760-8e0c1096b248  /mnt/slick  ext4  defaults,noauto,nofail,x-systemd.device-timeout=5  0 2
+
+# EndeavourOS recovery parent (sda4, btrfs) — UUID-keyed so sda/sdb swap is safe
+UUID=0ac123f1-bbd1-4ea6-8fdd-930bd0d45e18  /mnt/endeavor  btrfs  defaults,noatime,nofail,x-systemd.device-timeout=5  0 0
+
+# Recovery build workspace (sda7, btrfs)
+UUID=3f6e3011-94a1-47d5-8192-6d86e9fd26d2  /mnt/recoverybuild  btrfs  defaults,noatime,nofail,x-systemd.device-timeout=5  0 0
+
+# Recovery OS output (sda6, ext4)
+UUID=9a9c857f-f2cb-47cc-ac13-2cf3a3e24bc8  /mnt/recoveryos  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2

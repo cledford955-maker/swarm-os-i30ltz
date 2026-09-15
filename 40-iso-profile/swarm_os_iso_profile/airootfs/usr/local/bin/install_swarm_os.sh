@@ -202,6 +202,30 @@ if ! grep -q "slick\|$SLICK_MAPPER" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
     info "Slick vault added to fstab → /mnt/slick"
 fi
 
+# EndeavourOS recovery parent (sda4, btrfs) — UUID-keyed so sda/sdb swap is safe
+ENDEAVOR_UUID="0ac123f1-bbd1-4ea6-8fdd-930bd0d45e18"
+mkdir -p "$MOUNT_POINT/mnt/endeavor"
+if ! grep -q "$ENDEAVOR_UUID\|/mnt/endeavor" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
+    echo "UUID=${ENDEAVOR_UUID}  /mnt/endeavor  btrfs  defaults,noatime,nofail,x-systemd.device-timeout=5  0 0" >> "$MOUNT_POINT/etc/fstab"
+    info "EndeavourOS partition added to fstab → /mnt/endeavor"
+fi
+
+# Recovery build workspace (sda7, btrfs)
+RECOVERYBUILD_UUID="3f6e3011-94a1-47d5-8192-6d86e9fd26d2"
+mkdir -p "$MOUNT_POINT/mnt/recoverybuild"
+if ! grep -q "$RECOVERYBUILD_UUID\|/mnt/recoverybuild" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
+    echo "UUID=${RECOVERYBUILD_UUID}  /mnt/recoverybuild  btrfs  defaults,noatime,nofail,x-systemd.device-timeout=5  0 0" >> "$MOUNT_POINT/etc/fstab"
+    info "Recovery build workspace added to fstab → /mnt/recoverybuild"
+fi
+
+# Recovery OS output (sda6, ext4)
+RECOVERYOS_UUID="9a9c857f-f2cb-47cc-ac13-2cf3a3e24bc8"
+mkdir -p "$MOUNT_POINT/mnt/recoveryos"
+if ! grep -q "$RECOVERYOS_UUID\|/mnt/recoveryos" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
+    echo "UUID=${RECOVERYOS_UUID}  /mnt/recoveryos  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2" >> "$MOUNT_POINT/etc/fstab"
+    info "Recovery OS output added to fstab → /mnt/recoveryos"
+fi
+
 info "fstab written"
 
 banner "Copying custom airootfs files..."
