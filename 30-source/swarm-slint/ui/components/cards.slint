@@ -98,10 +98,19 @@ export component GameCardWidget inherits Rectangle {
     }
 
     VerticalLayout {
-        // Header placeholder block (real image loading is a follow-up task)
+        // Box art, with the flat color behind it as a fallback while the
+        // thumbnail is still downloading (or if it never loads).
         Rectangle {
             height: 90px;
             background: card.on-gfn ? #1a2e0a : #1a1a1a;
+            clip: true;
+
+            Image {
+                source: card.header-image;
+                width: 100%;
+                height: 100%;
+                image-fit: cover;
+            }
 
             if card.on-gfn : Rectangle {
                 x: parent.width - 34px; y: 6px;
@@ -128,6 +137,24 @@ export component GameCardWidget inherits Rectangle {
                     color: #0d0d0d;
                     font-size: 8px;
                     font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            // Thumbnail fetch failed (bad URL, network blip, dead CDN link).
+            // The card still works — this just tells the user it's not a
+            // blank/broken card, it genuinely has no art loaded, and it'll
+            // keep retrying with backoff in the background.
+            if card.image-failed : Rectangle {
+                x: 6px; y: parent.height - 22px;
+                width: 16px; height: 16px;
+                border-radius: 3px;
+                background: #00000080;
+                Text {
+                    text: "⚠";
+                    color: SwarmTheme.warn;
+                    font-size: 10px;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }

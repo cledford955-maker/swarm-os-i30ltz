@@ -9,6 +9,14 @@ After=lucy-server.service
 Type=simple
 User=swarm
 WorkingDirectory=/opt/swarm_os/GoogleWorkspaceService
+# google_tokens/ holds OAuth credentials written after the user's first
+# Google login — it doesn't exist in the ISO image, so create it here
+# (same pattern as gaming-agent.service/lucy-server.service provisioning
+# /etc/swarm_os) instead of baking permissions for a path that isn't there
+# yet at build time.
+ExecStartPre=+/usr/bin/mkdir -p /opt/swarm_os/GoogleWorkspaceService/google_tokens
+ExecStartPre=+/usr/bin/chown swarm:swarm /opt/swarm_os/GoogleWorkspaceService/google_tokens
+ExecStartPre=+/usr/bin/chmod 750 /opt/swarm_os/GoogleWorkspaceService/google_tokens
 ExecStart=/usr/bin/dotnet /opt/swarm_os/GoogleWorkspaceService/GoogleWorkspaceService.dll
 Restart=on-failure
 RestartSec=5

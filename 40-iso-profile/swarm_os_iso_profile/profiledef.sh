@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-iso_name="swarm-os-v6.2.44-529dc998"
+iso_name="swarm-os-v6.2.54-cc49de3a"
 iso_label="SWARM_OS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="SWARM OS <https://github.com/swarm>"
-iso_application="SWARM OS · Lucille v6.2.44"
+iso_application="SWARM OS · Lucille v6.2.54"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="swarm"
 buildmodes=('iso')
@@ -38,6 +38,11 @@ file_permissions=(
   ["/etc/systemd/system/swarm-secrets.service"]="0:0:644"
   ["/etc/subuid"]="0:0:644"
   ["/etc/subgid"]="0:0:644"
+  # Live-boot swarm user is in the wheel group but had no sudoers rule
+  # enabling it, so `sudo install_swarm_os.sh` failed at first boot
+  # (found 2026-09-14). This grants wheel sudo from boot; the installer
+  # still re-applies/hardens the same rule on the target system.
+  ["/etc/sudoers.d/10-wheel"]="0:0:440"
   ["/etc/containers"]="0:0:755"
   ["/etc/containers/registries.conf"]="0:0:644"
   ["/etc/containers/storage.conf"]="0:0:644"
@@ -48,6 +53,14 @@ file_permissions=(
   ["/home/swarm/.config/systemd"]="1000:1000:750"
   ["/home/swarm/.config/systemd/user"]="1000:1000:750"
   ["/home/swarm/.config/systemd/user/sockets.target.wants"]="1000:1000:750"
-  ["/opt/swarm_os/GoogleWorkspaceService/google_tokens"]="1000:1000:750"
-  ["/opt/swarm_os/GoogleWorkspaceService/google_tokens/credentials.json"]="1000:1000:600"
+  # google_tokens/credentials.json is NOT listed here on purpose: it's a
+  # runtime artifact written only after the user completes Google OAuth —
+  # it doesn't exist in the airootfs at build time. mkarchiso's
+  # file_permissions resolves every listed path with realpath before
+  # chmod'ing it; a nested path whose parent directory doesn't exist yet
+  # resolves outside the expected tree and mkarchiso aborts with "Outside
+  # of valid path" instead of the graceful "does not exist" warning it
+  # gives for a plain missing entry (found 2026-09-13). google-workspace.
+  # service now creates the directory itself via ExecStartPre, same
+  # pattern as gaming-agent.service/lucy-server.service and /etc/swarm_os.
 )

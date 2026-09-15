@@ -48,6 +48,13 @@ ExecStartPre=+/usr/bin/mkdir -p /mnt/Lucy/logs
 # launches the Flutter shell as a normal Wayland client inside it.
 ExecStart=/usr/bin/labwc
 ExecStopPost=+/usr/bin/bash -c 'journalctl -u swarm-ui.service -b --no-pager > /mnt/Lucy/logs/swarm-ui-$(date +%%Y%%m%%d-%%H%%M%%S).log 2>&1 || true'
+# TTYVTDisallocate (above) deallocates tty1 on stop, but that race isn't airtight
+# against a fast restart: labwc drives the VT directly via DRM/KMS, and if fbcon
+# hasn't finished re-initializing text mode before the next reader (getty, or a
+# shell you're sitting in on tty1) writes to it, you get garbled/unreadable
+# leftover graphics-mode noise on screen. Force a full VT100 reset after every
+# stop so tty1 always comes back clean before anything else touches it.
+ExecStopPost=+/usr/bin/sh -c 'TERM=linux /usr/bin/reset > /dev/tty1 2>&1 < /dev/tty1 || true'
 Restart=on-failure
 RestartSec=10
 

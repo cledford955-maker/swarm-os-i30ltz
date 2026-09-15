@@ -17,3 +17,7 @@ flutter-sdk
 *.qcow2
 *.gguf
 .env
+# swarm-secrets.key unseals every API key baked into the ISO's AES-256 blob
+# (see 70-scripts/seal_secrets.sh / swarm-unseal-secrets) — never sync it.
+*.key
+swarm-secrets.key
