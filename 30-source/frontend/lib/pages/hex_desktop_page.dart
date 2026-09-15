@@ -133,6 +133,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     _DesktopSpace(name: 'ORIGIN', agents: _toHexAgents(SwarmAppCategory.origin)),
     _DesktopSpace(name: 'SYSTEM', agents: _toHexAgents(SwarmAppCategory.system)),
     _DesktopSpace(name: 'GAMING & MEDIA', agents: _toHexAgents(SwarmAppCategory.gamingMedia)),
+    _DesktopSpace(name: 'DROID', agents: _toHexAgents(SwarmAppCategory.droid)),
+    _DesktopSpace(name: 'FORGE', agents: _toHexAgents(SwarmAppCategory.forge)),
   ];
 
   // ────────────────────────────────────────────────────────────

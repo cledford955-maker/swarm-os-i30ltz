@@ -218,7 +218,7 @@ All code written and `flutter analyze` clean (0 errors, 0 warnings). Not yet tes
 - [ ] **Settings page: reconfigure garden cipher** without resetting main cipher — add "Garden Cipher" row in settings that lets user change only the garden pattern
 - [ ] **Garden content updater** — cron/service that periodically pulls new strain images into `/opt/swarm_os/garden/` from a local or LAN source (not internet — keep it offline-first)
 
-### Active: Desktop Shell (hex icon grid / app launcher under labwc)
+### Active: Desktop Shell (hex icon grid / app launcher under labwc) — icon fixes 2026-09-15
 - [x] **Hex wallpaper** — Flutter shell now uses `swarm_wasp_nest_v5.jpg` as the full-screen wasp-nest background (swarm_shell.dart)
 - [x] **Infinite circular desktop** — `HexDesktopPage` (`lib/pages/hex_desktop_page.dart`): multiple swipeable desktop spaces (ORIGIN → SYSTEM → GAMING & MEDIA → … → FULL CIRCLE ↩ ORIGIN). PageView with loop sentinel at end that auto-returns to page 0. ⭐ ORIGIN badge (gold), SPACE N badge (cyan), loop icon. + button adds blank spaces. Long-press × removes non-origin spaces. Bottom ring indicator (gold origin dot, cyan active dot, loop icon). Fully persistent via `shared_preferences` — space count, names, last active page all survive restart. Icon tiles are nearly transparent so wasp-nest wallpaper shows through.
 - [x] **App launcher** — `HexAgent.execCommand` → `SystemLauncher.launch()` (native process); `HexAgent.routePath` → go_router navigation; floating Flutter window fallback for terminal/monitor
@@ -226,6 +226,10 @@ All code written and `flutter analyze` clean (0 errors, 0 warnings). Not yet tes
 - [x] **`HexAgent` extended** — added `execCommand` (native process) and `routePath` (router nav) fields
 - [x] **`HexGrid` extended** — added `showSlotBackgrounds` param (default true, false for wallpaper-overlay desktop mode)
 - [x] labwc autostart already had Flutter shell — no change needed
+- [x] **Fixed: Claude icon now launches chromium first** — `claudeDesktopCmd` had `google-chrome-stable` before `chromium` but only chromium is installed; reordered so chromium is the first browser fallback (`30-source/frontend/lib/services/system_launcher.dart`)
+- [x] **Fixed: Browser icon now appears in ORIGIN space** — browser was system-only; added `SwarmAppCategory.origin` so it shows on the first page without scrolling (`30-source/frontend/lib/models/swarm_apps.dart`)
+- [x] **Fixed: DROID and FORGE spaces now appear by default** — these two categories had apps registered but were never added to `_buildInitialSpaces()`; added both so their icons (Waydroid, scrcpy, Docker, etc.) are visible (`30-source/frontend/lib/pages/hex_desktop_page.dart`)
+- [x] Flutter bundle rebuilt and staged to `airootfs/opt/swarm_os/swarm_flutter/` (2026-09-15)
 - [ ] **Test on real hardware** — verify icons over wallpaper, drag-snap, native app launch, scrolling
 - [ ] Waybar taskbar — labwc has no panel; add `waybar` to packages.x86_64 + config for window switcher strip
 - [ ] App definitions file — hardcoded in `HexDesktopPage`; make editable from settings

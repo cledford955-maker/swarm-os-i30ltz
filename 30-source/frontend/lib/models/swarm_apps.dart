@@ -83,7 +83,7 @@ class SwarmAppRegistry {
       description: 'High-performance GPU-accelerated shell',
       execCommand: SystemLauncher.terminalCmd, isFavorite: true),
     SwarmApp(id: 'browser', name: 'Browser', icon: Icons.public,
-      color: Color(0xFF4FC3F7), categories: {SwarmAppCategory.system},
+      color: Color(0xFF4FC3F7), categories: {SwarmAppCategory.origin, SwarmAppCategory.system},
       execCommand: SystemLauncher.browserCmd),
     SwarmApp(id: 'files', name: 'Files', icon: Icons.folder,
       color: Color(0xFFA1887F), categories: {SwarmAppCategory.system},
