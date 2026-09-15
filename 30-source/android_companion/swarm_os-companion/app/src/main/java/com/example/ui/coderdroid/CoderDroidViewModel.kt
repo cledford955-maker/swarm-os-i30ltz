@@ -20,7 +20,9 @@ data class CoderDroidState(
     val terminalVisible: Boolean = false,
     val gitPanelVisible: Boolean = false,
     val gitState: CdrGitState = CdrGitState(),
-    val gitHasCredentials: Boolean = false
+    val gitHasCredentials: Boolean = false,
+    val cloneInProgress: Boolean = false,
+    val cloneError: String? = null
 )
 
 sealed class CoderDroidEvent {
@@ -41,6 +43,8 @@ sealed class CoderDroidEvent {
     object Push : CoderDroidEvent()
     object Pull : CoderDroidEvent()
     data class SetGitCredentials(val username: String, val token: String) : CoderDroidEvent()
+    data class CloneRepo(val url: String) : CoderDroidEvent()
+    object DismissCloneError : CoderDroidEvent()
 }
 
 class CoderDroidViewModel(application: Application) : AndroidViewModel(application) {
@@ -73,6 +77,8 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
             CoderDroidEvent.Push                -> push()
             CoderDroidEvent.Pull                -> pull()
             is CoderDroidEvent.SetGitCredentials -> setGitCredentials(event.username, event.token)
+            is CoderDroidEvent.CloneRepo        -> cloneRepo(event.url)
+            CoderDroidEvent.DismissCloneError   -> _state.update { it.copy(cloneError = null) }
         }
     }
 
@@ -173,6 +179,37 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun pull() = withGitCredentials { root, username, token ->
         CdrGitService.pull(root, username, token)
+    }
+
+    /**
+     * Clones [url] into app-private storage (files/projects/<repo-name>) and, on
+     * success, opens it as the workspace — this is CoderDroid's "download a
+     * folder from git" entry point, separate from the SAF folder picker which
+     * only opens what's already on the phone (e.g. via Syncthing).
+     */
+    private fun cloneRepo(url: String) {
+        val trimmed = url.trim()
+        if (trimmed.isBlank()) return
+        val repoName = trimmed
+            .trimEnd('/')
+            .substringAfterLast('/')
+            .removeSuffix(".git")
+            .ifBlank { "repo" }
+        val dest = File(getApplication<Application>().filesDir, "projects/$repoName")
+
+        _state.update { it.copy(cloneInProgress = true, cloneError = null) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = CdrGitService.clone(dest, trimmed, gitCredentials.username, gitCredentials.token)
+            result.fold(
+                onSuccess = { openedRoot ->
+                    _state.update { it.copy(cloneInProgress = false) }
+                    openWorkspace(openedRoot)
+                },
+                onFailure = { err ->
+                    _state.update { it.copy(cloneInProgress = false, cloneError = err.message ?: "clone failed") }
+                }
+            )
+        }
     }
 
     private fun setGitCredentials(username: String, token: String) {

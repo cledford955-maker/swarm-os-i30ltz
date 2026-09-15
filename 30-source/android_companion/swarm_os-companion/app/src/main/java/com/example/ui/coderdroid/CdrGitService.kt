@@ -74,6 +74,25 @@ object CdrGitService {
             .call()
     }
 
+    /** Clones [url] into [dest] (must not already exist). Returns [dest] on success. */
+    fun clone(dest: File, url: String, username: String, token: String): Result<File> =
+        try {
+            if (dest.exists() && dest.listFiles()?.isNotEmpty() == true) {
+                Result.failure(IllegalStateException("Destination already exists and isn't empty: ${dest.name}"))
+            } else {
+                dest.parentFile?.mkdirs()
+                val cmd = Git.cloneRepository().setURI(url).setDirectory(dest)
+                if (token.isNotBlank()) {
+                    cmd.setCredentialsProvider(UsernamePasswordCredentialsProvider(username.ifBlank { token }, token))
+                }
+                cmd.call().close()
+                Result.success(dest)
+            }
+        } catch (e: Exception) {
+            dest.deleteRecursively()
+            Result.failure(e)
+        }
+
     fun push(root: File, username: String, token: String): Result<Unit> = runGit(root) { git ->
         git.push()
             .setCredentialsProvider(UsernamePasswordCredentialsProvider(username.ifBlank { token }, token))
