@@ -249,13 +249,25 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
           itemBuilder: (ctx, index) {
             final realIndex = index % _spaces.length;
             final isWrap = index > 0 && realIndex == 0;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isWrap) _buildLoopDivider(),
-                _buildSpaceSection(realIndex),
-                const SizedBox(height: 28),
-              ],
+            // A space with only a few icons is naturally short, so with few
+            // spaces the endless loop was wrapping back to ORIGIN within a
+            // single screen — "ORIGIN" repeating ~10x stacked on top of
+            // itself instead of reading as one page per scroll. Force each
+            // space to occupy at least one full viewport so scrolling always
+            // moves meaningfully to the next space rather than looping in
+            // place.
+            final minHeight = MediaQuery.of(ctx).size.height -
+                (isWrap ? 96 : 0); // divider eats a bit of the next one's slack
+            return ConstrainedBox(
+              constraints: BoxConstraints(minHeight: minHeight),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isWrap) _buildLoopDivider(),
+                  _buildSpaceSection(realIndex),
+                  const SizedBox(height: 28),
+                ],
+              ),
             );
           },
         ),
