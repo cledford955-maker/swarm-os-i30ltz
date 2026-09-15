@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/launch_status.dart';
 
 /// Represents a single floating window in the SWARM OS environment.
 class AppWindow {
@@ -48,9 +49,10 @@ class WindowManager extends StateNotifier<List<AppWindow>> {
   WindowManager() : super([]);
 
   void openWindow(AppWindow window) {
+    LaunchStatusRegistry.setRunning(window.id);
     // Unfocus all other windows
     final updated = state.map((w) => w.copyWith(isFocused: false)).toList();
-    
+
     // Check if window already exists
     final existingIndex = updated.indexWhere((w) => w.id == window.id);
     if (existingIndex >= 0) {
@@ -70,6 +72,7 @@ class WindowManager extends StateNotifier<List<AppWindow>> {
   }
 
   void closeWindow(String id) {
+    LaunchStatusRegistry.setClosed(id);
     final updated = state.where((w) => w.id != id).toList();
     if (updated.isNotEmpty && state.firstWhere((w) => w.id == id).isFocused) {
       // Focus the new top window if the closed one was focused

@@ -307,3 +307,12 @@ _Appended by `sync_lucille_ai.sh` on each run._
 | Size | 2801864 bytes |
 | sdb8 (/mnt/boltz) | ✓ synced |
 | sda4 (lucy-master) | not mounted / LUKS locked |
+
+### Sync — 2026-09-15 04:34:02
+| Field | Value |
+|---|---|
+| Binary | `/mnt/Lucy/30-source/i30ltz-recovery/target/release/i30ltz-recovery` |
+| SHA256 | `cc8e005f6fc565570873224170c4a5f4878519cd3a97feb57ec0dd1b6740f089` |
+| Size | 2801864 bytes |
+| sdb8 (/mnt/boltz) | ✓ synced |
+| sda4 (lucy-master) | not mounted / LUKS locked |

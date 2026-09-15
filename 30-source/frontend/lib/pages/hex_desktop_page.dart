@@ -198,7 +198,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         return;
     }
     if (agent.execCommand != null) {
-      SystemLauncher.launch(context, agent.execCommand!, displayName: agent.name);
+      SystemLauncher.launch(context, agent.execCommand!, displayName: agent.name, agentId: agent.id);
       return;
     }
     if (agent.routePath != null) {

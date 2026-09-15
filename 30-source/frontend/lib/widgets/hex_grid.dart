@@ -6,6 +6,7 @@
 
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../services/launch_status.dart';
 
 // ─── Hex Slot: a position in the grid ───
 class HexSlot {
@@ -440,29 +441,59 @@ class _HexTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: pulseAnimation,
-      builder: (_, __) {
-        final pulse = pulseAnimation.value;
+    return ValueListenableBuilder<LaunchAuraState>(
+      valueListenable: LaunchStatusRegistry.notifierFor(agent.id),
+      builder: (_, auraState, __) {
+        return AnimatedBuilder(
+          animation: pulseAnimation,
+          builder: (_, __) {
+            final pulse = pulseAnimation.value;
 
-        return SizedBox(
-          width: width,
-          height: height,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Hex shape
-              CustomPaint(
-                size: Size(width, height),
-                painter: _HexPainter(
-                  fillColor: agent.bgColor.withValues(alpha: dragging ? 0.95 : 0.85),
-                  strokeColor: agent.color.withValues(
-                    alpha: (dragging ? 0.8 : 0.3 + pulse * 0.1) * (agent.mock ? 0.5 : 1.0)),
-                  strokeWidth: dragging ? 2.5 : 1.5,
-                  glow: dragging,
-                  glowColor: agent.color,
-                ),
-              ),
+            Color? auraColor;
+            double auraAlpha = 0;
+            if (auraState == LaunchAuraState.loading) {
+              auraColor = const Color(0xFF00FF88);
+              auraAlpha = 0.25 + pulse * 0.55;
+            } else if (auraState == LaunchAuraState.running) {
+              auraColor = const Color(0xFF00FF88);
+              auraAlpha = 0.65;
+            } else if (auraState == LaunchAuraState.closed) {
+              auraColor = const Color(0xFFFF3333);
+              auraAlpha = 0.7;
+            }
+
+            return SizedBox(
+              width: width,
+              height: height,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Status aura glow (behind hex shape)
+                  if (auraColor != null)
+                    CustomPaint(
+                      size: Size(width, height),
+                      painter: _HexPainter(
+                        fillColor: Colors.transparent,
+                        strokeColor: auraColor.withValues(alpha: auraAlpha),
+                        strokeWidth: 3.0,
+                        glow: true,
+                        glowColor: auraColor,
+                        glowAlpha: auraAlpha * 0.5,
+                        glowRadius: 18,
+                      ),
+                    ),
+                  // Hex shape
+                  CustomPaint(
+                    size: Size(width, height),
+                    painter: _HexPainter(
+                      fillColor: agent.bgColor.withValues(alpha: dragging ? 0.95 : 0.85),
+                      strokeColor: agent.color.withValues(
+                        alpha: (dragging ? 0.8 : 0.3 + pulse * 0.1) * (agent.mock ? 0.5 : 1.0)),
+                      strokeWidth: dragging ? 2.5 : 1.5,
+                      glow: dragging,
+                      glowColor: agent.color,
+                    ),
+                  ),
               // Content
               Column(
                 mainAxisSize: MainAxisSize.min,
@@ -528,6 +559,8 @@ class _HexTile extends StatelessWidget {
         );
       },
     );
+  },
+  );
   }
 }
 
@@ -541,6 +574,8 @@ class _HexPainter extends CustomPainter {
   final double strokeWidth;
   final bool glow;
   final Color? glowColor;
+  final double glowAlpha;
+  final double glowRadius;
 
   _HexPainter({
     required this.fillColor,
@@ -548,6 +583,8 @@ class _HexPainter extends CustomPainter {
     this.strokeWidth = 1.0,
     this.glow = false,
     this.glowColor,
+    this.glowAlpha = 0.15,
+    this.glowRadius = 12,
   });
 
   @override
@@ -557,8 +594,8 @@ class _HexPainter extends CustomPainter {
     // Glow
     if (glow) {
       final glowPaint = Paint()
-        ..color = (glowColor ?? strokeColor).withValues(alpha: 0.15)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+        ..color = (glowColor ?? strokeColor).withValues(alpha: glowAlpha)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowRadius);
       canvas.drawPath(path, glowPaint);
     }
 
@@ -600,5 +637,6 @@ class _HexPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _HexPainter old) =>
       fillColor != old.fillColor || strokeColor != old.strokeColor ||
-      strokeWidth != old.strokeWidth || glow != old.glow;
+      strokeWidth != old.strokeWidth || glow != old.glow ||
+      glowAlpha != old.glowAlpha || glowRadius != old.glowRadius;
 }

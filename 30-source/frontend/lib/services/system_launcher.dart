@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/swarm_colors.dart';
+import 'launch_status.dart';
 
 /// Direct Native Process Launcher for Swarm OS
 ///
@@ -16,7 +17,10 @@ class SystemLauncher {
   // while a real GUI app is still running at this point.
   static const _verifyWindow = Duration(milliseconds: 900);
 
-  static Future<bool> launch(BuildContext? context, String command, {String? displayName}) async {
+  static Future<bool> launch(BuildContext? context, String command,
+      {String? displayName, String? agentId}) async {
+    if (agentId != null) LaunchStatusRegistry.setLoading(agentId);
+
     // Detached mode discards the child's stdio, so we can't read its exit
     // status directly. Route it through a status file instead — this is
     // what lets us tell a real launch apart from every fallback silently
@@ -40,6 +44,14 @@ class SystemLauncher {
         unawaited(file.delete().catchError((_) => file));
       }
       final failed = exitCode != null && exitCode != 0;
+
+      if (agentId != null) {
+        if (failed) {
+          LaunchStatusRegistry.setClosed(agentId);
+        } else {
+          LaunchStatusRegistry.setRunning(agentId);
+        }
+      }
 
       if (context != null && context.mounted) {
         if (failed) {
@@ -74,6 +86,7 @@ class SystemLauncher {
       }
       return !failed;
     } catch (e) {
+      if (agentId != null) LaunchStatusRegistry.setClosed(agentId);
       if (context != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
