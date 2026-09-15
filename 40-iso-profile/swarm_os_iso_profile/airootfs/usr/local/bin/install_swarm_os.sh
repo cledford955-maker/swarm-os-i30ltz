@@ -24,10 +24,24 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$DISK" ]; then
-  # Find non-removable physical disks, pick the largest
-  DISK=$(lsblk -dpno NAME,TYPE,RM,SIZE --bytes \
-    | awk '$2=="disk" && $3=="0" {print $4, $1}' \
-    | sort -rn | head -1 | awk '{print $2}')
+  # Find non-removable physical disks, excluding any that already contain a
+  # LUKS-encrypted partition (an encrypted archive/reference drive — e.g. this
+  # project's read-only `lucy-master` mirror — is never the intended
+  # wipe-and-reinstall target), then pick the largest of what's left.
+  #
+  # This matters concretely on this project's hardware: /dev/sda and /dev/sdb
+  # swap identities between boots, and whichever one currently holds
+  # `lucy-master` is also frequently the largest disk in the machine —
+  # "largest disk" alone would target it instead of the real OS disk.
+  LUKS_DISKS=$(lsblk -rno PKNAME,FSTYPE | awk '$2=="crypto_LUKS"{print $1}' | sort -u)
+  DISK=""
+  while read -r _SIZE NAME; do
+    BASENAME=$(basename "$NAME")
+    if ! grep -qx "$BASENAME" <<<"$LUKS_DISKS"; then
+      DISK="$NAME"
+      break
+    fi
+  done < <(lsblk -dpno NAME,TYPE,RM,SIZE --bytes | awk '$2=="disk" && $3=="0" {print $4, $1}' | sort -rn)
   if [ -z "$DISK" ]; then
     echo -e "${RED}ERROR: Could not auto-detect a target disk.${NC}"
     echo "Pass one explicitly:  sudo $0 --disk /dev/nvme0n1"
@@ -36,8 +50,10 @@ if [ -z "$DISK" ]; then
   echo -e "\n${CYN}Detected target disk: ${YLW}${DISK}${NC}"
   lsblk "$DISK"
   echo -e "\n${RED}WARNING: ALL DATA ON ${DISK} WILL BE ERASED.${NC}"
-  read -r -p "Type YES to continue: " CONFIRM
-  [[ "$CONFIRM" == "YES" ]] || { echo "Aborted."; exit 1; }
+  # Require the operator to type the exact disk path, not just "YES" — forces
+  # a moment of actually reading which device this is about to erase.
+  read -r -p "Type the disk path exactly (${DISK}) to continue: " CONFIRM
+  [[ "$CONFIRM" == "$DISK" ]] || { echo "Aborted."; exit 1; }
 fi
 
 # Derive EFI and root partitions (handles NVMe p1/p2 vs SATA 1/2)
@@ -127,6 +143,10 @@ if [ ! -f "$PROFILE_PACKAGES" ]; then
   echo "Expected: /usr/local/share/swarm-os/packages.x86_64"
   exit 1
 fi
+PROFILE_ROOT="$SCRIPT_DIR/swarm_os_iso_profile"
+if [ ! -d "$PROFILE_ROOT/airootfs" ]; then
+  PROFILE_ROOT="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile"
+fi
 PROFILE_PACMAN_CONF="/usr/local/share/swarm-os/pacman.conf"
 if [ ! -f "$PROFILE_PACMAN_CONF" ]; then
   PROFILE_PACMAN_CONF="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile/pacman.conf"
@@ -185,18 +205,28 @@ fi
 info "fstab written"
 
 banner "Copying custom airootfs files..."
-if [ -d "$SCRIPT_DIR/swarm_os_iso_profile/airootfs/" ]; then
+if [ -d "$PROFILE_ROOT/airootfs/" ]; then
     # Backup base system auth files before copying airootfs
     cp -a "$MOUNT_POINT/etc/passwd" "$MOUNT_POINT/etc/passwd.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/group" "$MOUNT_POINT/etc/group.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/shadow" "$MOUNT_POINT/etc/shadow.sys" 2>/dev/null || true
+    # The airootfs ships its own static fstab/crypttab for the live boot
+    # environment (no root/home subvol entries — those are mounted by the
+    # live boot process). Back up the genfstab-generated fstab (with the
+    # real @home mount and our custom drive entries) and crypttab (with the
+    # Slick LUKS entry) so the airootfs copy below doesn't silently stomp them.
+    cp -a "$MOUNT_POINT/etc/fstab" "$MOUNT_POINT/etc/fstab.sys" 2>/dev/null || true
+    cp -a "$MOUNT_POINT/etc/crypttab" "$MOUNT_POINT/etc/crypttab.sys" 2>/dev/null || true
 
-    cp -a "$SCRIPT_DIR/swarm_os_iso_profile/airootfs/"* "$MOUNT_POINT/"
+    cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
 
     # Restore pristine system auth files (so users and render groups exist)
     [ -f "$MOUNT_POINT/etc/passwd.sys" ] && mv "$MOUNT_POINT/etc/passwd.sys" "$MOUNT_POINT/etc/passwd"
     [ -f "$MOUNT_POINT/etc/group.sys" ] && mv "$MOUNT_POINT/etc/group.sys" "$MOUNT_POINT/etc/group"
     [ -f "$MOUNT_POINT/etc/shadow.sys" ] && mv "$MOUNT_POINT/etc/shadow.sys" "$MOUNT_POINT/etc/shadow"
+    # Restore the real fstab/crypttab (root/home subvol mounts + custom drives)
+    [ -f "$MOUNT_POINT/etc/fstab.sys" ] && mv "$MOUNT_POINT/etc/fstab.sys" "$MOUNT_POINT/etc/fstab"
+    [ -f "$MOUNT_POINT/etc/crypttab.sys" ] && mv "$MOUNT_POINT/etc/crypttab.sys" "$MOUNT_POINT/etc/crypttab"
     info "airootfs files copied"
 fi
 
@@ -246,6 +276,28 @@ fi
 ROOT_UUID=$(blkid -s UUID -o value "$TARGET_ROOT")
 info "Root UUID: $ROOT_UUID"
 
+# Leave a durable, non-secret record on the installed root so recovery tools
+# can identify exactly which SWARM OS build was installed on this partition.
+BUILD_RELEASE_FILE="$MOUNT_POINT/etc/swarm-release"
+BUILD_VERSION=$(sed -n 's/^SWARM_VERSION=//p' "$BUILD_RELEASE_FILE" 2>/dev/null | head -n1 || true)
+BUILD_COMMIT=$(sed -n 's/^SWARM_COMMIT=//p' "$BUILD_RELEASE_FILE" 2>/dev/null | head -n1 || true)
+BUILD_DATE=$(sed -n 's/^SWARM_DATE=//p' "$BUILD_RELEASE_FILE" 2>/dev/null | head -n1 || true)
+BUILD_VERSION=${BUILD_VERSION:-unknown}
+BUILD_COMMIT=${BUILD_COMMIT:-unknown}
+BUILD_DATE=${BUILD_DATE:-unknown}
+cat > "$MOUNT_POINT/etc/swarm-build-info" <<BUILDINFO
+# SWARM OS installed-build record. No secrets are stored here.
+SWARM_VERSION=$BUILD_VERSION
+SWARM_COMMIT=$BUILD_COMMIT
+SWARM_BUILD_DATE=$BUILD_DATE
+INSTALL_DATE=$(date -Is)
+INSTALL_TARGET_DISK=$DISK
+INSTALL_TARGET_ROOT=$TARGET_ROOT
+INSTALL_ROOT_UUID=$ROOT_UUID
+BUILDINFO
+chmod 0644 "$MOUNT_POINT/etc/swarm-build-info"
+info "Installed build record written to /etc/swarm-build-info"
+
 # Capture existing password hash for i30ltz from host if available
 HOST_PW_HASH=$(grep '^i30ltz:' /etc/shadow 2>/dev/null | cut -d: -f2 || true)
 
@@ -268,13 +320,15 @@ mkinitcpio -P
 # Setup user i30ltz with video, render, and wheel groups
 useradd -m -G wheel,video,render,users -s /bin/bash i30ltz 2>/dev/null || usermod -a -G wheel,video,render,users i30ltz
 
-# Set command execution password (used for sudo and terminal commands, NOT for graphical login)
+# Set command execution password (used for sudo and terminal commands, NOT for graphical login).
+# Interactive password entry can't happen in here: this whole block is fed to
+# arch-chroot's bash over a heredoc, so passwd's prompt would read leftover
+# heredoc text instead of the terminal. When no usable host hash exists, we
+# leave the account unset here and prompt for a real password after this
+# heredoc closes (see below), where stdin is the actual terminal again.
 if [ -n "$HOST_PW_HASH" ] && [ "$HOST_PW_HASH" != "!" ] && [ "$HOST_PW_HASH" != "*" ]; then
     usermod -p "$HOST_PW_HASH" i30ltz
     echo "✓ Preserved user password for running commands from host"
-else
-    echo "Please set a password for user 'i30ltz' (to use for sudo and running commands):"
-    passwd i30ltz
 fi
 
 # Standard sudo requires password for running commands
@@ -284,15 +338,33 @@ rm -f /etc/sudoers.d/01-wheel-nopasswd
 # Configure swarm-ui kiosk to auto-login as user i30ltz
 if [ -f /etc/systemd/system/swarm-ui.service ]; then
     sed -i 's/^User=.*/User=i30ltz/' /etc/systemd/system/swarm-ui.service
+    sed -i 's/^Group=.*/Group=i30ltz/' /etc/systemd/system/swarm-ui.service
     sed -i 's|^WorkingDirectory=.*|WorkingDirectory=/home/i30ltz|' /etc/systemd/system/swarm-ui.service
     sed -i 's|swarm:swarm|i30ltz:i30ltz|g' /etc/systemd/system/swarm-ui.service
 fi
 
-# BUG FIX: gaming-agent.service and lucy-server.service are baked with
-# User=swarm (the live-ISO user), but this installer never creates a "swarm"
-# system user — only i30ltz. Left unpatched, both backend daemons fail to
-# start on every installed (non-live) system. Same treatment as swarm-ui.service.
-for svc in gaming-agent.service lucy-server.service; do
+# BUG FIX: swarm-ui.service now runs as i30ltz, but labwc's config (the
+# autostart script that actually launches the Flutter shell + Lucille panel,
+# plus rc.xml's floating-window rules) only exists at /home/swarm/.config/labwc
+# — baked there by the airootfs skeleton for the live-ISO "swarm" user. Left
+# uncopied, labwc starts (it needs no config to start) but runs its autostart
+# script from nowhere, so no client windows ever launch: a black screen with
+# just the compositor's cursor, on every installed system. Copy the whole
+# labwc config dir into i30ltz's home and fix ownership.
+if [ -d /home/swarm/.config/labwc ]; then
+    mkdir -p /home/i30ltz/.config
+    cp -a /home/swarm/.config/labwc /home/i30ltz/.config/
+    chown -R i30ltz:i30ltz /home/i30ltz/.config/labwc
+fi
+
+# BUG FIX: gaming-agent.service, lucy-server.service, and google-workspace.
+# service are all baked with User=swarm (the live-ISO user), but this
+# installer never creates a "swarm" system user — only i30ltz. Left
+# unpatched, all three backend daemons fail to start on every installed
+# (non-live) system. Same treatment as swarm-ui.service.
+# (google-workspace.service was missed in the original fix for this same
+# bug on the other two services — found+added 2026-09-13.)
+for svc in gaming-agent.service lucy-server.service google-workspace.service; do
     if [ -f "/etc/systemd/system/$svc" ]; then
         sed -i 's/^User=swarm$/User=i30ltz/' "/etc/systemd/system/$svc"
         sed -i 's|swarm:swarm|i30ltz:i30ltz|g' "/etc/systemd/system/$svc"
@@ -442,6 +514,14 @@ if ! grep -q '^SWARM_AUTH_TOKEN=' /etc/swarm_os.env 2>/dev/null; then
     echo "Generated unique SWARM_AUTH_TOKEN for this install"
 fi
 EOF
+
+# If no usable host password hash was preserved above, set one now. This runs
+# as a normal foreground command (not through the heredoc above) so passwd's
+# prompts reach the real terminal instead of leftover heredoc input.
+if [ -z "$HOST_PW_HASH" ] || [ "$HOST_PW_HASH" = "!" ] || [ "$HOST_PW_HASH" = "*" ]; then
+    echo "Please set a password for user 'i30ltz' (used for sudo and terminal commands):"
+    arch-chroot "$MOUNT_POINT" passwd i30ltz
+fi
 
 banner "Cleaning up..."
 sync

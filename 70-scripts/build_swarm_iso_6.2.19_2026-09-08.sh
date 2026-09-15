@@ -161,7 +161,14 @@ echo -e "  ${GREEN}✓ LucyServer (Go) compiled.${NC}"
 echo -e "\n  Compiling Google Workspace Service (.NET)..."
 rm -rf "$WORK_DIR/google-workspace-publish"
 mkdir -p "$WORK_DIR/google-workspace-publish"
-(cd "$GOOGLE_WORKSPACE_DIR" && dotnet publish -c Release -o "$WORK_DIR/google-workspace-publish" --self-contained false)
+# -r linux-x64: without a runtime identifier, a framework-dependent publish
+# stays RID-agnostic and bundles every platform's native assets from NuGet
+# packages that ship them (found 2026-09-13: SQLitePCLRaw.provider.e_sqlite3
+# alone dragged in linux-arm64/riscv64/armel/arm/musl-*/win-*/osx-* copies of
+# libe_sqlite3.so). The ISO only ever runs this on x86_64 Arch Linux with
+# dotnet-runtime-10.0 installed, so scope the publish to that one platform —
+# this is still framework-dependent (--self-contained false), just RID-pinned.
+(cd "$GOOGLE_WORKSPACE_DIR" && dotnet publish -c Release -r linux-x64 -o "$WORK_DIR/google-workspace-publish" --self-contained false)
 echo -e "  ${GREEN}✓ Google Workspace Service published.${NC}"
 
 # -----------------------------------------------------------------------------
@@ -288,10 +295,17 @@ if [ -f "$AIROOTFS/etc/swarm_os.env" ]; then
     echo -e "${RED}✗ Plaintext $AIROOTFS/etc/swarm_os.env exists. Refusing to build.${NC}"
     exit 1
 fi
-if grep -rlE 'sk-ant-|sk-or-v1-|nvapi-|gsk_[A-Za-z0-9]{20}|AIza[0-9A-Za-z_-]{35}' \
+# Note: sk-ant-/sk-or-v1-/nvapi- require real key-shaped content after the
+# prefix (matching how gsk_/AIza already worked) so UI placeholder/masked-key
+# display strings (e.g. 'sk-or-v1-...' hint text, 'sk-or-v1-••••…' masked
+# display in the Flutter settings UI) don't false-positive this gate — found
+# 2026-09-13 when a real build tripped on exactly those two strings baked
+# into libapp.so, neither of which is an actual credential.
+SECRET_PATTERN='sk-ant-[A-Za-z0-9_-]{20,}|sk-or-v1-[A-Za-z0-9]{20,}|nvapi-[A-Za-z0-9-]{20,}|gsk_[A-Za-z0-9]{20}|AIza[0-9A-Za-z_-]{35}'
+if grep -rlE "$SECRET_PATTERN" \
         "$AIROOTFS/etc" "$AIROOTFS/opt/swarm_os" 2>/dev/null | grep -v '\.gpg$' | head -5 | grep -q .; then
     echo -e "${RED}✗ Cleartext API keys found under airootfs. Refusing to build:${NC}"
-    grep -rlE 'sk-ant-|sk-or-v1-|nvapi-|gsk_[A-Za-z0-9]{20}|AIza[0-9A-Za-z_-]{35}' \
+    grep -rlE "$SECRET_PATTERN" \
         "$AIROOTFS/etc" "$AIROOTFS/opt/swarm_os" 2>/dev/null | grep -v '\.gpg$' | sed 's/^/    /'
     exit 1
 fi
@@ -335,6 +349,14 @@ echo "  Output Directory: $OUT_DIR"
 sudo rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 
+# mkarchiso (below) leaves $WORK_DIR root/nobody-owned. Step 3 of the *next*
+# run (dotnet publish for Google Workspace, unprivileged) writes into this
+# same WORK_DIR before this script ever reaches the rm -rf above, so a
+# leftover root-owned tree from this run breaks the next run's mkdir with
+# "Permission denied" (found 2026-09-14). Hand the tree back to the invoking
+# user on ANY exit from here on — including a failed/interrupted mkarchiso —
+# so the next run always starts clean.
+trap 'sudo chown -R "$(id -u):$(id -g)" "$WORK_DIR" 2>/dev/null || true' EXIT
 
 # Bake build identity into installed system
 printf 'SWARM_VERSION=%s\nSWARM_COMMIT=%s\nSWARM_DATE=%s\n' "$NEW_VER" "$COMMIT" "$(date +%Y%m%d)" > "$AIROOTFS/etc/swarm-release"
@@ -342,33 +364,40 @@ printf 'SWARM_VERSION=%s\nSWARM_COMMIT=%s\nSWARM_DATE=%s\n' "$NEW_VER" "$COMMIT"
 sudo SYSTEMD_LOG_LEVEL=err mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
 
 # -----------------------------------------------------------------------------
-# Step 6: Finalize Artifacts and Distribute to Desktop
+# Step 6: Finalize Artifacts  (b2 — 2026-09-13 v1.0.0)
+#
+# Previously this step left FIVE full copies of every ISO behind (mkarchiso's
+# raw output + v${VER}.iso + v6.2.iso + two Desktop copies), none of which
+# were ever cleaned up — 10-releases/ grew by ~17GB per build. One artifact
+# per build now: mkarchiso's raw output is renamed (not copied) into place,
+# "latest" is a symlink, and the Desktop gets a symlink instead of a copy.
+# See 70-scripts/build_swarm_iso_v6.2.19_2026-09-07.sh, which already fixed
+# this same regression once before ("One artifact per build (mv, not cp)").
 # -----------------------------------------------------------------------------
 echo -e "\n${CYAN}[6/8] Finalizing ISO releases...${NC}"
-LATEST_ISO=$(ls -t "$OUT_DIR"/swarm-os-v${NEW_VER}*.iso 2>/dev/null | head -n 1)
+BUILT_ISO=$(ls -t "$OUT_DIR"/swarm-os-v${NEW_VER}*.iso 2>/dev/null | head -n 1)
 
-if [ -z "$LATEST_ISO" ]; then
-    LATEST_ISO=$(ls -t "$OUT_DIR"/swarm-os-*.iso 2>/dev/null | head -n 1)
+if [ -z "$BUILT_ISO" ]; then
+    BUILT_ISO=$(ls -t "$OUT_DIR"/swarm-os-*.iso 2>/dev/null | head -n 1)
 fi
 
-if [ -n "$LATEST_ISO" ]; then
+if [ -n "$BUILT_ISO" ]; then
     TARGET_ISO="$OUT_DIR/swarm-os-v${NEW_VER}.iso"
-    cp -f "$LATEST_ISO" "$TARGET_ISO"
-    cp -f "$LATEST_ISO" "$OUT_DIR/swarm-os-v6.2.iso"
+    [ "$BUILT_ISO" = "$TARGET_ISO" ] || mv -f "$BUILT_ISO" "$TARGET_ISO"
     # Use a symlink so latest always resolves to the real file by name
     ln -sf "swarm-os-v${NEW_VER}.iso" "$OUT_DIR/swarm-os-latest.iso"
-    
-    # Copy directly to user Desktop
-    cp -f "$LATEST_ISO" "/home/i30ltz/Desktop/swarm-os-v${NEW_VER}.iso" 2>/dev/null || true
-    cp -f "$LATEST_ISO" "/home/i30ltz/Desktop/swarm-os-latest.iso" 2>/dev/null || true
-    
+
+    # Desktop gets a symlink, not a second multi-GB copy
+    ln -sf "$TARGET_ISO" "/home/i30ltz/Desktop/swarm-os-v${NEW_VER}.iso" 2>/dev/null || true
+    ln -sf "$TARGET_ISO" "/home/i30ltz/Desktop/swarm-os-latest.iso" 2>/dev/null || true
+
     ISO_SIZE=$(ls -lh "$TARGET_ISO" | awk '{print $5}')
-    
+
     echo -e "\n${CYAN}${BOLD}======================================================================${NC}"
     echo -e "${GREEN}${BOLD}  🎉 SUCCESS: SWARM OS v${NEW_VER} ISO BUILT SUCCESSFULLY!${NC}"
     echo -e "${CYAN}${BOLD}======================================================================${NC}"
     echo -e "  📦 Workspace ISO: ${BOLD}$TARGET_ISO${NC} ($ISO_SIZE)"
-    echo -e "  📦 Desktop Copy:   ${BOLD}/home/i30ltz/Desktop/swarm-os-v${NEW_VER}.iso${NC}"
+    echo -e "  📦 Desktop Link:   ${BOLD}/home/i30ltz/Desktop/swarm-os-v${NEW_VER}.iso${NC} -> workspace ISO"
     echo -e "  📦 Latest Pointer: ${BOLD}/home/i30ltz/Desktop/swarm-os-latest.iso${NC}"
     echo -e "\n${YELLOW}${BOLD}⚡ To boot with Ventoy:${NC}"
     echo -e "  ${BOLD}Copy /home/i30ltz/Desktop/swarm-os-v${NEW_VER}.iso to the Ventoy data partition.${NC}"
@@ -405,6 +434,73 @@ if [ -n "$LATEST_ISO" ]; then
             fi
             exit 1
         fi
+    fi
+
+    # -------------------------------------------------------------------------
+    # Step 8/8: Archive superseded releases, then age them out  (b2 — 2026-09-13 v1.0.0)
+    #
+    # Only reached once the new ISO is considered good (gate passed, or
+    # knowingly skipped/missing above) — a failed gate exits before this runs,
+    # so the previous good ISO is never archived out from under a bad build.
+    #
+    # Archive target is /mnt/storage (sda7, plain btrfs — NOT lucy-master,
+    # which stays read-only per project rules). If it isn't mounted, old
+    # releases are left in place rather than deleted, and a clear warning is
+    # printed — mount it yourself with:
+    #   sudo mount /dev/sda7 /mnt/storage
+    #
+    # Retention: always keep the 10 most recently archived ISOs regardless of
+    # age. Beyond those 10 (oldest first), anything that has sat in the
+    # archive for 7+ days since it was moved there (mtime is reset on move,
+    # see `touch` below) is deleted for good. This is checked here rather
+    # than via a systemd timer/cron job because there is no other standing
+    # automation on this box for it to piggyback on, and it keeps the
+    # retention sweep tied to a build you already chose to run.
+    # -------------------------------------------------------------------------
+    ARCHIVE_ROOT="/mnt/storage/swarm-os-iso-archive"
+    OLD_ISOS=()
+    while IFS= read -r -d '' f; do
+        OLD_ISOS+=("$f")
+    done < <(find "$OUT_DIR" -maxdepth 1 -type f -name 'swarm-os-*.iso' ! -name "swarm-os-v${NEW_VER}.iso" -print0 2>/dev/null)
+
+    if mountpoint -q /mnt/storage 2>/dev/null; then
+        mkdir -p "$ARCHIVE_ROOT"
+        if [ "${#OLD_ISOS[@]}" -gt 0 ]; then
+            echo -e "\n${CYAN}[8/8] Archiving superseded releases to $ARCHIVE_ROOT ...${NC}"
+            for f in "${OLD_ISOS[@]}"; do
+                mv -f "$f" "$ARCHIVE_ROOT/$(basename "$f")"
+                touch "$ARCHIVE_ROOT/$(basename "$f")"  # retention clock starts now, not at build time
+                echo -e "  ${GREEN}✓ moved${NC} $(basename "$f")"
+            done
+        fi
+
+        KEEP_COUNT=10
+        ALL_ARCHIVED=()
+        while IFS= read -r f; do
+            ALL_ARCHIVED+=("$f")
+        done < <(find "$ARCHIVE_ROOT" -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | cut -d' ' -f2-)
+
+        EXPIRED=()
+        if [ "${#ALL_ARCHIVED[@]}" -gt "$KEEP_COUNT" ]; then
+            for f in "${ALL_ARCHIVED[@]:$KEEP_COUNT}"; do
+                if find "$f" -maxdepth 0 -mtime +7 2>/dev/null | grep -q .; then
+                    EXPIRED+=("$f")
+                fi
+            done
+        fi
+        if [ "${#EXPIRED[@]}" -gt 0 ]; then
+            echo -e "${YELLOW}  Deleting ${#EXPIRED[@]} archived ISO(s) beyond the newest $KEEP_COUNT and older than 7 days:${NC}"
+            for f in "${EXPIRED[@]}"; do
+                echo -e "    ${RED}✗ deleted${NC} $(basename "$f")"
+                rm -f "$f"
+            done
+        fi
+    elif [ "${#OLD_ISOS[@]}" -gt 0 ]; then
+        echo -e "\n${YELLOW}⚠ [8/8] /mnt/storage is not mounted — ${#OLD_ISOS[@]} superseded ISO(s) left in $OUT_DIR:${NC}"
+        for f in "${OLD_ISOS[@]}"; do
+            echo -e "    $(basename "$f")"
+        done
+        echo -e "${YELLOW}  Mount the archive drive to enable auto-archival: sudo mount /dev/sda7 /mnt/storage${NC}"
     fi
 else
     echo -e "${RED}✗ Error: ISO file was not found in $OUT_DIR after build.${NC}"

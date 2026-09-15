@@ -65,7 +65,7 @@ class SystemLauncher {
   static const String terminalCmd = 'alacritty || foot || xterm || konsole || tilix || xfce4-terminal';
   static const String browserCmd = '$_fj firefox || $_fj chromium || $_fj google-chrome-stable || $_fj epiphany';
   static const String fileManagerCmd = 'thunar || pcmanfm || dolphin || nautilus';
-  static const String monitorCmd = 'alacritty -e btop || xterm -e htop || alacritty -e htop || btop || htop';
+  static const String monitorCmd = 'foot -e btop || alacritty -e btop || xterm -e htop || alacritty -e htop || foot -e htop || btop || htop';
   static const String installerCmd = 'if [ -x /usr/local/bin/install_swarm_os.sh ]; then alacritty -e sudo /usr/local/bin/install_swarm_os.sh --disk /dev/nvme0n1 || foot -e sudo /usr/local/bin/install_swarm_os.sh --disk /dev/nvme0n1 || xterm -e sudo /usr/local/bin/install_swarm_os.sh --disk /dev/nvme0n1; else alacritty -e bash -lc "echo SWARM OS installer is only available from the live ISO; read -r" || xterm -e bash -lc "echo SWARM OS installer is only available from the live ISO; read -r"; fi';
   static const String antigravityIdeCmd = 'antigravity || "/run/media/i30ltz/lucy-master/Antigravity-x64/antigravity" || code';
   static const String claudeDesktopCmd = 'claude-desktop || $_fj google-chrome-stable --app=https://claude.ai || $_fj chromium --app=https://claude.ai || $_fj firefox --new-window https://claude.ai';

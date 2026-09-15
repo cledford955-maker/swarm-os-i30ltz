@@ -25,7 +25,16 @@ set -euo pipefail
 LUCY="/mnt/Lucy"
 OUT_DIR="$LUCY/10-releases"
 LOG_DIR="$LUCY/logs"
-TIMEOUT="${SWARM_GATE_TIMEOUT:-300}"
+# 300s used to be enough, but a build with secrets sealed behind a real
+# passphrase changes the timing: lucy-server.service/gaming-agent.service
+# both wait on swarm-secrets.service, which retries systemd-ask-password up
+# to 3x with a 120s timeout each (360s worst case) before giving up and
+# continuing key-less — and this headless test VM has no keyfile drive
+# attached and no way to answer the prompt, so it always hits that worst
+# case. Found 2026-09-13: a perfectly healthy sealed ISO was timing out here
+# with LucyServer/GamingAgent never even getting a chance to start. 480s
+# clears the 360s worst case with room left for the actual boot+services.
+TIMEOUT="${SWARM_GATE_TIMEOUT:-480}"
 MEM="${SWARM_GATE_MEM:-4096}"
 KEEP_DISK=0
 ISO_PATH=""
@@ -54,10 +63,33 @@ command -v curl              >/dev/null 2>&1 || { bad "curl not installed"; exit
 STAMP="$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$LOG_DIR"
 SERIAL_LOG="$LOG_DIR/boot-gate-$STAMP.log"
+QEMU_LOG="$LOG_DIR/boot-gate-$STAMP-qemu.log"
 DISK="$(mktemp -u -t swarm-gate-XXXXXX).qcow2"
-SSH_PORT=22222
-LUCY_PORT=15000
-GAME_PORT=18401
+
+# Hardcoded host ports used to collide with a leftover QEMU process from a
+# prior run (found 2026-09-13: repeated back-to-back gate runs during active
+# debugging are exactly this script's normal use case, and a killed/crashed
+# run can leave qemu-system-x86_64 still holding its hostfwd ports) —
+# "Could not set up host forwarding rule" aborted QEMU instantly with no
+# guest output at all, which looked identical to a real boot failure. Pick a
+# free port for each instead of trusting a fixed number.
+# Each call runs via $(...), i.e. its own subshell — take already-picked
+# ports as arguments rather than a shared variable, which a subshell can't
+# write back to its caller.
+free_port() {
+    local p used
+    for _ in $(seq 1 20); do
+        p=$(( (RANDOM % 20000) + 20000 ))
+        for used in "$@"; do
+            [ "$p" = "$used" ] && continue 2
+        done
+        ss -Htln "sport = :$p" 2>/dev/null | grep -q . || { echo "$p"; return 0; }
+    done
+    return 1
+}
+SSH_PORT=$(free_port) || { echo -e "${RED}Could not find a free port for SSH forwarding.${NC}"; exit 2; }
+LUCY_PORT=$(free_port "$SSH_PORT") || { echo -e "${RED}Could not find a free port for LucyServer forwarding.${NC}"; exit 2; }
+GAME_PORT=$(free_port "$SSH_PORT" "$LUCY_PORT") || { echo -e "${RED}Could not find a free port for GamingAgent forwarding.${NC}"; exit 2; }
 
 echo -e "\n${CYAN}${BOLD}======================================================================${NC}"
 echo -e "${CYAN}${BOLD}  SWARM OS :: AUTOMATED BOOT GATE  v1.0.0 · $(date +%Y-%m-%d)${NC}"
@@ -65,6 +97,7 @@ echo -e "${CYAN}${BOLD}=========================================================
 info "ISO:     $ISO_PATH"
 info "Timeout: ${TIMEOUT}s"
 info "Serial:  $SERIAL_LOG"
+info "Ports:   ssh=$SSH_PORT lucy=$LUCY_PORT game=$GAME_PORT"
 
 qemu-img create -f qcow2 "$DISK" 16G >/dev/null
 
@@ -111,7 +144,7 @@ qemu-system-x86_64 \
     -cdrom "$ISO_PATH" \
     -boot order=d \
     -no-reboot \
-    >/dev/null 2>&1 &
+    >"$QEMU_LOG" 2>&1 &
 QEMU_PID=$!
 
 # --- watch the boot ----------------------------------------------------------
@@ -167,6 +200,16 @@ else
 fi
 
 echo -e "\n${YELLOW}  last 40 lines of serial console:${NC}"
-tail -n 40 "$SERIAL_LOG" 2>/dev/null | sed 's/^/    /' || echo "    (serial log is empty — the guest produced no console output at all)"
+if [ -s "$SERIAL_LOG" ]; then
+    tail -n 40 "$SERIAL_LOG" | sed 's/^/    /'
+else
+    echo "    (serial log is empty — either the guest produced no console output,"
+    echo "     or QEMU itself never got that far. Checking QEMU's own output below.)"
+fi
+if [ -s "$QEMU_LOG" ]; then
+    echo -e "\n${YELLOW}  QEMU's own stdout/stderr (this is the process, not the guest OS):${NC}"
+    sed 's/^/    /' "$QEMU_LOG"
+fi
 echo -e "\n${CYAN}  Full serial log: $SERIAL_LOG${NC}"
+echo -e "${CYAN}  QEMU process log: $QEMU_LOG${NC}"
 exit 1

@@ -10,3 +10,7 @@ logs/
 **/build/
 **/obj/
 **/.dart_tool/
+# swarm-secrets.key unseals every API key baked into the ISO's AES-256 blob
+# (see 70-scripts/seal_secrets.sh / swarm-unseal-secrets) — never sync it.
+*.key
+swarm-secrets.key
