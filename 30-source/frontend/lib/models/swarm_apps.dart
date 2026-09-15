@@ -114,8 +114,10 @@ class SwarmAppRegistry {
       execCommand: 'yay'),
 
     // ───────────── GAMING & MEDIA ─────────────
-    SwarmApp(id: 'gaming', name: 'Gaming', icon: Icons.sports_esports,
-      color: Color(0xFF76B900), categories: {SwarmAppCategory.gamingMedia},
+    SwarmApp(id: 'gaming', name: 'Gamer', icon: Icons.sports_esports,
+      color: Color(0xFF76B900),
+      categories: {SwarmAppCategory.gamingMedia, SwarmAppCategory.origin},
+      description: 'GFN + Steam dashboard — AI game picks by Lucille',
       routePath: '/nvidia'),
     SwarmApp(id: 'cinema', name: 'Cinema', icon: Icons.movie_filter,
       color: Color(0xFFF48FB1),

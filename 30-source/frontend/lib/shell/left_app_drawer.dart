@@ -5,12 +5,17 @@ import '../services/system_launcher.dart';
 import '../models/swarm_apps.dart';
 import 'companion_bridge_dialog.dart';
 
+// ── "THIS is NOW" palette ──────────────────────────────────────────
+const _eBlue    = Color(0xFF0088FF); // electric blue primary
+const _drawerBg = Color(0xFF030810); // near-black with blue tint
+
 class AppItem {
   final String id;
   final String name;
   final String description;
   final String command;
   final IconData icon;
+  final Color color;
   final SwarmAppCategory category;
   bool isFavorite;
 
@@ -20,24 +25,29 @@ class AppItem {
     required this.description,
     required this.command,
     required this.icon,
+    required this.color,
     required this.category,
     this.isFavorite = false,
   });
 
-  // Picks the drawer-relevant category (droid > forge > system) for an app
-  // that may be tagged with more than one SwarmAppRegistry category.
+  // Maps the most-specific category for an app that may carry several tags.
   factory AppItem.fromRegistry(SwarmApp app) {
     final category = app.categories.contains(SwarmAppCategory.droid)
         ? SwarmAppCategory.droid
         : app.categories.contains(SwarmAppCategory.forge)
             ? SwarmAppCategory.forge
-            : SwarmAppCategory.system;
+            : app.categories.contains(SwarmAppCategory.gamingMedia)
+                ? SwarmAppCategory.gamingMedia
+                : app.categories.contains(SwarmAppCategory.origin)
+                    ? SwarmAppCategory.origin
+                    : SwarmAppCategory.system;
     return AppItem(
       id: app.id,
       name: app.name,
       description: app.description,
       command: app.execCommand ?? app.routePath ?? '',
       icon: app.icon,
+      color: app.color,
       category: category,
       isFavorite: app.isFavorite,
     );
@@ -62,15 +72,19 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  // Drawn from SwarmAppRegistry (shared with the hex desktop and hub grid)
-  // instead of a separate hardcoded list — previously this file, the hex
-  // desktop, and the hub grid each kept their own drifting copy of the same
-  // apps (Terminal, Claude, Files, Cinema, GitLens, ...).
-  late final List<AppItem> _allApps = [
-    ...SwarmAppRegistry.byCategory(SwarmAppCategory.droid),
-    ...SwarmAppRegistry.byCategory(SwarmAppCategory.forge),
-    ...SwarmAppRegistry.byCategory(SwarmAppCategory.system),
-  ].map(AppItem.fromRegistry).toList();
+  // All categories — deduplicated by id so multi-tagged apps (browser, cinema…)
+  // only appear once. Order: ORIGIN first (highest priority), then GAMING,
+  // then SYS, DROID, FORGE.
+  late final List<AppItem> _allApps = () {
+    final seen = <String>{};
+    return [
+      ...SwarmAppRegistry.byCategory(SwarmAppCategory.origin),
+      ...SwarmAppRegistry.byCategory(SwarmAppCategory.gamingMedia),
+      ...SwarmAppRegistry.byCategory(SwarmAppCategory.system),
+      ...SwarmAppRegistry.byCategory(SwarmAppCategory.droid),
+      ...SwarmAppRegistry.byCategory(SwarmAppCategory.forge),
+    ].where((a) => seen.add(a.id)).map(AppItem.fromRegistry).toList();
+  }();
 
   @override
   void dispose() {
@@ -82,10 +96,10 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
     if (SwarmAppRegistry.byId(app.id)?.mock == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: SwarmColors.bgElevated,
+          backgroundColor: _drawerBg,
           content: Text(
             '🔜 ${app.name} — coming soon',
-            style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           duration: const Duration(seconds: 2),
         ),
@@ -118,91 +132,44 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
     }).toList();
   }
 
-  List<AppItem> get _favoriteApps {
-    return _allApps.where((app) => app.isFavorite).toList();
-  }
+  List<AppItem> get _favoriteApps =>
+      _allApps.where((app) => app.isFavorite).toList();
 
   Widget _buildCategoryBadge(SwarmAppCategory category) {
     switch (category) {
-      case SwarmAppCategory.droid:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: SwarmColors.statusOnline.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: SwarmColors.statusOnline.withValues(alpha: 0.6)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.android, size: 12, color: SwarmColors.statusOnline),
-              SizedBox(width: 4),
-              Text(
-                'DROID',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.8,
-                  color: SwarmColors.statusOnline,
-                ),
-              ),
-            ],
-          ),
-        );
-      case SwarmAppCategory.forge:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: SwarmColors.statusBusy.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: SwarmColors.statusBusy.withValues(alpha: 0.6)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.whatshot, size: 12, color: SwarmColors.statusBusy),
-              SizedBox(width: 4),
-              Text(
-                'FORGE',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.8,
-                  color: SwarmColors.statusBusy,
-                ),
-              ),
-            ],
-          ),
-        );
-      case SwarmAppCategory.system:
       case SwarmAppCategory.origin:
+        return _badge(Icons.grid_view_rounded, 'ORIGIN', _eBlue);
       case SwarmAppCategory.gamingMedia:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: SwarmColors.agentCyan.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: SwarmColors.agentCyan.withValues(alpha: 0.6)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.memory, size: 12, color: SwarmColors.agentCyan),
-              SizedBox(width: 4),
-              Text(
-                'SYS',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.8,
-                  color: SwarmColors.agentCyan,
-                ),
-              ),
-            ],
-          ),
-        );
+        return _badge(Icons.sports_esports, 'GAMING', const Color(0xFF76B900));
+      case SwarmAppCategory.droid:
+        return _badge(Icons.android, 'DROID', SwarmColors.statusOnline);
+      case SwarmAppCategory.forge:
+        return _badge(Icons.whatshot, 'FORGE', SwarmColors.statusBusy);
+      case SwarmAppCategory.system:
+        return _badge(Icons.memory, 'SYS', SwarmColors.agentCyan);
     }
   }
+
+  Widget _badge(IconData icon, String label, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(4),
+      border: Border.all(color: color.withValues(alpha: 0.5)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold,
+              letterSpacing: 0.8, color: color),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -210,77 +177,122 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
       left: widget.isOpen ? 0 : -380,
-      top: 48, // Below top bar
+      top: 48,
       bottom: 0,
       width: 380,
       child: Container(
         decoration: BoxDecoration(
-          color: SwarmColors.bgSurface.withValues(alpha: 0.94),
-          border: const Border(
-            right: BorderSide(color: SwarmColors.border, width: 1.5),
+          color: _drawerBg,
+          image: const DecorationImage(
+            image: AssetImage('assets/wallpapers/swarm_wasp_nest_v5.jpg'),
+            fit: BoxFit.cover,
+            opacity: 0.055,
+          ),
+          border: Border(
+            right: BorderSide(color: _eBlue.withValues(alpha: 0.45), width: 1.5),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.6),
-              blurRadius: 24,
-              offset: const Offset(8, 0),
+              color: _eBlue.withValues(alpha: 0.18),
+              blurRadius: 20,
+              offset: const Offset(4, 0),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.75),
+              blurRadius: 28,
+              offset: const Offset(10, 0),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Drawer Header
+            // ── Header: THIS is NOW ──────────────────────────────
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: SwarmColors.border)),
+              padding: const EdgeInsets.fromLTRB(16, 13, 8, 13),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                border: Border(
+                  bottom: BorderSide(color: _eBlue.withValues(alpha: 0.4)),
+                ),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: SwarmColors.accentSurface,
+                      color: _eBlue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: SwarmColors.accent.withValues(alpha: 0.4)),
+                      border: Border.all(color: _eBlue.withValues(alpha: 0.5)),
                     ),
-                    child: const Icon(Icons.apps, color: SwarmColors.accent, size: 20),
+                    child: const Icon(Icons.grid_view_rounded,
+                        color: _eBlue, size: 20),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'SWARM APPS',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
-                      color: SwarmColors.textPrimary,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'THIS is NOW',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2.2,
+                          color: _eBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: _eBlue.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(3),
+                          border: Border.all(
+                              color: _eBlue.withValues(alpha: 0.4)),
+                        ),
+                        child: const Text(
+                          'v1',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5,
+                            color: _eBlue,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: SwarmColors.textMuted, size: 18),
+                    icon: Icon(Icons.close,
+                        color: Colors.white.withValues(alpha: 0.3), size: 18),
                     onPressed: widget.onClose,
-                    tooltip: 'Close App Drawer',
+                    tooltip: 'Close',
                   ),
                 ],
               ),
             ),
 
-            // Search Bar
+            // ── Search ──────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: TextField(
                 controller: _searchController,
-                style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 13),
+                style: const TextStyle(color: Colors.white, fontSize: 13),
                 onChanged: (val) => setState(() => _searchQuery = val),
                 decoration: InputDecoration(
-                  hintText: 'Search apps, Droid, Forge...',
-                  hintStyle: const TextStyle(color: SwarmColors.textMuted, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search, color: SwarmColors.textMuted, size: 18),
+                  hintText: 'Search apps, Gaming, Droid, Forge…',
+                  hintStyle: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.3), fontSize: 13),
+                  prefixIcon: Icon(Icons.search,
+                      color: Colors.white.withValues(alpha: 0.3), size: 18),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, color: SwarmColors.textMuted, size: 16),
+                          icon: Icon(Icons.clear,
+                              color: Colors.white.withValues(alpha: 0.3),
+                              size: 16),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchQuery = '');
@@ -288,40 +300,45 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                         )
                       : null,
                   filled: true,
-                  fillColor: SwarmColors.bgElevated,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  fillColor: Colors.white.withValues(alpha: 0.04),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: SwarmColors.border),
+                    borderSide: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.1)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: SwarmColors.accent),
+                    borderSide: const BorderSide(color: _eBlue),
                   ),
                 ),
               ),
             ),
 
-            // Main Scrollable Area
+            // ── App List ─────────────────────────────────────────
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 children: [
-                  // Favorites Section (Top)
+                  // Favorites row
                   if (_searchQuery.isEmpty && _favoriteApps.isNotEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8, top: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8, top: 4),
                       child: Row(
                         children: [
-                          Icon(Icons.star, color: SwarmColors.statusIdle, size: 15),
-                          SizedBox(width: 6),
+                          Icon(Icons.star,
+                              color: Colors.amber.withValues(alpha: 0.8),
+                              size: 15),
+                          const SizedBox(width: 6),
                           Text(
                             'FAVORITES',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.2,
-                              color: SwarmColors.textMuted,
+                              color: Colors.white.withValues(alpha: 0.4),
                             ),
                           ),
                         ],
@@ -332,7 +349,8 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _favoriteApps.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(width: 10),
                         itemBuilder: (context, idx) {
                           final app = _favoriteApps[idx];
                           return InkWell(
@@ -342,14 +360,15 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                               width: 80,
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: SwarmColors.bgElevated,
+                                color: Colors.white.withValues(alpha: 0.04),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: SwarmColors.border),
+                                border: Border.all(
+                                    color: app.color.withValues(alpha: 0.3)),
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(app.icon, color: SwarmColors.accent, size: 26),
+                                  Icon(app.icon, color: app.color, size: 26),
                                   const SizedBox(height: 6),
                                   Text(
                                     app.name,
@@ -357,7 +376,7 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       fontSize: 10,
-                                      color: SwarmColors.textPrimary,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -369,55 +388,64 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Divider(color: SwarmColors.border, height: 1),
+                    Divider(
+                        color: Colors.white.withValues(alpha: 0.07), height: 1),
                     const SizedBox(height: 12),
                   ],
 
-                  // Full Apps List Section
+                  // Section heading
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
-                      _searchQuery.isEmpty ? 'ALL APPLICATIONS' : 'SEARCH RESULTS (${_filteredApps.length})',
-                      style: const TextStyle(
+                      _searchQuery.isEmpty
+                          ? 'ALL APPLICATIONS'
+                          : 'RESULTS (${_filteredApps.length})',
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
-                        color: SwarmColors.textMuted,
+                        color: Colors.white.withValues(alpha: 0.35),
                       ),
                     ),
                   ),
 
                   if (_filteredApps.isEmpty)
-                    Container(
+                    Padding(
                       padding: const EdgeInsets.all(24),
-                      alignment: Alignment.center,
-                      child: const Text(
+                      child: Text(
                         'No matching applications found',
-                        style: TextStyle(color: SwarmColors.textMuted, fontSize: 13),
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            fontSize: 13),
+                        textAlign: TextAlign.center,
                       ),
                     ),
 
+                  // App rows
                   ..._filteredApps.map((app) => Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
-                          color: SwarmColors.bgElevated.withValues(alpha: 0.7),
+                          color: Colors.white.withValues(alpha: 0.03),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: SwarmColors.border),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.07)),
                         ),
                         child: Material(
                           color: Colors.transparent,
                           child: ListTile(
                             dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
                             leading: Container(
                               width: 38,
                               height: 38,
                               decoration: BoxDecoration(
-                                color: SwarmColors.bgSurface,
+                                color: app.color.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: SwarmColors.border),
+                                border: Border.all(
+                                    color: app.color.withValues(alpha: 0.35)),
                               ),
-                              child: Icon(app.icon, color: SwarmColors.textPrimary, size: 20),
+                              child: Icon(app.icon, color: app.color, size: 20),
                             ),
                             title: Row(
                               children: [
@@ -425,20 +453,24 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                                   child: Text(
                                     app.name,
                                     style: const TextStyle(
-                                      color: SwarmColors.textPrimary,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
                                     ),
                                   ),
                                 ),
-                                if (SwarmAppRegistry.byId(app.id)?.mock == true) ...[
+                                if (SwarmAppRegistry.byId(app.id)?.mock ==
+                                    true) ...[
                                   Container(
                                     margin: const EdgeInsets.only(right: 6),
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: Colors.white.withValues(alpha: 0.06),
                                       borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                      border: Border.all(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.2)),
                                     ),
                                     child: Text(
                                       'SOON',
@@ -446,7 +478,8 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                         letterSpacing: 0.8,
-                                        color: Colors.white.withValues(alpha: 0.5),
+                                        color: Colors.white
+                                            .withValues(alpha: 0.5),
                                       ),
                                     ),
                                   ),
@@ -456,7 +489,9 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                             ),
                             subtitle: Text(
                               app.description,
-                              style: const TextStyle(color: SwarmColors.textMuted, fontSize: 11),
+                              style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.35),
+                                  fontSize: 11),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -465,17 +500,24 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                               children: [
                                 IconButton(
                                   icon: Icon(
-                                    app.isFavorite ? Icons.star : Icons.star_border,
-                                    color: app.isFavorite ? SwarmColors.statusIdle : SwarmColors.textMuted,
+                                    app.isFavorite
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    color: app.isFavorite
+                                        ? Colors.amber
+                                        : Colors.white
+                                            .withValues(alpha: 0.25),
                                     size: 18,
                                   ),
                                   onPressed: () {
-                                    setState(() => app.isFavorite = !app.isFavorite);
+                                    setState(
+                                        () => app.isFavorite = !app.isFavorite);
                                   },
                                   tooltip: 'Toggle Favorite',
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.play_arrow, color: SwarmColors.accent, size: 20),
+                                  icon: const Icon(Icons.play_arrow,
+                                      color: _eBlue, size: 20),
                                   onPressed: () => _launchApp(app),
                                   tooltip: 'Launch',
                                 ),

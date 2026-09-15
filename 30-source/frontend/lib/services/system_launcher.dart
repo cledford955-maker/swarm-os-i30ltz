@@ -127,14 +127,12 @@ class SystemLauncher {
   // `npm install -g @anthropic-ai/claude-code`. Check for it on PATH first so
   // a missing install surfaces a real, actionable message in a terminal
   // instead of every terminal-emulator fallback failing silently.
+  // Opens a terminal that: runs claude if installed, otherwise auto-installs
+  // via npm (which is on PATH after the 2026-09-15 pacman install) then runs it.
   static const String claudeCodeCmd =
-      'if command -v claude >/dev/null 2>&1; then '
-      'alacritty -e claude || foot -e claude || kitty -e claude || xterm -e claude; '
-      'else '
-      'alacritty -e bash -c \'echo "claude CLI not installed. Run: npm install -g @anthropic-ai/claude-code"; read -r -p "Press enter to close..."\' || '
-      'foot -e bash -c \'echo "claude CLI not installed. Run: npm install -g @anthropic-ai/claude-code"; read -r -p "Press enter to close..."\' || '
-      'xterm -e bash -c \'echo "claude CLI not installed. Run: npm install -g @anthropic-ai/claude-code"; read -r -p "Press enter to close..."\'; '
-      'fi';
+      r'alacritty -e bash -lc "command -v claude >/dev/null 2>&1 && exec claude; echo Installing Claude Code CLI...; npm install -g @anthropic-ai/claude-code && exec claude; echo; echo Install failed - run: npm install -g @anthropic-ai/claude-code; read -r"'
+      r' || foot -e bash -lc "command -v claude >/dev/null 2>&1 && exec claude; echo Installing Claude Code CLI...; npm install -g @anthropic-ai/claude-code && exec claude; echo; echo Install failed - run: npm install -g @anthropic-ai/claude-code; read -r"'
+      r' || xterm -e bash -lc "command -v claude >/dev/null 2>&1 && exec claude; echo Installing Claude Code CLI...; npm install -g @anthropic-ai/claude-code && exec claude; echo; echo Install failed - run: npm install -g @anthropic-ai/claude-code; read -r"';
 
   static Future<bool> launchAntigravity(BuildContext? context) {
     return launch(context, antigravityIdeCmd, displayName: 'Antigravity IDE');
