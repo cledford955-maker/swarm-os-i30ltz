@@ -135,6 +135,9 @@ fun CoderDroidScreen(
             onOpenFolder   = { folderPicker.launch(null) },
             onToggleSidebar = { viewModel.onEvent(CoderDroidEvent.ToggleSidebar) },
             onToggleTerminal = { viewModel.onEvent(CoderDroidEvent.ToggleTerminal) },
+            onToggleGit     = { viewModel.onEvent(CoderDroidEvent.ToggleGitPanel) },
+            gitPanelActive  = state.gitPanelVisible,
+            gitHasChanges   = state.gitState.hasChanges,
             onOpenDrI30LTZ  = {
                 // Open the DR. I30LTZ Recovery project from Syncthing-synced folder
                 val candidates = listOf(
@@ -159,14 +162,30 @@ fun CoderDroidScreen(
         Row(modifier = Modifier.weight(1f)) {
 
             if (state.sidebarVisible) {
-                CdrFileTreePanel(
-                    workspaceRoot = state.workspaceRoot,
-                    workspaceName = state.workspaceName,
-                    onFileClick   = { viewModel.onEvent(CoderDroidEvent.OpenFile(it)) },
-                    modifier      = Modifier
-                        .width(220.dp)
-                        .fillMaxHeight()
-                )
+                if (state.gitPanelVisible) {
+                    CdrGitPanel(
+                        gitState       = state.gitState,
+                        hasCredentials = state.gitHasCredentials,
+                        modifier       = Modifier.width(240.dp).fillMaxHeight(),
+                        onRefresh      = { viewModel.onEvent(CoderDroidEvent.RefreshGit) },
+                        onStage        = { viewModel.onEvent(CoderDroidEvent.StageFile(it)) },
+                        onUnstage      = { viewModel.onEvent(CoderDroidEvent.UnstageFile(it)) },
+                        onStageAll     = { viewModel.onEvent(CoderDroidEvent.StageAll) },
+                        onCommit       = { viewModel.onEvent(CoderDroidEvent.Commit(it)) },
+                        onPush         = { viewModel.onEvent(CoderDroidEvent.Push) },
+                        onPull         = { viewModel.onEvent(CoderDroidEvent.Pull) },
+                        onSaveCredentials = { u, t -> viewModel.onEvent(CoderDroidEvent.SetGitCredentials(u, t)) }
+                    )
+                } else {
+                    CdrFileTreePanel(
+                        workspaceRoot = state.workspaceRoot,
+                        workspaceName = state.workspaceName,
+                        onFileClick   = { viewModel.onEvent(CoderDroidEvent.OpenFile(it)) },
+                        modifier      = Modifier
+                            .width(220.dp)
+                            .fillMaxHeight()
+                    )
+                }
             }
 
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
