@@ -437,70 +437,108 @@ if [ -n "$BUILT_ISO" ]; then
     fi
 
     # -------------------------------------------------------------------------
-    # Step 8/8: Archive superseded releases, then age them out  (b2 — 2026-09-13 v1.0.0)
+    # Step 8/8: Local pruning + Ventoy sync  (b3 — 2026-09-15 v1.0.0)
     #
     # Only reached once the new ISO is considered good (gate passed, or
-    # knowingly skipped/missing above) — a failed gate exits before this runs,
-    # so the previous good ISO is never archived out from under a bad build.
+    # knowingly skipped/missing above) — a failed gate exits before this step,
+    # so we never promote a broken build.
     #
-    # Archive target is /mnt/storage (sda7, plain btrfs — NOT lucy-master,
-    # which stays read-only per project rules). If it isn't mounted, old
-    # releases are left in place rather than deleted, and a clear warning is
-    # printed — mount it yourself with:
-    #   sudo mount /dev/sda7 /mnt/storage
+    # LOCAL (/mnt/Lucy/10-releases/): keep the 2 most recent versioned ISOs.
+    # The current build is always one of them; the previous one stays as a
+    # local emergency fallback. Everything older is deleted.
     #
-    # Retention: always keep the 10 most recently archived ISOs regardless of
-    # age. Beyond those 10 (oldest first), anything that has sat in the
-    # archive for 7+ days since it was moved there (mtime is reset on move,
-    # see `touch` below) is deleted for good. This is checked here rather
-    # than via a systemd timer/cron job because there is no other standing
-    # automation on this box for it to piggyback on, and it keeps the
-    # retention sweep tied to a build you already chose to run.
+    # VENTOY (sda1, label "Ventoy", exFAT, 663 GB):
+    #   - ISOs live in VENTOY_ISO_DIR (/SWARM-OS/ by default).
+    #   - swarm-os-fallback.iso is always a copy of the build that was
+    #     "latest" BEFORE the current one — stable name so Ventoy always
+    #     shows a known-good boot entry even if the newest build is broken.
+    #   - Keep the 10 most recent versioned ISOs. Beyond that, oldest deleted.
+    #   - The fallback copy does NOT count toward the 10 (it's a safety net).
+    #   - Script auto-mounts sda1 if it isn't already mounted.
     # -------------------------------------------------------------------------
-    ARCHIVE_ROOT="/mnt/storage/swarm-os-iso-archive"
-    OLD_ISOS=()
-    while IFS= read -r -d '' f; do
-        OLD_ISOS+=("$f")
-    done < <(find "$OUT_DIR" -maxdepth 1 -type f -name 'swarm-os-*.iso' ! -name "swarm-os-v${NEW_VER}.iso" -print0 2>/dev/null)
+    echo -e "\n${CYAN}[8/8] Local pruning + Ventoy sync...${NC}"
 
-    if mountpoint -q /mnt/storage 2>/dev/null; then
-        mkdir -p "$ARCHIVE_ROOT"
-        if [ "${#OLD_ISOS[@]}" -gt 0 ]; then
-            echo -e "\n${CYAN}[8/8] Archiving superseded releases to $ARCHIVE_ROOT ...${NC}"
-            for f in "${OLD_ISOS[@]}"; do
-                mv -f "$f" "$ARCHIVE_ROOT/$(basename "$f")"
-                touch "$ARCHIVE_ROOT/$(basename "$f")"  # retention clock starts now, not at build time
-                echo -e "  ${GREEN}✓ moved${NC} $(basename "$f")"
-            done
-        fi
+    # ── 8a: local /mnt/Lucy/10-releases/ — keep 2 ────────────────────────
+    LOCAL_ALL=()
+    while IFS= read -r f; do
+        LOCAL_ALL+=("$f")
+    done < <(find "$OUT_DIR" -maxdepth 1 -type f -name 'swarm-os-v*.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | cut -d' ' -f2-)
 
-        KEEP_COUNT=10
-        ALL_ARCHIVED=()
-        while IFS= read -r f; do
-            ALL_ARCHIVED+=("$f")
-        done < <(find "$ARCHIVE_ROOT" -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | cut -d' ' -f2-)
-
-        EXPIRED=()
-        if [ "${#ALL_ARCHIVED[@]}" -gt "$KEEP_COUNT" ]; then
-            for f in "${ALL_ARCHIVED[@]:$KEEP_COUNT}"; do
-                if find "$f" -maxdepth 0 -mtime +7 2>/dev/null | grep -q .; then
-                    EXPIRED+=("$f")
-                fi
-            done
-        fi
-        if [ "${#EXPIRED[@]}" -gt 0 ]; then
-            echo -e "${YELLOW}  Deleting ${#EXPIRED[@]} archived ISO(s) beyond the newest $KEEP_COUNT and older than 7 days:${NC}"
-            for f in "${EXPIRED[@]}"; do
-                echo -e "    ${RED}✗ deleted${NC} $(basename "$f")"
-                rm -f "$f"
-            done
-        fi
-    elif [ "${#OLD_ISOS[@]}" -gt 0 ]; then
-        echo -e "\n${YELLOW}⚠ [8/8] /mnt/storage is not mounted — ${#OLD_ISOS[@]} superseded ISO(s) left in $OUT_DIR:${NC}"
-        for f in "${OLD_ISOS[@]}"; do
-            echo -e "    $(basename "$f")"
+    if [ "${#LOCAL_ALL[@]}" -gt 2 ]; then
+        for f in "${LOCAL_ALL[@]:2}"; do
+            echo -e "  ${RED}✗ local prune${NC} $(basename "$f")"
+            rm -f "$f"
         done
-        echo -e "${YELLOW}  Mount the archive drive to enable auto-archival: sudo mount /dev/sda7 /mnt/storage${NC}"
+    fi
+    # Refresh symlink after pruning
+    ln -sf "swarm-os-v${NEW_VER}.iso" "$OUT_DIR/swarm-os-latest.iso"
+    echo -e "  ${GREEN}✓ local${NC} keeping 2 ISOs in $OUT_DIR"
+
+    # ── 8b: Ventoy sync ──────────────────────────────────────────────────
+    VENTOY_DEV="/dev/sda1"
+    VENTOY_MNT="/mnt/ventoy"
+    VENTOY_ISO_DIR="$VENTOY_MNT/SWARM-OS"
+    VENTOY_MOUNTED_HERE=0
+
+    if ! mountpoint -q "$VENTOY_MNT" 2>/dev/null; then
+        if [ -b "$VENTOY_DEV" ]; then
+            sudo mkdir -p "$VENTOY_MNT"
+            if sudo mount "$VENTOY_DEV" "$VENTOY_MNT" 2>/dev/null; then
+                VENTOY_MOUNTED_HERE=1
+                echo -e "  ${GREEN}✓ mounted${NC} $VENTOY_DEV → $VENTOY_MNT"
+            else
+                echo -e "  ${YELLOW}⚠ Could not mount Ventoy ($VENTOY_DEV) — skipping Ventoy sync.${NC}"
+                echo -e "    Mount it yourself: sudo mount $VENTOY_DEV $VENTOY_MNT"
+            fi
+        else
+            echo -e "  ${YELLOW}⚠ Ventoy drive ($VENTOY_DEV) not present — skipping Ventoy sync.${NC}"
+        fi
+    fi
+
+    if mountpoint -q "$VENTOY_MNT" 2>/dev/null; then
+        sudo mkdir -p "$VENTOY_ISO_DIR"
+
+        # Determine which ISO was "latest" before this build (will become fallback)
+        PREV_LATEST=$(find "$VENTOY_ISO_DIR" -maxdepth 1 -type f -name 'swarm-os-v*.iso' \
+            -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)
+
+        # Copy the new ISO to Ventoy
+        echo -e "  Copying v${NEW_VER} to Ventoy ($(du -sh "$TARGET_ISO" | cut -f1))..."
+        sudo cp "$TARGET_ISO" "$VENTOY_ISO_DIR/swarm-os-v${NEW_VER}.iso"
+        echo -e "  ${GREEN}✓ copied${NC} swarm-os-v${NEW_VER}.iso → Ventoy"
+
+        # Update fallback: copy the previous latest as swarm-os-fallback.iso
+        if [ -n "$PREV_LATEST" ] && [ "$PREV_LATEST" != "$VENTOY_ISO_DIR/swarm-os-v${NEW_VER}.iso" ]; then
+            sudo cp -f "$PREV_LATEST" "$VENTOY_ISO_DIR/swarm-os-fallback.iso"
+            echo -e "  ${GREEN}✓ fallback${NC} → $(basename "$PREV_LATEST") (safe boot entry)"
+        else
+            # First build ever on this Ventoy — fallback = current build itself
+            sudo cp -f "$VENTOY_ISO_DIR/swarm-os-v${NEW_VER}.iso" "$VENTOY_ISO_DIR/swarm-os-fallback.iso"
+            echo -e "  ${GREEN}✓ fallback${NC} seeded with v${NEW_VER} (first build on this Ventoy)"
+        fi
+
+        # Prune versioned ISOs on Ventoy to keep only 10 (fallback not counted)
+        VENTOY_ALL=()
+        while IFS= read -r f; do
+            VENTOY_ALL+=("$f")
+        done < <(find "$VENTOY_ISO_DIR" -maxdepth 1 -type f -name 'swarm-os-v*.iso' \
+            -printf '%T@ %p\n' 2>/dev/null | sort -rn | cut -d' ' -f2-)
+
+        VENTOY_KEEP=10
+        if [ "${#VENTOY_ALL[@]}" -gt "$VENTOY_KEEP" ]; then
+            echo -e "  ${YELLOW}Pruning Ventoy to newest $VENTOY_KEEP versioned ISOs:${NC}"
+            for f in "${VENTOY_ALL[@]:$VENTOY_KEEP}"; do
+                echo -e "    ${RED}✗ deleted from Ventoy${NC} $(basename "$f")"
+                sudo rm -f "$f"
+            done
+        fi
+        VENTOY_FINAL_COUNT=$(find "$VENTOY_ISO_DIR" -maxdepth 1 -type f -name 'swarm-os-v*.iso' 2>/dev/null | wc -l)
+        echo -e "  ${GREEN}✓ Ventoy${NC} ${VENTOY_FINAL_COUNT} versioned ISO(s) + fallback in $VENTOY_ISO_DIR"
+
+        # Unmount if we mounted it
+        if [ "$VENTOY_MOUNTED_HERE" = "1" ]; then
+            sudo umount "$VENTOY_MNT" && echo -e "  ${GREEN}✓ unmounted${NC} Ventoy"
+        fi
     fi
 else
     echo -e "${RED}✗ Error: ISO file was not found in $OUT_DIR after build.${NC}"
