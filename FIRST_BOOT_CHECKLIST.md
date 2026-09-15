@@ -8,7 +8,7 @@ LucyServer runs on **port 5000**, GamingAgent on **port 8401**, both loopback-on
 ## 1. Verify Core Services
 
 ```bash
-systemctl status swarm-ui gaming-agent lucy-server google-workspace syncthing@swarm
+systemctl status swarm-ui gaming-agent lucy-server google-workspace
 ```
 
 All five should be `active (running)`. If any failed, check logs:
@@ -205,13 +205,25 @@ Right-click → **Allow Launching** on first use. Runs a manual snapshot for ris
 
 ---
 
-## 15. Syncthing (verify phone ↔ SWARM sync)
+## 15. Verify Git Sync (replaces Syncthing)
+
+Source code stays current via `auto_sync_github.sh` (runs on a timer). Check it pushed cleanly:
 
 ```bash
-systemctl status syncthing@swarm
-# Open Syncthing web UI to pair your phone:
-# http://localhost:8384  (from the SWARM desktop browser)
+cd /mnt/Lucy && git log --oneline -3
+# Should show recent auto-sync commits.
+# If behind, push manually:
+git add -A && git commit -m "manual sync" && git push origin main
 ```
+
+On any other machine, pull to get current:
+
+```bash
+cd /mnt/Lucy && git pull origin main
+```
+
+Syncthing has been removed — it was redundant with git and kept breaking.
+The setup script is archived at `70-scripts/setup_syncthing_v1.0.0_2026-09-07.sh` if ever needed again.
 
 ---
 
