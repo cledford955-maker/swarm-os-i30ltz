@@ -124,6 +124,26 @@ fun CoderDroidScreen(
         }
     }
 
+    var showCloneDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.cloneError) {
+        state.cloneError?.let { err ->
+            Toast.makeText(context, "Clone failed: $err", Toast.LENGTH_LONG).show()
+            viewModel.onEvent(CoderDroidEvent.DismissCloneError)
+        }
+    }
+
+    if (showCloneDialog) {
+        CdrCloneRepoDialog(
+            inProgress = state.cloneInProgress,
+            onDismiss  = { showCloneDialog = false },
+            onClone    = { url ->
+                viewModel.onEvent(CoderDroidEvent.CloneRepo(url))
+                showCloneDialog = false
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -133,6 +153,7 @@ fun CoderDroidScreen(
         CdrTopBar(
             workspaceName  = state.workspaceName,
             onOpenFolder   = { folderPicker.launch(null) },
+            onCloneRepo    = { showCloneDialog = true },
             onToggleSidebar = { viewModel.onEvent(CoderDroidEvent.ToggleSidebar) },
             onToggleTerminal = { viewModel.onEvent(CoderDroidEvent.ToggleTerminal) },
             onToggleGit     = { viewModel.onEvent(CoderDroidEvent.ToggleGitPanel) },
@@ -230,8 +251,12 @@ fun CoderDroidScreen(
 private fun CdrTopBar(
     workspaceName: String,
     onOpenFolder: () -> Unit,
+    onCloneRepo: () -> Unit,
     onToggleSidebar: () -> Unit,
     onToggleTerminal: () -> Unit,
+    onToggleGit: () -> Unit,
+    gitPanelActive: Boolean,
+    gitHasChanges: Boolean,
     onOpenDrI30LTZ: () -> Unit
 ) {
     Column(
@@ -282,6 +307,24 @@ private fun CdrTopBar(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 CdrIconButton(Icons.Default.FolderOpen, "Open folder", ElectricCyan) { onOpenFolder() }
+                CdrIconButton(Icons.Default.CloudDownload, "Clone from git", ElectricCyan) { onCloneRepo() }
+                Box {
+                    CdrIconButton(
+                        Icons.Default.AccountTree,
+                        "Toggle git panel",
+                        if (gitPanelActive) ElectricPurple else TextSecondary
+                    ) { onToggleGit() }
+                    if (gitHasChanges && !gitPanelActive) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 4.dp, end = 4.dp)
+                                .size(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(LightningYellow)
+                        )
+                    }
+                }
                 CdrIconButton(Icons.Default.ViewSidebar, "Toggle sidebar", TextSecondary) { onToggleSidebar() }
                 CdrIconButton(Icons.Default.Terminal, "Toggle terminal", TextSecondary) { onToggleTerminal() }
             }
@@ -484,4 +527,58 @@ private fun CdrIconButton(
     IconButton(onClick = onClick, modifier = Modifier.size(32.dp)) {
         Icon(icon, desc, tint = tint, modifier = Modifier.size(18.dp))
     }
+}
+
+// ── Clone-from-git dialog ───────────────────────────────────────────────────────
+
+/**
+ * "Download a folder from git" entry point — clones into app-private storage
+ * via [CdrGitService.clone] and opens the result as the workspace. Uses
+ * whatever GitHub token is set in the Git panel for private repos; public
+ * repos clone fine with none set.
+ */
+@Composable
+private fun CdrCloneRepoDialog(
+    inProgress: Boolean,
+    onDismiss: () -> Unit,
+    onClone: (String) -> Unit
+) {
+    var url by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = { if (!inProgress) onDismiss() },
+        containerColor = CarbonSurface,
+        title = { Text("Clone repository", color = Color.White, fontSize = 14.sp) },
+        text = {
+            Column {
+                Text(
+                    "Downloads the repo into the app's private storage and opens it as the workspace. Private repos need a token set in the Git panel first.",
+                    color = TextMuted,
+                    fontSize = 11.sp
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("Repository URL") },
+                    placeholder = { Text("https://github.com/user/repo.git") },
+                    singleLine = true,
+                    enabled = !inProgress,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (inProgress) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = ElectricPurple)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onClone(url) }, enabled = url.isNotBlank() && !inProgress) {
+                Text("Clone", color = ElectricCyan)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !inProgress) { Text("Cancel", color = TextMuted) }
+        }
+    )
 }
