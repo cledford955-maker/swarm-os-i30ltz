@@ -330,6 +330,42 @@ WebAuthn endpoints stay in place — they work if a FIDO2 key is ever added late
 
 ## IDEAS / TODO 💡
 
+### Mock tool wiring instructions (2026-09-15 — user wants all 4 kept, wire up when ready)
+Each lives in `30-source/frontend/lib/models/swarm_apps.dart` under "MOCK IDEAS", tagged `mock: true`.
+To wire one up for real: add `execCommand:` or `routePath:` to its `SwarmApp` entry and flip `mock: true`
+→ `mock: false` (or delete the field, defaults to false). No other file needs touching — the hex desktop,
+left drawer, and hub grid all read this registry, so the "SOON" badge disappears and the tile goes live
+everywhere at once the moment `mock` flips.
+
+- **Task Master** (`mock_taskmaster`, ORIGIN, `Icons.checklist_rtl`) — "Agent that turns a goal into a
+  tracked task list." Natural home: a new LucyServer-go endpoint (e.g. `/api/taskmaster/plan`) that takes a
+  free-text goal, calls Nemotron to decompose it into steps, and persists the list to `gaming.db` (new
+  `tasks` table) the same way chat history already works (`/api/lucille/chat` pattern). UI: either a new
+  route `/taskmaster` (in-app window, same pattern as `/agents`) or reuse the existing `AI Squad` window
+  shell. Natural pairing with `agents` (id `agents`, "AI Squad") already in ORIGIN — consider whether this
+  should just be a mode of that screen instead of a separate tile.
+- **Code Sentry** (`mock_codesentry`, SYSTEM, `Icons.shield_moon`) — "Background agent that watches for
+  regressions & flags them." This is a long-running watcher, not a one-shot launch — needs a systemd
+  service (pattern after `lucille-ai-sync.timer`/`.service`) that polls `git log`/`git diff` on
+  `/mnt/Lucy` at an interval, asks Nemotron/Lucille to flag anything that looks like a regression, and
+  writes findings somewhere the tile can poll (a LucyServer-go endpoint, or straight to the existing
+  SQLite). Tile itself would then just open a window listing findings, same content-window pattern as
+  `sysmon`/`terminal` in `hex_desktop_page.dart`'s `_openAgent` switch (in-app widget, not `execCommand`).
+- **Voice Bridge** (`mock_voicebridge`, ORIGIN, `Icons.record_voice_over`) — "Push-to-talk voice HUD routed
+  straight into Lucille." `SWARM_AI_FEATURES.md`'s own architecture notes mention a "voice HUD" already
+  exists per `CLAUDE.md`'s component table (Flutter shell: "wallpaper, app drawer, floating windows, voice
+  HUD") — **check `30-source/frontend/lib` for an existing voice HUD widget before building a new one**;
+  this tile may just need to open/toggle something that's already implemented but not linked from the
+  desktop. If nothing exists yet: needs a push-to-talk key binding, mic capture, and either local
+  speech-to-text or a streaming call into `/api/lucille/chat/stream`.
+- **SwarmCast** (`mock_swarmcast`, GAMING & MEDIA, `Icons.podcasts`) — "Stream the desktop/gameplay straight
+  to a companion device." Overlaps with the existing `mirror` tile (id `mirror`, "Mirror",
+  `Icons.screen_share`, routes to `/mirror`) and the Android Companion's `scrcpy`-based screen mirror
+  (`droid_scrcpy` in the DROID category, drawer-only) — **read what `/mirror` already does before building
+  this**, since it may already be screen-casting in the other direction (PC→phone vs `droid_scrcpy`'s
+  phone→PC) and this tile might just be a rename/promotion of that flow to the main desktop rather than new
+  work.
+
 ### GamingAgent (implement in Go rewrite, not .NET)
 - [ ] Price alert: poll CheapShark daily, write to gaming.db when a game drops below threshold, surface in dashboard
 - [ ] Add IGDB or SteamSpy API for richer genre/description data (GFN catalog has sparse genres)
@@ -350,11 +386,16 @@ WebAuthn endpoints stay in place — they work if a FIDO2 key is ever added late
 - [ ] Sources: GamingOnLinux RSS, Phoronix, Steam news API per owned game — check what `NewsAndGamesService` already sources before assuming gaps
 - [ ] Surface "your games got updates" notification in dashboard
 
-### Desktop Shell (hex grid — LARGELY DONE 2026-09-11)
+### Desktop Shell (hex grid — LARGELY DONE 2026-09-11, launcher+layout fixed 2026-09-15)
 - [x] Hex wallpaper background (swarm_wasp_nest_v5.jpg in swarm_shell)
 - [x] Hex icon grid with drag-to-reorder, app launching, scrollable desktop
+- [x] **App registry consolidated (2026-09-15)** — `lib/models/swarm_apps.dart` is now the single source of truth for every launchable tile; `hex_desktop_page.dart`, `shell/left_app_drawer.dart`, and `hub/desktop_apps.dart` all read from it instead of each hardcoding their own drifting copy (this is why icons appeared to "go missing" — they were just on a different surface's list).
+- [x] **Icon-grid layout reworked to endless vertical loop (2026-09-15)** — replaced the 3-page horizontal `PageView` (ORIGIN/SYSTEM/GAMING&MEDIA swiped sideways) with a single `ListView.builder` with no `itemCount`, indexed `% _spaces.length`, so scrolling down never ends — it wraps back to ORIGIN with a "↻ FULL CIRCLE" divider each pass. Icons render in two narrow checkered columns hugging the left/right edges (`HexGrid(columns: 2)` per side); the middle stays clear as the window landing zone, and `_openAgent` now opens windows centered in that gutter via `MediaQuery` instead of a fixed corner offset.
+- [x] **Launcher silent-failure bug fixed (2026-09-15)** — `system_launcher.dart`'s `launch()` previously reported "🚀 Launched" the instant `bash -c` forked, even when every fallback in the command chain failed with "command not found" (which is exactly what was happening: Claude/CC/Terminal/Browser tiles all showed "Launching…" then did nothing because the ISO's `packages.x86_64` shipped none of alacritty/chromium/firefox/any terminal emulator, and the `claude` CLI isn't a system package at all). Fixed two ways: (1) `launch()` now routes the child through a status-file trick (`(cmd) ; echo $? > file`) and waits ~900ms before reporting success/failure, so a real "command not found" surfaces as a red error toast instead of a fake success; (2) `packages.x86_64` gained `alacritty`, `chromium` (not `google-chrome` — that's AUR-only and this profile's pacman.conf has no AUR repo, same reason `tailscale` was pulled earlier), `nodejs`+`npm` (so `npm install -g @anthropic-ai/claude-code` can provide the `claude` CLI — not baked in directly, it's a per-user auth-gated install). `claudeCodeCmd` now checks `command -v claude` first and opens a terminal with an actual install instruction instead of silently failing when it's missing. **Not yet done: these packages only take effect on the next ISO rebuild+reinstall — the currently-booted live system still lacks them until then; user chose ISO-only rather than also live-patching the current boot.**
+- [x] **4 mock tool/agent ideas kept as "COMING SOON" placeholders (2026-09-15, user confirmed keep-all)** — `mock_taskmaster`, `mock_codesentry`, `mock_voicebridge`, `mock_swarmcast` in `swarm_apps.dart`, tagged `mock: true`. They render on the desktop today (dimmed icon + a "SOON" badge baked into the hex tile itself via `HexAgent.mock` in `hex_grid.dart`'s `_HexTile`, not just hidden text) and the drawer list (small "SOON" chip next to the category badge in `left_app_drawer.dart`). Tapping either shows "🔜 <name> — coming soon" instead of a silent no-op. See "Mock tool wiring instructions" below for what each one should actually become.
 - [ ] Taskbar / window-switcher strip (labwc has no panel — needs `waybar` pkg + config)
-- [ ] App definitions file (name, icon, exec command) editable from Lucille settings tab
+- [ ] **Software-center / "install any compatible program from the web"** — user asked for this 2026-09-15 but it's unscoped; likely candidates are a GUI wrapper over `pacman`/`yay` (AUR) or a curated Flatpak catalog. Needs a follow-up conversation to pin down UX before building.
+- [ ] Live-patch the currently-booted SWARM OS install with alacritty/chromium/nodejs so the launcher works today, not just after the next ISO rebuild (user explicitly deferred this — only chose to bake into the ISO)
 
 ### SWARM OS / ISO
 - [x] **`GoogleWorkspaceService` build and staging automated** — `70-scripts/build_swarm_iso_6.2.19_2026-09-08.sh` now publishes from `30-source/GoogleWorkspaceService` into an out-of-tree build directory and stages the fresh output on every ISO build; runtime OAuth credentials are not copied from the host. `dotnet publish` verified successfully 2026-09-12.

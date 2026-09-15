@@ -151,6 +151,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     bgColor: _t,
     execCommand: app.execCommand,
     routePath: app.routePath,
+    mock: app.mock,
   );
 
   // ────────────────────────────────────────────────────────────
@@ -171,7 +172,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     if (SwarmAppRegistry.byId(agent.id)?.mock == true) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         backgroundColor: SwarmColors.bgElevated,
-        content: Text('🔧 ${agent.name} — idea, not wired up yet',
+        content: Text('🔜 ${agent.name} — coming soon',
           style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12)),
         duration: const Duration(seconds: 2),
       ));

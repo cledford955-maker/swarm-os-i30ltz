@@ -37,6 +37,9 @@ class HexAgent {
   final String? execCommand;
   // If set, tapping this tile navigates to this go_router path.
   final String? routePath;
+  // Placeholder tool/agent idea not wired up yet — renders a "SOON" badge
+  // and taps show a "coming soon" message instead of doing nothing.
+  final bool mock;
   int slotRow;
   int slotCol;
 
@@ -49,6 +52,7 @@ class HexAgent {
     this.windowBuilder,
     this.execCommand,
     this.routePath,
+    this.mock = false,
     this.slotRow = 0,
     this.slotCol = 0,
   });
@@ -452,7 +456,8 @@ class _HexTile extends StatelessWidget {
                 size: Size(width, height),
                 painter: _HexPainter(
                   fillColor: agent.bgColor.withValues(alpha: dragging ? 0.95 : 0.85),
-                  strokeColor: agent.color.withValues(alpha: dragging ? 0.8 : 0.3 + pulse * 0.1),
+                  strokeColor: agent.color.withValues(
+                    alpha: (dragging ? 0.8 : 0.3 + pulse * 0.1) * (agent.mock ? 0.5 : 1.0)),
                   strokeWidth: dragging ? 2.5 : 1.5,
                   glow: dragging,
                   glowColor: agent.color,
@@ -464,14 +469,14 @@ class _HexTile extends StatelessWidget {
                 children: [
                   Icon(
                     agent.icon,
-                    color: agent.color.withValues(alpha: 0.9),
+                    color: agent.color.withValues(alpha: agent.mock ? 0.45 : 0.9),
                     size: width * 0.28,
                   ),
                   SizedBox(height: height * 0.03),
                   Text(
                     agent.name,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Colors.white.withValues(alpha: agent.mock ? 0.4 : 0.8),
                       fontSize: width * 0.12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.3,
@@ -482,6 +487,28 @@ class _HexTile extends StatelessWidget {
                   ),
                 ],
               ),
+              // "SOON" badge — idea not wired up yet
+              if (agent.mock)
+                Positioned(
+                  bottom: height * 0.06,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A0A18).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 0.75),
+                    ),
+                    child: Text(
+                      'SOON',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        fontSize: width * 0.075,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
               // Drag indicator
               if (dragging)
                 Positioned(

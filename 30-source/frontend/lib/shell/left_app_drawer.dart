@@ -84,7 +84,7 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
         SnackBar(
           backgroundColor: SwarmColors.bgElevated,
           content: Text(
-            '🔧 ${app.name} — idea, not wired up yet',
+            '🔜 ${app.name} — coming soon',
             style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12),
           ),
           duration: const Duration(seconds: 2),
@@ -431,6 +431,26 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                                     ),
                                   ),
                                 ),
+                                if (SwarmAppRegistry.byId(app.id)?.mock == true) ...[
+                                  Container(
+                                    margin: const EdgeInsets.only(right: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.06),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Text(
+                                      'SOON',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8,
+                                        color: Colors.white.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 _buildCategoryBadge(app.category),
                               ],
                             ),
