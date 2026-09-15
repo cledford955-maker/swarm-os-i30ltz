@@ -2,13 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/swarm_colors.dart';
 import '../services/system_launcher.dart';
+import '../models/swarm_apps.dart';
 import 'companion_bridge_dialog.dart';
-
-enum AppCategory {
-  droid,
-  forge,
-  system,
-}
 
 class AppItem {
   final String id;
@@ -16,7 +11,7 @@ class AppItem {
   final String description;
   final String command;
   final IconData icon;
-  final AppCategory category;
+  final SwarmAppCategory category;
   bool isFavorite;
 
   AppItem({
@@ -28,6 +23,25 @@ class AppItem {
     required this.category,
     this.isFavorite = false,
   });
+
+  // Picks the drawer-relevant category (droid > forge > system) for an app
+  // that may be tagged with more than one SwarmAppRegistry category.
+  factory AppItem.fromRegistry(SwarmApp app) {
+    final category = app.categories.contains(SwarmAppCategory.droid)
+        ? SwarmAppCategory.droid
+        : app.categories.contains(SwarmAppCategory.forge)
+            ? SwarmAppCategory.forge
+            : SwarmAppCategory.system;
+    return AppItem(
+      id: app.id,
+      name: app.name,
+      description: app.description,
+      command: app.execCommand ?? app.routePath ?? '',
+      icon: app.icon,
+      category: category,
+      isFavorite: app.isFavorite,
+    );
+  }
 }
 
 class LeftAppDrawer extends StatefulWidget {
@@ -48,133 +62,15 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  final List<AppItem> _allApps = [
-    // Droid category
-    AppItem(
-      id: 'droid_companion',
-      name: 'Droid Companion',
-      description: 'Mobile telemetry and remote OS sync bridge',
-      command: 'swarm-droid-companion',
-      icon: Icons.phone_android,
-      category: AppCategory.droid,
-      isFavorite: true,
-    ),
-    AppItem(
-      id: 'droid_apk_installer',
-      name: 'APK Installer',
-      description: 'Sideload & manage Android packages',
-      command: 'adb install',
-      icon: Icons.install_mobile,
-      category: AppCategory.droid,
-    ),
-    AppItem(
-      id: 'droid_emulator',
-      name: 'Waydroid Container',
-      description: 'Hardware-accelerated Android runtime',
-      command: 'waydroid session start',
-      icon: Icons.smart_screen,
-      category: AppCategory.droid,
-      isFavorite: true,
-    ),
-    AppItem(
-      id: 'droid_scrcpy',
-      name: 'Screen Mirror (scrcpy)',
-      description: 'Ultra-low latency device mirroring',
-      command: 'scrcpy --stay-awake',
-      icon: Icons.cast_connected,
-      category: AppCategory.droid,
-    ),
-
-    // Forge category
-    AppItem(
-      id: 'forge_terminal',
-      name: 'Forge Terminal',
-      description: 'High-performance GPU-accelerated shell',
-      command: 'foot',
-      icon: Icons.terminal,
-      category: AppCategory.forge,
-      isFavorite: true,
-    ),
-    AppItem(
-      id: 'forge_ide',
-      name: 'Forge Code Studio',
-      description: 'Antigravity developer IDE & agent suite',
-      command: 'code',
-      icon: Icons.code,
-      category: AppCategory.forge,
-      isFavorite: true,
-    ),
-    AppItem(
-      id: 'forge_docker',
-      name: 'Docker Workbench',
-      description: 'Manage sandbox containers & images',
-      command: 'docker ps',
-      icon: Icons.view_in_ar,
-      category: AppCategory.forge,
-    ),
-    AppItem(
-      id: 'forge_k3s',
-      name: 'k3s Cluster Shell',
-      description: 'Lightweight Kubernetes cluster console',
-      command: 'kubectl get nodes',
-      icon: Icons.hub,
-      category: AppCategory.forge,
-    ),
-    AppItem(
-      id: 'forge_build',
-      name: 'Compiler & Toolchain',
-      description: 'Native C++20 / CMake build console',
-      command: 'cmake --version',
-      icon: Icons.build_circle,
-      category: AppCategory.forge,
-    ),
-    AppItem(
-      id: 'forge_cinema',
-      name: 'Cinema Video Studio',
-      description: 'Hardware-accelerated AI video player & production studio',
-      command: '/cinema',
-      icon: Icons.movie_filter_rounded,
-      category: AppCategory.forge,
-      isFavorite: true,
-    ),
-    AppItem(
-      id: 'forge_gitlens',
-      name: 'GitLens Studio',
-      description: 'Visual commit graph DAG, file history, blame & diff studio',
-      command: '/gitlens',
-      icon: Icons.hub_rounded,
-      category: AppCategory.forge,
-      isFavorite: true,
-    ),
-
-
-    // System category
-    AppItem(
-      id: 'sys_files',
-      name: 'Storage & Files',
-      description: 'Browse local drives, NVMe & partitions',
-      command: 'thunar',
-      icon: Icons.folder,
-      category: AppCategory.system,
-      isFavorite: true,
-    ),
-    AppItem(
-      id: 'sys_monitor',
-      name: 'Hardware Telemetry',
-      description: 'CPU, RAM, GPU & thermals monitor',
-      command: 'btop',
-      icon: Icons.speed,
-      category: AppCategory.system,
-    ),
-    AppItem(
-      id: 'sys_yay',
-      name: 'Yay Package Center',
-      description: 'Search & install Arch / AUR software',
-      command: 'yay',
-      icon: Icons.inventory_2,
-      category: AppCategory.system,
-    ),
-  ];
+  // Drawn from SwarmAppRegistry (shared with the hex desktop and hub grid)
+  // instead of a separate hardcoded list — previously this file, the hex
+  // desktop, and the hub grid each kept their own drifting copy of the same
+  // apps (Terminal, Claude, Files, Cinema, GitLens, ...).
+  late final List<AppItem> _allApps = [
+    ...SwarmAppRegistry.byCategory(SwarmAppCategory.droid),
+    ...SwarmAppRegistry.byCategory(SwarmAppCategory.forge),
+    ...SwarmAppRegistry.byCategory(SwarmAppCategory.system),
+  ].map(AppItem.fromRegistry).toList();
 
   @override
   void dispose() {
@@ -183,6 +79,19 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
   }
 
   Future<void> _launchApp(AppItem app) async {
+    if (SwarmAppRegistry.byId(app.id)?.mock == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: SwarmColors.bgElevated,
+          content: Text(
+            '🔧 ${app.name} — idea, not wired up yet',
+            style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     if (app.id == 'droid_companion') {
       Navigator.of(context).maybePop();
       CompanionResourcePoolDialog.show(context);
@@ -213,9 +122,9 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
     return _allApps.where((app) => app.isFavorite).toList();
   }
 
-  Widget _buildCategoryBadge(AppCategory category) {
+  Widget _buildCategoryBadge(SwarmAppCategory category) {
     switch (category) {
-      case AppCategory.droid:
+      case SwarmAppCategory.droid:
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
@@ -240,7 +149,7 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
             ],
           ),
         );
-      case AppCategory.forge:
+      case SwarmAppCategory.forge:
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
@@ -265,7 +174,9 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
             ],
           ),
         );
-      case AppCategory.system:
+      case SwarmAppCategory.system:
+      case SwarmAppCategory.origin:
+      case SwarmAppCategory.gamingMedia:
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(

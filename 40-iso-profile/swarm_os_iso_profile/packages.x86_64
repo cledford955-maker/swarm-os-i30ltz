@@ -160,6 +160,23 @@ parted
 reflector
 mkinitcpio
 
+# ===== GUI apps launched from the hex desktop =====
+# system_launcher.dart's fallback chains referenced these before they were
+# ever added here, so every "Launching..." tap silently failed — none of
+# terminalCmd/browserCmd's candidates existed on the built ISO. alacritty is
+# the first choice in every terminal fallback chain; chromium is used instead
+# of google-chrome-stable for the browser tile because google-chrome is
+# AUR-only and this profile's pacman.conf has no AUR repo configured (see the
+# tailscale removal note above — an AUR-only package here breaks pacstrap).
+alacritty
+chromium
+# nodejs/npm — lets `npm install -g @anthropic-ai/claude-code` provide the
+# `claude` CLI that the CC tile shells out to (claudeCodeCmd in
+# system_launcher.dart). The CLI itself isn't packaged here since it's a
+# per-user, auth-gated install, not a system package.
+nodejs
+npm
+
 # ===== Live ISO Boot Requirements =====
 mkinitcpio-archiso
 mkinitcpio-nfs-utils

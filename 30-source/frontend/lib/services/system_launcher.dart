@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/swarm_colors.dart';
@@ -10,30 +11,68 @@ import '../theme/swarm_colors.dart';
 class SystemLauncher {
   SystemLauncher._();
 
+  // How long we wait before deciding a launch "took" — a command whose
+  // every fallback fails (all `command not found`) exits almost instantly,
+  // while a real GUI app is still running at this point.
+  static const _verifyWindow = Duration(milliseconds: 900);
+
   static Future<bool> launch(BuildContext? context, String command, {String? displayName}) async {
+    // Detached mode discards the child's stdio, so we can't read its exit
+    // status directly. Route it through a status file instead — this is
+    // what lets us tell a real launch apart from every fallback silently
+    // failing with "command not found" (previously this always reported
+    // success the instant bash forked, even when nothing ever opened).
+    final statusFile =
+        '/tmp/swarm_launch_${DateTime.now().microsecondsSinceEpoch}_${command.hashCode}.status';
     try {
-      // Launch detached in background
-      await Process.start('bash', ['-c', command], mode: ProcessStartMode.detached);
+      await Process.start(
+        'bash',
+        ['-c', '($command) ; echo \$? > "$statusFile" 2>/dev/null'],
+        mode: ProcessStartMode.detached,
+      );
+
+      await Future.delayed(_verifyWindow);
+
+      int? exitCode;
+      final file = File(statusFile);
+      if (await file.exists()) {
+        exitCode = int.tryParse((await file.readAsString()).trim());
+        unawaited(file.delete().catchError((_) => file));
+      }
+      final failed = exitCode != null && exitCode != 0;
 
       if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: SwarmColors.bgElevated,
-            content: Row(
-              children: [
-                const Icon(Icons.rocket_launch, color: SwarmColors.accent, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  displayName != null ? '🚀 Launched $displayName' : '🚀 Launched $command',
-                  style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12),
-                ),
-              ],
+        if (failed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: SwarmColors.statusCritical,
+              content: Text(
+                '⚠️ ${displayName ?? command} failed to start — no compatible app found on this system',
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              duration: const Duration(seconds: 4),
             ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: SwarmColors.bgElevated,
+              content: Row(
+                children: [
+                  const Icon(Icons.rocket_launch, color: SwarmColors.accent, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    displayName != null ? '🚀 Launched $displayName' : '🚀 Launched $command',
+                    style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12),
+                  ),
+                ],
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
-      return true;
+      return !failed;
     } catch (e) {
       if (context != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -69,7 +108,18 @@ class SystemLauncher {
   static const String installerCmd = 'if [ -x /usr/local/bin/install_swarm_os.sh ]; then alacritty -e sudo /usr/local/bin/install_swarm_os.sh --disk /dev/nvme0n1 || foot -e sudo /usr/local/bin/install_swarm_os.sh --disk /dev/nvme0n1 || xterm -e sudo /usr/local/bin/install_swarm_os.sh --disk /dev/nvme0n1; else alacritty -e bash -lc "echo SWARM OS installer is only available from the live ISO; read -r" || xterm -e bash -lc "echo SWARM OS installer is only available from the live ISO; read -r"; fi';
   static const String antigravityIdeCmd = 'antigravity || "/run/media/i30ltz/lucy-master/Antigravity-x64/antigravity" || code';
   static const String claudeDesktopCmd = 'claude-desktop || $_fj google-chrome-stable --app=https://claude.ai || $_fj chromium --app=https://claude.ai || $_fj firefox --new-window https://claude.ai';
-  static const String claudeCodeCmd = 'alacritty -e claude || foot -e claude || kitty -e claude || xterm -e claude';
+  // The `claude` CLI isn't a pacman/AUR package — it's installed per-user via
+  // `npm install -g @anthropic-ai/claude-code`. Check for it on PATH first so
+  // a missing install surfaces a real, actionable message in a terminal
+  // instead of every terminal-emulator fallback failing silently.
+  static const String claudeCodeCmd =
+      'if command -v claude >/dev/null 2>&1; then '
+      'alacritty -e claude || foot -e claude || kitty -e claude || xterm -e claude; '
+      'else '
+      'alacritty -e bash -c \'echo "claude CLI not installed. Run: npm install -g @anthropic-ai/claude-code"; read -r -p "Press enter to close..."\' || '
+      'foot -e bash -c \'echo "claude CLI not installed. Run: npm install -g @anthropic-ai/claude-code"; read -r -p "Press enter to close..."\' || '
+      'xterm -e bash -c \'echo "claude CLI not installed. Run: npm install -g @anthropic-ai/claude-code"; read -r -p "Press enter to close..."\'; '
+      'fi';
 
   static Future<bool> launchAntigravity(BuildContext? context) {
     return launch(context, antigravityIdeCmd, displayName: 'Antigravity IDE');

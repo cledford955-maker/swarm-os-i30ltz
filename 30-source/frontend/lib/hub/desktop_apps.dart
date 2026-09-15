@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/swarm_colors.dart';
 import '../services/system_launcher.dart';
+import '../models/swarm_apps.dart';
 import '../widgets/extensions_dialog.dart';
 import '../shell/companion_bridge_dialog.dart';
 
@@ -11,75 +12,51 @@ class DesktopApp {
   final IconData icon;
 
   DesktopApp({required this.name, required this.command, required this.icon});
+
+  // Pulls a shared app definition out of SwarmAppRegistry (the single source
+  // of truth also used by the hex desktop and the left app drawer) instead
+  // of re-declaring its name/icon/command here.
+  factory DesktopApp.fromRegistry(String id) {
+    final app = SwarmAppRegistry.byId(id);
+    assert(app != null, 'Unknown SwarmAppRegistry id: $id');
+    return DesktopApp(
+      name: app!.name,
+      command: app.execCommand ?? app.routePath ?? '',
+      icon: app.icon,
+    );
+  }
+
+  DesktopApp.dialog({required String name, required String command, required IconData icon})
+      : this(name: name, command: command, icon: icon);
 }
 
 class DesktopAppsGrid extends StatelessWidget {
   final List<DesktopApp> apps = [
-    DesktopApp(
-      name: 'Cinema Studio',
-      command: '/cinema',
-      icon: Icons.movie_filter_rounded,
-    ),
-    DesktopApp(
-      name: 'GitLens Studio',
-      command: '/gitlens',
-      icon: Icons.hub_rounded,
-    ),
-    DesktopApp(
-      name: 'Visual Diff Studio',
-      command: '/diff',
-      icon: Icons.difference_rounded,
-    ),
-    DesktopApp(
+    DesktopApp.fromRegistry('cinema'),
+    DesktopApp.fromRegistry('gitlens'),
+    DesktopApp.fromRegistry('diff'),
+    DesktopApp.dialog(
       name: 'IDE Extensions',
       command: '__extensions_dialog__',
       icon: Icons.extension_rounded,
     ),
-    DesktopApp(
+    DesktopApp.dialog(
       name: 'Sync Beta',
       command: 'alacritty -e bash -c "git pull origin beta && echo Sync Complete && sleep 2"',
       icon: Icons.cloud_sync_rounded,
     ),
-    DesktopApp(
+    DesktopApp.dialog(
       name: '3 Phone Sync',
       command: '__companion_pool_dialog__',
       icon: Icons.sync_rounded,
     ),
-    DesktopApp(
-      name: 'SysOpt Evals',
-      command: '/sysopt',
-      icon: Icons.bolt_rounded,
-    ),
-    DesktopApp(
-      name: 'File Manager',
-      command: SystemLauncher.fileManagerCmd,
-      icon: Icons.folder,
-    ),
-    DesktopApp(
-      name: 'Claude Desktop',
-      command: SystemLauncher.claudeDesktopCmd,
-      icon: Icons.psychology_rounded,
-    ),
-    DesktopApp(
-      name: 'Claude Code',
-      command: SystemLauncher.claudeCodeCmd,
-      icon: Icons.terminal_rounded,
-    ),
-    DesktopApp(
-      name: 'Terminal',
-      command: SystemLauncher.terminalCmd,
-      icon: Icons.terminal,
-    ),
-    DesktopApp(
-      name: 'Web Browser',
-      command: SystemLauncher.browserCmd,
-      icon: Icons.public,
-    ),
-    DesktopApp(
-      name: 'System Monitor',
-      command: SystemLauncher.monitorCmd,
-      icon: Icons.speed,
-    ),
+    DesktopApp.fromRegistry('sysopt'),
+    DesktopApp.fromRegistry('files'),
+    DesktopApp.fromRegistry('claude_desktop'),
+    DesktopApp.fromRegistry('claude_code'),
+    DesktopApp.fromRegistry('terminal'),
+    DesktopApp.fromRegistry('browser'),
+    DesktopApp.fromRegistry('sysmon'),
   ];
 
   DesktopAppsGrid({super.key});

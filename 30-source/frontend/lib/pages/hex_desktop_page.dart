@@ -1,13 +1,14 @@
 // ═══════════════════════════════════════════════════════════════
 // Swarm OS — Infinite Circular Desktop
 //
-// Swipeable pages (desktops/spaces) arranged in a ring:
-//   [ORIGIN] → [Space 2] → [Space 3] → … → [FULL CIRCLE] ↩ [ORIGIN]
+// One continuous vertical scroll through every space (ORIGIN, SYSTEM,
+// GAMING & MEDIA, …user-added spaces). Scrolling past the last space
+// loops seamlessly back to ORIGIN — the list has no end, it just keeps
+// growing as spaces are added and wrapping around forever.
 //
-// • Swipe right through spaces; grows as user adds new ones.
-// • Last page = loop sentinel that auto-returns to ORIGIN (page 0).
-// • Page 0 is clearly labelled ⭐ ORIGIN.
-// • Bottom indicator: gold dot (origin), cyan dot (current), loop icon.
+// • Scroll down through spaces; content repeats once you pass the end.
+// • A "↻ FULL CIRCLE" divider marks each wrap back to ORIGIN.
+// • Page 0 (ORIGIN) is clearly labelled ⭐ ORIGIN.
 // • + button adds a new blank space; long-press to remove it.
 // ═══════════════════════════════════════════════════════════════
 
@@ -20,8 +21,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/hex_grid.dart';
 import '../shell/window_manager.dart';
 import '../services/system_launcher.dart';
+import '../models/swarm_apps.dart';
 import '../widgets/swarm_terminal.dart';
 import '../widgets/companion_telemetry.dart';
+import '../theme/swarm_colors.dart';
 
 // ─── Thin transparent backing so the wasp-nest wallpaper shows through ───
 const _t = Color(0x28000000);
@@ -34,14 +37,12 @@ class HexDesktopPage extends ConsumerStatefulWidget {
 }
 
 class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
-  late PageController _ctrl;
-  // Each element is one desktop space.  Index 0 = ORIGIN.
+  late ScrollController _ctrl;
+  // Each element is one desktop space. Index 0 = ORIGIN.
   late List<_DesktopSpace> _spaces;
-  int _currentPage = 0;
 
-  static const _returnDelay = Duration(milliseconds: 700);
   static const _kSpaces = 'hex_desktop_spaces';
-  static const _kLastPage = 'hex_desktop_last_page';
+  static const _kScrollOffset = 'hex_desktop_scroll_offset';
 
   // ────────────────────────────────────────────────────────────
   // Init / Persist
@@ -51,7 +52,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
   void initState() {
     super.initState();
     _spaces = _buildInitialSpaces();
-    _ctrl = PageController();
+    _ctrl = ScrollController();
     HardwareKeyboard.instance.addHandler(_onKey);
     _loadPrefs();
   }
@@ -60,10 +61,9 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_kSpaces);
-      final lastPage = prefs.getInt(_kLastPage) ?? 0;
+      final offset = prefs.getDouble(_kScrollOffset) ?? 0;
       if (raw != null) {
         final List<dynamic> saved = jsonDecode(raw) as List<dynamic>;
-        // Rebuild spaces: initial 3 fixed app sets + any extra user spaces
         final rebuilt = <_DesktopSpace>[];
         final defaults = _buildInitialSpaces();
         for (int i = 0; i < saved.length; i++) {
@@ -72,15 +72,14 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
           rebuilt.add(_DesktopSpace(name: name, agents: agents));
         }
         if (rebuilt.isNotEmpty && mounted) {
-          setState(() {
-            _spaces = rebuilt;
-            _currentPage = lastPage.clamp(0, rebuilt.length - 1);
-          });
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_ctrl.hasClients) _ctrl.jumpToPage(_currentPage);
-          });
+          setState(() => _spaces = rebuilt);
         }
       }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_ctrl.hasClients && offset > 0) {
+          _ctrl.jumpTo(offset.clamp(0, _ctrl.position.maxScrollExtent));
+        }
+      });
     } catch (_) {
       // Prefs unavailable — use defaults silently
     }
@@ -93,7 +92,9 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         _spaces.map((s) => {'name': s.name}).toList(),
       );
       await prefs.setString(_kSpaces, encoded);
-      await prefs.setInt(_kLastPage, _currentPage.clamp(0, _spaces.length - 1));
+      if (_ctrl.hasClients) {
+        await prefs.setDouble(_kScrollOffset, _ctrl.offset);
+      }
     } catch (_) {}
   }
 
@@ -104,117 +105,97 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     super.dispose();
   }
 
-  // Meta+Tab → next space; Meta+Shift+Tab → previous space
+  // Meta+Tab → scroll to next space; Meta+Shift+Tab → previous space
   bool _onKey(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
     if (!HardwareKeyboard.instance.isMetaPressed) return false;
     if (event.logicalKey != LogicalKeyboardKey.tab) return false;
 
     if (HardwareKeyboard.instance.isShiftPressed) {
-      _prevPage();
+      _scrollBy(-1);
     } else {
-      _nextPage();
+      _scrollBy(1);
     }
     return true; // consumed
   }
 
-  void _nextPage() {
-    final target =
-        _currentPage >= _spaces.length - 1 ? 0 : _currentPage + 1;
-    _ctrl.animateToPage(target,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutCubic);
-  }
-
-  void _prevPage() {
-    final target =
-        _currentPage <= 0 ? _spaces.length - 1 : _currentPage - 1;
-    _ctrl.animateToPage(target,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutCubic);
+  void _scrollBy(int spaces) {
+    if (!_ctrl.hasClients) return;
+    final target = (_ctrl.offset + spaces * 520)
+        .clamp(0.0, _ctrl.position.maxScrollExtent == 0
+            ? double.infinity
+            : double.infinity);
+    _ctrl.animateTo(target < 0 ? 0 : target,
+        duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
   }
 
   List<_DesktopSpace> _buildInitialSpaces() => [
-    _DesktopSpace(name: 'ORIGIN', agents: _coreApps()),
-    _DesktopSpace(name: 'SYSTEM', agents: _systemApps()),
-    _DesktopSpace(name: 'GAMING & MEDIA', agents: _mediaApps()),
+    _DesktopSpace(name: 'ORIGIN', agents: _toHexAgents(SwarmAppCategory.origin)),
+    _DesktopSpace(name: 'SYSTEM', agents: _toHexAgents(SwarmAppCategory.system)),
+    _DesktopSpace(name: 'GAMING & MEDIA', agents: _toHexAgents(SwarmAppCategory.gamingMedia)),
   ];
 
   // ────────────────────────────────────────────────────────────
-  // App definitions — split across three initial spaces
+  // App definitions — pulled from the shared SwarmAppRegistry so this
+  // page, the left app drawer, and the hub grid never drift out of sync.
   // ────────────────────────────────────────────────────────────
 
-  List<HexAgent> _coreApps() => [
-    HexAgent(id: 'lucille', name: 'Lucille', icon: Icons.auto_awesome,
-      color: const Color(0xFFCE93D8), bgColor: _t, routePath: '/lucille'),
-    HexAgent(id: 'forge', name: 'Forge', icon: Icons.construction,
-      color: const Color(0xFF9575CD), bgColor: _t, routePath: '/forge'),
-    HexAgent(id: 'ide', name: 'Coder', icon: Icons.code,
-      color: const Color(0xFF64B5F6), bgColor: _t, routePath: '/ide'),
-    HexAgent(id: 'claude_desktop', name: 'Claude', icon: Icons.psychology,
-      color: const Color(0xFFFF8A65), bgColor: _t,
-      execCommand: SystemLauncher.claudeDesktopCmd),
-    HexAgent(id: 'claude_code', name: 'CC', icon: Icons.terminal,
-      color: const Color(0xFF81C784), bgColor: _t,
-      execCommand: SystemLauncher.claudeCodeCmd),
-    HexAgent(id: 'memory', name: 'Memory', icon: Icons.psychology_alt,
-      color: const Color(0xFF4DB6AC), bgColor: _t, routePath: '/memory'),
-    HexAgent(id: 'agents', name: 'AI Squad', icon: Icons.group,
-      color: const Color(0xFFBA68C8), bgColor: _t, routePath: '/agents'),
-    HexAgent(id: 'vital', name: 'Vital', icon: Icons.monitor_heart,
-      color: const Color(0xFFEF9A9A), bgColor: _t, routePath: '/vital'),
-  ];
+  List<HexAgent> _toHexAgents(SwarmAppCategory category) =>
+      SwarmAppRegistry.byCategory(category).map(_toHexAgent).toList();
 
-  List<HexAgent> _systemApps() => [
-    HexAgent(id: 'terminal', name: 'Terminal', icon: Icons.terminal,
-      color: const Color(0xFF00D4FF), bgColor: _t),
-    HexAgent(id: 'browser', name: 'Browser', icon: Icons.public,
-      color: const Color(0xFF4FC3F7), bgColor: _t,
-      execCommand: SystemLauncher.browserCmd),
-    HexAgent(id: 'files', name: 'Files', icon: Icons.folder,
-      color: const Color(0xFFA1887F), bgColor: _t,
-      execCommand: SystemLauncher.fileManagerCmd),
-    HexAgent(id: 'antigravity', name: 'Antigravity', icon: Icons.rocket_launch,
-      color: const Color(0xFFFFB74D), bgColor: _t,
-      execCommand: SystemLauncher.antigravityIdeCmd),
-    HexAgent(id: 'sysmon', name: 'Monitor', icon: Icons.bar_chart,
-      color: const Color(0xFFFF7043), bgColor: _t,
-      execCommand: SystemLauncher.monitorCmd),
-    HexAgent(id: 'installer', name: 'Install', icon: Icons.install_desktop,
-      color: const Color(0xFFFFD54F), bgColor: _t,
-      execCommand: SystemLauncher.installerCmd),
-    HexAgent(id: 'sysopt', name: 'SysOpt', icon: Icons.bolt,
-      color: const Color(0xFF4DD0E1), bgColor: _t, routePath: '/sysopt'),
-    HexAgent(id: 'mirror', name: 'Mirror', icon: Icons.screen_share,
-      color: const Color(0xFF80CBC4), bgColor: _t, routePath: '/mirror'),
-    HexAgent(id: 'settings', name: 'Settings', icon: Icons.settings,
-      color: const Color(0xFF78909C), bgColor: _t, routePath: '/settings'),
-  ];
-
-  List<HexAgent> _mediaApps() => [
-    HexAgent(id: 'gaming', name: 'Gaming', icon: Icons.sports_esports,
-      color: const Color(0xFF76B900), bgColor: _t, routePath: '/nvidia'),
-    HexAgent(id: 'cinema', name: 'Cinema', icon: Icons.movie_filter,
-      color: const Color(0xFFF48FB1), bgColor: _t, routePath: '/cinema'),
-    HexAgent(id: 'gitlens', name: 'GitLens', icon: Icons.hub,
-      color: const Color(0xFFFFD54F), bgColor: _t, routePath: '/gitlens'),
-    HexAgent(id: 'diff', name: 'Diff', icon: Icons.difference,
-      color: const Color(0xFFDCE775), bgColor: _t, routePath: '/diff'),
-    HexAgent(id: 'vms', name: 'VMs', icon: Icons.computer,
-      color: const Color(0xFF90A4AE), bgColor: _t, routePath: '/vms'),
-    HexAgent(id: 'security', name: 'Security', icon: Icons.security,
-      color: const Color(0xFFEF5350), bgColor: _t, routePath: '/security-audit'),
-    HexAgent(id: 'telemetry', name: 'Telemetry', icon: Icons.timeline,
-      color: const Color(0xFF7986CB), bgColor: _t, routePath: '/telemetry'),
-    HexAgent(id: 'backend', name: 'Backend', icon: Icons.dns,
-      color: const Color(0xFF90A4AE), bgColor: _t, routePath: '/backend'),
-  ];
+  HexAgent _toHexAgent(SwarmApp app) => HexAgent(
+    id: app.id,
+    name: app.name,
+    icon: app.icon,
+    color: app.color,
+    bgColor: _t,
+    execCommand: app.execCommand,
+    routePath: app.routePath,
+  );
 
   // ────────────────────────────────────────────────────────────
   // Actions
   // ────────────────────────────────────────────────────────────
 
+  // Windows land centered in the middle gutter between the two icon rails,
+  // not tucked in a corner behind them.
+  Offset _centerWindowOffset(Size windowSize) {
+    final screen = MediaQuery.of(context).size;
+    return Offset(
+      ((screen.width - windowSize.width) / 2).clamp(0, double.infinity),
+      ((screen.height - windowSize.height) / 2).clamp(40, double.infinity),
+    );
+  }
+
   void _openAgent(HexAgent agent) {
+    if (SwarmAppRegistry.byId(agent.id)?.mock == true) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: SwarmColors.bgElevated,
+        content: Text('🔧 ${agent.name} — idea, not wired up yet',
+          style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12)),
+        duration: const Duration(seconds: 2),
+      ));
+      return;
+    }
+    const windowSize = Size(620, 460);
+    // These two stay in-app widgets rather than shelling out — an embedded
+    // terminal/monitor works even before a terminal emulator is packaged.
+    switch (agent.id) {
+      case 'terminal':
+        ref.read(windowProvider.notifier).openWindow(AppWindow(
+          id: agent.id, title: agent.name,
+          position: _centerWindowOffset(windowSize), size: windowSize,
+          content: const SwarmTerminal(initialPanes: 1),
+        ));
+        return;
+      case 'sysmon':
+        ref.read(windowProvider.notifier).openWindow(AppWindow(
+          id: agent.id, title: agent.name,
+          position: _centerWindowOffset(windowSize), size: windowSize,
+          content: const CompanionTelemetryPanel(),
+        ));
+        return;
+    }
     if (agent.execCommand != null) {
       SystemLauncher.launch(context, agent.execCommand!, displayName: agent.name);
       return;
@@ -223,21 +204,12 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       context.go(agent.routePath!);
       return;
     }
-    Widget content;
-    switch (agent.id) {
-      case 'terminal':
-        content = const SwarmTerminal(initialPanes: 1);
-      case 'sysmon':
-        content = const CompanionTelemetryPanel();
-      default:
-        content = _placeholder(agent);
-    }
     ref.read(windowProvider.notifier).openWindow(AppWindow(
       id: agent.id,
       title: agent.name,
-      position: const Offset(120, 80),
-      size: const Size(620, 460),
-      content: content,
+      position: _centerWindowOffset(windowSize),
+      size: windowSize,
+      content: _placeholder(agent),
     ));
   }
 
@@ -246,42 +218,12 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       _spaces.add(_DesktopSpace(name: 'SPACE ${_spaces.length + 1}', agents: []));
     });
     _savePrefs();
-    Future.microtask(() => _ctrl.animateToPage(
-      _spaces.length - 1,
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOutCubic,
-    ));
   }
 
   void _removeSpace(int index) {
     if (_spaces.length <= 1 || index == 0) return; // can't remove ORIGIN
-    setState(() {
-      _spaces.removeAt(index);
-      if (_currentPage >= _spaces.length) {
-        _currentPage = _spaces.length - 1;
-      }
-    });
-    _ctrl.jumpToPage(_currentPage);
+    setState(() => _spaces.removeAt(index));
     _savePrefs();
-  }
-
-  // ────────────────────────────────────────────────────────────
-  // Page changed handler
-  // ────────────────────────────────────────────────────────────
-
-  void _onPageChanged(int page) {
-    setState(() => _currentPage = page);
-    // Save last-visited real page (not the sentinel)
-    if (page < _spaces.length) _savePrefs();
-    // Loop sentinel reached — bounce back to ORIGIN after a beat
-    if (page == _spaces.length) {
-      Future.delayed(_returnDelay, () {
-        if (!mounted) return;
-        _ctrl.animateToPage(0,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOutCubic);
-      });
-    }
   }
 
   // ────────────────────────────────────────────────────────────
@@ -290,70 +232,108 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
 
   @override
   Widget build(BuildContext context) {
-    // itemCount = N real spaces + 1 loop-sentinel page
     return Stack(children: [
-      PageView.builder(
-        controller: _ctrl,
-        itemCount: _spaces.length + 1,
-        onPageChanged: _onPageChanged,
-        itemBuilder: (ctx, index) {
-          if (index == _spaces.length) return _buildLoopSentinel();
-          return _buildSpacePage(index);
+      NotificationListener<ScrollUpdateNotification>(
+        onNotification: (n) {
+          // Persist periodically rather than on every pixel of scroll.
+          if ((n.metrics.pixels % 200) < 20) _savePrefs();
+          return false;
         },
-      ),
-
-      // Bottom page ring indicator
-      Positioned(
-        bottom: 12,
-        left: 0,
-        right: 0,
-        child: _buildRingIndicator(),
+        child: ListView.builder(
+          controller: _ctrl,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          // No itemCount — the list is intentionally endless. Each real
+          // space repeats via `index % _spaces.length`, which is what makes
+          // scrolling down forever loop back to ORIGIN instead of stopping.
+          itemBuilder: (ctx, index) {
+            final realIndex = index % _spaces.length;
+            final isWrap = index > 0 && realIndex == 0;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isWrap) _buildLoopDivider(),
+                _buildSpaceSection(realIndex),
+                const SizedBox(height: 28),
+              ],
+            );
+          },
+        ),
       ),
 
       // Add new space button (bottom-right)
       Positioned(
         right: 20,
-        bottom: 52,
+        bottom: 24,
         child: _buildAddButton(),
       ),
     ]);
   }
 
   // ────────────────────────────────────────────────────────────
-  // Space page
+  // Space section
   // ────────────────────────────────────────────────────────────
 
-  Widget _buildSpacePage(int index) {
+  Widget _buildSpaceSection(int index) {
     final space = _spaces[index];
+    // Icons run down two checkered columns hugging the left/right edges;
+    // the middle stays clear as the landing zone for opened windows.
+    // Interleaved so the checkerboard reads continuously top-to-bottom.
+    final left = <HexAgent>[];
+    final right = <HexAgent>[];
+    for (int i = 0; i < space.agents.length; i++) {
+      (i.isEven ? left : right).add(space.agents[i]);
+    }
+
     return Stack(children: [
+      Container(
+        padding: const EdgeInsets.fromLTRB(0, 36, 0, 8),
+        child: space.agents.isEmpty
+            ? _buildEmptySpace()
+            : IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 150,
+                      child: HexGrid(
+                        agents: left,
+                        columns: 2,
+                        rows: (left.length / 2).ceil().clamp(1, 40),
+                        hexSize: 64,
+                        onAgentOpen: _openAgent,
+                        showSlotBackgrounds: false,
+                      ),
+                    ),
+                    // Window landing zone — left empty on purpose.
+                    const Expanded(child: SizedBox.shrink()),
+                    SizedBox(
+                      width: 150,
+                      child: HexGrid(
+                        agents: right,
+                        columns: 2,
+                        rows: (right.length / 2).ceil().clamp(1, 40),
+                        hexSize: 64,
+                        onAgentOpen: _openAgent,
+                        showSlotBackgrounds: false,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+      ),
+
       // Space label badge (top-left)
       Positioned(
         top: 6,
-        left: 16,
-        child: index == 0 ? _originBadge() : _spaceBadge(index, space.name),
-      ),
-
-      // Scrollable hex icon grid
-      SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 40, 16, 72),
-        child: space.agents.isEmpty
-            ? _buildEmptySpace(index)
-            : HexGrid(
-                agents: space.agents,
-                columns: 8,
-                rows: 4,
-                hexSize: 64,
-                onAgentOpen: _openAgent,
-                showSlotBackgrounds: false,
-              ),
+        left: 0,
+        child: index == 0 ? _originBadge() : _spaceBadge(space.name),
       ),
 
       // Remove button (top-right) — only for non-ORIGIN spaces
       if (index != 0)
         Positioned(
           top: 6,
-          right: 16,
+          right: 0,
           child: GestureDetector(
             onTap: () => _removeSpace(index),
             child: Container(
@@ -370,81 +350,42 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     ]);
   }
 
-  Widget _buildEmptySpace(int index) {
+  Widget _buildEmptySpace() {
     return SizedBox(
-      height: 300,
+      height: 160,
       child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.add_circle_outline,
-          color: Colors.white.withValues(alpha: 0.1), size: 56),
-        const SizedBox(height: 16),
+          color: Colors.white.withValues(alpha: 0.1), size: 40),
+        const SizedBox(height: 10),
         Text('Empty space', style: TextStyle(
           color: Colors.white.withValues(alpha: 0.15),
-          fontSize: 14, letterSpacing: 1)),
-        const SizedBox(height: 6),
-        Text('Swipe right to see more desktops', style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.08),
-          fontSize: 11, letterSpacing: 0.5)),
+          fontSize: 13, letterSpacing: 1)),
       ])),
     );
   }
 
   // ────────────────────────────────────────────────────────────
-  // Loop sentinel
+  // Loop divider — shown each time the endless scroll wraps to ORIGIN
   // ────────────────────────────────────────────────────────────
 
-  Widget _buildLoopSentinel() {
-    return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      // Animated circular glow ring
-      TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.6, end: 1.0),
-        duration: const Duration(milliseconds: 900),
-        curve: Curves.easeInOut,
-        builder: (_, v, child) => AnimatedScale(
-          scale: v,
-          duration: Duration.zero,
-          child: child,
+  Widget _buildLoopDivider() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Row(children: [
+        Expanded(child: Divider(color: const Color(0xFF00D4FF).withValues(alpha: 0.25))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.loop_rounded, color: Color(0xFF00D4FF), size: 15),
+            const SizedBox(width: 6),
+            Text('FULL CIRCLE', style: TextStyle(
+              color: const Color(0xFF00D4FF).withValues(alpha: 0.8),
+              fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 3)),
+          ]),
         ),
-        child: Container(
-          width: 130,
-          height: 130,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF00D4FF), width: 2),
-            color: const Color(0xFF00D4FF).withValues(alpha: 0.06),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF00D4FF).withValues(alpha: 0.35),
-                blurRadius: 40,
-                spreadRadius: 8,
-              ),
-            ],
-          ),
-          child: const Icon(Icons.loop_rounded, color: Color(0xFF00D4FF), size: 64),
-        ),
-      ),
-      const SizedBox(height: 28),
-      const Text(
-        'FULL CIRCLE',
-        style: TextStyle(
-          color: Color(0xFF00D4FF),
-          fontSize: 24,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 5,
-        ),
-      ),
-      const SizedBox(height: 10),
-      Text(
-        'Returning to ORIGIN…',
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.35),
-          fontSize: 13,
-          letterSpacing: 1.5,
-        ),
-      ),
-      const SizedBox(height: 32),
-      // Preview of ORIGIN badge
-      _originBadge(),
-    ]));
+        Expanded(child: Divider(color: const Color(0xFF00D4FF).withValues(alpha: 0.25))),
+      ]),
+    );
   }
 
   // ────────────────────────────────────────────────────────────
@@ -479,7 +420,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     );
   }
 
-  Widget _spaceBadge(int index, String name) {
+  Widget _spaceBadge(String name) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -496,61 +437,6 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
           letterSpacing: 2,
         ),
       ),
-    );
-  }
-
-  // ────────────────────────────────────────────────────────────
-  // Ring indicator (bottom)
-  // ────────────────────────────────────────────────────────────
-
-  Widget _buildRingIndicator() {
-    final total = _spaces.length + 1; // real spaces + loop sentinel
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ...List.generate(total, (i) {
-          final isLoop = i == _spaces.length;
-          final isCurrent = _currentPage == i;
-          final isOrigin = i == 0;
-
-          if (isLoop) {
-            // Loop sentinel dot — loop icon
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: AnimatedOpacity(
-                opacity: isCurrent ? 1.0 : 0.35,
-                duration: const Duration(milliseconds: 200),
-                child: Icon(Icons.loop_rounded,
-                  color: const Color(0xFF00D4FF), size: 14),
-              ),
-            );
-          }
-
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
-            width: isCurrent ? 22 : (isOrigin ? 10 : 7),
-            height: isOrigin ? 10 : 7,
-            decoration: BoxDecoration(
-              color: isCurrent
-                  ? (isOrigin ? const Color(0xFFFFD700) : const Color(0xFF00D4FF))
-                  : isOrigin
-                      ? const Color(0xFFFFD700).withValues(alpha: 0.55)
-                      : Colors.white.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: isCurrent
-                  ? [BoxShadow(
-                      color: (isOrigin
-                          ? const Color(0xFFFFD700)
-                          : const Color(0xFF00D4FF)).withValues(alpha: 0.5),
-                      blurRadius: 8,
-                    )]
-                  : [],
-            ),
-          );
-        }),
-      ],
     );
   }
 
