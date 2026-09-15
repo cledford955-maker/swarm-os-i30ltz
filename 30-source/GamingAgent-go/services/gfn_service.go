@@ -15,6 +15,10 @@ const gfnCatalogURL = "https://static.nvidiagrid.net/supported-public-game-conte
 
 var nonAlphanumRe = regexp.MustCompile(`[^a-z0-9]`)
 
+// subtitleRe strips ": subtitle" or " - subtitle" so "Tainted Grail: The Fall of Avalon"
+// can still match a GFN entry that only lists "Tainted Grail".
+var subtitleRe = regexp.MustCompile(`\s*[:\-]\s*.+$`)
+
 type GfnService struct {
 	cache  *cached[[]models.GfnGame]
 	client *http.Client

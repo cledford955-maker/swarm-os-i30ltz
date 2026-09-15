@@ -90,7 +90,7 @@ there is no compositor for a second app to draw into.
 ### GamingAgent (fully migrated .NET → Go, tasks #10–14 all complete — runs from `GamingAgent-go/`)
 - [x] `GET /api/gfn/catalog` — full NVIDIA GFN catalog (12h cache)
 - [x] `GET /api/steam/library` — user's full Steam library via API key
-- [x] `GET /api/games/intersection` — Steam ∩ GFN with enrichment (playtime, images, genres, favorites)
+- [x] `GET /api/games/intersection` — Steam ∩ GFN with enrichment (playtime, images, genres, favorites); subtitle-strip fallback so e.g. "Tainted Grail: The Fall of Avalon" matches GFN entry "Tainted Grail" (2026-09-15)
 - [x] `GET /api/games/genres` — genre list from GFN catalog
 - [x] `GET /api/games/prices/{appId}` — CheapShark cross-store prices
 - [x] `POST /api/games/favorite` — set favorite/pin state in SQLite at `/etc/swarm_os/gaming.db`

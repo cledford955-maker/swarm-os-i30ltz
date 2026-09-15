@@ -41,15 +41,21 @@ func (s *GamesService) GetIntersection() ([]models.EnrichedGame, error) {
 		return nil, fmt.Errorf("favorites: %w", err)
 	}
 
-	// Build GFN lookup by steamAppId + normalised title
+	// Build GFN lookup by steamAppId + normalised title + normalised bare title (no subtitle)
 	bySteamId := make(map[int]*models.GfnGame, len(gfnGames))
 	byTitle := make(map[string]*models.GfnGame, len(gfnGames))
+	byBareTitle := make(map[string]*models.GfnGame, len(gfnGames))
 	for i := range gfnGames {
 		g := &gfnGames[i]
 		if g.SteamAppId != 0 {
 			bySteamId[g.SteamAppId] = g
 		}
-		byTitle[NormalizeTitle(g.Title)] = g
+		norm := NormalizeTitle(g.Title)
+		byTitle[norm] = g
+		bare := NormalizeTitle(subtitleRe.ReplaceAllString(g.Title, ""))
+		if bare != norm {
+			byBareTitle[bare] = g
+		}
 	}
 
 	result := make([]models.EnrichedGame, 0, len(steamGames))
@@ -59,6 +65,14 @@ func (s *GamesService) GetIntersection() ([]models.EnrichedGame, error) {
 			gfn = g
 		} else if g, ok := byTitle[NormalizeTitle(sg.Name)]; ok {
 			gfn = g
+		} else {
+			// Subtitle-strip fallback: "Tainted Grail: The Fall of Avalon" → "Tainted Grail"
+			bare := NormalizeTitle(subtitleRe.ReplaceAllString(sg.Name, ""))
+			if g, ok := byTitle[bare]; ok {
+				gfn = g
+			} else if g, ok := byBareTitle[bare]; ok {
+				gfn = g
+			}
 		}
 
 		fav := favs[sg.AppId]
