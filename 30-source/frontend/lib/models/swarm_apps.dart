@@ -79,7 +79,7 @@ class SwarmAppRegistry {
 
     // ───────────── SYSTEM ─────────────
     SwarmApp(id: 'terminal', name: 'Terminal', icon: Icons.terminal,
-      color: Color(0xFF00D4FF), categories: {SwarmAppCategory.system},
+      color: Color(0xFF00D4FF), categories: {SwarmAppCategory.origin, SwarmAppCategory.system},
       description: 'High-performance GPU-accelerated shell',
       execCommand: SystemLauncher.terminalCmd, isFavorite: true),
     SwarmApp(id: 'browser', name: 'Browser', icon: Icons.public,
@@ -118,7 +118,7 @@ class SwarmAppRegistry {
       color: Color(0xFF76B900),
       categories: {SwarmAppCategory.gamingMedia, SwarmAppCategory.origin},
       description: 'GFN + Steam dashboard — AI game picks by Lucille',
-      routePath: '/nvidia'),
+      execCommand: SystemLauncher.gamingDashboardCmd),
     SwarmApp(id: 'cinema', name: 'Cinema', icon: Icons.movie_filter,
       color: Color(0xFFF48FB1),
       categories: {SwarmAppCategory.gamingMedia, SwarmAppCategory.forge},

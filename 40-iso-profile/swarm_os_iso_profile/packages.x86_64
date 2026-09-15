@@ -169,7 +169,12 @@ mkinitcpio
 # AUR-only and this profile's pacman.conf has no AUR repo configured (see the
 # tailscale removal note above — an AUR-only package here breaks pacstrap).
 alacritty
+foot
 chromium
+# file manager for the Files tile (fileManagerCmd in system_launcher.dart)
+thunar
+# system monitor for the Monitor tile (monitorCmd uses btop first)
+btop
 # nodejs/npm — lets `npm install -g @anthropic-ai/claude-code` provide the
 # `claude` CLI that the CC tile shells out to (claudeCodeCmd in
 # system_launcher.dart). The CLI itself isn't packaged here since it's a

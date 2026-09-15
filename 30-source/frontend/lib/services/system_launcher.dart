@@ -134,6 +134,13 @@ class SystemLauncher {
       r' || foot -e bash -lc "command -v claude >/dev/null 2>&1 && exec claude; echo Installing Claude Code CLI...; npm install -g @anthropic-ai/claude-code && exec claude; echo; echo Install failed - run: npm install -g @anthropic-ai/claude-code; read -r"'
       r' || xterm -e bash -lc "command -v claude >/dev/null 2>&1 && exec claude; echo Installing Claude Code CLI...; npm install -g @anthropic-ai/claude-code && exec claude; echo; echo Install failed - run: npm install -g @anthropic-ai/claude-code; read -r"';
 
+  // Opens the GamingAgent-backed GFN+Steam dashboard (Artifact) in a Chromium
+  // app window. localhost exemption in Chrome allows the HTTPS artifact to call
+  // http://localhost:8401 without mixed-content blocking.
+  static const String gamingDashboardCmd =
+      '$_fj chromium --app=https://claude.ai/code/artifact/5c970c82-aed8-4cb2-83c0-ed3c459fc7d9'
+      ' || chromium https://claude.ai/code/artifact/5c970c82-aed8-4cb2-83c0-ed3c459fc7d9';
+
   static Future<bool> launchAntigravity(BuildContext? context) {
     return launch(context, antigravityIdeCmd, displayName: 'Antigravity IDE');
   }

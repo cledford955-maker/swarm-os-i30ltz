@@ -46,7 +46,7 @@ ExecStartPre=+/usr/bin/chmod 0700 /run/user/1000
 ExecStartPre=+/usr/bin/mkdir -p /mnt/Lucy/logs
 # labwc starts the compositor; its autostart script (~/.config/labwc/autostart)
 # launches the Flutter shell as a normal Wayland client inside it.
-ExecStart=/usr/bin/labwc
+ExecStart=/usr/bin/dbus-run-session -- /usr/bin/labwc
 ExecStopPost=+/usr/bin/bash -c 'journalctl -u swarm-ui.service -b --no-pager > /mnt/Lucy/logs/swarm-ui-$(date +%%Y%%m%%d-%%H%%M%%S).log 2>&1 || true'
 # TTYVTDisallocate (above) deallocates tty1 on stop, but that race isn't airtight
 # against a fast restart: labwc drives the VT directly via DRM/KMS, and if fbcon
