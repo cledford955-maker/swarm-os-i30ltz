@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,8 @@ import 'package:media_kit/media_kit.dart';
 import 'router.dart';
 import 'theme/swarm_theme.dart';
 import 'widgets/openrouter_balance_widget.dart';
+import 'widgets/ui_zoom_control.dart';
+import 'services/ui_scale_service.dart';
 import 'services/ai_client.dart';
 import 'services/telemetry_service.dart';
 import 'services/memory_service.dart';
@@ -63,11 +66,13 @@ void main() async {
   final googleHubService = GoogleHubService();
   final authService = AuthService();
   final lucyServerClient = LucyServerClient();
+  final uiScaleService = UiScaleService();
 
   runApp(
     ProviderScope(
       child: p.MultiProvider(
         providers: [
+          p.ChangeNotifierProvider.value(value: uiScaleService),
           p.Provider.value(value: aiClient),
           p.Provider.value(value: telemetryService),
           p.Provider.value(value: memoryService),
@@ -89,8 +94,48 @@ void main() async {
   );
 }
 
-class SwarmApp extends StatelessWidget {
+class SwarmApp extends StatefulWidget {
   const SwarmApp({super.key});
+
+  @override
+  State<SwarmApp> createState() => _SwarmAppState();
+}
+
+class _SwarmAppState extends State<SwarmApp> {
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  // Ctrl+= / Ctrl+- / Ctrl+0 — whole-shell zoom, works from any screen.
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (!HardwareKeyboard.instance.isControlPressed) return false;
+    final ui = context.read<UiScaleService>();
+    if (event.logicalKey == LogicalKeyboardKey.equal ||
+        event.logicalKey == LogicalKeyboardKey.numpadAdd) {
+      ui.zoomIn();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.minus ||
+        event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
+      ui.zoomOut();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit0 ||
+        event.logicalKey == LogicalKeyboardKey.numpad0) {
+      ui.reset();
+      return true;
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,22 +145,56 @@ class SwarmApp extends StatelessWidget {
       theme: SwarmTheme.dark,
       routerConfig: goRouter,
       builder: (context, child) {
-        return Stack(
-          children: [
-            if (child != null) child,
-            const Positioned(
-              top: 10,
-              right: 15,
-              child: Material(
-                color: Colors.transparent,
-                child: SafeArea(
-                  child: OpenRouterBalanceWidget(),
+        return p.Consumer<UiScaleService>(
+          builder: (context, ui, _) {
+            return Stack(
+              children: [
+                if (child != null) _wholeShellZoom(context, child, ui.scale),
+                const Positioned(
+                  top: 10,
+                  right: 15,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: SafeArea(
+                      child: OpenRouterBalanceWidget(),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
+                const UiZoomControl(),
+              ],
+            );
+          },
         );
       },
+    );
+  }
+
+  // Scales every screen in the shell uniformly (icons, text, layout — not
+  // just fonts), keeping hit-testing correct. Content is laid out against a
+  // shrunk/grown "virtual" screen size and then stretched back to the real
+  // one via Transform.scale.
+  Widget _wholeShellZoom(BuildContext context, Widget child, double scale) {
+    if (scale == 1.0) return child;
+    final mq = MediaQuery.of(context);
+    final virtualSize = mq.size / scale;
+    return MediaQuery(
+      data: mq.copyWith(size: virtualSize),
+      child: OverflowBox(
+        alignment: Alignment.topLeft,
+        minWidth: virtualSize.width,
+        maxWidth: virtualSize.width,
+        minHeight: virtualSize.height,
+        maxHeight: virtualSize.height,
+        child: Transform.scale(
+          scale: scale,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: virtualSize.width,
+            height: virtualSize.height,
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }

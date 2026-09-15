@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ───────────────────────────────────────────
 // ANSI COLOR PARSER
@@ -146,6 +147,11 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
   final Map<String, double> _progress = {};
   String _clip = '';
 
+  // Personalized text size — bigger by default than the original cramped
+  // 10-12.5px, and remembered per-user so it doesn't reset every launch.
+  static const _kFontScaleKey = 'swarm_terminal_font_scale';
+  double _fontScale = 1.35;
+
   @override
   void initState() {
     super.initState();
@@ -153,6 +159,23 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
     for (int i = 0; i < widget.initialPanes.clamp(1, 4); i++) {
       _addPane();
     }
+    _loadFontScale();
+  }
+
+  Future<void> _loadFontScale() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getDouble(_kFontScaleKey);
+      if (saved != null && mounted) setState(() => _fontScale = saved);
+    } catch (_) {}
+  }
+
+  Future<void> _adjustFontScale(double delta) async {
+    setState(() => _fontScale = (_fontScale + delta).clamp(0.8, 2.2));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_kFontScaleKey, _fontScale);
+    } catch (_) {}
   }
 
   @override
@@ -543,7 +566,7 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
 
   // ─── Line ───
   Widget _line(TermLine l) {
-    final fs = _layout == 4 ? 10.0 : (_layout == 2 ? 11.0 : 12.5);
+    final fs = (_layout == 4 ? 13.0 : (_layout == 2 ? 15.0 : 17.0)) * _fontScale;
     return Padding(
       padding: const EdgeInsets.only(bottom: 0.5),
       child: SelectableText.rich(TextSpan(
@@ -582,6 +605,9 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
         _divider(),
         _tb('Clear', Icons.layers_clear, const Color(0xFF888888), () => setState(() => pane.lines.clear()), compact),
         if (pane.busy) _tb('Kill', Icons.stop_circle_outlined, const Color(0xFFFF6B6B), () => _kill(pane), compact),
+        _divider(),
+        _tb('A-', Icons.text_decrease, const Color(0xFFDA77F2), () => _adjustFontScale(-0.1), compact),
+        _tb('A+', Icons.text_increase, const Color(0xFFDA77F2), () => _adjustFontScale(0.1), compact),
         const Spacer(),
         _tb('^C', Icons.cancel_outlined, const Color(0xFFFF8787), () { if (pane.busy) _kill(pane); }, compact),
         _tb('Tab', Icons.keyboard_tab, const Color(0xFF777799), () { pane.input.text += '\t'; }, compact),
@@ -622,10 +648,10 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
       ),
       child: Row(children: [
         // Prompt
-        Text(_shortDir(pane.cwd), style: const TextStyle(color: Color(0xFF5B8DEF), fontSize: 11, fontFamily: 'monospace')),
+        Text(_shortDir(pane.cwd), style: TextStyle(color: const Color(0xFF5B8DEF), fontSize: 13 * _fontScale, fontFamily: 'monospace')),
         Text(pane.busy ? ' ◉ ' : ' ❯ ', style: TextStyle(
           color: pane.busy ? const Color(0xFF51CF66) : const Color(0xFF00D4FF),
-          fontSize: 13, fontWeight: FontWeight.w800, fontFamily: 'monospace',
+          fontSize: 15 * _fontScale, fontWeight: FontWeight.w800, fontFamily: 'monospace',
         )),
         // Input field
         Expanded(child: KeyboardListener(
@@ -643,7 +669,7 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
           child: TextField(
             controller: pane.input,
             focusNode: pane.focus,
-            style: const TextStyle(color: Colors.white, fontSize: 12.5, fontFamily: 'monospace', letterSpacing: 0.3),
+            style: TextStyle(color: Colors.white, fontSize: 15 * _fontScale, fontFamily: 'monospace', letterSpacing: 0.3),
             decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
             cursorColor: const Color(0xFF00D4FF),
             cursorWidth: 8,
@@ -697,6 +723,9 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
         _mi('Clear', Icons.layers_clear, 'clear', const Color(0xFF888888)),
         _mi('Select All', Icons.select_all, 'selectall', const Color(0xFF888888)),
         const PopupMenuDivider(),
+        _mi('Bigger Text', Icons.text_increase, 'bigger', const Color(0xFFDA77F2)),
+        _mi('Smaller Text', Icons.text_decrease, 'smaller', const Color(0xFFDA77F2)),
+        const PopupMenuDivider(),
         _mi('New Pane', Icons.add_box_outlined, 'new', const Color(0xFF00D4FF)),
         _mi('Split View', Icons.vertical_split, 'split', const Color(0xFF00D4FF)),
         _mi('Quad View', Icons.grid_view, 'quad', const Color(0xFF00D4FF)),
@@ -713,6 +742,8 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
         case 'cut': _cut(pane);
         case 'clear': setState(() => pane.lines.clear());
         case 'selectall': pane.input.selection = TextSelection(baseOffset: 0, extentOffset: pane.input.text.length);
+        case 'bigger': _adjustFontScale(0.1);
+        case 'smaller': _adjustFontScale(-0.1);
         case 'new': _addPane();
         case 'split': setState(() => _layout = 2); while (_p.length < 2) {
           _addPane();
