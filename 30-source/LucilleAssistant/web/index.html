@@ -1,0 +1,654 @@
+<title>Lucille Assistant</title>
+<meta name="theme-color" content="#07040d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Chakra+Petch:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Lucille — purple electricity goddess. One deliberate dark world:
+   void black, plasma purple, arc blue, ember red. Carved-stone display type
+   (Cinzel) over a technical body (Chakra Petch). */
+:root{
+  --void:#07040d;
+  --void-2:#0e0819;
+  --plasma:#a45cff;
+  --plasma-hi:#d2a8ff;
+  --arc:#46b0ff;
+  --ember:#ff3355;
+  --filament:#f3ebff;
+  --smoke:#a898c4;
+  --smoke-dim:#6f628a;
+  --ok:#5ee0a0;
+  --warn:#ffc04d;
+  --crit:#ff3355;
+  --panel-fill:rgba(11,6,21,.84);
+  --edge:linear-gradient(135deg,rgba(164,92,255,.75),rgba(70,176,255,.35) 45%,rgba(255,51,85,.45));
+  --display:"Cinzel",Georgia,"Times New Roman",serif;
+  --body:"Chakra Petch",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --cut:12px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--filament)}
+body{font:15px/1.5 var(--body);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--plasma-hi)}
+:focus-visible{outline:2px solid var(--arc);outline-offset:2px}
+
+/* ── the storm ─────────────────────────────────────────── */
+.storm{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:
+  radial-gradient(120% 80% at 50% 110%,#1a0730 0%,transparent 60%),
+  radial-gradient(90% 60% at 50% -10%,#0b1330 0%,transparent 70%),var(--void)}
+.blob{position:absolute;width:70vmax;height:70vmax;border-radius:50%;filter:blur(70px);opacity:.55;mix-blend-mode:screen;will-change:transform}
+.blob.p{background:radial-gradient(circle,#7a2cff 0%,#4b12a8 35%,transparent 68%);left:-20vmax;top:-10vmax;animation:drift1 26s ease-in-out infinite alternate}
+.blob.b{background:radial-gradient(circle,#1f7dff 0%,#0d3a9e 35%,transparent 66%);right:-28vmax;top:20vh;opacity:.45;animation:drift2 32s ease-in-out infinite alternate}
+.blob.r{background:radial-gradient(circle,#ff1f4b 0%,#8a0c2a 32%,transparent 64%);left:10vw;bottom:-40vmax;opacity:.4;animation:drift3 22s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate(30vw,25vh) scale(1.15)}}
+@keyframes drift2{to{transform:translate(-35vw,-15vh) scale(.9)}}
+@keyframes drift3{to{transform:translate(25vw,-30vh) scale(1.2)}}
+.hexgrid{position:absolute;inset:0;opacity:.13;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97'%3E%3Cpath d='M28 0l28 16v32L28 64 0 48V16zM28 64v33' fill='none' stroke='%23b98aff' stroke-width='1'/%3E%3C/svg%3E");
+  -webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 10%,transparent 75%);mask-image:radial-gradient(ellipse at 50% 40%,#000 10%,transparent 75%)}
+#bolts{position:absolute;inset:0;width:100%;height:100%}
+.flash{position:absolute;inset:0;background:radial-gradient(circle at var(--fx,50%) var(--fy,30%),rgba(200,160,255,.35),transparent 60%);opacity:0;transition:opacity .5s ease-out}
+.flash.on{opacity:1;transition:none}
+
+/* ── shell ─────────────────────────────────────────────── */
+.app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 92px)}
+header.top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.sigil{width:52px;height:52px;flex:none;transition:filter .2s}
+.sigil.hit{filter:drop-shadow(0 0 14px #c890ff) drop-shadow(0 0 28px #6a3cff) brightness(1.5)}
+.id{flex:1;min-width:0}
+.name{font:800 26px/1 var(--display);letter-spacing:.14em;margin:0;background:linear-gradient(180deg,#fff 10%,var(--plasma-hi) 55%,var(--plasma) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 24px rgba(164,92,255,.35)}
+.sub{font:500 11px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--smoke);margin-top:4px}
+.conn{border:0;background:rgba(255,255,255,.06);padding:6px 10px;font:600 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:6px;cursor:pointer;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+.conn i{width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.conn.live i{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+
+/* the voice — Lucille's spoken headline */
+.voice{position:relative;margin:0 0 14px;padding:14px 16px 14px 18px}
+.voice p{margin:0;font:500 17px/1.45 var(--body);text-wrap:pretty}
+.voice .who{font:600 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--plasma-hi);display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.wave{height:10px;width:60px}
+.wave path{stroke:var(--plasma-hi);stroke-width:1.5;fill:none}
+
+/* panels: carved plate with an electric edge */
+.panel{position:relative;padding:1px;background:var(--edge);clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut))}
+.panel>.in{background:var(--panel-fill);clip-path:inherit;padding:14px 14px 15px}
+.stack{display:flex;flex-direction:column;gap:12px}
+h2{font:600 13px/1 var(--display);letter-spacing:.18em;text-transform:uppercase;margin:0 0 12px;color:var(--filament);display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+h2 small{font:500 10px/1 var(--mono);letter-spacing:.08em;color:var(--smoke-dim);text-transform:uppercase}
+.muted{color:var(--smoke)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.list{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.item{display:flex;gap:10px;align-items:flex-start}
+.item .t{flex:1;min-width:0}
+.item .t b{font-weight:600;display:block;overflow-wrap:anywhere}
+.item .t span{font-size:13px;color:var(--smoke)}
+.kicker{font:600 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--smoke-dim)}
+hr.sep{border:0;height:1px;background:linear-gradient(90deg,transparent,rgba(164,92,255,.4),transparent);margin:12px 0}
+
+/* nudges: severity stripe + glyph */
+.nudge{display:flex;gap:10px;padding:10px 12px;background:rgba(255,255,255,.035);border-left:3px solid var(--smoke-dim)}
+.nudge.warn{border-color:var(--warn)}
+.nudge.critical{border-color:var(--crit);background:rgba(255,51,85,.09)}
+.nudge.info{border-color:var(--arc)}
+.nudge .k{font:600 10px/1.6 var(--mono);letter-spacing:.1em;text-transform:uppercase;width:44px;flex:none;color:var(--smoke)}
+.nudge.critical .k{color:#ff8098}
+.nudge p{margin:0;font-size:14px}
+
+/* buttons */
+.btn{border:0;cursor:pointer;padding:9px 14px;font-weight:600;font-size:14px;background:rgba(164,92,255,.18);color:var(--filament);clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);transition:background .15s,transform .1s}
+.btn:hover{background:rgba(164,92,255,.32)}
+.btn:active{transform:scale(.97)}
+.btn.hot{background:linear-gradient(135deg,var(--plasma),#6b2cff);box-shadow:0 0 18px rgba(164,92,255,.5)}
+.btn.red{background:linear-gradient(135deg,var(--ember),#a3122f)}
+.btn.sm{padding:6px 10px;font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid rgba(164,92,255,.35);background:transparent;padding:5px 10px;font:500 12px/1.2 var(--body);cursor:pointer;border-radius:999px;color:var(--smoke)}
+.chip.on{background:rgba(164,92,255,.25);color:var(--filament);border-color:var(--plasma)}
+.chip.done{border-color:rgba(94,224,160,.5);color:var(--ok)}
+
+/* meters */
+.meter{height:6px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}
+.meter>i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--arc),var(--plasma));box-shadow:0 0 10px var(--plasma)}
+.meter.hot>i{background:linear-gradient(90deg,var(--warn),var(--ember))}
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar .lbl{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;gap:8px}
+.bar .lbl span:last-child{font-family:var(--mono);color:var(--smoke);font-variant-numeric:tabular-nums}
+
+/* water vessel */
+.vessel{display:grid;grid-template-columns:96px 1fr;gap:16px;align-items:center}
+.vessel svg{width:96px;height:96px}
+.big{font:600 30px/1 var(--mono);font-variant-numeric:tabular-nums}
+
+/* deals */
+.deal{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;text-decoration:none;color:inherit}
+.deal img{width:64px;height:30px;object-fit:cover;background:#1a1030}
+.deal .ph{width:64px;height:30px;background:linear-gradient(135deg,#2a1450,#0f2750)}
+.deal .price{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.deal .price b{display:block;color:var(--ok)}
+.deal .price s{font-size:11px;color:var(--smoke-dim)}
+.pct{font:600 11px/1 var(--mono);color:var(--void);background:var(--ok);padding:3px 5px;margin-left:6px;vertical-align:1px}
+
+/* jobs board */
+.status{font:600 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:4px 6px;flex:none;margin-top:3px}
+.status.built{background:rgba(94,224,160,.15);color:var(--ok)}
+.status.next{background:rgba(70,176,255,.15);color:var(--arc)}
+.status.later{background:rgba(255,255,255,.07);color:var(--smoke)}
+.idea{padding:10px 0;border-top:1px solid rgba(164,92,255,.15)}
+.idea:first-child{border-top:0;padding-top:0}
+.idea b{font:600 16px/1.3 var(--body)}
+.idea p{margin:4px 0 6px;color:var(--smoke);font-size:14px}
+
+input.field,select.field{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(164,92,255,.3);padding:9px 10px;border-radius:0}
+input.field:focus,select.field:focus{border-color:var(--plasma);outline:none;box-shadow:0 0 0 2px rgba(164,92,255,.25)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--smoke);flex:1}
+.timer{font:600 40px/1 var(--mono);font-variant-numeric:tabular-nums;letter-spacing:.02em;text-shadow:0 0 18px rgba(164,92,255,.6)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* bottom nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:linear-gradient(180deg,transparent,rgba(7,4,13,.92) 30%)}
+nav.tabs .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:rgba(14,8,26,.9);border:1px solid rgba(164,92,255,.3);padding:4px}
+nav.tabs button{border:0;background:transparent;padding:8px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--smoke-dim);cursor:pointer}
+nav.tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7}
+nav.tabs button[aria-selected="true"]{color:var(--filament);background:rgba(164,92,255,.2);box-shadow:inset 0 -2px 0 var(--plasma)}
+
+.sheet{position:fixed;inset:0;z-index:10;background:rgba(4,2,8,.7);display:flex;align-items:flex-end;justify-content:center}
+.sheet .panel{width:100%;max-width:480px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 90px);transform:translateX(-50%);z-index:11;background:#1b0f33;border:1px solid var(--plasma);padding:8px 14px;font-size:13px;box-shadow:0 0 20px rgba(164,92,255,.4)}
+
+@media (prefers-reduced-motion: reduce){
+  .blob{animation:none}
+  #bolts,.flash{display:none}
+}
+</style>
+
+<div class="storm" aria-hidden="true">
+  <div class="blob p"></div><div class="blob b"></div><div class="blob r"></div>
+  <div class="hexgrid"></div>
+  <canvas id="bolts"></canvas>
+  <div class="flash" id="flash"></div>
+</div>
+
+<div class="app">
+  <header class="top">
+    <svg class="sigil" id="sigil" viewBox="0 0 64 64" aria-hidden="true">
+      <defs>
+        <linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d2a8ff"/><stop offset=".55" stop-color="#8a3dff"/><stop offset="1" stop-color="#ff3355"/></linearGradient>
+      </defs>
+      <path d="M32 3l25 14.5v29L32 61 7 46.5v-29z" fill="#120a22" stroke="url(#sg)" stroke-width="2"/>
+      <path d="M35 12L21 35h10l-4 17 16-24H32z" fill="url(#sg)"/>
+    </svg>
+    <div class="id">
+      <h1 class="name">LUCILLE</h1>
+      <div class="sub" id="today">—</div>
+    </div>
+    <button class="conn" id="conn" type="button" aria-label="Connection settings"><i></i><span>Example</span></button>
+  </header>
+
+  <section class="panel voice" aria-live="polite"><div class="in">
+    <div class="who"><svg class="wave" viewBox="0 0 60 10"><path id="wavepath" d="M0 5 L60 5"/></svg>Lucille says</div>
+    <p id="headline">Gathering the storm…</p>
+  </div></section>
+
+  <main id="view" class="stack"></main>
+</div>
+
+<nav class="tabs" aria-label="Sections"><div class="in" role="tablist">
+  <button role="tab" data-tab="brief" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Brief</button>
+  <button role="tab" data-tab="care" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 3c3 4 6 7.5 6 11a6 6 0 01-12 0c0-3.5 3-7 6-11z"/></svg>Care</button>
+  <button role="tab" data-tab="work" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg>Work</button>
+  <button role="tab" data-tab="games" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 10v5M4.5 12.5h5M15.5 12h.01M18 14h.01"/></svg>Games</button>
+  <button role="tab" data-tab="ideas" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 2l2.5 5.5L20 10l-5.5 2.5L12 18l-2.5-5.5L4 10l5.5-2.5z"/></svg>Ideas</button>
+</div></nav>
+
+<div id="sheet-root"></div>
+
+<script>
+/* ════════════ lightning storm ════════════ */
+(function storm(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cv = document.getElementById('bolts'), ctx = cv.getContext('2d');
+  const flash = document.getElementById('flash'), sigil = document.getElementById('sigil');
+  const COLORS = [['#c792ff','#8a3dff'],['#c792ff','#8a3dff'],['#9fd4ff','#2f86ff'],['#ff8fa3','#ff2e55']];
+  let W, H, dpr, bolts = [], sparks = [], last = 0, nextStrike = 600;
+  function resize(){ dpr = Math.min(devicePixelRatio||1, 1.5); W = innerWidth; H = innerHeight; cv.width = W*dpr; cv.height = H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  addEventListener('resize', resize); resize();
+
+  function path(x1,y1,x2,y2,disp,out){
+    if (disp < 3){ out.push([x2,y2]); return; }
+    const mx=(x1+x2)/2+(Math.random()-.5)*disp, my=(y1+y2)/2+(Math.random()-.5)*disp*.4;
+    path(x1,y1,mx,my,disp/2,out); path(mx,my,x2,y2,disp/2,out);
+  }
+  function makeBolt(x1,y1,x2,y2,width,col,depth){
+    const pts=[[x1,y1]]; path(x1,y1,x2,y2,Math.hypot(x2-x1,y2-y1)*.28,pts);
+    const b={pts,width,col,life:0,max:380+Math.random()*420,branches:[]};
+    if (depth<2){
+      const n = 1+Math.floor(Math.random()*3);
+      for(let i=0;i<n;i++){
+        const p = pts[Math.floor(pts.length*(.2+Math.random()*.6))];
+        const ang = Math.atan2(y2-y1,x2-x1)+(Math.random()-.5)*1.6, len = Math.hypot(x2-x1,y2-y1)*(.2+Math.random()*.3);
+        b.branches.push(makeBolt(p[0],p[1],p[0]+Math.cos(ang)*len,p[1]+Math.sin(ang)*len,width*.55,col,depth+1));
+      }
+    }
+    return b;
+  }
+  function strike(){
+    const col = COLORS[Math.floor(Math.random()*COLORS.length)];
+    let x1 = Math.random()*W, y1 = -20, x2, y2;
+    const aim = Math.random()<.22 && scrollY<60;
+    if (aim){ const r = sigil.getBoundingClientRect(); x2=r.left+r.width/2; y2=r.top+r.height/2; x1 = x2+(Math.random()-.5)*W*.6; }
+    else { x2 = x1+(Math.random()-.5)*W*.5; y2 = H*(.35+Math.random()*.6); }
+    bolts.push(makeBolt(x1,y1,x2,y2,2+Math.random()*1.6,col,0));
+    for(let i=0;i<14;i++) sparks.push({x:x2,y:y2,vx:(Math.random()-.5)*3,vy:(Math.random()-1)*3,life:1,col:col[0]});
+    flash.style.setProperty('--fx',(x2/W*100)+'%'); flash.style.setProperty('--fy',(y2/H*100)+'%');
+    flash.classList.add('on'); requestAnimationFrame(()=>requestAnimationFrame(()=>flash.classList.remove('on')));
+    if (aim){ sigil.classList.add('hit'); setTimeout(()=>sigil.classList.remove('hit'),260); }
+  }
+  function drawBolt(b,alpha){
+    ctx.strokeStyle=b.col[1]; ctx.shadowColor=b.col[1]; ctx.shadowBlur=24; ctx.globalAlpha=alpha*.7; ctx.lineWidth=b.width*3;
+    ctx.beginPath(); b.pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
+    ctx.strokeStyle=b.col[0]; ctx.shadowBlur=8; ctx.globalAlpha=alpha; ctx.lineWidth=b.width*.7; ctx.stroke();
+    b.branches.forEach(c=>drawBolt(c,alpha*.7));
+  }
+  function frame(t){
+    const dt = Math.min(64,t-last); last=t;
+    ctx.clearRect(0,0,W,H);
+    if (!document.hidden){ nextStrike -= dt; if (nextStrike<=0){ strike(); if(Math.random()<.3) setTimeout(strike,90); nextStrike = 900+Math.random()*2600; } }
+    ctx.globalCompositeOperation='lighter';
+    bolts = bolts.filter(b=>{ b.life+=dt; const k=1-b.life/b.max; if(k<=0) return false;
+      const flick = k>.6 ? (Math.random()<.35?.3:1) : k; drawBolt(b,flick); return true; });
+    ctx.shadowBlur=0;
+    sparks = sparks.filter(s=>{ s.x+=s.vx; s.y+=s.vy; s.vy+=.06; s.life-=dt/700; if(s.life<=0) return false;
+      ctx.globalAlpha=s.life; ctx.fillStyle=s.col; ctx.fillRect(s.x,s.y,2,2); return true; });
+    ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
+    const wp=document.getElementById('wavepath'); if(wp){ let d='M0 5'; for(let x=3;x<=60;x+=3) d+=` L${x} ${5+Math.sin(t/140+x*.5)*Math.sin(t/900+x*.13)*4}`; wp.setAttribute('d',d); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* ════════════ data ════════════ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = { get(k){ try{return localStorage.getItem(k)}catch{return null} }, set(k,v){ try{localStorage.setItem(k,v)}catch{} } };
+
+(function captureToken(){
+  const q = new URLSearchParams(location.search);
+  if (q.get('token')){ store.set('la.token', q.get('token')); history.replaceState(null,'',location.pathname); }
+})();
+
+const cfg = {
+  get base(){ return store.get('la.server') || (location.protocol.startsWith('http') && !/claude|artifact/.test(location.host) ? location.origin : ''); },
+  get token(){ return store.get('la.token') || ''; }
+};
+
+async function api(path, body){
+  if (!cfg.base) throw new Error('no server');
+  const r = await fetch(cfg.base + path, {
+    method: body ? 'POST' : 'GET',
+    headers: Object.assign({'Content-Type':'application/json'}, cfg.token ? {'X-Swarm-Auth': cfg.token} : {}),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const j = await r.json();
+  if (r.status === 401) throw new Error(j.error || 'Wrong token');
+  return j;
+}
+
+/* Example data — shown when the PC isn't reachable (and in the artifact preview). */
+const now = new Date(), iso = (h,m=0) => { const d=new Date(now); d.setHours(h,m,0,0); return d.toISOString(); };
+const EXAMPLE = {
+  headline: "Morning. Evening meds were never ticked off last night — check the log. Lucy has 14 uncommitted changes. Most of your week went to LucyServer-go (11.5 h).",
+  nudges: [
+    {kind:'water',severity:'warn',text:"You're 650 ml behind on water. Grab a glass."},
+    {kind:'break',severity:'warn',text:"95 min straight on LucyServer-go. Stand up, stretch, drink water."},
+    {kind:'sleep',severity:'info',text:"Log last night's sleep so I can track it."}
+  ],
+  care: { day:{meds:[{name:'Morning meds',taken_at:iso(9,12)}], water_ml:750, meals:[{label:'Breakfast',at:iso(9,40)}], sleep:{hours:6.4}},
+          schedule:[{name:'Morning meds',at:'09:00'},{name:'Evening meds',at:'21:00'}], water_goal_ml:2500, sleep_goal_hours:7.5 },
+  sessions: { active:[{project:'LucyServer-go',kind:'project',start:new Date(Date.now()-95*60000).toISOString()}],
+    today_minutes:{'LucyServer-go':95,'SWARM OS ISO':40},
+    week_minutes:{'LucyServer-go':690,'SWARM OS ISO':410,'Companion app':260,'Lucille Assistant':75,'Cyberpunk 2077':540},
+    gaming_week_minutes:540 },
+  projects:['SWARM OS ISO','LucyServer-go','Companion app','Lucille Assistant','Recovery OS'],
+  git: [{path:'/mnt/Lucy',branch:'main',ahead:0,behind:0,dirty:9,untracked:5,last_commit:'auto-sync: 2026-09-16T07:41:14-04:00',last_when:'2 hours ago',changed:['30-source/LucyServer-go/memory/sync.go','SWARM_AI_FEATURES.md','30-source/LucilleAssistant/']}],
+  drives: [{mount:'/',mounted:true,used_gb:212,total_gb:500,used_pct:42},{mount:'/mnt/Lucy',mounted:true,used_gb:842,total_gb:931,used_pct:90.4},{mount:'/mnt/brains',mounted:true,used_gb:61,total_gb:250,used_pct:24},{mount:'/mnt/boltz',mounted:false,used_gb:0,total_gb:0,used_pct:0}],
+  mail: {connected:true, unread:{count:7}, inbox:{messages:[
+    {from:'GitHub',subject:'[swarm-os] auto-sync workflow succeeded'},
+    {from:'Steam',subject:'An item on your wishlist is on sale'},
+    {from:'NVIDIA Developer',subject:'NIM API usage summary for September'}]}},
+  calendar: {connected:true, events:[{summary:'Test SWARM ISO in QEMU',start:iso(14)},{summary:'Refill prescription',start:iso(17,30)}]},
+  gdrive: {connected:true, files:[{name:'SWARM OS roadmap',modifiedTime:iso(8)},{name:'Lucille voice lines',modifiedTime:iso(7)}]},
+  memory: [{kind:'decision',key:'shared-memory-architecture',ts:'2026-09-16T09:31:17Z',content:'Shared memory v1.0.0: append-only per-device logs at /mnt/brains/swarm-memory, cursor-based sync, Tailscale :5000 + token-only LAN :8402.'},
+           {kind:'decision',key:'desktop-direction',ts:'2026-09-11T12:00:00Z',content:'labwc floating compositor; Slint panel moves to backend-winit; no Electron shell.'}],
+  news: [
+    {source:'Arch Linux',tag:'arch',title:'Manual intervention for linux-firmware split packages',link:'https://archlinux.org/news/',when:iso(6)},
+    {source:'GamingOnLinux',tag:'gaming',title:'Proton Experimental adds fixes for several recent releases',link:'https://www.gamingonlinux.com/',when:iso(5)},
+    {source:'CachyOS',tag:'distro',title:'CachyOS September release: new kernel scheduler options',link:'https://cachyos.org/',when:iso(4)},
+    {source:'Phoronix',tag:'linux',title:'Mesa point release brings RADV and ANV performance fixes',link:'https://www.phoronix.com/',when:iso(3)},
+    {source:'DistroWatch',tag:'distro',title:'Distribution release: EndeavourOS refresh',link:'https://distrowatch.com/',when:iso(2)},
+    {source:'Steam News',tag:'gaming',title:'Steam Deck client update improves shader pre-caching',link:'https://store.steampowered.com/news/',when:iso(1)}],
+  deals: {
+    steam:[{title:'Hades',store:'Steam',sale_price:'6.24',normal_price:'24.99',savings_pct:75,steam_rating_pct:'98',url:'https://www.cheapshark.com/'},
+           {title:'Deep Rock Galactic',store:'Steam',sale_price:'7.49',normal_price:'29.99',savings_pct:75,steam_rating_pct:'97',url:'https://www.cheapshark.com/'},
+           {title:'Hollow Knight',store:'Steam',sale_price:'7.49',normal_price:'14.99',savings_pct:50,steam_rating_pct:'97',url:'https://www.cheapshark.com/'}],
+    keys:[{title:'Cyberpunk 2077',store:'GreenManGaming',sale_price:'23.99',normal_price:'59.99',savings_pct:60,steam_rating_pct:'82',url:'https://www.cheapshark.com/'},
+          {title:'Baldur’s Gate 3',store:'Fanatical',sale_price:'47.99',normal_price:'59.99',savings_pct:20,steam_rating_pct:'96',url:'https://www.cheapshark.com/'},
+          {title:'Satisfactory',store:'Gamesplanet',sale_price:'26.99',normal_price:'39.99',savings_pct:33,steam_rating_pct:'96',url:'https://www.cheapshark.com/'}]},
+  gaming: {steam_recent:[{name:'Cyberpunk 2077',hours_2weeks:14.2},{name:'Deep Rock Galactic',hours_2weeks:5.5},{name:'Balatro',hours_2weeks:2.1}], steam_hours_2weeks:21.8, logged_week_hours:9},
+  ideas: [
+    {title:'Hex launcher heatmap',pitch:'Tint each hex icon on the SWARM desktop by how many hours you spent in that app this week.',stack:'Flutter + /api/sessions',size:'weekend'},
+    {title:'Pacman update risk score',pitch:'Before -Syu, cross-check pending packages against Arch news for manual-intervention notices.',stack:'Go + /api/news + checkupdates',size:'evening'},
+    {title:'Proton compatibility sentinel',pitch:'Watch ProtonDB for your wishlist and ping when a game moves to Gold or Platinum.',stack:'Go worker + GamingAgent :8401',size:'weekend'},
+    {title:'Lightning wallpaper that reacts to load',pitch:'Bolts in the desktop background fire faster as CPU and GPU load climbs.',stack:'Flutter shader + /proc/stat',size:'sprint'}],
+  ideasSource:'curated'
+};
+
+/* Lucille's job board — the brainstorm. Status reflects this build (v1.0.0). */
+const JOBS = [
+  ['Daily rhythm', [
+    ['built','Morning brief','Nudges, git, drives, mail, calendar, memory, news and deals in one call.'],
+    ['next','Night shutdown ritual','Summarize the day, remind to commit and push, pick tomorrow’s top three.'],
+    ['next','Sunday review','Hours per project, sleep average, gaming hours, what shipped.'],
+    ['later','Spoken brief','Read the headline aloud in Lucille’s ElevenLabs voice at wake time.']]],
+  ['Body', [
+    ['built','Meds tracker','Scheduled doses, tick-off, escalates when two hours late.'],
+    ['built','Water pace','Compares intake to where you should be by now, not just the daily total.'],
+    ['built','Meal gap watch','Flags five hours without food during waking hours.'],
+    ['built','Sleep log','Bed and wake times, warns after a short night.'],
+    ['built','Break nudges','Speaks up after 90 minutes straight on one session.'],
+    ['next','Phone push','Nudges arrive as notifications through the companion app or ntfy.'],
+    ['later','Bedtime wind-down','Dim labwc outputs and warm the palette after the configured bed time.']]],
+  ['Mail & calendar', [
+    ['built','Unread + inbox','Through GoogleWorkspaceService on :8399.'],
+    ['built','Today’s events','Next 24 hours from the primary calendar.'],
+    ['next','Heads-up','“QEMU test session in 30 minutes” as a nudge.'],
+    ['later','Draft replies','Lucille drafts; you send. Never auto-sends.']]],
+  ['Code & drives', [
+    ['built','Git status','Branch, ahead/behind, uncommitted files, last commit per repo.'],
+    ['built','Local drives','Usage for /, /mnt/Lucy, /mnt/brains, /mnt/boltz; flags 90% full.'],
+    ['built','Google Drive','Recent files and quota.'],
+    ['next','Auto-sync watchdog','Alert if the 10-minute auto-sync commits stop landing.'],
+    ['next','ISO build watcher','Tail build_swarm_iso and report success, failure line, and time.'],
+    ['next','SMART health','smartctl wear and error counts for nvme0n1 and the LUCILLE drive.'],
+    ['later','Mount control','Mount or unmount brains/boltz with a confirm tap.']]],
+  ['Shared memory', [
+    ['built','Recent decisions','Read straight from /mnt/brains/swarm-memory/log.'],
+    ['built','Remember this','Add a note, fact or decision through swarm-memory add.'],
+    ['later','Idea inbox','Saved build ideas sync to every OS and phone.']]],
+  ['Gaming', [
+    ['built','Steam hours','Last two weeks from the Steam Web API plus logged sessions.'],
+    ['built','Steam sales','Top-rated games on sale right now.'],
+    ['built','Key prices','Authorized key stores via CheapShark — GMG, Fanatical, Gamesplanet and more.'],
+    ['built','Price lookup','Every store’s price and the lowest ever for one title.'],
+    ['next','Wishlist alerts','Ping when a wishlist game hits a new low.'],
+    ['next','ProtonDB badge','Linux rating next to every deal.'],
+    ['next','GFN cross-check','Mark deals you could also stream through GeForce NOW (GamingAgent :8401).'],
+    ['later','Soft hours cap','A gentle weekly gaming budget, not a lock.']]],
+  ['News (no politics)', [
+    ['built','Arch, CachyOS, DistroWatch','Distro news and manual-intervention notices.'],
+    ['built','GamingOnLinux, Phoronix, Steam','Linux gaming, drivers and kernel.'],
+    ['built','Off-topic filter','Anything political or world-news gets dropped before you see it.'],
+    ['next','-Syu guard','Warn before updating when Arch news needs manual intervention.']]],
+  ['Phone', [
+    ['built','Installable web app','Served from the PC on :8403; open over Tailscale and add to home screen.'],
+    ['next','Companion tab','Native Lucille tab in the Android companion app.'],
+    ['later','Home-screen widget','Meds, water and timer without opening the app.']]]
+];
+
+let S = structuredClone(EXAMPLE), live = false, tab = store.get('la.tab') || 'brief', newsTag = '', dealFilter = 'steam';
+
+async function load(){
+  try {
+    const b = await api('/api/brief');
+    const [care, sessions, ideas, gaming, mail, cal, gd, news, deals] = await Promise.all([
+      api('/api/care'), api('/api/sessions'), api('/api/ideas'), api('/api/gaming'),
+      api('/api/mail').catch(()=>null), api('/api/calendar').catch(()=>null), api('/api/gdrive').catch(()=>null),
+      api('/api/news').catch(()=>null), api('/api/deals').catch(()=>null)]);
+    S = {
+      headline: b.headline, nudges: b.nudges || [], care, git: b.git || [], drives: b.drives || [],
+      sessions: sessions.summary, projects: sessions.projects, memory: b.memory || [],
+      mail: mail && mail.ok ? {connected:true, unread:mail.unread, inbox:mail.inbox} : {connected:false, error: mail && mail.error},
+      calendar: cal && cal.ok ? {connected:true, events:(cal.events && cal.events.events) || []} : {connected:false, error: cal && cal.error},
+      gdrive: gd && gd.ok ? {connected:true, files:(gd.files && gd.files.files) || []} : {connected:false, error: gd && gd.error},
+      news: news && news.ok ? news.items : [], deals: deals && deals.ok ? deals : {steam:[],keys:[]},
+      gaming, ideas: ideas.ideas, ideasSource: ideas.source
+    };
+    live = true;
+  } catch(e) {
+    live = false;
+    if (cfg.base && !/no server/.test(e.message)) toast('Can’t reach the PC: ' + e.message + '. Showing example data.');
+  }
+  render();
+}
+
+/* ════════════ render ════════════ */
+const fmtH = m => (m/60).toFixed(1) + ' h';
+const timeOf = s => { const d = new Date(s); return isNaN(d) ? '' : d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); };
+const ago = s => { const m = Math.round((Date.now()-new Date(s))/60000); if (m<60) return m+'m ago'; if (m<1440) return Math.round(m/60)+'h ago'; return Math.round(m/1440)+'d ago'; };
+const panel = (title, body, note='') => `<section class="panel"><div class="in"><h2>${title}${note?`<small>${note}</small>`:''}</h2>${body}</div></section>`;
+const offline = svc => `<p class="muted" style="margin:0">${esc(svc)}</p>`;
+
+function nudgesHTML(){
+  if (!S.nudges.length) return panel('Right now', `<p class="muted" style="margin:0">Nothing to nag about. Meds, water and food are on track.</p>`);
+  return panel('Right now', `<div class="list">${S.nudges.map(n=>`<div class="nudge ${esc(n.severity)}"><span class="k">${esc(n.kind)}</span><p>${esc(n.text)}</p></div>`).join('')}</div>`, S.nudges.length+' open');
+}
+
+function careQuick(){
+  const c = S.care, taken = new Set((c.day.meds||[]).map(m=>m.name));
+  const pct = Math.min(100, c.day.water_ml / c.water_goal_ml * 100);
+  return panel('Body', `
+    <div class="chips" style="margin-bottom:12px">${c.schedule.map(m=>`<button class="chip ${taken.has(m.name)?'done':''}" data-med="${esc(m.name)}">${taken.has(m.name)?'✓ ':''}${esc(m.name)} <span class="mono">${esc(m.at)}</span></button>`).join('')}</div>
+    <div class="row between" style="margin-bottom:6px"><span class="kicker">Water</span><span class="mono">${c.day.water_ml} / ${c.water_goal_ml} ml</span></div>
+    <div class="meter" style="margin-bottom:12px"><i style="width:${pct}%"></i></div>
+    <div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm" data-water="250">+250 ml</button><button class="btn sm" data-water="500">+500 ml</button><button class="btn sm" data-meal="Meal">Ate something</button></div>`,
+    `last meal ${c.day.meals.length ? timeOf(c.day.meals[c.day.meals.length-1].at) : '—'}`);
+}
+
+function todayHTML(){
+  const cal = S.calendar.connected
+    ? (S.calendar.events.length ? `<ul class="list">${S.calendar.events.map(e=>`<li class="item"><span class="mono muted" style="width:62px;flex:none">${esc(timeOf(e.start?.dateTime||e.start))}</span><div class="t"><b>${esc(e.summary)}</b></div></li>`).join('')}</ul>` : `<p class="muted" style="margin:0">No events in the next day.</p>`)
+    : offline('Calendar not connected — start GoogleWorkspaceService and sign in.');
+  const m = S.mail.connected
+    ? `<ul class="list">${((S.mail.inbox&&S.mail.inbox.messages)||[]).slice(0,4).map(x=>`<li class="item"><div class="t"><b>${esc(x.subject)}</b><span>${esc(String(x.from||'').replace(/\s*<[^>]*>$/,'').replace(/"/g,''))}</span></div></li>`).join('')}</ul>`
+    : offline('Mail not connected — start GoogleWorkspaceService and sign in.');
+  return panel('Today', `<div class="kicker" style="margin-bottom:8px">Calendar</div>${cal}<hr class="sep"><div class="kicker" style="margin-bottom:8px">Mail</div>${m}`,
+    S.mail.connected ? `${S.mail.unread?.count ?? 0} unread` : '');
+}
+
+function gitHTML(){
+  return panel('Git', `<ul class="list">${S.git.map(r=>{
+    const c = r.dirty + r.untracked;
+    return `<li class="item"><div class="t"><b class="mono" style="font-size:14px">${esc(r.path)} <span class="muted">· ${esc(r.branch)}</span></b>
+      <span>${c ? `<b style="display:inline;color:var(--warn)">${c} uncommitted</b> · ` : 'clean · '}${r.ahead?`${r.ahead} ahead · `:''}${r.behind?`${r.behind} behind · `:''}${esc(r.last_commit)} (${esc(r.last_when)})</span></div></li>`;
+  }).join('')}</ul>`);
+}
+
+function drivesHTML(){
+  return panel('Drives', `<div class="bars">${S.drives.map(d=> d.mounted
+    ? `<div class="bar"><div class="lbl"><span class="mono">${esc(d.mount)}</span><span>${d.used_gb.toFixed(0)} / ${d.total_gb.toFixed(0)} GB</span></div><div class="meter ${d.used_pct>=90?'hot':''}"><i style="width:${d.used_pct}%"></i></div></div>`
+    : `<div class="bar"><div class="lbl"><span class="mono">${esc(d.mount)}</span><span>not mounted</span></div><div class="meter"></div></div>`).join('')}</div>`);
+}
+
+function memoryHTML(withForm){
+  return panel('Shared memory', `<ul class="list">${S.memory.map(e=>`<li class="item"><span class="status later">${esc(e.kind)}</span><div class="t"><b>${esc(e.key||'note')}</b><span>${esc((e.content||'').slice(0,180))}</span></div></li>`).join('') || '<li class="muted">No decisions logged yet.</li>'}</ul>
+    ${withForm ? `<hr class="sep"><form id="memform" class="stack" style="gap:8px"><div class="row"><select class="field" name="kind" style="width:120px"><option>note</option><option>fact</option><option>decision</option></select><input class="field" name="key" placeholder="topic (optional)"></div><input class="field" name="text" placeholder="Remember that…" required><button class="btn hot" type="submit">Save to shared memory</button></form>` : ''}`,
+    '/mnt/brains');
+}
+
+function newsHTML(limit){
+  const items = S.news.filter(n=>!newsTag || n.tag===newsTag).slice(0, limit||40);
+  const tags = [['','All'],['arch','Arch'],['distro','Distro'],['linux','Linux'],['gaming','Gaming']];
+  return panel('Linux & gaming news', `${limit?'':`<div class="chips" style="margin-bottom:12px">${tags.map(([k,l])=>`<button class="chip ${newsTag===k?'on':''}" data-tag="${k}">${l}</button>`).join('')}</div>`}
+    <ul class="list">${items.map(n=>`<li class="item"><div class="t"><b><a href="${esc(n.link)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${esc(n.title)}</a></b><span>${esc(n.source)} · ${esc(ago(n.when))}</span></div></li>`).join('') || '<li class="muted">No feeds answered yet.</li>'}</ul>`, 'no politics');
+}
+
+function dealsHTML(limit){
+  const list = (S.deals[dealFilter]||[]).slice(0, limit||20);
+  return panel('Deals', `<div class="chips" style="margin-bottom:12px"><button class="chip ${dealFilter==='steam'?'on':''}" data-deal="steam">Steam sales</button><button class="chip ${dealFilter==='keys'?'on':''}" data-deal="keys">CD keys</button></div>
+    <div class="list">${list.map(d=>`<a class="deal" href="${esc(d.url)}" target="_blank" rel="noopener">${d.thumb?`<img src="${esc(d.thumb)}" alt="" loading="lazy">`:'<span class="ph"></span>'}
+      <div class="t"><b style="font-weight:600">${esc(d.title)}</b><div class="muted" style="font-size:12px">${esc(d.store)}${d.steam_rating_pct?` · ${esc(d.steam_rating_pct)}% positive`:''}</div></div>
+      <div class="price"><b>$${esc(d.sale_price)}<span class="pct">-${d.savings_pct}%</span></b><s>$${esc(d.normal_price)}</s></div></a>`).join('') || '<p class="muted">No deals loaded.</p>'}</div>`, 'cheapshark');
+}
+
+function timerHTML(){
+  const a = (S.sessions.active||[])[0];
+  const opts = [...S.projects.map(p=>`<option value="project|${esc(p)}">${esc(p)}</option>`), `<option value="gaming|Gaming">Gaming</option>`].join('');
+  return panel('Time on projects', a
+    ? `<div class="kicker">${esc(a.kind)} · since ${esc(timeOf(a.start))}</div><div class="row between" style="margin:8px 0 4px"><div><div class="timer" id="timer" data-start="${esc(a.start)}">0:00:00</div><div style="margin-top:6px;font-weight:600">${esc(a.project)}</div></div><button class="btn red" id="stop">Stop</button></div>`
+    : `<div class="row" style="gap:8px"><select class="field" id="proj">${opts}</select><button class="btn hot" id="start">Start</button></div>`);
+}
+
+function hoursHTML(){
+  const wk = Object.entries(S.sessions.week_minutes||{}).sort((a,b)=>b[1]-a[1]);
+  const max = Math.max(1, ...wk.map(x=>x[1]));
+  return panel('This week', `<div class="bars">${wk.map(([p,m])=>`<div class="bar"><div class="lbl"><span>${esc(p)}</span><span>${fmtH(m)}</span></div><div class="meter"><i style="width:${m/max*100}%"></i></div></div>`).join('') || '<p class="muted" style="margin:0">Start a timer to track project time.</p>'}</div>`, 'last 7 days');
+}
+
+function gamingHTML(){
+  const g = S.gaming, rec = g.steam_recent || [], max = Math.max(1, ...rec.map(x=>x.hours_2weeks));
+  return panel('Gaming hours', `<div class="grid2" style="margin-bottom:14px"><div><div class="big">${(g.steam_hours_2weeks||0).toFixed(1)}</div><div class="kicker" style="margin-top:4px">Steam h · 2 weeks</div></div><div><div class="big">${(g.logged_week_hours||0).toFixed(1)}</div><div class="kicker" style="margin-top:4px">Logged h · 7 days</div></div></div>
+    <div class="bars">${rec.map(x=>`<div class="bar"><div class="lbl"><span>${esc(x.name)}</span><span>${x.hours_2weeks.toFixed(1)} h</span></div><div class="meter"><i style="width:${x.hours_2weeks/max*100}%"></i></div></div>`).join('') || `<p class="muted" style="margin:0">${esc(g.steam_error || 'No Steam playtime in the last two weeks.')}</p>`}</div>`);
+}
+
+function lookupHTML(){
+  return panel('Price check', `<form id="lookup" class="row" style="gap:8px"><input class="field" name="title" placeholder="Game title, e.g. Hades" required><button class="btn hot" type="submit">Check</button></form><div id="lookup-out" style="margin-top:10px"></div>`, 'every store');
+}
+
+function careFull(){
+  const c = S.care, taken = new Map((c.day.meds||[]).map(m=>[m.name,m.taken_at]));
+  const pct = Math.min(1, c.day.water_ml / c.water_goal_ml), R = 40, C = 2*Math.PI*R;
+  const sl = c.day.sleep;
+  return [
+    nudgesHTML(),
+    panel('Meds', `<ul class="list">${c.schedule.map(m=>`<li class="item" style="align-items:center"><div class="t"><b>${esc(m.name)}</b><span>due ${esc(m.at)}${taken.has(m.name)?` · taken ${esc(timeOf(taken.get(m.name)))}`:''}</span></div>
+      ${taken.has(m.name)?'<span class="status built">taken</span>':`<button class="btn sm hot" data-med="${esc(m.name)}">Took them</button>`}</li>`).join('')}</ul>`, 'edit schedule in config.json'),
+    panel('Water', `<div class="vessel"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="url(#wg)" stroke-width="9" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-pct)}" transform="rotate(-90 50 50)" style="filter:drop-shadow(0 0 5px #46b0ff)"/><defs><linearGradient id="wg"><stop offset="0" stop-color="#46b0ff"/><stop offset="1" stop-color="#a45cff"/></linearGradient></defs><text x="50" y="55" text-anchor="middle" fill="#f3ebff" font-family="JetBrains Mono,monospace" font-size="16">${Math.round(pct*100)}%</text></svg>
+      <div><div class="big">${c.day.water_ml}<span class="muted" style="font-size:14px"> ml</span></div><div class="kicker" style="margin:4px 0 10px">goal ${c.water_goal_ml} ml</div><div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm" data-water="250">+250</button><button class="btn sm" data-water="500">+500</button><button class="btn sm" data-water="-250">Undo 250</button></div></div></div>`),
+    panel('Food', `<ul class="list" style="margin-bottom:10px">${(c.day.meals||[]).map(m=>`<li class="item"><span class="mono muted" style="width:62px;flex:none">${esc(timeOf(m.at))}</span><div class="t"><b>${esc(m.label)}</b></div></li>`).join('') || '<li class="muted">Nothing logged today.</li>'}</ul>
+      <div class="chips">${['Breakfast','Lunch','Dinner','Snack'].map(l=>`<button class="chip" data-meal="${l}">+ ${l}</button>`).join('')}</div>`),
+    panel('Sleep', `${sl?`<div class="row" style="margin-bottom:12px"><div class="big">${sl.hours.toFixed(1)}<span class="muted" style="font-size:14px"> h</span></div><span class="muted">last night · goal ${c.sleep_goal_hours ?? 7.5} h</span></div>`:''}
+      <form id="sleepform" class="stack" style="gap:8px"><div class="row"><label class="f">Went to bed<input class="field" type="time" name="bed" value="00:45" required></label><label class="f">Woke up<input class="field" type="time" name="wake" value="08:10" required></label></div><button class="btn" type="submit">Log last night</button></form>`)
+  ].join('');
+}
+
+function jobsHTML(){
+  const counts = JOBS.flatMap(g=>g[1]).reduce((a,j)=>(a[j[0]]=(a[j[0]]||0)+1,a),{});
+  return `<section class="panel"><div class="in"><h2>Lucille’s jobs<small>${counts.built} built · ${counts.next} next · ${counts.later} later</small></h2>
+    <div class="stack" style="gap:16px">${JOBS.map(([g,jobs])=>`<div><div class="kicker" style="margin-bottom:8px;color:var(--plasma-hi)">${esc(g)}</div><ul class="list">${jobs.map(([st,t,d])=>`<li class="item"><span class="status ${st}">${st}</span><div class="t"><b>${esc(t)}</b><span>${esc(d)}</span></div></li>`).join('')}</ul></div>`).join('')}</div></div></section>`;
+}
+
+function ideasHTML(){
+  return panel('Build ideas', S.ideas.map(i=>`<div class="idea"><b>${esc(i.title)}</b><p>${esc(i.pitch)}</p><div class="row" style="gap:8px;flex-wrap:wrap"><span class="status next">${esc(i.size)}</span><span class="mono muted" style="font-size:12px">${esc(i.stack)}</span></div></div>`).join(''),
+    /nemotron/.test(S.ideasSource) ? 'from nemotron' : 'curated');
+}
+
+function render(){
+  const conn = $('#conn');
+  conn.classList.toggle('live', live);
+  conn.querySelector('span').textContent = live ? 'Live' : 'Example data';
+  $('#today').textContent = new Date().toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'}) + (live ? '' : ' · not connected');
+  $('#headline').textContent = S.headline;
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected', b.dataset.tab===tab));
+  const v = {
+    brief: () => [nudgesHTML(), careQuick(), todayHTML(), gitHTML(), newsHTML(3), dealsHTML(3), drivesHTML(), memoryHTML(false)],
+    care: () => [careFull()],
+    work: () => [timerHTML(), hoursHTML(), gitHTML(), drivesHTML(),
+      panel('Google Drive', S.gdrive.connected ? `<ul class="list">${(S.gdrive.files||[]).slice(0,8).map(f=>`<li class="item"><div class="t"><b>${esc(f.name)}</b><span>${(f.modified||f.modifiedTime)?esc(ago(f.modified||f.modifiedTime)):''}</span></div></li>`).join('')}</ul>` : offline('Google Drive not connected — start GoogleWorkspaceService and sign in.')),
+      memoryHTML(true)],
+    games: () => [gamingHTML(), dealsHTML(), lookupHTML(), newsHTML()],
+    ideas: () => [ideasHTML(), jobsHTML()]
+  }[tab]();
+  $('#view').innerHTML = v.join('');
+  tick();
+}
+
+function tick(){
+  const t = document.getElementById('timer'); if (!t) return;
+  const s = Math.max(0, Math.floor((Date.now() - new Date(t.dataset.start))/1000));
+  t.textContent = `${Math.floor(s/3600)}:${String(Math.floor(s/60)%60).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+setInterval(tick, 1000);
+
+function toast(msg){
+  const el = document.createElement('div'); el.className='toast'; el.setAttribute('role','status'); el.textContent=msg;
+  document.body.appendChild(el); setTimeout(()=>el.remove(), 3200);
+}
+
+/* ════════════ actions ════════════ */
+async function act(path, body, local, done){
+  if (live){
+    try { const r = await api(path, body); if (!r.ok) throw new Error(r.error); await load(); }
+    catch(e){ toast(e.message); return; }
+  } else { local(); render(); }
+  if (done) toast(done);
+}
+
+document.addEventListener('click', e=>{
+  const t = e.target.closest('button'); if (!t) return;
+  const nowISO = new Date().toISOString();
+  if (t.dataset.tab){ tab = t.dataset.tab; store.set('la.tab', tab); render(); scrollTo({top:0}); return; }
+  if (t.dataset.med && !t.classList.contains('done')) return act('/api/care/med', {name:t.dataset.med}, ()=>S.care.day.meds.push({name:t.dataset.med,taken_at:nowISO}), `${t.dataset.med} logged`);
+  if (t.dataset.water){ const ml=+t.dataset.water; return act('/api/care/water', {ml}, ()=>{S.care.day.water_ml=Math.max(0,S.care.day.water_ml+ml)}, ml>0?`+${ml} ml logged`:'Undone'); }
+  if (t.dataset.meal) return act('/api/care/meal', {label:t.dataset.meal}, ()=>S.care.day.meals.push({label:t.dataset.meal,at:nowISO}), `${t.dataset.meal} logged`);
+  if (t.dataset.tag !== undefined){ newsTag = t.dataset.tag; render(); return; }
+  if (t.dataset.deal){ dealFilter = t.dataset.deal; render(); return; }
+  if (t.id==='start'){ const [kind, project] = $('#proj').value.split('|'); return act('/api/sessions/start', {project, kind}, ()=>{S.sessions.active=[{project,kind,start:nowISO}]}, `Tracking ${project}`); }
+  if (t.id==='stop'){ return act('/api/sessions/stop', {}, ()=>{ const a=S.sessions.active[0]; const m=(Date.now()-new Date(a.start))/60000; S.sessions.week_minutes[a.project]=(S.sessions.week_minutes[a.project]||0)+m; S.sessions.active=[]; }, 'Session saved'); }
+  if (t.id==='conn') return openSettings();
+});
+
+document.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const f = new FormData(e.target);
+  if (e.target.id==='memform'){
+    const body = {kind:f.get('kind'), key:f.get('key'), text:f.get('text')};
+    return act('/api/memory', body, ()=>S.memory.unshift({kind:body.kind,key:body.key||'note',content:body.text,ts:new Date().toISOString()}), 'Saved to shared memory');
+  }
+  if (e.target.id==='sleepform'){
+    const w = new Date(); const [wh,wm] = f.get('wake').split(':'); w.setHours(+wh,+wm,0,0);
+    const b = new Date(w); const [bh,bm] = f.get('bed').split(':'); b.setHours(+bh,+bm,0,0); if (b >= w) b.setDate(b.getDate()-1);
+    return act('/api/care/sleep', {bed:b.toISOString(), wake:w.toISOString()}, ()=>{S.care.day.sleep={hours:(w-b)/3.6e6}}, 'Sleep logged');
+  }
+  if (e.target.id==='lookup'){
+    const out = $('#lookup-out'), title = f.get('title');
+    if (!live){ out.innerHTML = `<p class="muted" style="margin:0">Connect to the PC to compare live prices for “${esc(title)}”.</p>`; return; }
+    out.innerHTML = '<p class="muted" style="margin:0">Checking every store…</p>';
+    try {
+      const r = await api('/api/deals/lookup?title=' + encodeURIComponent(title));
+      if (!r.ok) throw new Error(r.error);
+      out.innerHTML = `<div class="kicker" style="margin-bottom:8px">${esc(r.title)} · lowest ever $${esc(r.lowest_ever)} (${esc(r.lowest_ever_date)})</div><div class="list">${r.prices.map(d=>`<a class="deal" style="grid-template-columns:1fr auto" href="${esc(d.url)}" target="_blank" rel="noopener"><span>${esc(d.store||'Store')}</span><span class="price"><b>$${esc(d.sale_price)}${d.savings_pct?`<span class="pct">-${d.savings_pct}%</span>`:''}</b></span></a>`).join('')}</div>`;
+    } catch(err){ out.innerHTML = `<p class="muted" style="margin:0">${esc(err.message)}</p>`; }
+  }
+});
+
+function openSettings(){
+  const root = $('#sheet-root');
+  root.innerHTML = `<div class="sheet" id="sheet"><section class="panel"><div class="in"><h2>Connect to your PC<small>${live?'connected':'example data'}</small></h2>
+    <form id="connform" class="stack" style="gap:10px">
+      <label class="f">Lucille Assistant address<input class="field mono" name="server" placeholder="http://100.82.1.19:8403" value="${esc(store.get('la.server')||'')}"></label>
+      <label class="f">Token (same as SWARM_AUTH_TOKEN on the PC)<input class="field mono" name="token" type="password" value="${esc(cfg.token)}"></label>
+      <p class="muted" style="margin:0;font-size:13px">Leave the address empty when this page is served by the PC itself. From a phone, use the PC’s Tailscale address.</p>
+      <div class="row"><button class="btn hot" type="submit">Connect</button><button class="btn" type="button" id="closesheet">Cancel</button></div>
+    </form></div></section></div>`;
+  $('#closesheet').onclick = () => root.innerHTML = '';
+  $('#sheet').onclick = e => { if (e.target.id==='sheet') root.innerHTML=''; };
+  $('#connform').onsubmit = async e => {
+    e.preventDefault(); const f = new FormData(e.target);
+    store.set('la.server', (f.get('server')||'').trim().replace(/\/$/,'')); store.set('la.token', f.get('token')||'');
+    root.innerHTML = ''; await load(); toast(live ? 'Connected' : 'Still showing example data');
+  };
+}
+
+render();
+load();
+setInterval(()=>{ if (live && !document.hidden) load(); }, 5*60*1000);
+</script>

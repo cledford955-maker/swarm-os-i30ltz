@@ -1,0 +1,9 @@
+{
+  "name": "Lucille Assistant",
+  "short_name": "Lucille",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07040d",
+  "theme_color": "#07040d",
+  "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
+}
