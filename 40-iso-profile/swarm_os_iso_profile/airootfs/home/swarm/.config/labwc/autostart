@@ -1,6 +1,25 @@
 #!/bin/sh
 # Launched by labwc as soon as the compositor session starts.
-#
+
+# ── Display configuration ───────────────────────────────────────────────────
+# Find the 2560x1440 external monitor and place it at origin (0,0) so it acts
+# as the primary display. The built-in eDP-1 is offset to the right of it.
+# wlr-randr exits cleanly if an output isn't connected, so this is safe when
+# running on the laptop screen only.
+if command -v wlr-randr >/dev/null 2>&1; then
+  # Detect the 1440p output name dynamically
+  PRIMARY_OUT=$(wlr-randr 2>/dev/null | awk '
+    /^[A-Za-z]/ { cur=$1 }
+    /2560x1440/ { print cur; exit }
+  ')
+  if [ -n "$PRIMARY_OUT" ]; then
+    wlr-randr --output "$PRIMARY_OUT" --pos 0,0 2>/dev/null || true
+    # Push eDP-1 (built-in 13") to the right of the 1440p panel
+    wlr-randr --output eDP-1 --pos 2560,0 2>/dev/null || true
+  fi
+fi
+# ────────────────────────────────────────────────────────────────────────────
+
 # Flutter shell — full desktop: wallpaper, app drawer, floating window manager,
 # voice HUD, overlays. Runs as a GTK3 Wayland client.
 /opt/swarm_os/swarm_flutter/swarm_flutter &

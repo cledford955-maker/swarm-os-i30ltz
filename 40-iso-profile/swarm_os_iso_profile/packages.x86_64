@@ -171,6 +171,8 @@ mkinitcpio
 alacritty
 foot
 chromium
+# wlr-randr: configure Wayland outputs (set 1440p external as primary in autostart)
+wlr-randr
 # file manager for the Files tile (fileManagerCmd in system_launcher.dart)
 thunar
 # system monitor for the Monitor tile (monitorCmd uses btop first)
