@@ -422,14 +422,17 @@ private fun CdrInlineTerminal(modifier: Modifier = Modifier) {
     val lines = remember { mutableStateListOf("Connecting to ${connection.host}:${connection.port}…") }
     var socket by remember { mutableStateOf<WebSocket?>(null) }
 
+    // OkHttp calls back on its own threads; Compose state must change on the main thread.
     fun append(text: String) {
-        text.split("\n").filter { it.isNotEmpty() }.forEach { lines.add(it) }
-        if (lines.size > 500) repeat(lines.size - 500) { lines.removeAt(0) }
-        scope.launch { if (lines.isNotEmpty()) listState.animateScrollToItem(lines.size - 1) }
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            text.split("\n").filter { it.isNotEmpty() }.forEach { lines.add(it) }
+            if (lines.size > 500) repeat(lines.size - 500) { lines.removeAt(0) }
+            if (lines.isNotEmpty()) listState.animateScrollToItem(lines.size - 1)
+        }
     }
 
     DisposableEffect(connection.host, connection.port) {
-        val client = OkHttpClient()
+        val client = connection.terminalClient()
         val request = Request.Builder()
             .url("${connection.wsBase()}/api/terminal/ws")
             .addHeader("X-Swarm-Auth", connection.authToken)
@@ -437,20 +440,20 @@ private fun CdrInlineTerminal(modifier: Modifier = Modifier) {
 
         val ws = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                connected = true
+                scope.launch(kotlinx.coroutines.Dispatchers.Main) { connected = true }
                 append("⚡ connected to ${connection.host}")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) = append(text)
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                connected = false
+                scope.launch(kotlinx.coroutines.Dispatchers.Main) { connected = false }
                 append("[disconnected: $reason]")
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                connected = false
-                append("[connection error: ${t.message}]")
+                scope.launch(kotlinx.coroutines.Dispatchers.Main) { connected = false }
+                append("[connection error: ${connection.explain(t, response?.code)}]")
             }
         })
         socket = ws

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.config.SwarmConnection
 import com.example.ui.theme.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.*
 import okio.ByteString
@@ -46,35 +47,41 @@ fun InteractiveTerminalScreen(
     val listState = rememberLazyListState()
 
     var webSocket by remember { mutableStateOf<WebSocket?>(null) }
+    var connected by remember { mutableStateOf(false) }
+    var attempt by remember { mutableIntStateOf(0) }
 
-    DisposableEffect(targetIp) {
-        val client = OkHttpClient()
+    // OkHttp calls back on its own threads; Compose state must change on the main thread.
+    fun log(vararg lines: String) {
+        coroutineScope.launch(Dispatchers.Main) {
+            lines.forEach { text -> text.split("\n").filter { it.isNotEmpty() }.forEach { terminalLog.add(it) } }
+            if (terminalLog.size > 1000) repeat(terminalLog.size - 1000) { terminalLog.removeAt(0) }
+            if (terminalLog.isNotEmpty()) listState.animateScrollToItem(terminalLog.size - 1)
+        }
+    }
+
+    DisposableEffect(targetIp, attempt) {
+        if (attempt > 0) log("Reconnecting to ${connection.host}:${connection.port}…")
         val request = Request.Builder()
             .url("${connection.wsBase()}/api/terminal/ws")
             .addHeader("X-Swarm-Auth", connection.authToken)
             .build()
-        
-        val ws = client.newWebSocket(request, object : WebSocketListener() {
+
+        val ws = connection.terminalClient().newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                terminalLog.add("⚡ SWARM_OS LUCILLE CORE CYBER TERMINAL ONLINE ($targetIp)")
+                coroutineScope.launch(Dispatchers.Main) { connected = true }
+                log("⚡ SWARM_OS LUCILLE CORE CYBER TERMINAL ONLINE ($targetIp)")
             }
 
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                val lines = text.split("\n")
-                terminalLog.addAll(lines.filter { it.isNotEmpty() })
-                coroutineScope.launch {
-                    if (terminalLog.isNotEmpty()) {
-                        listState.animateScrollToItem(terminalLog.size - 1)
-                    }
-                }
-            }
+            override fun onMessage(webSocket: WebSocket, text: String) = log(text)
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                terminalLog.add("[TERMINAL DISCONNECTED: $reason]")
+                coroutineScope.launch(Dispatchers.Main) { connected = false }
+                log("[TERMINAL DISCONNECTED${if (reason.isNotBlank()) ": $reason" else ""}] Tap RECONNECT.")
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                terminalLog.add("[TERMINAL CONNECTION ERROR: ${t.message}]")
+                coroutineScope.launch(Dispatchers.Main) { connected = false }
+                log("[TERMINAL CONNECTION ERROR] ${connection.explain(t, response?.code)}")
             }
         })
         webSocket = ws
@@ -87,9 +94,12 @@ fun InteractiveTerminalScreen(
     fun executeTerminalCommand(cmd: String) {
         val trimmed = cmd.trim()
         if (trimmed.isEmpty()) return
-
-        webSocket?.send(trimmed + "\n")
         commandInput = ""
+        if (!connected || webSocket?.send(trimmed + "\n") != true) {
+            log("[TERMINAL CONNECTION ERROR] Not connected — tap RECONNECT.")
+            return
+        }
+        log("$ $trimmed")
     }
 
     Column(
@@ -179,6 +189,7 @@ fun InteractiveTerminalScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            TerminalChip(if (connected) "ONLINE" else "RECONNECT") { if (!connected) attempt++ }
             TerminalChip("CLEAR") { terminalLog.clear() }
             TerminalChip("TOP") { executeTerminalCommand("top -b -n 1") }
             TerminalChip("LSBLK") { executeTerminalCommand("lsblk") }

@@ -47,12 +47,13 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
     var commandInput by remember { mutableStateOf("") }
     var targetIp by remember { mutableStateOf(connection.host) }
     var authTokenInput by remember { mutableStateOf(connection.authToken) }
+    var portInput by remember { mutableStateOf(connection.port.toString()) }
     var isIpConfigExpanded by remember { mutableStateOf(false) }
 
     val terminalLog = remember {
         mutableStateListOf(
             "root@swarm-pc:~# SWARM_OS CYBER TERMINAL v3.6 ONLINE",
-            "root@swarm-pc:~# Target Node: ${connection.host} (LucyServer .NET 8 / REST & WS)",
+            "root@swarm-pc:~# Target Node: ${connection.host} (LucyServer · REST & WS)",
             "------------------------------------------------------------------------"
         )
     }
@@ -71,28 +72,47 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                 val isClipboard = trimmed.startsWith("clipboard ")
 
                 val url = if (isClipboard) "${connection.httpBase()}/api/clipboard/set" else "${connection.httpBase()}/api/run_command"
-                val bodyText = if (isClipboard) "{\"Text\":\"${trimmed.removePrefix("clipboard ")}\"}" else "{\"Command\":\"$trimmed\"}"
-                val reqBody = bodyText.toRequestBody(jsonMedia)
+                // JSONObject escapes quotes and backslashes; the old hand-built
+                // string turned any command containing " into invalid JSON (HTTP 400).
+                val bodyText = if (isClipboard) {
+                    org.json.JSONObject().put("text", trimmed.removePrefix("clipboard ")).toString()
+                } else {
+                    org.json.JSONObject().put("command", trimmed).toString()
+                }
                 val request = okhttp3.Request.Builder()
                     .url(url)
                     .addHeader("X-Swarm-Auth", connection.authToken)
-                    .post(reqBody)
+                    .post(bodyText.toRequestBody(jsonMedia))
                     .build()
-                val client = okhttp3.OkHttpClient()
-                val response = client.newCall(request).execute()
-                val responseBody = response.body?.string() ?: ""
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                val lines = client.newCall(request).execute().use { response ->
+                    val responseBody = response.body?.string() ?: ""
+                    when {
+                        !response.isSuccessful -> listOf("Error: ${connection.explain(null, response.code)}")
+                        isClipboard -> listOf("Clipboard updated remotely.")
+                        else -> {
+                            val result = runCatching { org.json.JSONObject(responseBody) }.getOrNull()
+                            if (result == null) listOf(responseBody) else buildList {
+                                result.optString("standardOutput").trimEnd().takeIf { it.isNotEmpty() }?.let { addAll(it.split("\n")) }
+                                result.optString("standardError").trimEnd().takeIf { it.isNotEmpty() }?.let { addAll(it.split("\n")) }
+                                val code = result.optInt("exitCode", 0)
+                                if (code != 0) add("[exit $code]")
+                                if (isEmpty()) add("(no output)")
+                            }
+                        }
+                    }
+                }
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    if (response.isSuccessful) {
-                        terminalLog.add(if (isClipboard) "Clipboard updated remotely." else responseBody)
-                    } else {
-                        terminalLog.add("Error: ${response.code} $responseBody")
-                    }
+                    terminalLog.addAll(lines)
                     listState.animateScrollToItem(terminalLog.size - 1)
                 }
             } catch (e: Exception) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    terminalLog.add("Network Error: ${e.message}")
+                    terminalLog.add("Network Error: ${connection.explain(e)}")
                     listState.animateScrollToItem(terminalLog.size - 1)
                 }
             }
@@ -181,6 +201,16 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                             textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = Color.White, fontFamily = FontFamily.Monospace)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
+                        Text("Port (LucyServer, default 5000):", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = portInput,
+                            onValueChange = { v -> portInput = v.filter { it.isDigit() }.take(5) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = Color.White, fontFamily = FontFamily.Monospace)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text("X-Swarm-Auth token:", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(4.dp))
                         OutlinedTextField(
@@ -195,8 +225,9 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                             onClick = {
                                 connection.host = targetIp
                                 connection.authToken = authTokenInput
+                                portInput.toIntOrNull()?.takeIf { it in 1..65535 }?.let { connection.port = it }
                                 isIpConfigExpanded = false
-                                terminalLog.add("⚡ Node switched to ${connection.host}")
+                                terminalLog.add("⚡ Node switched to ${connection.host}:${connection.port}")
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = NvidiaGreen),
                             modifier = Modifier.align(Alignment.End)

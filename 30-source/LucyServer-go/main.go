@@ -236,14 +236,33 @@ func main() {
 	if addr == "" {
 		addr = "http://0.0.0.0:5000"
 	}
-	listenAddr := strings.TrimPrefix(addr, "http://")
+	// Like ASP.NET Core, several URLs may be given, separated by ';'. The first
+	// is required; later ones (e.g. a Tailscale IP that comes up after boot)
+	// are retried in the background instead of taking the server down.
+	var listenAddrs []string
+	for _, u := range strings.FieldsFunc(addr, func(c rune) bool { return c == ';' || c == ',' }) {
+		if u = strings.TrimSpace(u); u != "" {
+			listenAddrs = append(listenAddrs, strings.TrimPrefix(u, "http://"))
+		}
+	}
 
 	if memAPI != nil {
 		go serveMemoryLAN(memAPI)
 	}
 
-	fmt.Printf("[LucyServer] listening on %s\n", addr)
-	if err := http.ListenAndServe(listenAddr, r); err != nil {
+	for _, extra := range listenAddrs[1:] {
+		go func(a string) {
+			for {
+				fmt.Printf("[LucyServer] listening on http://%s\n", a)
+				err := http.ListenAndServe(a, r)
+				fmt.Fprintf(os.Stderr, "[LucyServer] listener %s: %v (retrying in 10s)\n", a, err)
+				time.Sleep(10 * time.Second)
+			}
+		}(extra)
+	}
+
+	fmt.Printf("[LucyServer] listening on http://%s\n", listenAddrs[0])
+	if err := http.ListenAndServe(listenAddrs[0], r); err != nil {
 		fmt.Fprintf(os.Stderr, "server: %v\n", err)
 		os.Exit(1)
 	}

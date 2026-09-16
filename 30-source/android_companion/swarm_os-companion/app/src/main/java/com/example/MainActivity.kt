@@ -140,7 +140,7 @@ class MainActivity : FragmentActivity() {
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "SWARM OS COMPANION  •  i30ltz  •  v6.2.0",
+                                    text = "SWARM OS COMPANION  •  i30ltz  •  v6.2.12",
                                     color = Color(0xFFE040FB),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,

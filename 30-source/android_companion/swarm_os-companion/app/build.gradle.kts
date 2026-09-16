@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.sysopt.app"
     minSdk = 24
     targetSdk = 36
-    versionCode = 71
-    versionName = "6.2.11"
+    versionCode = 72
+    versionName = "6.2.12"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
