@@ -5,6 +5,28 @@ LucyServer runs on **port 5000**, GamingAgent on **port 8401**, both loopback-on
 
 ---
 
+## 0. Set your sudo password and fix file ownership (installs before 2026-09-16)
+
+Open foot (Super+Enter). No sudo needed for the first command:
+
+```bash
+passwd
+```
+
+Then hand system files back to root (the old installer left them owned by your user):
+
+```bash
+sudo find /etc /usr /opt -xdev -uid 1000 -exec chown -h root:root {} +
+```
+
+```bash
+sudo chmod 440 /etc/sudoers.d/10-wheel
+```
+
+The same commands, with Copy buttons, are in the **Commands** app on the SWARM OS desktop.
+
+---
+
 ## 1. Verify Core Services
 
 ```bash

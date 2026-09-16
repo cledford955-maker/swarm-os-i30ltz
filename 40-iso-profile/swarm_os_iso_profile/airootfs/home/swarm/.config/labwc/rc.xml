@@ -6,6 +6,12 @@
     <adaptiveSync>yes</adaptiveSync>
   </core>
 
+  <!-- New app windows open centered, between the Flutter desktop's icon
+       rails (1 free column + 2 staggered icon columns on each side). -->
+  <placement>
+    <policy>center</policy>
+  </placement>
+
   <theme>
     <!-- Minimal dark chrome; swarm-slint draws its own top bar -->
     <cornerRadius>0</cornerRadius>

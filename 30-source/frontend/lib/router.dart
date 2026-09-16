@@ -33,6 +33,7 @@ import 'pages/security_audit_page.dart';
 import 'pages/cinema_page.dart';
 import 'pages/git_lens_page.dart';
 import 'pages/diff_viewer_page.dart';
+import 'pages/command_reference_page.dart';
 
 /// SWARM OS Route Configuration
 /// Mirrors the 11 routes from the Next.js App Router
@@ -63,6 +64,7 @@ final goRouter = GoRouter(
       routes: [
         GoRoute(path: '/', builder: (_, __) => const HexDesktopPage()),
         GoRoute(path: '/hub', builder: (_, __) => const HubPage()),
+        GoRoute(path: '/reference', builder: (_, __) => const CommandReferencePage()),
         GoRoute(path: '/agent/lucille', builder: (_, __) => const LucilleChatPage()),
         GoRoute(path: '/agent/forge', builder: (_, __) => const ForgeWorkstation()),
         GoRoute(path: '/agent/ui_tandem', builder: (_, __) => const UiTandemStudio()),
