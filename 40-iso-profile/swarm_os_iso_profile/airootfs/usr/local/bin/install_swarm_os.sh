@@ -378,9 +378,9 @@ fi
 # doesn't exist on an installed system — they failed with 217/USER
 # "Unknown user" at every boot (found 2026-09-16).
 for unit in /etc/systemd/system/*.service; do
-    sed -i -e 's/^User=swarm *\$/User=i30ltz/' \
-           -e 's/^Group=swarm *\$/Group=i30ltz/' \
-           -e 's|chown swarm:swarm|chown i30ltz:i30ltz|g' "\$unit"
+    sed -i -e 's/^User=swarm *$/User=i30ltz/' \
+           -e 's/^Group=swarm *$/Group=i30ltz/' \
+           -e 's|chown swarm:swarm|chown i30ltz:i30ltz|g' "$unit"
 done
 
 # BUG FIX: swarm-ui.service now runs as i30ltz, but labwc's config (the
