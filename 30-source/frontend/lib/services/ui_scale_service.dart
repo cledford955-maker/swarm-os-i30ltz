@@ -11,12 +11,15 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UiScaleService extends ChangeNotifier {
-  static const _key = 'swarm_ui_scale';
+  // v2 (2026-09-16): default raised to 1.3 — new key so a scale saved under
+  // the old 1.0 default doesn't keep the desktop zoomed out.
+  static const _key = 'swarm_ui_scale_v2';
   static const double min = 0.75;
   static const double max = 1.75;
   static const double step = 0.1;
+  static const double defaultScale = 1.3;
 
-  double _scale = 1.0;
+  double _scale = defaultScale;
   double get scale => _scale;
 
   UiScaleService() {
@@ -32,13 +35,13 @@ class UiScaleService extends ChangeNotifier {
         notifyListeners();
       }
     } catch (_) {
-      // Prefs unavailable — stay at default 1.0
+      // Prefs unavailable — stay at the default
     }
   }
 
   void zoomIn() => _setScale(_scale + step);
   void zoomOut() => _setScale(_scale - step);
-  void reset() => _setScale(1.0);
+  void reset() => _setScale(defaultScale);
 
   void _setScale(double value) {
     final clamped = value.clamp(min, max);

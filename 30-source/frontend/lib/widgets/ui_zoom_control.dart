@@ -56,8 +56,13 @@ class UiZoomControl extends StatelessWidget {
   }
 
   Widget _btn(IconData icon, VoidCallback? onTap) {
-    return Tooltip(
-      message: icon == Icons.add ? 'Zoom in (Ctrl+=)' : 'Zoom out (Ctrl+-)',
+    // Semantics, not Tooltip: this control is built in MaterialApp.builder,
+    // above the Navigator, so there is no Overlay for a Tooltip to use.
+    // A Tooltip here threw "No Overlay widget found", which a release build
+    // paints as a full-screen light-grey error box (the "white overlay").
+    return Semantics(
+      button: true,
+      label: icon == Icons.add ? 'Zoom in (Ctrl+=)' : 'Zoom out (Ctrl+-)',
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -69,6 +74,47 @@ class UiZoomControl extends StatelessWidget {
             color: onTap != null
                 ? Colors.white.withValues(alpha: 0.8)
                 : Colors.white.withValues(alpha: 0.2)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Scales every screen in the shell uniformly (icons, text, layout — not
+/// just fonts), keeping hit-testing correct. Content is laid out against a
+/// shrunk/grown "virtual" screen size and then stretched back to the real
+/// one via Transform.scale.
+///
+/// Always wraps, even at 1.0, so the widget tree keeps the same shape when
+/// the scale crosses 100% — otherwise the Router below is torn down and
+/// rebuilt on that step.
+class WholeShellZoom extends StatelessWidget {
+  final double scale;
+  final Widget child;
+  const WholeShellZoom({super.key, required this.scale, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final virtualSize = mq.size / scale;
+    return MediaQuery(
+      data: mq.copyWith(size: virtualSize),
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.topLeft,
+          minWidth: virtualSize.width,
+          maxWidth: virtualSize.width,
+          minHeight: virtualSize.height,
+          maxHeight: virtualSize.height,
+          child: Transform.scale(
+            scale: scale,
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: virtualSize.width,
+              height: virtualSize.height,
+              child: child,
+            ),
+          ),
         ),
       ),
     );

@@ -109,6 +109,12 @@ class TPane {
   Process? proc;
   String cwd;
   bool busy = false;
+  // Output after the last newline — prompts like "[sudo] password for x: "
+  // never end in one, so they're shown as a live last line.
+  String partial = '';
+  bool partialShown = false;
+  // True while the running command is asking for a password: input is hidden.
+  bool wantsSecret = false;
   final ScrollController scroll = ScrollController();
   final TextEditingController input = TextEditingController();
   final FocusNode focus = FocusNode();
@@ -232,6 +238,13 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
     if (pane.history.isEmpty || pane.history.last != c) pane.history.add(c);
     pane.histIdx = pane.history.length;
 
+    // A command is already running — this line is input for it (answers,
+    // sudo passwords), not a new command.
+    if (pane.busy && pane.proc != null) {
+      _sendInput(pane, cmd);
+      return;
+    }
+
     setState(() => pane.lines.add(TermLine(
       '\x1B[1;32m${_shortDir(pane.cwd)}\x1B[0m \x1B[1;36m❯\x1B[0m \x1B[97m$c\x1B[0m',
       isCmd: true,
@@ -249,21 +262,28 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
     _startProgress(pane.id);
 
     try {
-      pane.proc = await Process.start('tmux', ['new-session', '-A', '-s', 'swarm_mirror', 'bash', '-c', c],
+      // `script` runs the command on a real pseudo-terminal. The old
+      // `tmux new-session` wrapper had no TTY to attach to, so every command
+      // died with "open terminal failed: not a terminal", and sudo couldn't
+      // prompt. -q quiet, -e keep the exit code, -f flush as output arrives.
+      pane.proc = await Process.start('script', ['-qefc', c, '/dev/null'],
         workingDirectory: pane.cwd,
         environment: {...Platform.environment, 'TERM': 'xterm-256color', 'COLUMNS': '200', 'LINES': '50'},
       );
 
-      pane.proc!.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen((line) {
-        if (mounted) setState(() { pane.lines.add(TermLine(line)); _scrollEnd(pane); });
+      pane.proc!.stdout.transform(const Utf8Decoder(allowMalformed: true)).listen((chunk) {
+        if (mounted) setState(() { _emit(pane, chunk); _scrollEnd(pane); });
       });
-      pane.proc!.stderr.transform(utf8.decoder).transform(const LineSplitter()).listen((line) {
-        if (mounted) setState(() { pane.lines.add(TermLine('\x1B[31m$line\x1B[0m', isErr: true)); _scrollEnd(pane); });
+      pane.proc!.stderr.transform(const Utf8Decoder(allowMalformed: true)).listen((chunk) {
+        if (mounted) setState(() { _emit(pane, chunk, err: true); _scrollEnd(pane); });
       });
 
       final code = await pane.proc!.exitCode;
       if (mounted) {
         setState(() {
+        _emit(pane, '\n');
+        pane.wantsSecret = false;
+        pane.proc = null;
         pane.busy = false;
         _stopProgress(pane.id);
         if (code != 0) pane.lines.add(TermLine('\x1B[90m⏎ exit \x1B[31m$code\x1B[0m'));
@@ -280,6 +300,39 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
       });
       }
     }
+  }
+
+  // Terminal control sequences that aren't colors (cursor moves, bracketed
+  // paste, window titles) would show up as junk text — drop them.
+  static final _nonColorEscapes = RegExp(r'\x1B\[[0-9;?]*[A-Za-ln-z]|\x1B\][^\x07]*(\x07|\x1B\\)|\x1B[()][A-Z0-9]|\x1B[=>]');
+
+  void _emit(TPane pane, String chunk, {bool err = false}) {
+    final text = pane.partial + chunk.replaceAll('\r\n', '\n').replaceAll('\r', '').replaceAll(_nonColorEscapes, '');
+    final parts = text.split('\n');
+    if (pane.partialShown) {
+      pane.lines.removeLast();
+      pane.partialShown = false;
+    }
+    for (final line in parts.sublist(0, parts.length - 1)) {
+      pane.lines.add(err ? TermLine('\x1B[31m$line\x1B[0m', isErr: true) : TermLine(line));
+    }
+    pane.partial = parts.last;
+    if (pane.partial.isNotEmpty) {
+      pane.lines.add(TermLine(pane.partial));
+      pane.partialShown = true;
+    }
+    pane.wantsSecret = RegExp(r'pass(word|phrase)[^:\n]*:\s*$', caseSensitive: false).hasMatch(pane.partial);
+  }
+
+  void _sendInput(TPane pane, String text) {
+    final secret = pane.wantsSecret;
+    pane.proc!.stdin.writeln(text);
+    setState(() {
+      // Echo what was typed onto the prompt line (masked for passwords).
+      _emit(pane, '${secret ? '•' * text.length : text}\n');
+      pane.wantsSecret = false;
+      _scrollEnd(pane);
+    });
   }
 
   void _cd(TPane pane, String target) {
@@ -674,6 +727,7 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
             cursorColor: const Color(0xFF00D4FF),
             cursorWidth: 8,
             cursorHeight: 14,
+            obscureText: pane.wantsSecret,
             onSubmitted: (cmd) {
               _exec(pane, cmd);
               pane.input.clear();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/launch_status.dart';
+import 'desktop_geometry.dart';
 
 /// Represents a single floating window in the SWARM OS environment.
 class AppWindow {
@@ -59,7 +60,10 @@ class WindowManager extends StateNotifier<List<AppWindow>> {
       final existing = updated.removeAt(existingIndex);
       updated.add(existing.copyWith(isFocused: true)); // Move to front
     } else {
-      updated.add(window.copyWith(isFocused: true));
+      // Every new window starts centered between the desktop icon rails,
+      // whatever position the caller asked for.
+      final spot = DesktopGeometry.place(window.size, updated.length);
+      updated.add(window.copyWith(position: spot.topLeft, size: spot.size, isFocused: true));
     }
     state = updated;
   }

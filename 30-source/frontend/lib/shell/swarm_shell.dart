@@ -14,6 +14,8 @@ import '../services/wake_word_service.dart';
 import '../widgets/hive_watermark_overlay.dart';
 import '../widgets/lucille_voice_hud_button.dart';
 import '../widgets/hive_420_overlay.dart';
+import '../widgets/cpu_aura_wallpaper.dart';
+import 'desktop_geometry.dart';
 
 /// Top-level desktop shell — wraps all pages with edge drawers, seductive lips visualizer, and window manager
 class SwarmShell extends ConsumerStatefulWidget {
@@ -75,15 +77,14 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
       backgroundColor: SwarmColors.bg,
       body: Stack(
         children: [
-          // 1. Background Wallpaper
+          // 1. Background Wallpaper — FALLEN SOLDIER with a light aura that
+          //    pulses faster as CPU load rises. Also records the shell size
+          //    so new windows open between the icon rails.
           Positioned.fill(
-            child: Image.asset(
-              'assets/wallpapers/swarm_wasp_nest_v5.jpg',
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              color: Colors.black.withValues(alpha: 0.3),
-              colorBlendMode: BlendMode.darken,
-            ),
+            child: LayoutBuilder(builder: (context, constraints) {
+              DesktopGeometry.screen = constraints.biggest;
+              return const CpuAuraWallpaper();
+            }),
           ),
 
           // 1b. Large Background Welcome Typography

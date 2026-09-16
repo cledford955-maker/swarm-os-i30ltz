@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/openrouter_balance_service.dart';
+import '../router.dart';
 
 /// Compact OpenRouter balance chip for top bar / HUD overlay.
 class OpenRouterBalanceWidget extends StatelessWidget {
@@ -98,7 +99,9 @@ class OpenRouterBalanceWidget extends StatelessWidget {
   void _showKeyDialog(BuildContext context, OpenRouterBalanceService svc) {
     final ctrl = TextEditingController();
     showDialog(
-      context: context,
+      // This chip lives in MaterialApp.builder, above the Navigator, so its own
+      // context can't open a dialog — use the router's navigator instead.
+      context: goRouter.routerDelegate.navigatorKey.currentContext ?? context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
         title: const Text('OpenRouter API Key',
@@ -144,7 +147,9 @@ class OpenRouterBalanceWidget extends StatelessWidget {
   void _showDetailDialog(BuildContext context, OpenRouterBalanceService svc) {
     final b = svc.balance;
     showDialog(
-      context: context,
+      // This chip lives in MaterialApp.builder, above the Navigator, so its own
+      // context can't open a dialog — use the router's navigator instead.
+      context: goRouter.routerDelegate.navigatorKey.currentContext ?? context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
         title: const Row(

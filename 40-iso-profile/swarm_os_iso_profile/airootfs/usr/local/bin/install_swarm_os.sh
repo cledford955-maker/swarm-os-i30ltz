@@ -242,7 +242,13 @@ if [ -d "$PROFILE_ROOT/airootfs/" ]; then
     cp -a "$MOUNT_POINT/etc/fstab" "$MOUNT_POINT/etc/fstab.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/crypttab" "$MOUNT_POINT/etc/crypttab.sys" 2>/dev/null || true
 
-    cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
+    # --no-preserve=ownership: the profile on /mnt/Lucy is owned by the build
+    # user (uid 1000). Plain `cp -a` carried that owner onto the target's
+    # /etc, /etc/sudoers.d/10-wheel, /etc/systemd/system and root-run scripts
+    # in /opt — letting the desktop user edit sudoers and root services, and
+    # making sudo reject 10-wheel (found 2026-09-16). Copied files are root-
+    # owned now; per-user config (labwc) is chowned to i30ltz further down.
+    cp -a --no-preserve=ownership "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
 
     # Restore pristine system auth files (so users and render groups exist)
     [ -f "$MOUNT_POINT/etc/passwd.sys" ] && mv "$MOUNT_POINT/etc/passwd.sys" "$MOUNT_POINT/etc/passwd"
@@ -545,7 +551,16 @@ EOF
 # prompts reach the real terminal instead of leftover heredoc input.
 if [ -z "$HOST_PW_HASH" ] || [ "$HOST_PW_HASH" = "!" ] || [ "$HOST_PW_HASH" = "*" ]; then
     echo "Please set a password for user 'i30ltz' (used for sudo and terminal commands):"
-    arch-chroot "$MOUNT_POINT" passwd i30ltz
+    if [ -t 0 ]; then
+        # Keep asking — a typo'd confirmation used to leave the account with
+        # no password at all, so sudo could never be used after first boot.
+        until arch-chroot "$MOUNT_POINT" passwd i30ltz; do
+            echo "Passwords didn't match or were rejected — try again."
+        done
+    else
+        echo "WARNING: no terminal attached, so the i30ltz password was NOT set."
+        echo "After first boot, open foot (Super+Enter) and run: passwd"
+    fi
 fi
 
 banner "Cleaning up..."

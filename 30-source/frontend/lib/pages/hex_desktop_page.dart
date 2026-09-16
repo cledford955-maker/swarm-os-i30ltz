@@ -25,6 +25,7 @@ import '../models/swarm_apps.dart';
 import '../widgets/swarm_terminal.dart';
 import '../widgets/companion_telemetry.dart';
 import '../theme/swarm_colors.dart';
+import '../shell/desktop_geometry.dart';
 
 // ─── Thin transparent backing so the wasp-nest wallpaper shows through ───
 const _t = Color(0x28000000);
@@ -160,15 +161,11 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
   // Actions
   // ────────────────────────────────────────────────────────────
 
-  // Windows land centered in the middle gutter between the two icon rails,
-  // not tucked in a corner behind them.
-  Offset _centerWindowOffset(Size windowSize) {
-    final screen = MediaQuery.of(context).size;
-    return Offset(
-      ((screen.width - windowSize.width) / 2).clamp(0, double.infinity),
-      ((screen.height - windowSize.height) / 2).clamp(40, double.infinity),
-    );
-  }
+  // Windows land centered in the middle gutter between the two icon rails.
+  // WindowManager.openWindow re-places new windows via DesktopGeometry too;
+  // this keeps the requested position sensible for existing windows.
+  Offset _centerWindowOffset(Size windowSize) =>
+      DesktopGeometry.place(windowSize, 0).topLeft;
 
   void _openAgent(HexAgent agent) {
     if (SwarmAppRegistry.byId(agent.id)?.mock == true) {
@@ -244,7 +241,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         },
         child: ListView.builder(
           controller: _ctrl,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          // No side padding: the free outer column is part of each rail.
+          padding: const EdgeInsets.fromLTRB(0, 16, 0, 96),
           // No itemCount — the list is intentionally endless. Each real
           // space repeats via `index % _spaces.length`, which is what makes
           // scrolling down forever loop back to ORIGIN instead of stopping.
@@ -290,57 +288,54 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
 
   Widget _buildSpaceSection(int index) {
     final space = _spaces[index];
-    // Icons run down two checkered columns hugging the left/right edges;
-    // the middle stays clear as the landing zone for opened windows.
-    // Interleaved so the checkerboard reads continuously top-to-bottom.
+    // Each side, from the screen edge in: one free column, then two icon
+    // columns staggered like a checkerboard (an icon on every other cell).
+    // The middle stays clear — that's where windows open.
     final left = <HexAgent>[];
     final right = <HexAgent>[];
     for (int i = 0; i < space.agents.length; i++) {
       (i.isEven ? left : right).add(space.agents[i]);
     }
+    final cell = DesktopGeometry.cell;
+
+    Widget rail(List<HexAgent> agents, {required bool mirror}) => SizedBox(
+          width: cell * 2,
+          child: HexGrid(
+            // Rebuild the grid when the cell size changes (zoom / resize).
+            key: ValueKey('${space.name}-$mirror-${cell.round()}-${agents.length}'),
+            agents: agents,
+            columns: 2,
+            // Checker layout holds one icon per row.
+            rows: agents.length.clamp(1, 80),
+            onAgentOpen: _openAgent,
+            showSlotBackgrounds: false,
+            checker: true,
+            mirror: mirror,
+          ),
+        );
 
     return Stack(children: [
       Container(
         padding: const EdgeInsets.fromLTRB(0, 36, 0, 8),
         child: space.agents.isEmpty
             ? _buildEmptySpace()
-            : IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 150,
-                      child: HexGrid(
-                        agents: left,
-                        columns: 2,
-                        rows: (left.length / 2).ceil().clamp(1, 40),
-                        hexSize: 64,
-                        onAgentOpen: _openAgent,
-                        showSlotBackgrounds: false,
-                      ),
-                    ),
-                    // Window landing zone — left empty on purpose.
-                    const Expanded(child: SizedBox.shrink()),
-                    SizedBox(
-                      width: 150,
-                      child: HexGrid(
-                        agents: right,
-                        columns: 2,
-                        rows: (right.length / 2).ceil().clamp(1, 40),
-                        hexSize: 64,
-                        onAgentOpen: _openAgent,
-                        showSlotBackgrounds: false,
-                      ),
-                    ),
-                  ],
-                ),
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: cell), // free column
+                  rail(left, mirror: false),
+                  // Window landing zone — left empty on purpose.
+                  const Expanded(child: SizedBox.shrink()),
+                  rail(right, mirror: true),
+                  SizedBox(width: cell), // free column
+                ],
               ),
       ),
 
       // Space label badge (top-left)
       Positioned(
         top: 6,
-        left: 0,
+        left: cell,
         child: index == 0 ? _originBadge() : _spaceBadge(space.name),
       ),
 
@@ -348,7 +343,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       if (index != 0)
         Positioned(
           top: 6,
-          right: 0,
+          right: cell,
           child: GestureDetector(
             onTap: () => _removeSpace(index),
             child: Container(

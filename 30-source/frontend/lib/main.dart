@@ -149,7 +149,7 @@ class _SwarmAppState extends State<SwarmApp> {
           builder: (context, ui, _) {
             return Stack(
               children: [
-                if (child != null) _wholeShellZoom(context, child, ui.scale),
+                if (child != null) WholeShellZoom(scale: ui.scale, child: child),
                 const Positioned(
                   top: 10,
                   right: 15,
@@ -166,35 +166,6 @@ class _SwarmAppState extends State<SwarmApp> {
           },
         );
       },
-    );
-  }
-
-  // Scales every screen in the shell uniformly (icons, text, layout — not
-  // just fonts), keeping hit-testing correct. Content is laid out against a
-  // shrunk/grown "virtual" screen size and then stretched back to the real
-  // one via Transform.scale.
-  Widget _wholeShellZoom(BuildContext context, Widget child, double scale) {
-    if (scale == 1.0) return child;
-    final mq = MediaQuery.of(context);
-    final virtualSize = mq.size / scale;
-    return MediaQuery(
-      data: mq.copyWith(size: virtualSize),
-      child: OverflowBox(
-        alignment: Alignment.topLeft,
-        minWidth: virtualSize.width,
-        maxWidth: virtualSize.width,
-        minHeight: virtualSize.height,
-        maxHeight: virtualSize.height,
-        child: Transform.scale(
-          scale: scale,
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: virtualSize.width,
-            height: virtualSize.height,
-            child: child,
-          ),
-        ),
-      ),
     );
   }
 }

@@ -76,6 +76,11 @@ class HexGrid extends StatefulWidget {
   final OnAgentOpen? onAgentOpen;
   // When false, slot-background hexagons are hidden so a wallpaper shows through.
   final bool showSlotBackgrounds;
+  // Checker layout (desktop rails): square cells, an icon only on every
+  // other cell, so neighbouring columns stagger. `mirror` flips which column
+  // starts on row 0 — use it for the right-hand rail so both sides match.
+  final bool checker;
+  final bool mirror;
 
   const HexGrid({
     super.key,
@@ -85,6 +90,8 @@ class HexGrid extends StatefulWidget {
     this.hexSize = 52,
     this.onAgentOpen,
     this.showSlotBackgrounds = true,
+    this.checker = false,
+    this.mirror = false,
   });
 
   @override
@@ -143,6 +150,9 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
     _slots = [];
     for (int r = 0; r < widget.rows; r++) {
       for (int c = 0; c < widget.columns; c++) {
+        if (widget.checker && (r + (widget.mirror ? widget.columns - 1 - c : c)) % 2 != 0) {
+          continue;
+        }
         _slots.add(HexSlot(r, c));
       }
     }
@@ -158,7 +168,15 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
     }
   }
 
+  // Checker tiles fill this share of their cell, leaving a gap between them.
+  static const _checkerFill = 0.88;
+  static const _checkerRowStep = 0.62; // of tile height
+
   Offset _slotCenter(int row, int col, double hexW, double hexH) {
+    if (widget.checker) {
+      final cellW = hexW / _checkerFill;
+      return Offset(col * cellW + cellW / 2, row * hexH * _checkerRowStep + hexH / 2);
+    }
     final rowOffset = (row % 2 == 1) ? hexW * 0.5 : 0.0;
     final x = col * hexW + rowOffset + hexW / 2;
     final y = row * (hexH * 0.75) + hexH / 2;
@@ -207,9 +225,13 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (ctx, constraints) {
       final totalW = constraints.maxWidth;
-      final hexW = min(widget.hexSize * 2, totalW / (widget.columns + 0.5));
+      final hexW = widget.checker
+          ? totalW / widget.columns * _checkerFill
+          : min(widget.hexSize * 2, totalW / (widget.columns + 0.5));
       final hexH = hexW * 1.1547; // ratio for regular hex
-      final gridH = widget.rows * (hexH * 0.75) + hexH * 0.25;
+      final gridH = widget.checker
+          ? (widget.rows - 1) * hexH * _checkerRowStep + hexH
+          : widget.rows * (hexH * 0.75) + hexH * 0.25;
 
       // Compute centers
       for (final slot in _slots) {
