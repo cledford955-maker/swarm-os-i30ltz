@@ -26,7 +26,7 @@
   --ok:#5ee0a0;
   --warn:#ffc04d;
   --crit:#ff3355;
-  --panel-fill:rgba(11,6,21,.84);
+  --panel-fill:rgba(11,6,21,.76);
   --edge:linear-gradient(135deg,rgba(164,92,255,.75),rgba(70,176,255,.35) 45%,rgba(255,51,85,.45));
   --display:"Cinzel",Georgia,"Times New Roman",serif;
   --body:"Chakra Petch",ui-sans-serif,system-ui,sans-serif;
@@ -47,8 +47,8 @@ a{color:var(--plasma-hi)}
   radial-gradient(90% 60% at 50% -10%,#0b1330 0%,transparent 70%),var(--void)}
 .blob{position:absolute;width:70vmax;height:70vmax;border-radius:50%;filter:blur(70px);opacity:.55;mix-blend-mode:screen;will-change:transform}
 .blob.p{background:radial-gradient(circle,#7a2cff 0%,#4b12a8 35%,transparent 68%);left:-20vmax;top:-10vmax;animation:drift1 26s ease-in-out infinite alternate}
-.blob.b{background:radial-gradient(circle,#1f7dff 0%,#0d3a9e 35%,transparent 66%);right:-28vmax;top:20vh;opacity:.45;animation:drift2 32s ease-in-out infinite alternate}
-.blob.r{background:radial-gradient(circle,#ff1f4b 0%,#8a0c2a 32%,transparent 64%);left:10vw;bottom:-40vmax;opacity:.4;animation:drift3 22s ease-in-out infinite alternate}
+.blob.b{background:radial-gradient(circle,#1f7dff 0%,#0d3a9e 35%,transparent 66%);right:-28vmax;top:20vh;opacity:.6;animation:drift2 32s ease-in-out infinite alternate}
+.blob.r{background:radial-gradient(circle,#ff1f4b 0%,#8a0c2a 32%,transparent 64%);left:10vw;bottom:-40vmax;opacity:.55;animation:drift3 22s ease-in-out infinite alternate}
 @keyframes drift1{to{transform:translate(30vw,25vh) scale(1.15)}}
 @keyframes drift2{to{transform:translate(-35vw,-15vh) scale(.9)}}
 @keyframes drift3{to{transform:translate(25vw,-30vh) scale(1.2)}}
@@ -262,7 +262,7 @@ nav.tabs button[aria-selected="true"]{color:var(--filament);background:rgba(164,
   function frame(t){
     const dt = Math.min(64,t-last); last=t;
     ctx.clearRect(0,0,W,H);
-    if (!document.hidden){ nextStrike -= dt; if (nextStrike<=0){ strike(); if(Math.random()<.3) setTimeout(strike,90); nextStrike = 900+Math.random()*2600; } }
+    if (!document.hidden){ nextStrike -= dt; if (nextStrike<=0){ strike(); if(Math.random()<.3) setTimeout(strike,90); nextStrike = 500+Math.random()*1700; } }
     ctx.globalCompositeOperation='lighter';
     bolts = bolts.filter(b=>{ b.life+=dt; const k=1-b.life/b.max; if(k<=0) return false;
       const flick = k>.6 ? (Math.random()<.35?.3:1) : k; drawBolt(b,flick); return true; });
@@ -306,7 +306,7 @@ async function api(path, body){
 /* Example data — shown when the PC isn't reachable (and in the artifact preview). */
 const now = new Date(), iso = (h,m=0) => { const d=new Date(now); d.setHours(h,m,0,0); return d.toISOString(); };
 const EXAMPLE = {
-  headline: "Morning. Evening meds were never ticked off last night — check the log. Lucy has 14 uncommitted changes. Most of your week went to LucyServer-go (11.5 h).",
+  headline: "Morning. You're 650 ml behind on water. Lucy has 14 uncommitted changes, and /mnt/Lucy is 90% full. Most of your week went to LucyServer-go (11.5 h).",
   nudges: [
     {kind:'water',severity:'warn',text:"You're 650 ml behind on water. Grab a glass."},
     {kind:'break',severity:'warn',text:"95 min straight on LucyServer-go. Stand up, stretch, drink water."},

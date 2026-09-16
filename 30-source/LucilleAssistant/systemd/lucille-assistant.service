@@ -1,0 +1,17 @@
+# User unit — install with:
+#   cp systemd/lucille-assistant.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now lucille-assistant
+[Unit]
+Description=Lucille Assistant (daily brief, care, gaming, news) on :8403
+After=network-online.target
+
+[Service]
+EnvironmentFile=/mnt/Lucy/20-runtime/.env
+# Loopback + Tailscale so the phones can reach it. Non-loopback callers need SWARM_AUTH_TOKEN.
+Environment=LUCILLE_ASSISTANT_LISTEN=127.0.0.1:8403;100.82.1.19:8403
+ExecStart=/mnt/Lucy/30-source/LucilleAssistant/lucille-assistant
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
