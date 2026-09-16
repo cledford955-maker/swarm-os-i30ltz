@@ -108,9 +108,6 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
   final _history = <String>[];
   int _histIdx = -1;
 
-  // Drag state
-  FileSystemEntity? _dragSrc;
-
   @override
   void initState() {
     super.initState();
@@ -246,7 +243,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         _clipCut = false;
       } else {
         if (src is File) {
-          await (src as File).copy(dst);
+          await File(src.path).copy(dst);
         } else {
           // shallow copy of dir
           await Process.run('cp', ['-r', src.path, dst]);
@@ -396,7 +393,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
       switch (v) {
         case 'open':   _open(e);
         case 'kate':   _openKate(e.path);
-        case 'video':  context.go('/cinema?file=${Uri.encodeComponent(e.path)}');
+        case 'video':  if (mounted) context.go('/cinema?file=${Uri.encodeComponent(e.path)}');
         case 'img':    setState(() => _selected = e);
         case 'copy':   setState(() { _clipEntity = e; _clipCut = false; }); _toast('Copied "$name"');
         case 'cut':    setState(() { _clipEntity = e; _clipCut = true; }); _toast('Cut "$name"');
