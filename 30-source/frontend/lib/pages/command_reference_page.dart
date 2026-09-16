@@ -30,8 +30,9 @@ const _steps = <_Step>[
     _Cmd('passwd'),
     _Cmd('sudo -v && echo "sudo works"', 'Check it'),
   ], 'first'),
-  _Step('Fix system file ownership', 'Installs before 2026-09-16 copied /etc, /usr and /opt owned by your user instead of root. This hands them back to root.', [
-    _Cmd('sudo find /etc /usr /opt -xdev -uid 1000 -exec chown -h root:root {} +'),
+  _Step('Fix system file ownership', 'SWARM OS only — never run this on CachyOS or another OS. Installs before 2026-09-16 copied system files owned by your user instead of root. This hands /etc, /usr and /opt/swarm_os back to root and leaves apps you installed yourself (Android Studio, Flutter) alone.', [
+    _Cmd('test -d /opt/swarm_os && echo "OK: SWARM OS" || echo "STOP: this is not SWARM OS"', 'Check you are on SWARM OS'),
+    _Cmd('sudo find /etc /usr /opt/swarm_os -xdev -uid 1000 -exec chown -h root:root {} +'),
     _Cmd('sudo chmod 440 /etc/sudoers.d/10-wheel', 'Then'),
   ], 'first'),
   _Step('Verify core services', 'All should show active (running).', [

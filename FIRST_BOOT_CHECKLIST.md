@@ -13,10 +13,12 @@ Open foot (Super+Enter). No sudo needed for the first command:
 passwd
 ```
 
-Then hand system files back to root (the old installer left them owned by your user):
+Then hand system files back to root (the old installer left them owned by your user).
+**SWARM OS only** — on CachyOS this would take your own apps (e.g. /opt/flutter) away from you.
+It deliberately skips the rest of /opt, where Android Studio must stay user-owned:
 
 ```bash
-sudo find /etc /usr /opt -xdev -uid 1000 -exec chown -h root:root {} +
+sudo find /etc /usr /opt/swarm_os -xdev -uid 1000 -exec chown -h root:root {} +
 ```
 
 ```bash
