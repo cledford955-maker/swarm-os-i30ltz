@@ -373,6 +373,16 @@ if [ -f /etc/systemd/system/swarm-ui.service ]; then
     sed -i 's|swarm:swarm|i30ltz:i30ltz|g' /etc/systemd/system/swarm-ui.service
 fi
 
+# The other SWARM services (gaming-agent, lucy-server, google-workspace,
+# i30ltz-recovery) were also written for the live ISO's 'swarm' user, which
+# doesn't exist on an installed system — they failed with 217/USER
+# "Unknown user" at every boot (found 2026-09-16).
+for unit in /etc/systemd/system/*.service; do
+    sed -i -e 's/^User=swarm *\$/User=i30ltz/' \
+           -e 's/^Group=swarm *\$/Group=i30ltz/' \
+           -e 's|chown swarm:swarm|chown i30ltz:i30ltz|g' "\$unit"
+done
+
 # BUG FIX: swarm-ui.service now runs as i30ltz, but labwc's config (the
 # autostart script that actually launches the Flutter shell + Lucille panel,
 # plus rc.xml's floating-window rules) only exists at /home/swarm/.config/labwc
