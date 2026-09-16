@@ -63,7 +63,13 @@ func main() {
 	fsH := handlers.NewFilesystemHandler()
 	chatH := handlers.NewChatHandler()
 
+	memAPI := openMemory()
+
 	r.Route("/api", func(api chi.Router) {
+		// Shared memory (2026-09-16) — log at /mnt/brains/swarm-memory, synced
+		// across the OSes, the companion phones and Claude's memory files.
+		api.Route("/memory", memoryRoutes(memAPI))
+
 		// TTS (task #19) — the ONE /api/ prefix exempted from the auth
 		// middleware in the .NET original (see swarmAuthMiddleware below).
 		// Rate-limited: ElevenLabs charges per character; 10 calls/min prevents
@@ -231,6 +237,10 @@ func main() {
 		addr = "http://0.0.0.0:5000"
 	}
 	listenAddr := strings.TrimPrefix(addr, "http://")
+
+	if memAPI != nil {
+		go serveMemoryLAN(memAPI)
+	}
 
 	fmt.Printf("[LucyServer] listening on %s\n", addr)
 	if err := http.ListenAndServe(listenAddr, r); err != nil {
