@@ -156,6 +156,9 @@ echo -e "  ${GREEN}✓ swarm-slint Lucille panel compiled.${NC}"
 # -----------------------------------------------------------------------------
 echo -e "\n${CYAN}[3/8] Compiling LucyServer Subsystem (Go)...${NC}"
 (cd "$LUCY_SERVER_GO_DIR" && go build -o lucy-server .)
+# Shared memory (2026-09-16): the log format is shared by every OS and phone,
+# so its tests gate the build — a broken merge rule must never ship.
+(cd "$LUCY_SERVER_GO_DIR" && go test ./memory/ && go build -o swarm-memory ./cmd/swarm-memory)
 echo -e "  ${GREEN}✓ LucyServer (Go) compiled.${NC}"
 
 echo -e "\n  Compiling Google Workspace Service (.NET)..."
@@ -245,6 +248,9 @@ echo -e "  ${GREEN}✓ lucille-core staged to /usr/bin/lucille-core.${NC}"
 # 4e-installer. Stage install script into live ISO so it can be run from TTY
 mkdir -p "$AIROOTFS/usr/local/bin"
 cp -f "$SOURCE_DIR/install_swarm_os.sh" "$AIROOTFS/usr/local/bin/install_swarm_os.sh"
+# swarm-memory CLI — shared memory at /mnt/brains/swarm-memory (2026-09-16)
+cp -f "$LUCY_SERVER_GO_DIR/swarm-memory" "$AIROOTFS/usr/local/bin/swarm-memory"
+chmod +x "$AIROOTFS/usr/local/bin/swarm-memory"
 chmod +x "$AIROOTFS/usr/local/bin/install_swarm_os.sh"
 # The installer runs from /usr/local/bin inside the live ISO, so stage the
 # package manifest beside it instead of relying on the build tree being present.

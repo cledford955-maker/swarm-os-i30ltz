@@ -115,12 +115,16 @@ Run `70-scripts/setup-dev-deps.sh` on any new machine after mounting LUCILLE.
 
 ---
 
+## Shared memory (2026-09-16)
+
+All OSes, the companion phones and Claude share one append-only memory log at `/mnt/brains/swarm-memory/` (git copy: `60-boltz-brain/swarm-memory/`). Read `/mnt/brains/swarm-memory/PROJECT_MEMORY.md` at session start; record lasting decisions with `swarm-memory add -kind decision -key <topic> "text"`. Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md`.
+
 ## Key services and ports
 
 | Service | Port | Active location |
 |---|---|---|
 | GamingAgent | 8401 | `30-source/GamingAgent-go/` |
-| LucyServer | configured in .env | `30-source/LucyServer/` (.NET, being replaced by `LucyServer-go/`) |
+| LucyServer | 5000 (+ 8402 memory sync, LAN) | `30-source/LucyServer/` (.NET, being replaced by `LucyServer-go/`) |
 
 ---
 

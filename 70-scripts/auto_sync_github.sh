@@ -10,6 +10,25 @@ set -euo pipefail
 REPO_DIR="/mnt/Lucy"
 cd "$REPO_DIR"
 
+# Shared memory (2026-09-16): mirror /mnt/brains/swarm-memory into the repo so
+# it is versioned and pushed with everything else. Skipped quietly when the
+# brains partition isn't mounted — the last mirrored copy stays in git.
+MEMORY_MIRROR="$REPO_DIR/60-boltz-brain/swarm-memory"
+if mountpoint -q /mnt/brains && [ -d /mnt/brains/swarm-memory ]; then
+  if command -v swarm-memory >/dev/null 2>&1; then
+    swarm-memory mirror "$MEMORY_MIRROR" >/dev/null
+  else
+    mkdir -p "$MEMORY_MIRROR/docs"
+    rsync -a --delete /mnt/brains/swarm-memory/log/ "$MEMORY_MIRROR/log/"
+    for f in PROJECT_MEMORY.md peers.json README.md; do
+      [ -f "/mnt/brains/swarm-memory/$f" ] && cp -f "/mnt/brains/swarm-memory/$f" "$MEMORY_MIRROR/$f"
+    done
+    for f in Lucy_Core_Prompt.md Dr_Boltz_Core_Prompt.md llcy_memory.md lucille_personas_memory.json memory.json users.json; do
+      [ -f "/mnt/brains/$f" ] && cp -f "/mnt/brains/$f" "$MEMORY_MIRROR/docs/$f"
+    done
+  fi
+fi
+
 if [ -n "$(git status --porcelain)" ]; then
   git add -A
   git commit -m "auto-sync: $(date -Iseconds)" --quiet

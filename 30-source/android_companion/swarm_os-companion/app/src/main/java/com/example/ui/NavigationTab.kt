@@ -10,5 +10,6 @@ enum class NavigationTab {
     CODER_DROID,
     AVATAR_3D,
     TERMINAL,
-    CHEAT_SHEET
+    CHEAT_SHEET,
+    MEMORY
 }

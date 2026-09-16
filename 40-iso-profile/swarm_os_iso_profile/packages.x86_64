@@ -198,3 +198,8 @@ os-prober
 # Sealed-secret unsealing at boot (swarm-secrets.service, 2026-09-12).
 # Explicit rather than relying on it arriving as a pacman dependency.
 gnupg
+
+# Shared memory LAN fallback (2026-09-16): advertises _swarmcompanion._tcp so
+# companion phones find LUCILLE on Wi-Fi when Tailscale is down.
+avahi
+nss-mdns

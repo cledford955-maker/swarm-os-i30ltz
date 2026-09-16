@@ -1,0 +1,12 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!-- SWARM OS shared memory sync (v1.0.0, 2026-09-16). Companion phones browse
+     _swarmcompanion._tcp and sync with LucyServer's LAN listener on 8402. -->
+<service-group>
+  <name replace-wildcards="yes">swarm-lucille-%h</name>
+  <service>
+    <type>_swarmcompanion._tcp</type>
+    <port>8402</port>
+    <txt-record>path=/api/memory/sync</txt-record>
+  </service>
+</service-group>

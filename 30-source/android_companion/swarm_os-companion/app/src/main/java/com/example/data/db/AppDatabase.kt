@@ -5,15 +5,18 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.Room.databaseBuilder
 import androidx.room.RoomDatabase
+import com.example.data.memory.MemoryDao
+import com.example.data.memory.MemoryEntryEntity
 
 @Database(
     entities = [
         TaskEntity::class,
         DeviceSyncEntity::class,
         SystemScanEntity::class,
-        AIChatEntity::class
+        AIChatEntity::class,
+        MemoryEntryEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -21,6 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun deviceSyncDao(): DeviceSyncDao
     abstract fun systemScanDao(): SystemScanDao
     abstract fun aiChatDao(): AIChatDao
+    abstract fun memoryDao(): MemoryDao
 
     companion object {
         @Volatile
@@ -29,6 +33,8 @@ abstract class AppDatabase : RoomDatabase() {
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = databaseBuilder(context.applicationContext, AppDatabase::class.java, "dr_boltz_db")
+                // Explicit migration first: shared memory must never be wiped by a schema bump.
+                .addMigrations(MemoryEntryEntity.MIGRATION_1_2)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance

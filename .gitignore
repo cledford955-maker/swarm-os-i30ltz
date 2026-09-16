@@ -76,3 +76,4 @@ appsettings.*.Development.json
 
 # quarantine holding area - never commit
 _to_delete/
+30-source/LucyServer-go/swarm-memory

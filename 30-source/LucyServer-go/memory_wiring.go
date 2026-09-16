@@ -51,6 +51,13 @@ func serveMemoryLAN(a *memory.API) {
 	if addr == "off" {
 		return
 	}
+	// The fallback token is printed in the docs and the companion defaults, so
+	// a LAN listener guarded only by it would hand the whole memory (users.json
+	// included) to anyone on the Wi-Fi. Tailscale sync on :5000 is unaffected.
+	if memory.AuthToken() == memory.FallbackToken {
+		fmt.Fprintln(os.Stderr, "[LucyServer] memory LAN listener disabled: set a real SWARM_AUTH_TOKEN to enable sync on :8402")
+		return
+	}
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Recoverer)
 	r.Use(securityHeaders)

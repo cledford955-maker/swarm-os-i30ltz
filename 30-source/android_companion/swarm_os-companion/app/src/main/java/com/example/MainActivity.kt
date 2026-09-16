@@ -89,6 +89,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.example.data.memory.MemorySyncEngine.start(applicationContext)
 
         setContent {
             MyApplicationTheme {
@@ -269,6 +270,21 @@ class MainActivity : FragmentActivity() {
                                     ),
                                     modifier = Modifier.testTag("nav_coder_droid")
                                 )
+
+                                NavigationBarItem(
+                                    selected = currentTab == NavigationTab.MEMORY,
+                                    onClick = { viewModel.selectTab(NavigationTab.MEMORY) },
+                                    icon = { Icon(Icons.Default.Hub, contentDescription = "Shared memory") },
+                                    label = { Text("Memory", fontSize = 10.sp) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = Color.White,
+                                        selectedTextColor = LightningYellow,
+                                        indicatorColor = ElectricCyan.copy(alpha = 0.5f),
+                                        unselectedIconColor = TextMuted,
+                                        unselectedTextColor = TextMuted
+                                    ),
+                                    modifier = Modifier.testTag("nav_memory")
+                                )
                             }
                         },
                         modifier = Modifier
@@ -387,6 +403,8 @@ class MainActivity : FragmentActivity() {
                                             onNavigateBack = { viewModel.selectTab(NavigationTab.DASHBOARD) }
                                         )
                                     }
+
+                                    NavigationTab.MEMORY -> MemoryScreen()
 
                                     NavigationTab.CODER_DROID -> {
                                         CoderDroidScreen(

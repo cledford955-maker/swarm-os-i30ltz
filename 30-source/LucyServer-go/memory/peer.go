@@ -22,6 +22,7 @@ type SyncResponse struct {
 	Device  string  `json:"device"`
 	Entries []Entry `json:"entries"`
 	Cursor  string  `json:"cursor"`
+	More    bool    `json:"more,omitempty"` // phones page their replies; pull again when set
 }
 
 // PushRequest is the body of POST /api/memory/sync.
@@ -69,33 +70,38 @@ func SyncWithPeer(s *Store, device, base, token string) PeerResult {
 
 	client := &http.Client{Timeout: 20 * time.Second}
 
-	// Pull.
-	u := strings.TrimRight(base, "/") + SyncPath + "?cursor=" + url.QueryEscape(st.PullCursor)
-	req, _ := http.NewRequest(http.MethodGet, u, nil)
-	req.Header.Set("X-Swarm-Auth", token)
-	resp, err := client.Do(req)
-	if err != nil {
-		res.Err = err
-		return res
+	// Pull, repeating while the peer reports more pages.
+	for {
+		u := strings.TrimRight(base, "/") + SyncPath + "?cursor=" + url.QueryEscape(st.PullCursor)
+		req, _ := http.NewRequest(http.MethodGet, u, nil)
+		req.Header.Set("X-Swarm-Auth", token)
+		resp, err := client.Do(req)
+		if err != nil {
+			res.Err = err
+			return res
+		}
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 256<<20))
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			res.Err = fmt.Errorf("pull: %s: %s", resp.Status, strings.TrimSpace(string(body)))
+			return res
+		}
+		var pulled SyncResponse
+		if err := json.Unmarshal(body, &pulled); err != nil {
+			res.Err = fmt.Errorf("pull: %w", err)
+			return res
+		}
+		n, err := s.Ingest(pulled.Entries)
+		if err != nil {
+			res.Err = err
+			return res
+		}
+		res.Pulled += n
+		st.PullCursor = pulled.Cursor
+		if !pulled.More {
+			break
+		}
 	}
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 256<<20))
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		res.Err = fmt.Errorf("pull: %s: %s", resp.Status, strings.TrimSpace(string(body)))
-		return res
-	}
-	var pulled SyncResponse
-	if err := json.Unmarshal(body, &pulled); err != nil {
-		res.Err = fmt.Errorf("pull: %w", err)
-		return res
-	}
-	n, err := s.Ingest(pulled.Entries)
-	if err != nil {
-		res.Err = err
-		return res
-	}
-	res.Pulled = n
-	st.PullCursor = pulled.Cursor
 
 	// Push, in batches so a first sync of large docs stays under body limits.
 	cur, err := ParseCursor(st.PushCursor)
@@ -178,5 +184,9 @@ func AuthToken() string {
 			}
 		}
 	}
-	return "swarm-token-2026"
+	return FallbackToken
 }
+
+// FallbackToken is LucyServer's built-in default. It is public (docs, the
+// companion's defaults), so nothing reachable from the LAN may rely on it.
+const FallbackToken = "swarm-token-2026"
