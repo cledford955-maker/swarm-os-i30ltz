@@ -1,5 +1,7 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **Master list (2026-09-16):** all 16 SWARM OS artifacts merged into one categorized, severity-ranked list — https://claude.ai/artifact/SNfWViWjiL2CYKvxY7gLCr (483 items: 47 critical, 114 high, 114 medium, 208 low; 44 already done).
+
 > **EVERY AI THAT TOUCHES THIS PROJECT MUST READ AND UPDATE THIS FILE.**
 > When you add a feature, mark it done here and add any new ideas you think of.
 > When you remove or refactor something, update the relevant entry.
