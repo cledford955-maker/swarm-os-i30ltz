@@ -2,6 +2,8 @@ import 'package:go_router/go_router.dart';
 import 'shell/swarm_shell.dart';
 import 'hub/hub_page.dart';
 import 'pages/hex_desktop_page.dart';
+import 'pages/grub_terminal_page.dart';
+import 'pages/file_explorer_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/models_page.dart';
 import 'pages/swarm_page.dart';
@@ -106,6 +108,22 @@ final goRouter = GoRouter(
           ),
         ),
         GoRoute(path: '/test-lucy', builder: (_, __) => const TestLucyServerPage()),
+        GoRoute(
+          path: '/grub',
+          builder: (_, state) => GrubTerminalPage(
+            startPath: state.uri.queryParameters['path'],
+          ),
+        ),
+        GoRoute(path: '/terminal-grub', builder: (_, state) =>
+          GrubTerminalPage(startPath: state.uri.queryParameters['path'])),
+        GoRoute(
+          path: '/explorer',
+          builder: (_, state) => FileExplorerPage(
+            initialPath: state.uri.queryParameters['path'],
+          ),
+        ),
+        GoRoute(path: '/files-explorer', builder: (_, state) =>
+          FileExplorerPage(initialPath: state.uri.queryParameters['path'])),
       ],
     ),
   ],
