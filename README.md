@@ -2,7 +2,7 @@
 `layout v1.0.0 · 2026-09-07 · SWARM OS v6.2.19`
 
 This partition holds everything needed to **run** SWARM OS. The encrypted
-master drive (`lucy-master`, LUKS) remains the source of truth for history;
+master drive ("lUCILLE"""/mnt/Lucy") remains the source of truth for history;
 this drive is the live working copy.
 
 ## Layout
