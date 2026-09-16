@@ -1,4 +1,4 @@
-# SWARM OS — Living Feature Tracker
+# SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
 > **EVERY AI THAT TOUCHES THIS PROJECT MUST READ AND UPDATE THIS FILE.**
 > When you add a feature, mark it done here and add any new ideas you think of.
