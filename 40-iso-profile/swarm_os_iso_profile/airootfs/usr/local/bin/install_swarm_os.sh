@@ -202,30 +202,6 @@ if ! grep -q "slick\|$SLICK_MAPPER" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
     info "Slick vault added to fstab → /mnt/slick"
 fi
 
-# EndeavourOS recovery parent (sda4, btrfs) — UUID-keyed so sda/sdb swap is safe
-ENDEAVOR_UUID="0ac123f1-bbd1-4ea6-8fdd-930bd0d45e18"
-mkdir -p "$MOUNT_POINT/mnt/endeavor"
-if ! grep -q "$ENDEAVOR_UUID\|/mnt/endeavor" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
-    echo "UUID=${ENDEAVOR_UUID}  /mnt/endeavor  btrfs  defaults,noatime,nofail,x-systemd.device-timeout=5  0 0" >> "$MOUNT_POINT/etc/fstab"
-    info "EndeavourOS partition added to fstab → /mnt/endeavor"
-fi
-
-# Recovery build workspace (sda7, btrfs)
-RECOVERYBUILD_UUID="3f6e3011-94a1-47d5-8192-6d86e9fd26d2"
-mkdir -p "$MOUNT_POINT/mnt/recoverybuild"
-if ! grep -q "$RECOVERYBUILD_UUID\|/mnt/recoverybuild" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
-    echo "UUID=${RECOVERYBUILD_UUID}  /mnt/recoverybuild  btrfs  defaults,noatime,nofail,x-systemd.device-timeout=5  0 0" >> "$MOUNT_POINT/etc/fstab"
-    info "Recovery build workspace added to fstab → /mnt/recoverybuild"
-fi
-
-# Recovery OS output (sda6, ext4)
-RECOVERYOS_UUID="9a9c857f-f2cb-47cc-ac13-2cf3a3e24bc8"
-mkdir -p "$MOUNT_POINT/mnt/recoveryos"
-if ! grep -q "$RECOVERYOS_UUID\|/mnt/recoveryos" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
-    echo "UUID=${RECOVERYOS_UUID}  /mnt/recoveryos  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2" >> "$MOUNT_POINT/etc/fstab"
-    info "Recovery OS output added to fstab → /mnt/recoveryos"
-fi
-
 info "fstab written"
 
 banner "Copying custom airootfs files..."
@@ -242,13 +218,7 @@ if [ -d "$PROFILE_ROOT/airootfs/" ]; then
     cp -a "$MOUNT_POINT/etc/fstab" "$MOUNT_POINT/etc/fstab.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/crypttab" "$MOUNT_POINT/etc/crypttab.sys" 2>/dev/null || true
 
-    # --no-preserve=ownership: the profile on /mnt/Lucy is owned by the build
-    # user (uid 1000). Plain `cp -a` carried that owner onto the target's
-    # /etc, /etc/sudoers.d/10-wheel, /etc/systemd/system and root-run scripts
-    # in /opt — letting the desktop user edit sudoers and root services, and
-    # making sudo reject 10-wheel (found 2026-09-16). Copied files are root-
-    # owned now; per-user config (labwc) is chowned to i30ltz further down.
-    cp -a --no-preserve=ownership "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
+    cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
 
     # Restore pristine system auth files (so users and render groups exist)
     [ -f "$MOUNT_POINT/etc/passwd.sys" ] && mv "$MOUNT_POINT/etc/passwd.sys" "$MOUNT_POINT/etc/passwd"
@@ -373,16 +343,6 @@ if [ -f /etc/systemd/system/swarm-ui.service ]; then
     sed -i 's|swarm:swarm|i30ltz:i30ltz|g' /etc/systemd/system/swarm-ui.service
 fi
 
-# The other SWARM services (gaming-agent, lucy-server, google-workspace,
-# i30ltz-recovery) were also written for the live ISO's 'swarm' user, which
-# doesn't exist on an installed system — they failed with 217/USER
-# "Unknown user" at every boot (found 2026-09-16).
-for unit in /etc/systemd/system/*.service; do
-    sed -i -e 's/^User=swarm *$/User=i30ltz/' \
-           -e 's/^Group=swarm *$/Group=i30ltz/' \
-           -e 's|chown swarm:swarm|chown i30ltz:i30ltz|g' "$unit"
-done
-
 # BUG FIX: swarm-ui.service now runs as i30ltz, but labwc's config (the
 # autostart script that actually launches the Flutter shell + Lucille panel,
 # plus rc.xml's floating-window rules) only exists at /home/swarm/.config/labwc
@@ -430,7 +390,6 @@ systemctl enable nftables || true
 systemctl enable apparmor || true
 systemctl enable swarm-podman-linger.service || true
 systemctl enable swarm-ui.service || true
-systemctl enable swarm-snapshot.service || true
 
 # Install GRUB as UEFI bootloader
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=SWARM_OS --recheck
@@ -561,16 +520,7 @@ EOF
 # prompts reach the real terminal instead of leftover heredoc input.
 if [ -z "$HOST_PW_HASH" ] || [ "$HOST_PW_HASH" = "!" ] || [ "$HOST_PW_HASH" = "*" ]; then
     echo "Please set a password for user 'i30ltz' (used for sudo and terminal commands):"
-    if [ -t 0 ]; then
-        # Keep asking — a typo'd confirmation used to leave the account with
-        # no password at all, so sudo could never be used after first boot.
-        until arch-chroot "$MOUNT_POINT" passwd i30ltz; do
-            echo "Passwords didn't match or were rejected — try again."
-        done
-    else
-        echo "WARNING: no terminal attached, so the i30ltz password was NOT set."
-        echo "After first boot, open foot (Super+Enter) and run: passwd"
-    fi
+    arch-chroot "$MOUNT_POINT" passwd i30ltz
 fi
 
 banner "Cleaning up..."

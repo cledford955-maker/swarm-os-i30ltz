@@ -1,6 +1,6 @@
 [package]
 name = "swarm-slint"
-version = "6.2.54"
+version = "6.2.57"
 edition = "2021"
 
 [[bin]]

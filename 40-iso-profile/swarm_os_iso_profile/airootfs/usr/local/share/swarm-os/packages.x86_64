@@ -160,6 +160,30 @@ parted
 reflector
 mkinitcpio
 
+# ===== GUI apps launched from the hex desktop =====
+# system_launcher.dart's fallback chains referenced these before they were
+# ever added here, so every "Launching..." tap silently failed — none of
+# terminalCmd/browserCmd's candidates existed on the built ISO. alacritty is
+# the first choice in every terminal fallback chain; chromium is used instead
+# of google-chrome-stable for the browser tile because google-chrome is
+# AUR-only and this profile's pacman.conf has no AUR repo configured (see the
+# tailscale removal note above — an AUR-only package here breaks pacstrap).
+alacritty
+foot
+chromium
+# wlr-randr: configure Wayland outputs (set 1440p external as primary in autostart)
+wlr-randr
+# file manager for the Files tile (fileManagerCmd in system_launcher.dart)
+thunar
+# system monitor for the Monitor tile (monitorCmd uses btop first)
+btop
+# nodejs/npm — lets `npm install -g @anthropic-ai/claude-code` provide the
+# `claude` CLI that the CC tile shells out to (claudeCodeCmd in
+# system_launcher.dart). The CLI itself isn't packaged here since it's a
+# per-user, auth-gated install, not a system package.
+nodejs
+npm
+
 # ===== Live ISO Boot Requirements =====
 mkinitcpio-archiso
 mkinitcpio-nfs-utils
@@ -174,3 +198,8 @@ os-prober
 # Sealed-secret unsealing at boot (swarm-secrets.service, 2026-09-12).
 # Explicit rather than relying on it arriving as a pacman dependency.
 gnupg
+
+# Shared memory LAN fallback (2026-09-16): advertises _swarmcompanion._tcp so
+# companion phones find LUCILLE on Wi-Fi when Tailscale is down.
+avahi
+nss-mdns

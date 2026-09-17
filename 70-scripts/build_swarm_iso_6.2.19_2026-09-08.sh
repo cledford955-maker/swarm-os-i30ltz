@@ -247,7 +247,7 @@ echo -e "  ${GREEN}✓ lucille-core staged to /usr/bin/lucille-core.${NC}"
 
 # 4e-installer. Stage install script into live ISO so it can be run from TTY
 mkdir -p "$AIROOTFS/usr/local/bin"
-cp -f "$SOURCE_DIR/install_swarm_os.sh" "$AIROOTFS/usr/local/bin/install_swarm_os.sh"
+cp -f "$LUCY/install_swarm_os.sh" "$AIROOTFS/usr/local/bin/install_swarm_os.sh"
 # swarm-memory CLI — shared memory at /mnt/brains/swarm-memory (2026-09-16)
 cp -f "$LUCY_SERVER_GO_DIR/swarm-memory" "$AIROOTFS/usr/local/bin/swarm-memory"
 chmod +x "$AIROOTFS/usr/local/bin/swarm-memory"

@@ -47,3 +47,4 @@
 /mnt/Lucy/30-source/GoogleWorkspaceService/obj/Release/net10.0/linux-x64/GoogleWorkspaceService.pdb
 /mnt/Lucy/30-source/GoogleWorkspaceService/obj/Release/net10.0/linux-x64/GoogleWorkspaceService.genruntimeconfig.cache
 /mnt/Lucy/30-source/GoogleWorkspaceService/obj/Release/net10.0/linux-x64/ref/GoogleWorkspaceService.dll
+/mnt/Lucy/30-source/GoogleWorkspaceService/obj/Release/net10.0/linux-x64/GoogleWorkspaceService.sourcelink.json
