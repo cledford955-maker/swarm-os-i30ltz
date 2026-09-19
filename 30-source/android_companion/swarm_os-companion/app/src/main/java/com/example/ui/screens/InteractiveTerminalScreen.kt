@@ -42,7 +42,7 @@ fun InteractiveTerminalScreen(
     val targetIp = connection.host
     var isIpConfigExpanded by remember { mutableStateOf(false) }
 
-    val terminalLog = remember { mutableStateListOf<String>("Connecting to Lucille Core Terminal ($targetIp)...") }
+    val terminalLog = remember { mutableStateListOf<String>("Connecting to DR. I30LTZ Terminal ($targetIp)...") }
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
@@ -69,7 +69,7 @@ fun InteractiveTerminalScreen(
         val ws = connection.terminalClient().newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 coroutineScope.launch(Dispatchers.Main) { connected = true }
-                log("⚡ SWARM_OS LUCILLE CORE CYBER TERMINAL ONLINE ($targetIp)")
+                log("⚡ SWARM_OS DR. I30LTZ CYBER TERMINAL ONLINE ($targetIp)")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) = log(text)
@@ -124,7 +124,7 @@ fun InteractiveTerminalScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "LUCILLE CORE • INTERACTIVE CYBER TERMINAL",
+                    text = "DR. I30LTZ • INTERACTIVE CYBER TERMINAL",
                     color = NvidiaGreen,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,

@@ -68,14 +68,14 @@ class AiSwarmConsensusEngine(
         val results = swarmTasks.awaitAll()
 
         val synthesis = StringBuilder().apply {
-            append("⚡ [LUCILLE CORE • REAL-TIME AI SWARM CONSENSUS]\n")
+            append("⚡ [DR. I30LTZ • REAL-TIME AI SWARM CONSENSUS]\n")
             append("========================================================================\n")
             results.forEach { res ->
                 append("🔹 ${res.agentName.uppercase()} [${res.modelId}]:\n")
                 append("${res.output.trim()}\n\n")
             }
             append("========================================================================\n")
-            append("👑 [LUCILLE MASTER SYNTHESIS]: Parallel multi-agent inference completed across ${results.size} swarm models under telemetry context: $systemContext.")
+            append("👑 [DR. I30LTZ MASTER SYNTHESIS]: Parallel multi-agent inference completed across ${results.size} swarm models under telemetry context: $systemContext.")
         }.toString()
 
         return@coroutineScope synthesis

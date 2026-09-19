@@ -52,16 +52,16 @@ data class LeaseState(val holder: String = "", val expires: String = "", val kno
 }
 
 /**
- * Keeps this phone's copy of the shared memory in step with LUCILLE and the
- * other phones. Spec: 90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md.
+ * Keeps this phone's copy of the shared memory in step with 13E457-THUNDERI30LT
+ * and the other phones. Spec: 90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md.
  *
  *  - Writes land in Room first (the offline queue) and push on the next sync.
  *  - Sync runs on network reconnect (callback, not a timer), every 15 min via
  *    JobScheduler under Doze, and on demand.
- *  - Peers: LUCILLE over Tailscale, plus anything advertising
- *    _swarmcompanion._tcp on the LAN — LUCILLE via avahi, and other phones.
+ *  - Peers: 13E457-THUNDERI30LT over Tailscale, plus anything advertising
+ *    _swarmcompanion._tcp on the LAN — 13E457-THUNDERI30LT via avahi, and other phones.
  *    Entries from third devices are forwarded too, so the mesh converges by gossip.
- *  - The write lease and the live SSE stream come from LUCILLE.
+ *  - The write lease and the live SSE stream come from 13E457-THUNDERI30LT.
  */
 object MemorySyncEngine {
     private const val TAG = "MemorySyncEngine"
@@ -137,7 +137,7 @@ object MemorySyncEngine {
     /**
      * The default token is public, so a phone serving its memory on the LAN
      * behind it would expose everything to anyone on the Wi-Fi. Syncing out to
-     * LUCILLE still works; serving and discovery wait for a real token.
+     * 13E457-THUNDERI30LT still works; serving and discovery wait for a real token.
      */
     fun startMeshIfSecure() {
         if (!started) return
@@ -155,17 +155,17 @@ object MemorySyncEngine {
     fun entries(kind: String, query: String): Flow<List<MemoryEntryEntity>> = dao.observe(kind, query, 300)
     fun count(): Flow<Int> = dao.count()
     private val _pending = MutableStateFlow(0)
-    /** Entries LUCILLE has not received from this phone yet. */
+    /** Entries 13E457-THUNDERI30LT has not received from this phone yet. */
     val pending: StateFlow<Int> = _pending.asStateFlow()
 
     private suspend fun updatePending() {
-        _pending.value = dao.since(pushCursor(lucilleUrl()), 10_000).size
+        _pending.value = dao.since(pushCursor(pcUrl()), 10_000).size
     }
 
     private fun prefs() = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    // Over Tailscale LUCILLE is reached on the main API port (token-guarded, 5000).
+    // Over Tailscale 13E457-THUNDERI30LT is reached on the main API port (token-guarded, 5000).
     // The sync-only port 8402 is the LAN fallback, found through mDNS.
-    private fun lucilleUrl() = "http://${connection.host}:${connection.port}"
+    private fun pcUrl() = "http://${connection.host}:${connection.port}"
     private fun pullCursor(peer: String) = prefs().getString("pull:$peer", "") ?: ""
     private fun pushCursor(peer: String) = prefs().getLong("push:$peer", 0L)
 
@@ -177,7 +177,7 @@ object MemorySyncEngine {
     }
 
     /**
-     * Saves a memory. While another device is main (and we can see LUCILLE),
+     * Saves a memory. While another device is main (and we can see 13E457-THUNDERI30LT),
      * live writes are refused so the lease means something; offline, the entry
      * is queued and merges on the next sync, as the spec allows.
      */
@@ -201,7 +201,7 @@ object MemorySyncEngine {
         if (!syncMutex.tryLock()) return // one pass at a time; a pass already covers this request
         try {
             _syncing.value = true
-            val targets = linkedMapOf("LUCILLE (Tailscale)" to lucilleUrl())
+            val targets = linkedMapOf("13E457-THUNDERI30LT (Tailscale)" to pcUrl())
             discovery.peers.value.forEach { (name, url) -> if (url !in targets.values) targets[name] = url }
             val results = targets.map { (name, url) -> syncWithPeer(name, url) }
             _peers.value = results
@@ -268,14 +268,14 @@ object MemorySyncEngine {
     private fun leaseFrom(o: JSONObject) = LeaseState(o.optString("holder"), o.optString("expires"), known = true)
 
     suspend fun refreshLease() = withContext(Dispatchers.IO) {
-        runCatching { _lease.value = leaseFrom(call(Request.Builder().url("${lucilleUrl()}/api/memory/lease").get())) }
+        runCatching { _lease.value = leaseFrom(call(Request.Builder().url("${pcUrl()}/api/memory/lease").get())) }
     }
 
     /** Make this phone main. [force] is the explicit "take over" from another device. */
     suspend fun acquireLease(force: Boolean): Result<LeaseState> = withContext(Dispatchers.IO) {
         runCatching {
             val body = JSONObject().put("device", deviceId).put("force", force).toString().toRequestBody(json)
-            val state = leaseFrom(call(Request.Builder().url("${lucilleUrl()}/api/memory/lease/acquire").post(body)))
+            val state = leaseFrom(call(Request.Builder().url("${pcUrl()}/api/memory/lease/acquire").post(body)))
             _lease.value = state
             startHeartbeat()
             state
@@ -288,7 +288,7 @@ object MemorySyncEngine {
         heartbeatJob?.cancel()
         runCatching {
             val body = JSONObject().put("device", deviceId).toString().toRequestBody(json)
-            call(Request.Builder().url("${lucilleUrl()}/api/memory/lease/release").post(body))
+            call(Request.Builder().url("${pcUrl()}/api/memory/lease/release").post(body))
             _lease.value = LeaseState(known = true)
         }
     }
@@ -300,7 +300,7 @@ object MemorySyncEngine {
                 delay(10_000)
                 try {
                     val body = JSONObject().put("device", deviceId).toString().toRequestBody(json)
-                    _lease.value = leaseFrom(call(Request.Builder().url("${lucilleUrl()}/api/memory/lease/heartbeat").post(body)))
+                    _lease.value = leaseFrom(call(Request.Builder().url("${pcUrl()}/api/memory/lease/heartbeat").post(body)))
                 } catch (e: HttpError) {
                     if (e.code == 409) { // someone took over, or we lapsed
                         e.body.optJSONObject("lease")?.let { _lease.value = leaseFrom(it) } ?: refreshLease()

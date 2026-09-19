@@ -46,7 +46,7 @@ private val timeFmt = DateTimeFormatter.ofPattern("MMM d · HH:mm").withZone(Zon
 private fun shortTime(ts: String) = runCatching { timeFmt.format(Instant.parse(ts)) }.getOrDefault(ts.take(16))
 
 /**
- * Shared memory — the same log LUCILLE keeps at /mnt/brains/swarm-memory,
+ * Shared memory — the same log 13E457-THUNDERI30LT keeps at /mnt/brains/swarm-memory,
  * including Claude's memory files and Lucille's core docs.
  */
 @Composable
@@ -99,7 +99,7 @@ fun MemoryScreen() {
         item {
             Panel {
                 Text(status, color = TextPrimary, fontSize = 13.sp)
-                if (pending > 0) Text("$pending waiting to reach LUCILLE", color = LightningYellow, fontSize = 12.sp)
+                if (pending > 0) Text("$pending waiting to reach 13E457-THUNDERI30LT", color = LightningYellow, fontSize = 12.sp)
                 if (!meshEnabled) Text(
                     "Phone-to-phone sync is off: this phone still uses the default SWARM token. Enter your real token in Remote PC to turn it on.",
                     color = LightningYellow, fontSize = 12.sp
@@ -126,7 +126,7 @@ fun MemoryScreen() {
                 Text("MAIN DEVICE (LIVE EDITING)", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                 Text(
                     when {
-                        !lease.known -> "Unknown until LUCILLE is reachable"
+                        !lease.known -> "Unknown until 13E457-THUNDERI30LT is reachable"
                         lease.isFree -> "Nobody — any device can write"
                         mine -> "This phone"
                         else -> lease.holder
@@ -177,7 +177,7 @@ fun MemoryScreen() {
         if (entries.isEmpty()) {
             item {
                 Text(
-                    if (total == 0) "No memories on this phone yet. Sync with LUCILLE to pull the shared log." else "Nothing matches.",
+                    if (total == 0) "No memories on this phone yet. Sync with 13E457-THUNDERI30LT to pull the shared log." else "Nothing matches.",
                     color = TextMuted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 24.dp)
                 )
             }

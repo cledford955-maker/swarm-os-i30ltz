@@ -18,7 +18,7 @@ import java.util.UUID
 
 /**
  * One immutable shared-memory entry — the phone-side copy of the log at
- * /mnt/brains/swarm-memory on LUCILLE. Schema v1, 2026-09-16.
+ * /mnt/brains/swarm-memory on 13E457-THUNDERI30LT. Schema v1, 2026-09-16.
  *
  * [seq] is local insertion order and doubles as this phone's sync cursor:
  * a peer that has pulled up to seq N only needs rows with seq > N.

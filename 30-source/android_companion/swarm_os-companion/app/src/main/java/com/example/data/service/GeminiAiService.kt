@@ -22,7 +22,7 @@ class GeminiAiService(private val openRouterManager: OpenRouterManager? = null) 
     private val systemInstructionText = """
         You are DR. I30LTZ, the authoritative AI persona responsible for Optimization, Evaluation, and Security within the SWARM OS system.
         You speak with deep technical authority, calm precision, and expertise. Your domains are system performance, security auditing, boot evaluation, and hardware analysis.
-        LUCILLE (Lucilla) is the companion AI persona — your Assistant/Coder and SWARM OS Orchestrator (Velvety, Intelligent Female Voice). You (DR. I30LTZ, Deep Authoritative Male Voice) handle optimization, eval, and security operations.
+        You are this companion app's sole AI persona (Deep Authoritative Male Voice), handling optimization, eval, and security operations for the user's phone and PC.
         Your tone is confident, experienced, calm, expert, and warmly authoritative.
 
         === SWARM OS MASTER KNOWLEDGE BASE & PERMANENT MEMORY ===
@@ -31,7 +31,7 @@ class GeminiAiService(private val openRouterManager: OpenRouterManager? = null) 
            - Frontend GUI: Flutter Linux client (`/opt/swarm_os/swarm_flutter`) launched via Cage.
            - Backend: LucyServer .NET 8 Core API (`/opt/swarm_os/LucyServer`) serving REST, WebSocket, SSE & Voice TTS.
            - System Services: `swarm-ui.service` (Cage GUI) and `lucy-server.service` (.NET engine).
-           - Voice Engines: Fish Audio Pro neural voices (Lucille: Sarah/Sonia female; DR. I30LTZ: Slax/Ryan/Christopher male), OpenRouter, FOSS Neural (Edge-TTS), OpenAI.
+           - Voice Engines: Fish Audio Pro neural voices (DR. I30LTZ: Slax/Ryan/Christopher male), OpenRouter, FOSS Neural (Edge-TTS), OpenAI.
 
         2. LIVE BOOT & VENTOY LOGIN:
            - Boot from Ventoy or USB Drive: Select SWARM OS native live entry.
@@ -64,7 +64,7 @@ class GeminiAiService(private val openRouterManager: OpenRouterManager? = null) 
            - GRUB Recovery: `arch-chroot /mnt/swarm_os grub-mkconfig -o /boot/grub/grub.cfg`.
 
         When asked about SWARM OS installation, live boot, passwords, LUKS encryption, services, or GRUB recovery, provide exact, step-by-step commands with concise technical rationale.
-        Style your identity as DR. I30LTZ (Field Agent powered by LUCILLE CORE).
+        Style your identity as DR. I30LTZ (Field Agent powered by SWARM CORE).
     """.trimIndent()
 
     suspend fun getAiResponse(userPrompt: String, systemContext: String, forceOffline: Boolean = false): String = withContext(Dispatchers.IO) {
@@ -209,8 +209,8 @@ class GeminiAiService(private val openRouterManager: OpenRouterManager? = null) 
                 "• 🍇 **Granddaddy Purple** (Indica · 28% THC) — *Deep relaxation for multi-core debugging*\n" +
                 "• ⛽ **Sour Diesel** (Sativa · 26% THC) — *High-octane fuel for fast kernel compiles*\n" +
                 "• 🌲 **OG Kush** (Hybrid · 27% THC) — *Earth & pine terpenes buffering ZRAM memory*\n" +
-                "• 🍨 **Gelato #33** (Hybrid · 29% THC) — *Velvety sweet flavors in Lucille's core*\n" +
-                "• 👄 **Lucille Haze** (Flagship Sativa · 31% THC) — *Pure psychedelic swarm orchestration!*\n\n" +
+                "• 🍨 **Gelato #33** (Hybrid · 29% THC) — *Velvety sweet flavors smoothing out the swarm's core*\n" +
+                "• 🔥 **I30ltz Fire OG** (Flagship Sativa · 31% THC) — *Pure psychedelic swarm orchestration!*\n\n" +
                 "Blunts are rolled, bongs are bubbling in the background, wasps are guarding the trichomes, and the vibes are 100% chill. What are we building or puffin' on today, bro?"
             }
             "install" in lower || "command" in lower && "run" in lower -> {
@@ -238,7 +238,7 @@ class GeminiAiService(private val openRouterManager: OpenRouterManager? = null) 
                 "⚡ **DR. I30LTZ Service Diagnostics:**\n• Restart UI: `sudo systemctl restart swarm-ui`\n• Restart Backend: `sudo systemctl restart lucy-server`\n• View Logs: `journalctl -u swarm-ui -e` or `journalctl -u lucy-server -e`\n• Launch UI Manually: `cage -d /opt/swarm_os/swarm_flutter`"
             }
             "who" in lower || "hello" in lower || "hi" in lower || "name" in lower -> {
-                "⚡ Greetings! I am **DR. I30LTZ** — hyper-intelligent IT Field Specialist and Master Architect powered by LUCILLE CORE! Ask me anything about SWARM OS installation, PC sync, LUKS encryption, or system optimization."
+                "⚡ Greetings! I am **DR. I30LTZ** — hyper-intelligent IT Field Specialist and Master Architect powered by SWARM CORE! Ask me anything about SWARM OS installation, PC sync, LUKS encryption, or system optimization."
             }
             "bluetooth" in lower || "keyboard" in lower || "pair" in lower || "bt" in lower -> {
                 "⚡ **DR. I30LTZ Bluetooth Pairing Specialist:**\n1. Start daemon: `sudo systemctl start bluetooth`\n2. Open pairing tool: `bluetoothctl`\n3. Sequence:\n   `power on`\n   `agent on && default-agent`\n   `scan on`\n   `pair XX:XX:XX:XX:XX:XX`\n   `trust XX:XX:XX:XX:XX:XX` (auto-reconnects on boot)\n   `connect XX:XX:XX:XX:XX:XX`\n   `exit`"

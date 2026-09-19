@@ -122,7 +122,7 @@ fun DrI3oltzFullAvatarScreen(
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 1.sp
                             )
-                            Text("Powered by LUCILLE CORE", color = TextSecondary, fontSize = 10.sp)
+                            Text("Powered by SWARM CORE", color = TextSecondary, fontSize = 10.sp)
                         }
                     }
                     IconButton(

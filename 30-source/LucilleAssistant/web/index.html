@@ -61,7 +61,7 @@ a{color:var(--plasma-hi)}
 /* ── shell ─────────────────────────────────────────────── */
 .app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 92px)}
 header.top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.sigil{width:52px;height:52px;flex:none;transition:filter .2s}
+.sigil{width:52px;height:52px;flex:none;transition:filter .2s;border-radius:50%;object-fit:cover;display:block;box-shadow:0 0 0 2px rgba(164,92,255,.5),0 0 16px rgba(164,92,255,.35)}
 .sigil.hit{filter:drop-shadow(0 0 14px #c890ff) drop-shadow(0 0 28px #6a3cff) brightness(1.5)}
 .id{flex:1;min-width:0}
 .name{font:800 26px/1 var(--display);letter-spacing:.14em;margin:0;background:linear-gradient(180deg,#fff 10%,var(--plasma-hi) 55%,var(--plasma) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 24px rgba(164,92,255,.35)}
@@ -180,13 +180,7 @@ nav.tabs button[aria-selected="true"]{color:var(--filament);background:rgba(164,
 
 <div class="app">
   <header class="top">
-    <svg class="sigil" id="sigil" viewBox="0 0 64 64" aria-hidden="true">
-      <defs>
-        <linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d2a8ff"/><stop offset=".55" stop-color="#8a3dff"/><stop offset="1" stop-color="#ff3355"/></linearGradient>
-      </defs>
-      <path d="M32 3l25 14.5v29L32 61 7 46.5v-29z" fill="#120a22" stroke="url(#sg)" stroke-width="2"/>
-      <path d="M35 12L21 35h10l-4 17 16-24H32z" fill="url(#sg)"/>
-    </svg>
+    <img class="sigil" id="sigil" src="assets/lucille_sigil.jpg" alt="Lucille">
     <div class="id">
       <h1 class="name">LUCILLE</h1>
       <div class="sub" id="today">—</div>

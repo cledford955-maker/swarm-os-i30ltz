@@ -12,8 +12,8 @@ import java.util.ArrayDeque
 
 /**
  * LAN fallback discovery (spec §3.2): every phone advertises
- * `_swarmcompanion._tcp` and browses for the others. LUCILLE advertises the
- * same type through avahi (/etc/avahi/services/swarm-memory.service), so a
+ * `_swarmcompanion._tcp` and browses for the others. 13E457-THUNDERI30LT
+ * advertises the same type through avahi (/etc/avahi/services/swarm-memory.service), so a
  * phone finds it on home Wi-Fi even with Tailscale down.
  */
 class MemoryPeerDiscovery(context: Context, private val serviceName: () -> String) {

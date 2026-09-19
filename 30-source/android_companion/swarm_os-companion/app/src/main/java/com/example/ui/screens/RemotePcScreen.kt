@@ -248,7 +248,7 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                 QuickCommandTile("tailscale status", "TAILSCALE", NvidiaGreen) { executeTerminalCommand("tailscale status") }
                 QuickCommandTile("ping a17", "PING a17", LightningYellow) { executeTerminalCommand("ping a17") }
                 QuickCommandTile("ping a16", "PING a16", Color.Cyan) { executeTerminalCommand("ping a16") }
-                QuickCommandTile("lucille audit", "AUDIT", Color(0xFFE040FB)) { executeTerminalCommand("lucille audit") }
+                QuickCommandTile("i30ltz audit", "AUDIT", Color(0xFFE040FB)) { executeTerminalCommand("i30ltz audit") }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

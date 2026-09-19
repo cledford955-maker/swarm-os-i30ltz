@@ -17,7 +17,7 @@ import java.net.URLDecoder
 
 /**
  * The phone's embedded sync endpoint, so phones can gossip with each other
- * when LUCILLE is unreachable. Serves only GET/POST /api/memory/sync and
+ * when 13E457-THUNDERI30LT is unreachable. Serves only GET/POST /api/memory/sync and
  * /health on [PORT], always behind the SWARM token — the same contract as
  * LucyServer's LAN listener, so the Go CLI can sync with a phone too.
  *
