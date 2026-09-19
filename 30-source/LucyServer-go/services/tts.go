@@ -15,10 +15,16 @@ import (
 //
 //   "openrouter/<voice>"  → OpenRouter TTS (OPENROUTER_API_KEY), maps to
 //                           openai/tts-1-hd with that voice name.
-//                           Dr. Boltz default: "openrouter/onyx"
+//                           DR. I30LTZ default: "openrouter/onyx"
 //   "eleven/<id>"         → ElevenLabs by explicit voice ID
 //   <32 hex chars>        → Fish Audio reference ID
-//   "boltz"               → resolves to BOLTZ_TTS_VOICE env (default: openrouter/onyx)
+//   "i30ltz"              → resolves to I30LTZ_TTS_VOICE env (default: openrouter/onyx)
+//   "boltz"               → DEPRECATED alias for "i30ltz" (persona renamed
+//                           DR. BOLTZ → DR. I30LTZ 2026-09-12; kept working
+//                           so an already-installed companion app APK still
+//                           sends the right voice until it updates too —
+//                           coordinated rename 2026-09-19, see
+//                           SWARM_AI_FEATURES.md)
 //   "lucille"             → resolves to LUCILLE_TTS_VOICE env (default: eleven/EXAVITQu4vr4xnSDxMaL — Bella)
 //   anything else         → ElevenLabs, voice resolved via resolveElevenVoiceID
 //
@@ -29,17 +35,20 @@ import (
 
 // Persona voice defaults. Override via env on the running system.
 const (
-	defaultBoltzVoice   = "openrouter/onyx"                  // deep authoritative male
-	defaultLucilleVoice = "eleven/EXAVITQu4vr4xnSDxMaL"     // ElevenLabs Bella — sultry female
+	defaultI3oltzVoice  = "openrouter/onyx"              // deep authoritative male
+	defaultLucilleVoice = "eleven/EXAVITQu4vr4xnSDxMaL"  // ElevenLabs Bella — sultry female
 )
 
 func resolvePersonaVoice(voiceName string) string {
 	switch voiceName {
-	case "boltz", "dr_boltz", "boltz_voice":
-		if v := os.Getenv("BOLTZ_TTS_VOICE"); v != "" {
+	case "i30ltz", "dr_i30ltz", "i30ltz_voice", "boltz", "dr_boltz", "boltz_voice":
+		if v := os.Getenv("I30LTZ_TTS_VOICE"); v != "" {
 			return v
 		}
-		return defaultBoltzVoice
+		if v := os.Getenv("BOLTZ_TTS_VOICE"); v != "" { // deprecated alias, same as above
+			return v
+		}
+		return defaultI3oltzVoice
 	case "lucille", "lucille_voice":
 		if v := os.Getenv("LUCILLE_TTS_VOICE"); v != "" {
 			return v
