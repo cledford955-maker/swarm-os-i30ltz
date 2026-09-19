@@ -5,6 +5,20 @@ import { StatTile, GenreChip, SubTabButton, GameCardWidget } from "../components
 export component GamingView inherits Rectangle {
     background: SwarmTheme.gaming-bg;
 
+    // Ambient background art — dimmed so the stat tiles, game grid and text
+    // stay readable over a genuinely busy photo, not a flat color.
+    Image {
+        source: @image-url("../assets/gaming_bg.jpg");
+        image-fit: cover;
+        width: 100%;
+        height: 100%;
+        opacity: 0.24;
+    }
+    Rectangle {
+        // Extra scrim on top of the dimmed image for text contrast.
+        background: #000000a8;
+    }
+
     VerticalLayout {
         padding: 16px;
         spacing: 12px;
