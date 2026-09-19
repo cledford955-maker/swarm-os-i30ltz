@@ -109,7 +109,7 @@ class SwarmAppRegistry {
       description: 'CPU, RAM, GPU & thermals monitor',
       execCommand: SystemLauncher.monitorCmd),
     SwarmApp(id: 'installer', name: 'Install', icon: Icons.install_desktop,
-      color: Color(0xFFFFD54F), categories: {SwarmAppCategory.system},
+      color: Color(0xFFFFD54F), categories: {SwarmAppCategory.origin, SwarmAppCategory.system},
       description: 'Install SWARM OS to disk — graphical, no terminal',
       routePath: '/install'),
     SwarmApp(id: 'sysopt', name: 'SysOpt', icon: Icons.bolt,
