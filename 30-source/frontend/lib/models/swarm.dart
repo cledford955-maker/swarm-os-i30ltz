@@ -344,6 +344,17 @@ final allModels = <SwarmModel>[
   const SwarmModel(id: 'llama4:scout', name: 'Llama 4 Scout (Local)', role: 'Local Multimodal MoE', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '10M', description: 'Local Llama 4 Scout multimodal MoE via Ollama — vision and 10M context offline.', keywords: ['local', 'llama4', 'scout', 'ollama', 'multimodal']),
   const SwarmModel(id: 'phi4:14b', name: 'Phi-4 14B (Local)', role: 'Local STEM Reasoner', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Local Microsoft Phi-4 reasoning model via Ollama for offline math and code tasks.', keywords: ['local', 'phi4', 'microsoft', 'ollama']),
 
+  // ─── New default swarm members (2026-09-19) — verified against OpenRouter's
+  // live /api/v1/models + real pricing at write time, not estimated. Two notes:
+  // the requested "GLM 5.6" doesn't exist on OpenRouter (their GLM line tops
+  // out at 5.3 right now) so this substitutes the current real flagship; and
+  // OpenRouter's Zhipu/GLM provider slug is 'z-ai/', not the 'zhipu/' prefix
+  // the rest of this catalog uses for GLM entries below — those older entries
+  // were never re-verified and are likely stale, out of scope for this pass.
+  const SwarmModel(id: 'moonshotai/kimi-k2.6', name: 'Kimi K2.6', role: 'General Coding Agent', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.95 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '256K', description: 'MoonshotAI\'s current agentic coding model — long-context multi-file work and tool use.', keywords: ['kimi', 'moonshot', 'coding', 'default']),
+  const SwarmModel(id: 'z-ai/glm-5.3', name: 'GLM 5.3', role: 'General Coding Agent', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.91 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '1.3M', description: 'Zhipu/Z.ai\'s current flagship — substituted for the requested "GLM 5.6", which does not exist on OpenRouter; 5.3 is the real current top of that line.', keywords: ['glm', 'zhipu', 'z-ai', 'coding', 'default']),
+  const SwarmModel(id: 'nvidia/nemotron-3-ultra-550b-a55b', name: 'Nemotron 3 Ultra', role: 'System, Eval & Gaming Reasoner', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.60 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '256K', description: 'NVIDIA\'s current flagship Nemotron — the default for system-utility agents, Dr. Boltz, and gaming-tagged agents; separate from GamingAgent\'s own direct-NVIDIA-API Lucille eval pipeline, which is unaffected by this swarm.', keywords: ['nvidia', 'nemotron', 'system', 'eval', 'gaming', 'default']),
+
 ];
 
 /// Pre-configured System Swarms
@@ -351,19 +362,28 @@ final swarms = <String, SwarmConfig>{
   // ─── NEW DEFAULT FLAGSHIP SWARM (For Everyone) ──────────────────────────
   'default-coding-swarm': SwarmConfig(
     id: 'default-coding-swarm',
-    name: 'Flagship SOTA Swarm (Default)',
-    role: 'Autonomous Multi-Agent Engineering Architecture',
+    name: 'General Coding Swarm (Default)',
+    role: 'Everyday Coding & Chat — Everyone Except System/Gaming/Eval Agents',
     isDefault: true,
-    estimatedPrice: r'~$1.85 / 1M (Blended Execution)',
-    description: 'Autonomous multi-agent orchestration combining Claude Opus 4.6, GPT-5.6 Sol, Kimi K3 Free, DeepSeek V4 Pro, and Gemini 3.7 Flash.',
+    estimatedPrice: r'~$0.63 / 1M (Blended Execution)',
+    description: 'Default for every general-purpose and coding agent (Lucille, Forge, Droid, and the rest of the roster): Kimi K2.6, Qwen 2.5 Coder 32B, GLM 5.3, and DeepSeek R1. System-utility agents, Dr. Boltz, and gaming-tagged agents use nemotron-swarm instead — see their defaultSwarmId.',
     models: [
-      allModels.firstWhere((m) => m.id == 'anthropic/claude-opus-4.6'),
-      allModels.firstWhere((m) => m.id == 'openai/gpt-5.6-sol'),
-      allModels.firstWhere((m) => m.id == 'moonshotai/kimi-k3:free', orElse: () => allModels.firstWhere((m) => m.id == 'moonshotai/kimi-k3')),
-      allModels.firstWhere((m) => m.id == 'deepseek/deepseek-v4-pro'),
-      allModels.firstWhere((m) => m.id == 'google/gemini-3.7-flash'),
-      allModels.firstWhere((m) => m.id == 'zhipu/glm-5.2-autocomplete'),
-      allModels.firstWhere((m) => m.id == 'nvidia/nemotron-120b-ultra'),
+      allModels.firstWhere((m) => m.id == 'moonshotai/kimi-k2.6'),
+      allModels.firstWhere((m) => m.id == 'qwen/qwen-2.5-coder-32b-instruct'),
+      allModels.firstWhere((m) => m.id == 'z-ai/glm-5.3'),
+      allModels.firstWhere((m) => m.id == 'deepseek/deepseek-r1'),
+    ],
+  ),
+
+  // ─── Nemotron-only swarm for gaming, system-utility, and eval agents ─────
+  'nemotron-swarm': SwarmConfig(
+    id: 'nemotron-swarm',
+    name: 'Nemotron Swarm',
+    role: 'System, Gaming & Eval Default',
+    estimatedPrice: r'~$0.60 / 1M',
+    description: 'NVIDIA Nemotron 3 Ultra only — default for system-utility agents (Archivist, Sonar, Weaver, Oracle, Warden, Scribe, Chronos, Voyager, Spectre, Pulse, Echo, Maestro, Scout, Titan), Dr. Boltz, and the gaming-tagged agents (Nexus, Librarian, Streamer). Distinct from GamingAgent-go\'s own direct-NVIDIA-API Lucille eval, which never goes through this OpenRouter-based swarm system at all.',
+    models: [
+      allModels.firstWhere((m) => m.id == 'nvidia/nemotron-3-ultra-550b-a55b'),
     ],
   ),
 
