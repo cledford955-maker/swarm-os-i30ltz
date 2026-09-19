@@ -41,6 +41,7 @@ lost+found/
 *.o
 *.zst
 *.pack
+*.deb
 
 # --- media blobs ----------------------------------------------------
 images/
