@@ -43,6 +43,9 @@ class HexAgent {
   // Placeholder tool/agent idea not wired up yet — renders a "SOON" badge
   // and taps show a "coming soon" message instead of doing nothing.
   final bool mock;
+  // Optional real artwork clipped into the hex shape behind the icon —
+  // most agents don't have one, and render exactly as before.
+  final String? previewImagePath;
   int slotRow;
   int slotCol;
 
@@ -56,6 +59,7 @@ class HexAgent {
     this.execCommand,
     this.routePath,
     this.mock = false,
+    this.previewImagePath,
     this.slotRow = 0,
     this.slotCol = 0,
   });
@@ -528,8 +532,43 @@ class _HexTile extends StatelessWidget {
                       strokeWidth: dragging ? 2.5 : 1.5,
                       glow: dragging,
                       glowColor: agent.color,
+                      hasImageOverlay: agent.previewImagePath != null,
                     ),
                   ),
+                  // Real artwork, clipped to the exact same hex outline —
+                  // dimmed + gradient-scrimmed so the icon/label on top
+                  // stay legible over a genuinely busy photo.
+                  if (agent.previewImagePath != null)
+                    ClipPath(
+                      clipper: const _HexClipper(),
+                      child: SizedBox(
+                        width: width,
+                        height: height,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.asset(
+                              agent.previewImagePath!,
+                              fit: BoxFit.cover,
+                              color: Colors.black.withValues(alpha: 0.30),
+                              colorBlendMode: BlendMode.darken,
+                            ),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.05),
+                                    Colors.black.withValues(alpha: 0.55),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
               // Content
               Column(
                 mainAxisSize: MainAxisSize.min,
@@ -601,6 +640,38 @@ class _HexTile extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════
+// Shared hex geometry — used by the painter below AND by the image
+// clipper that lets a tile show real artwork instead of a flat fill.
+// Was private to _HexPainter; extracted 2026-09-19 so both can draw the
+// exact same outline (a clipped image with a differently-shaped fill
+// behind it would show visible seams at the edges).
+// ═══════════════════════════════════════════════════════════
+
+Path buildHexPath(Size size) {
+  final w = size.width;
+  final h = size.height;
+  final cx = w / 2;
+  final cy = h / 2;
+  final rx = w / 2 * 0.92;
+  final ry = h / 2 * 0.92;
+
+  // Pointy-top hexagon
+  final path = Path();
+  for (int i = 0; i < 6; i++) {
+    final angle = (pi / 3) * i - pi / 2;
+    final x = cx + rx * cos(angle);
+    final y = cy + ry * sin(angle);
+    if (i == 0) {
+      path.moveTo(x, y);
+    } else {
+      path.lineTo(x, y);
+    }
+  }
+  path.close();
+  return path;
+}
+
+// ═══════════════════════════════════════════════════════════
 // HEX PAINTER — CustomPainter for hexagon shape
 // ═══════════════════════════════════════════════════════════
 
@@ -612,6 +683,11 @@ class _HexPainter extends CustomPainter {
   final Color? glowColor;
   final double glowAlpha;
   final double glowRadius;
+  // A photo is about to be clipped into this same hex shape on top of the
+  // fill — skip painting the flat fill/bevel so the photo isn't dimmed by
+  // sitting over it, while keeping the shadow and stroke (they read as the
+  // tile's own edge, not part of the fill).
+  final bool hasImageOverlay;
 
   _HexPainter({
     required this.fillColor,
@@ -621,11 +697,12 @@ class _HexPainter extends CustomPainter {
     this.glowColor,
     this.glowAlpha = 0.15,
     this.glowRadius = 12,
+    this.hasImageOverlay = false,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = _hexPath(size);
+    final path = buildHexPath(size);
 
     // Glow
     if (glow) {
@@ -635,8 +712,52 @@ class _HexPainter extends CustomPainter {
       canvas.drawPath(path, glowPaint);
     }
 
-    // Fill
-    canvas.drawPath(path, Paint()..color = fillColor..style = PaintingStyle.fill);
+    // Ambient drop shadow — a soft, offset, blurred copy of the hex sitting
+    // behind the tile. This plus the gradient fill below is what actually
+    // reads as "3D" rather than a flat color swatch with a stroke.
+    canvas.save();
+    canvas.translate(0, size.height * 0.035);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+    canvas.restore();
+
+    if (!hasImageOverlay) {
+      // Fill — a diagonal gradient from a lightened version of fillColor
+      // (simulating a light source top-left) down to a darkened version
+      // (bottom-right), instead of one flat color. Same technique as a
+      // CSS glossy-button bevel.
+      final hsl = HSLColor.fromColor(fillColor);
+      final lightColor = hsl.withLightness((hsl.lightness + 0.14).clamp(0.0, 1.0)).toColor();
+      final darkColor = hsl.withLightness((hsl.lightness - 0.10).clamp(0.0, 1.0)).toColor();
+      final rect = Offset.zero & size;
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [lightColor.withValues(alpha: fillColor.a), darkColor.withValues(alpha: fillColor.a)],
+          ).createShader(rect),
+      );
+
+      // Glossy highlight — a soft, blurred ellipse near the top edge,
+      // simulating a specular reflection. Purely additive, cheap to skip
+      // when an image is about to sit on top instead.
+      canvas.save();
+      canvas.clipPath(path);
+      final highlightRect = Rect.fromLTWH(size.width * 0.12, -size.height * 0.28, size.width * 0.76, size.height * 0.6);
+      canvas.drawOval(
+        highlightRect,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.10)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+      );
+      canvas.restore();
+    }
 
     // Stroke
     canvas.drawPath(path, Paint()
@@ -646,33 +767,22 @@ class _HexPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round);
   }
 
-  Path _hexPath(Size size) {
-    final w = size.width;
-    final h = size.height;
-    final cx = w / 2;
-    final cy = h / 2;
-    final rx = w / 2 * 0.92;
-    final ry = h / 2 * 0.92;
-
-    // Pointy-top hexagon
-    final path = Path();
-    for (int i = 0; i < 6; i++) {
-      final angle = (pi / 3) * i - pi / 2;
-      final x = cx + rx * cos(angle);
-      final y = cy + ry * sin(angle);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.close();
-    return path;
-  }
-
   @override
   bool shouldRepaint(covariant _HexPainter old) =>
       fillColor != old.fillColor || strokeColor != old.strokeColor ||
       strokeWidth != old.strokeWidth || glow != old.glow ||
-      glowAlpha != old.glowAlpha || glowRadius != old.glowRadius;
+      glowAlpha != old.glowAlpha || glowRadius != old.glowRadius ||
+      hasImageOverlay != old.hasImageOverlay;
+}
+
+// A CustomClipper using the exact same outline as _HexPainter, so a clipped
+// photo lines up perfectly with the hex's own stroke/shadow — no seams.
+class _HexClipper extends CustomClipper<Path> {
+  const _HexClipper();
+
+  @override
+  Path getClip(Size size) => buildHexPath(size);
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

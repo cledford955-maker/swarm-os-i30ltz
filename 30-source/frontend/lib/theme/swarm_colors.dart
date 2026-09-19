@@ -37,7 +37,14 @@ class SwarmColors {
   static const Color statusCritical = Color(0xFFDC2626); // Dark Red
 
   // ─── Agent Accent Palette ──────────────────────────────────
-  static const Color lucille = Color(0xFF76B900);        // NVIDIA Green
+  static const Color lucille = Color(0xFF76B900);        // NVIDIA Green — GamingAgent's own Lucille (Steam/GFN eval), legitimately NVIDIA-branded
+  // Lucille CORE's own identity — same electric cyan as the swarm-slint
+  // panel's general accent (2026-09-19), deliberately NOT NVIDIA green:
+  // `lucille` above is the *right* color for GamingAgent's gaming-context
+  // Lucille persona, but LUCILLE CORE (the orchestrator, agent.dart) isn't
+  // that — she was using the same green purely because both colors share
+  // the "lucille" name, not because either page is actually about gaming.
+  static const Color lucilleCore = Color(0xFF00E5FF);
   static const Color agentPurple = Color(0xFF8B5CF6);    // Violet
   static const Color agentCyan = Color(0xFF06B6D4);      // Cyan
   static const Color agentAmber = Color(0xFFF59E0B);     // Amber

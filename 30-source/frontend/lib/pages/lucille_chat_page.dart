@@ -26,154 +26,188 @@ class _LucilleChatPageState extends State<LucilleChatPage> {
 
     return Scaffold(
       backgroundColor: SwarmColors.bg,
-      body: Column(
+      // agent.wallpaperPath existed as a field on every Agent but nothing in
+      // the app ever actually read it (found 2026-09-19 wiring in Lucille's
+      // own new background) — rendered here for the first time.
+      body: Stack(
         children: [
-          // ─── Lucille Workstation Header ────────────────────────
-          Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: const BoxDecoration(
-              color: SwarmColors.bgSurface,
-              border: Border(
-                bottom: BorderSide(color: SwarmColors.border, width: 1),
+          if (lucille.wallpaperPath != null)
+            Positioned.fill(
+              child: Image.asset(
+                lucille.wallpaperPath!,
+                fit: BoxFit.cover,
+                color: Colors.black.withValues(alpha: 0.55),
+                colorBlendMode: BlendMode.darken,
               ),
             ),
-            child: Row(
-              children: [
-                // Back Button
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SwarmColors.textMuted),
-                  tooltip: 'Return to Hub',
-                  onPressed: () => context.go('/'),
-                ),
-                const SizedBox(width: 8),
-
-                // Lucille Amber Core Avatar
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: SwarmColors.lucille.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: SwarmColors.lucille.withValues(alpha: 0.6)),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.auto_awesome_rounded, size: 16, color: SwarmColors.lucille),
+          Column(
+            children: [
+              // ─── Lucille Workstation Header ────────────────────────
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: const BoxDecoration(
+                  color: SwarmColors.bgSurface,
+                  border: Border(
+                    bottom: BorderSide(color: SwarmColors.border, width: 1),
                   ),
                 ),
-                const SizedBox(width: 10),
-
-                // Title
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Row(
+                    // Back Button
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded,
+                          size: 18, color: SwarmColors.textMuted),
+                      tooltip: 'Return to Hub',
+                      onPressed: () => context.go('/'),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Lucille Amber Core Avatar
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: SwarmColors.lucilleCore.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color: SwarmColors.lucilleCore.withValues(alpha: 0.6)),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.auto_awesome_rounded,
+                            size: 16, color: SwarmColors.lucilleCore),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // Title
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'LUCILLE CORE',
-                          style: SwarmTextStyles.label.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                          decoration: BoxDecoration(
-                            color: SwarmColors.lucille.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: SwarmColors.lucille.withValues(alpha: 0.4)),
-                          ),
-                          child: Text(
-                            'ORCHESTRATOR',
-                            style: SwarmTextStyles.codeSmall.copyWith(
-                              color: SwarmColors.lucille,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
+                        Row(
+                          children: [
+                            Text(
+                              'LUCILLE CORE',
+                              style: SwarmTextStyles.label.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
                             ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color:
+                                    SwarmColors.lucilleCore.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                    color: SwarmColors.lucilleCore
+                                        .withValues(alpha: 0.4)),
+                              ),
+                              child: Text(
+                                'ORCHESTRATOR',
+                                style: SwarmTextStyles.codeSmall.copyWith(
+                                  color: SwarmColors.lucilleCore,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          'Primary Autonomous AI · Swarm Mind & Voice Engine',
+                          style: SwarmTextStyles.codeSmall.copyWith(
+                            color: SwarmColors.textMuted,
+                            fontSize: 10,
                           ),
                         ),
                       ],
                     ),
-                    Text(
-                      'Primary Autonomous AI · Swarm Mind & Voice Engine',
-                      style: SwarmTextStyles.codeSmall.copyWith(
-                        color: SwarmColors.textMuted,
-                        fontSize: 10,
+
+                    const Spacer(),
+
+                    // Voice Toggle Indicator
+                    AnimatedBuilder(
+                      animation: _voiceService,
+                      builder: (context, _) {
+                        final speaking = _voiceService.isSpeaking;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: speaking
+                                ? SwarmColors.lucilleCore.withValues(alpha: 0.2)
+                                : SwarmColors.bgElevated,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: speaking
+                                  ? SwarmColors.lucilleCore
+                                  : SwarmColors.border,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                speaking
+                                    ? Icons.record_voice_over_rounded
+                                    : Icons.mic_none_rounded,
+                                size: 14,
+                                color: speaking
+                                    ? SwarmColors.lucilleCore
+                                    : SwarmColors.textMuted,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                speaking ? 'LUCILLE SPEAKING' : 'VOICE READY',
+                                style: SwarmTextStyles.codeSmall.copyWith(
+                                  color: speaking
+                                      ? SwarmColors.lucilleCore
+                                      : SwarmColors.textMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Return to Hub
+                    ElevatedButton.icon(
+                      onPressed: () => context.go('/'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            SwarmColors.accent.withValues(alpha: 0.15),
+                        foregroundColor: SwarmColors.accent,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          side: BorderSide(
+                              color: SwarmColors.accent.withValues(alpha: 0.5)),
+                        ),
                       ),
+                      icon: const Icon(Icons.hub_rounded, size: 14),
+                      label: Text('HUB',
+                          style: SwarmTextStyles.label.copyWith(fontSize: 11)),
                     ),
                   ],
                 ),
+              ),
 
-                const Spacer(),
-
-                // Voice Toggle Indicator
-                AnimatedBuilder(
-                  animation: _voiceService,
-                  builder: (context, _) {
-                    final speaking = _voiceService.isSpeaking;
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: speaking
-                            ? SwarmColors.lucille.withValues(alpha: 0.2)
-                            : SwarmColors.bgElevated,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: speaking
-                              ? SwarmColors.lucille
-                              : SwarmColors.border,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            speaking ? Icons.record_voice_over_rounded : Icons.mic_none_rounded,
-                            size: 14,
-                            color: speaking ? SwarmColors.lucille : SwarmColors.textMuted,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            speaking ? 'LUCILLE SPEAKING' : 'VOICE READY',
-                            style: SwarmTextStyles.codeSmall.copyWith(
-                              color: speaking ? SwarmColors.lucille : SwarmColors.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-
-                // Return to Hub
-                ElevatedButton.icon(
-                  onPressed: () => context.go('/'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: SwarmColors.accent.withValues(alpha: 0.15),
-                    foregroundColor: SwarmColors.accent,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      side: BorderSide(color: SwarmColors.accent.withValues(alpha: 0.5)),
-                    ),
-                  ),
-                  icon: const Icon(Icons.hub_rounded, size: 14),
-                  label: Text('HUB', style: SwarmTextStyles.label.copyWith(fontSize: 11)),
-                ),
-              ],
-            ),
-          ),
-
-          // ─── Lucille Tabbed Chat & Terminal ───────────────────
-          Expanded(
-            child: AgentWindowContent(agent: lucille),
+              // ─── Lucille Tabbed Chat & Terminal ───────────────────
+              Expanded(
+                child: AgentWindowContent(agent: lucille),
+              ),
+            ],
           ),
         ],
       ),

@@ -68,7 +68,7 @@ final List<Agent> agents = [
     blurb: 'Autonomous AI coding agent capable of replacing the backend.',
     icon: Icons.memory,
     status: AgentStatus.online,
-    accent: SwarmColors.lucille,
+    accent: SwarmColors.lucilleCore,
     defaultSwarmId: 'default-coding-swarm',
     tags: ['system', 'orchestrator'],
     metric: (label: 'Tasks', value: 'Active'),
@@ -100,7 +100,12 @@ CRITICAL FILE SYSTEM & DIRECTORY BOUNDARY RULES:
    - App Shell & Top Bar: lib/shell/<name>.dart
 4. NEVER write files to the drive root, outside the workspace, or in random unorganized directories. Always adhere to this structure.''',
     memories: [],
-    wallpaperPath: 'assets/wallpapers/lucille_bg.jpg',
+    // 2026-09-19: assets/wallpapers/lucille_bg.jpg didn't exist at all
+    // (silently broken for every agent still using it as a shared fallback —
+    // now a real file, a copy of this same image, so those aren't broken
+    // either). Lucille gets her own distinct filename since this is
+    // genuinely her art, not a generic placeholder.
+    wallpaperPath: 'assets/wallpapers/lucille_swarm_core.jpg',
   ),
 
   const Agent(
@@ -121,7 +126,8 @@ CRITICAL FILE SYSTEM & DIRECTORY BOUNDARY RULES:
     race: 'Node',
     persona: 'You are Forge at Lucille\'s Core, the master OS coding and engineering engine in Swarm OS. You work seamlessly inside Lucille\'s core to inspect files, edit Dart and C++ code, execute build systems, and maintain system integrity. You and Droid are Lucille\'s core AI coders.',
     memories: [],
-    wallpaperPath: 'assets/wallpapers/bg_12.jpg',
+    // Was assets/wallpapers/bg_12.jpg — also never existed (see note above).
+    wallpaperPath: 'assets/wallpapers/forge_ide_core.jpg',
   ),
 
   const Agent(

@@ -32,6 +32,10 @@ class SwarmApp {
   final bool isFavorite;
   // Placeholder tool/agent idea not wired up to a real command/route yet.
   final bool mock;
+  // Optional real artwork (asset path) shown clipped into the hex tile
+  // behind its icon, instead of just a flat fill color. Added 2026-09-19 —
+  // most tiles don't have one yet; those render exactly as before.
+  final String? previewImage;
 
   const SwarmApp({
     required this.id,
@@ -44,6 +48,7 @@ class SwarmApp {
     this.routePath,
     this.isFavorite = false,
     this.mock = false,
+    this.previewImage,
   });
 }
 
@@ -54,10 +59,10 @@ class SwarmAppRegistry {
     // ───────────── ORIGIN ─────────────
     SwarmApp(id: 'lucille', name: 'Lucille', icon: Icons.auto_awesome,
       color: Color(0xFFCE93D8), categories: {SwarmAppCategory.origin},
-      routePath: '/lucille'),
+      routePath: '/lucille', previewImage: 'assets/wallpapers/lucille_swarm_core.jpg'),
     SwarmApp(id: 'forge', name: 'Forge', icon: Icons.construction,
       color: Color(0xFF9575CD), categories: {SwarmAppCategory.origin},
-      routePath: '/forge'),
+      routePath: '/forge', previewImage: 'assets/wallpapers/forge_ide_core.jpg'),
     SwarmApp(id: 'reference', name: 'Commands', icon: Icons.menu_book,
       color: Color(0xFF8EC4FF), categories: {SwarmAppCategory.origin},
       description: 'First-boot setup and copy-paste command reference',
@@ -128,10 +133,13 @@ class SwarmAppRegistry {
 
     // ───────────── GAMING & MEDIA ─────────────
     SwarmApp(id: 'gaming', name: 'Gamer', icon: Icons.sports_esports,
-      color: Color(0xFF76B900),
+      // Was NVIDIA green — matched swarm-slint's Gaming tab before its
+      // 2026-09-19 restyle to electric blue + black; matched here too now.
+      color: Color(0xFF2979FF),
       categories: {SwarmAppCategory.gamingMedia, SwarmAppCategory.origin},
       description: 'GFN + Steam dashboard — AI game picks by Lucille',
-      execCommand: SystemLauncher.gamingDashboardCmd),
+      execCommand: SystemLauncher.gamingDashboardCmd,
+      previewImage: 'assets/wallpapers/this_is_now_gaming.jpg'),
     SwarmApp(id: 'cinema', name: 'Cinema', icon: Icons.movie_filter,
       color: Color(0xFFF48FB1),
       categories: {SwarmAppCategory.gamingMedia, SwarmAppCategory.forge},

@@ -155,6 +155,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     execCommand: app.execCommand,
     routePath: app.routePath,
     mock: app.mock,
+    previewImagePath: app.previewImage,
   );
 
   // ────────────────────────────────────────────────────────────
