@@ -74,12 +74,29 @@ object CdrGitService {
             .call()
     }
 
-    /** Clones [url] into [dest] (must not already exist). Returns [dest] on success. */
+    /**
+     * Clones [url] into [dest]. [dest] lives under the app's private storage
+     * (filesDir/projects/<name>) — no file manager or SAF picker can ever
+     * see into it, so if a user goes looking for "the folder" outside the
+     * app they will always find nothing there; that's expected, not a bug.
+     *
+     * If [dest] already holds a valid clone (e.g. this repo was already
+     * fetched, or the caller is retrying after opening it once), returns it
+     * as-is rather than failing. If [dest] exists but ISN'T a real repo, it's
+     * leftover debris from a previous clone that got interrupted (app
+     * killed, network dropped) before this function's own catch-block
+     * cleanup ran — found 2026-09-19: the old code treated that leftover
+     * debris the same as a real repo and refused forever with "already
+     * exists and isn't empty", with no way for the user to recover short of
+     * clearing app storage. Now it's wiped and retried automatically.
+     */
     fun clone(dest: File, url: String, username: String, token: String): Result<File> =
         try {
-            if (dest.exists() && dest.listFiles()?.isNotEmpty() == true) {
-                Result.failure(IllegalStateException("Destination already exists and isn't empty: ${dest.name}"))
+            val hasContent = dest.exists() && dest.listFiles()?.isNotEmpty() == true
+            if (hasContent && isGitRepo(dest)) {
+                Result.success(dest)
             } else {
+                if (hasContent) dest.deleteRecursively()
                 dest.parentFile?.mkdirs()
                 val cmd = Git.cloneRepository().setURI(url).setDirectory(dest)
                 if (token.isNotBlank()) {
