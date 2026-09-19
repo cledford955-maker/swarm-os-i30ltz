@@ -166,7 +166,7 @@ fun DrI3oltzFullAvatarScreen(
             }
 
             // ── First Boot Cheatsheet ────────────────────────────────────────────────
-            item { BoltzCheatsheet() }
+            item { I3oltzCheatsheet() }
 
             // ── Phone Body Diagram ───────────────────────────────────────────────────
             item {
@@ -574,23 +574,23 @@ internal data class ProcessEntryAvatar(val pkg: String, val label: String, val m
 // ── DR. I30LTZ Memory ────────────────────────────────────────────────────────
 // Everything DR. I30LTZ knows about the system. Update this when the OS changes.
 
-internal data class BoltzMemoryEntry(val step: Int, val title: String, val command: String, val note: String)
+internal data class I3oltzMemoryEntry(val step: Int, val title: String, val command: String, val note: String)
 
-internal val BOLTZ_FIRST_BOOT_MEMORY: List<BoltzMemoryEntry> = listOf(
-    BoltzMemoryEntry(1,  "Check Services",       "systemctl status swarm-ui gaming-agent lucy-server",   "All 3 must be active (running)"),
-    BoltzMemoryEntry(2,  "LUCILLE Drive",         "ls /mnt/Lucy/SWARM_AI_FEATURES.md",                   "UUID: 62f0e009-43c2-4760-8d6c-d7c445f5f3df"),
-    BoltzMemoryEntry(3,  "Install Tailscale",     "curl -fsSL https://tailscale.com/install.sh | sh",    "Then: sudo tailscale up --accept-routes --ssh"),
-    BoltzMemoryEntry(4,  "Set Lock Password",     "POST http://127.0.0.1:5000/api/settings/login_password", "{\"password\":\"YOUR_PASSWORD\"}"),
-    BoltzMemoryEntry(5,  "TOTP 2FA Setup",        "POST http://127.0.0.1:5000/api/settings/totp/setup",  "Scan URI on all 3 phones, then confirm with first code"),
-    BoltzMemoryEntry(6,  "Install Claude Code",   "npm install -g @anthropic-ai/claude-code",            "API key already in /etc/swarm_os.env"),
-    BoltzMemoryEntry(7,  "Verify Firewall",       "nft list ruleset",                                    "Default-drop. SSH tailscale-only. Tailscale0 fully trusted."),
-    BoltzMemoryEntry(8,  "AppArmor Status",       "aa-status | grep gaming-agent",                       "gaming-agent=enforce, lucy-server=complain"),
-    BoltzMemoryEntry(9,  "Test GamingAgent",      "curl http://127.0.0.1:8401/api/gfn/catalog",          "12h cache, warns on first call"),
-    BoltzMemoryEntry(10, "Install Ollama",        "curl -fsSL https://ollama.ai/install.sh | sh",        "Then: ollama pull nomic-embed-text (for RAG)"),
-    BoltzMemoryEntry(11, "Verify Vulkan/GPU",     "vulkaninfo --summary",                                "Intel/AMD GPU should appear"),
-    BoltzMemoryEntry(12, "Syncthing",             "systemctl status syncthing@swarm",                    "Web UI at localhost:8384 to pair phone"),
-    BoltzMemoryEntry(13, "Auth Token",            "echo SWARM_AUTH_TOKEN=... >> /etc/swarm_os.env",      "Default: swarm-token-2026. Change + update companion app."),
-    BoltzMemoryEntry(14, "Health Check",          "curl 127.0.0.1:5000/health && curl 127.0.0.1:8401/health", "Both should return {status:ok}"),
+internal val I3OLTZ_FIRST_BOOT_MEMORY: List<I3oltzMemoryEntry> = listOf(
+    I3oltzMemoryEntry(1,  "Check Services",       "systemctl status swarm-ui gaming-agent lucy-server",   "All 3 must be active (running)"),
+    I3oltzMemoryEntry(2,  "LUCILLE Drive",         "ls /mnt/Lucy/SWARM_AI_FEATURES.md",                   "UUID: 62f0e009-43c2-4760-8d6c-d7c445f5f3df"),
+    I3oltzMemoryEntry(3,  "Install Tailscale",     "curl -fsSL https://tailscale.com/install.sh | sh",    "Then: sudo tailscale up --accept-routes --ssh"),
+    I3oltzMemoryEntry(4,  "Set Lock Password",     "POST http://127.0.0.1:5000/api/settings/login_password", "{\"password\":\"YOUR_PASSWORD\"}"),
+    I3oltzMemoryEntry(5,  "TOTP 2FA Setup",        "POST http://127.0.0.1:5000/api/settings/totp/setup",  "Scan URI on all 3 phones, then confirm with first code"),
+    I3oltzMemoryEntry(6,  "Install Claude Code",   "npm install -g @anthropic-ai/claude-code",            "API key already in /etc/swarm_os.env"),
+    I3oltzMemoryEntry(7,  "Verify Firewall",       "nft list ruleset",                                    "Default-drop. SSH tailscale-only. Tailscale0 fully trusted."),
+    I3oltzMemoryEntry(8,  "AppArmor Status",       "aa-status | grep gaming-agent",                       "gaming-agent=enforce, lucy-server=complain"),
+    I3oltzMemoryEntry(9,  "Test GamingAgent",      "curl http://127.0.0.1:8401/api/gfn/catalog",          "12h cache, warns on first call"),
+    I3oltzMemoryEntry(10, "Install Ollama",        "curl -fsSL https://ollama.ai/install.sh | sh",        "Then: ollama pull nomic-embed-text (for RAG)"),
+    I3oltzMemoryEntry(11, "Verify Vulkan/GPU",     "vulkaninfo --summary",                                "Intel/AMD GPU should appear"),
+    I3oltzMemoryEntry(12, "Syncthing",             "systemctl status syncthing@swarm",                    "Web UI at localhost:8384 to pair phone"),
+    I3oltzMemoryEntry(13, "Auth Token",            "echo SWARM_AUTH_TOKEN=... >> /etc/swarm_os.env",      "Default: swarm-token-2026. Change + update companion app."),
+    I3oltzMemoryEntry(14, "Health Check",          "curl 127.0.0.1:5000/health && curl 127.0.0.1:8401/health", "Both should return {status:ok}"),
 )
 
 internal val BOLTZ_VOICE_MEMORY = "DR. I30LTZ voice: OpenRouter → OpenAI tts-1-hd, voice=onyx (deep authoritative male). " +
@@ -601,7 +601,7 @@ internal val BOLTZ_VOICE_MEMORY = "DR. I30LTZ voice: OpenRouter → OpenAI tts-1
 // ── First Boot Cheatsheet Card ────────────────────────────────────────────────
 
 @Composable
-private fun BoltzCheatsheet() {
+private fun I3oltzCheatsheet() {
     var expanded by remember { mutableStateOf(false) }
     val accentColor = Color(0xFF00E5FF)
     val warnColor  = Color(0xFFFFAB00)
@@ -644,8 +644,8 @@ private fun BoltzCheatsheet() {
                 )
             } else {
                 Spacer(modifier = Modifier.height(10.dp))
-                BOLTZ_FIRST_BOOT_MEMORY.forEach { entry ->
-                    BoltzCheatsheetRow(entry)
+                I3OLTZ_FIRST_BOOT_MEMORY.forEach { entry ->
+                    I3oltzCheatsheetRow(entry)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
                 Divider(color = accentColor.copy(alpha = 0.2f), thickness = 0.5.dp)
@@ -665,7 +665,7 @@ private fun BoltzCheatsheet() {
 }
 
 @Composable
-private fun BoltzCheatsheetRow(entry: BoltzMemoryEntry) {
+private fun I3oltzCheatsheetRow(entry: I3oltzMemoryEntry) {
     val stepColor = Color(0xFF00E5FF)
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
         // Step badge

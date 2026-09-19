@@ -161,7 +161,7 @@ fun DrI3oltzAvatar(
                 }
 
                 // New DR. I30LTZ Avatar
-                com.example.ui.screens.DrBoltzAvatar(size = 110)
+                com.example.ui.screens.DrI3oltzSmallAvatar(size = 110)
 
                 // Name Tag Badge Overlay
                 Box(
@@ -175,7 +175,7 @@ fun DrI3oltzAvatar(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "DR. BOLTZ",
+                            text = "DR. I30LTZ",
                             color = TextPrimary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold

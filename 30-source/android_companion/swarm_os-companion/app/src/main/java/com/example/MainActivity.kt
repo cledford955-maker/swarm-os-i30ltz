@@ -370,7 +370,7 @@ class MainActivity : FragmentActivity() {
                                             isOfflineAi = isOfflineAi,
                                             onDownloadIso = { viewModel.downloadIso(it) },
                                             onToggleUsbMount = { viewModel.toggleUsbMount() },
-                                            onAskGrubHelp = { viewModel.askDrBoltzGrub(it) },
+                                            onAskGrubHelp = { viewModel.askDrI3oltzGrub(it) },
                                             onSendHidCommand = { viewModel.sendHidCommand(it) },
                                             onSendHidEnter = { viewModel.sendHidEnter() },
                                             onToggleAiMode = { viewModel.toggleOfflineAi() }

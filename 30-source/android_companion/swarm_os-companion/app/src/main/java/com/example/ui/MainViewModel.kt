@@ -311,7 +311,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun askDrBoltzGrub(issue: String) {
+    fun askDrI3oltzGrub(issue: String) {
         if (issue.isBlank()) return
         viewModelScope.launch {
             _avatarSpeech.value = "⚡ Analyzing GRUB boot issue..."

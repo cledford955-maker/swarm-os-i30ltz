@@ -19,7 +19,7 @@ import com.example.ui.theme.NvidiaGreen
 import com.example.R
 
 @Composable
-fun DrBoltzAvatar(size: Int = 48) {
+fun DrI3oltzSmallAvatar(size: Int = 48) {
     Box(
         modifier = Modifier
             .size(size.dp)

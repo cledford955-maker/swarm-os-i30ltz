@@ -39,7 +39,7 @@ class LocalLlamaEngine {
                 "3. `systemctl restart grub-btrfsd`"
             }
             "420" in lowerPrompt || "weed" in lowerPrompt || "stoner" in lowerPrompt -> {
-                "🌿 [DR. BOLTZ LOCAL GGUF • RELAXED FREQUENCY]:\n" +
+                "🌿 [DR. I30LTZ LOCAL GGUF • RELAXED FREQUENCY]:\n" +
                 "\"Aallright mannn... Lucille and I engineered this whole honeycomb frequency. Roll one up, kick back, the swarm has everything under control.\""
             }
             "ip" in lowerPrompt || "tailscale" in lowerPrompt || "node" in lowerPrompt -> {

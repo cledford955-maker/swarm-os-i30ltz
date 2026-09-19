@@ -203,7 +203,7 @@ class GeminiAiService(private val openRouterManager: OpenRouterManager? = null) 
         val lower = userPrompt.lowercase()
         return when {
             "420" in lower || "weed" in lower || "blunt" in lower || "bong" in lower || "stoner" in lower || "strain" in lower || "mary jane" in lower -> {
-                "🌿💨 **[EASTER EGG UNLOCKED: 420 HERBAL HIVE • DR. BOLTZ STONER MODE]**\n\n" +
+                "🌿💨 **[EASTER EGG UNLOCKED: 420 HERBAL HIVE • DR. I30LTZ STONER MODE]**\n\n" +
                 "*Aallright mannn... yeahhh, dude! Welcome to the green honeycomb!* 🍯🌿\n\n" +
                 "We got the entire wasp nest covered in glistening resin crystals and premium buds, man:\n" +
                 "• 🍇 **Granddaddy Purple** (Indica · 28% THC) — *Deep relaxation for multi-core debugging*\n" +
