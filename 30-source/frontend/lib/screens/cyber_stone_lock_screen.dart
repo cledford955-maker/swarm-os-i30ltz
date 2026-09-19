@@ -562,7 +562,15 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   }
 
   Future<void> _validateAndUnlock() async {
-    if (_storedPattern == null) { _unlockSuccess(isAdminBypass: false, gardenMode: false); return; }
+    if (_storedPattern == null) {
+      // Defensive only — should be unreachable. The sole caller only invokes
+      // this when !isSetup, and every path that nulls _storedPattern (initial
+      // load with nothing saved, _resetCipherPattern) sets
+      // _isSettingUpNewPattern = true in the same setState. Never treat a
+      // missing pattern as an unlock condition; that is the exact shape of
+      // the corner-tap bypass this screen was already fixed for once.
+      return;
+    }
 
     final bool mainMatch = _patternMatches(_currentInput, _storedPattern);
     final bool gardenMatch = _gardenPattern != null && _patternMatches(_currentInput, _gardenPattern);
@@ -611,12 +619,48 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   Future<void> _attemptRecoveryUnlock() async {
     HapticFeedback.mediumImpact();
     _voice.speak('Recovery requested. Enter your admin password.');
+    final ok = await _promptAdminPassword(
+      title: 'Cipher Recovery',
+      message: 'Enter your admin login password to unlock.',
+    );
+    if (ok) {
+      _unlockSuccess(isAdminBypass: true);
+    } else {
+      _voice.speak('Recovery cancelled.');
+    }
+  }
 
+  /// "CHANGE CIPHER" is shown right on the live /lock screen. It used to call
+  /// _resetCipherPattern() directly — wiping both stored ciphers and dropping
+  /// into setup — with zero authentication, so anyone standing at a locked
+  /// device could tap one button, choose their own glyphs, and be in. Found
+  /// 2026-09-19 during an audit for other bypasses like the corner-tap one.
+  /// Now requires the same bcrypt-verified admin password as recovery before
+  /// anything is erased; fails closed the same way (wrong password, none
+  /// ever configured, or LucyServer unreachable all leave the cipher intact).
+  Future<void> _confirmAndResetCipher() async {
+    HapticFeedback.mediumImpact();
+    final ok = await _promptAdminPassword(
+      title: 'Confirm Cipher Change',
+      message: 'Enter your admin login password to erase the current cipher and set a new one.',
+    );
+    if (ok) {
+      await _resetCipherPattern();
+    } else {
+      _voice.speak('Cipher change cancelled.');
+    }
+  }
+
+  String? _lastRecoveryError;
+
+  /// Shared admin-password dialog for both recovery unlock and cipher reset.
+  /// Returns true only on an explicit LucyServer accept.
+  Future<bool> _promptAdminPassword({required String title, required String message}) async {
     final controller = TextEditingController();
     String? errorText;
     bool verifying = false;
 
-    final unlocked = await showDialog<bool>(
+    final ok = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) {
@@ -626,9 +670,9 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
               final password = controller.text;
               if (password.isEmpty) return;
               setDialogState(() { verifying = true; errorText = null; });
-              final ok = await _verifyRecoveryPassword(password);
+              final accepted = await _verifyRecoveryPassword(password);
               if (!dialogContext.mounted) return;
-              if (ok) {
+              if (accepted) {
                 Navigator.of(dialogContext).pop(true);
               } else {
                 setDialogState(() {
@@ -644,15 +688,12 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                 borderRadius: BorderRadius.circular(12),
                 side: const BorderSide(color: Color(0xFF00E5FF), width: 1),
               ),
-              title: const Text('Cipher Recovery', style: TextStyle(color: Color(0xFF00E5FF))),
+              title: Text(title, style: const TextStyle(color: Color(0xFF00E5FF))),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Enter your admin login password to unlock.',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
+                  Text(message, style: const TextStyle(color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 12),
                   TextField(
                     controller: controller,
@@ -692,15 +733,8 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
         );
       },
     );
-
-    if (unlocked == true) {
-      _unlockSuccess(isAdminBypass: true);
-    } else {
-      _voice.speak('Recovery cancelled.');
-    }
+    return ok == true;
   }
-
-  String? _lastRecoveryError;
 
   /// Returns true only on an explicit 200 from LucyServer's
   /// verify_login_password endpoint. Any other outcome — 401, timeout,
@@ -1053,7 +1087,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
         const SizedBox(width: 12),
         if (!_isSettingUpNewPattern && !_isSettingUpGardenPattern)
           TextButton.icon(
-            onPressed: _resetCipherPattern,
+            onPressed: _confirmAndResetCipher,
             icon: const Icon(Icons.restart_alt, color: Color(0xFFD500F9), size: 18),
             label: Text('CHANGE CIPHER', style: SwarmTextStyles.labelSmall.copyWith(color: const Color(0xFFD500F9))),
           ),

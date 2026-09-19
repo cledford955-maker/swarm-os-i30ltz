@@ -136,7 +136,15 @@ func main() {
 		api.Get("/settings/voice/get", handlers.GetVoice)
 		api.Post("/settings/voice", handlers.SetVoice)
 		api.Post("/settings/login_password", handlers.SetLoginPassword)
-		api.Post("/settings/verify_login_password", handlers.VerifyLoginPassword)
+		// verify_login_password is the bcrypt check behind the lock screen's
+		// forgotten-cipher recovery AND cipher-reset confirmation (see
+		// cyber_stone_lock_screen.dart). Unlike /lucy, /tts/generate and
+		// /run_command above, this had no rate limit at all — anyone already
+		// holding the shared auth token (or on loopback) could brute-force
+		// bcrypt guesses as fast as the server could compute them. 5/min is
+		// generous for a human re-entering a forgotten password and throttles
+		// automated guessing by three orders of magnitude.
+		api.With(rateLimiter(5, time.Minute)).Post("/settings/verify_login_password", handlers.VerifyLoginPassword)
 		api.Post("/settings/sudo_password", handlers.SetSudoPassword)
 		api.Post("/admin/save-keys", handlers.SaveApiKeys)
 
@@ -144,7 +152,9 @@ func main() {
 		api.Get("/settings/totp/status", handlers.TOTPStatus)
 		api.Post("/settings/totp/setup", handlers.TOTPSetup)
 		api.Post("/settings/totp/confirm", handlers.TOTPConfirm)
-		api.Post("/settings/totp/check", handlers.TOTPCheck)
+		// Same gap as verify_login_password above: a 6-digit TOTP code is only
+		// 1,000,000 possibilities and was checkable with zero rate limit.
+		api.With(rateLimiter(5, time.Minute)).Post("/settings/totp/check", handlers.TOTPCheck)
 		api.Delete("/settings/totp", handlers.TOTPDisable)
 
 		// Search & daily brief (task #20)
