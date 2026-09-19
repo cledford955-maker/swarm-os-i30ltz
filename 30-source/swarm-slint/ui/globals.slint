@@ -4,13 +4,27 @@ export global SwarmTheme {
     out property <color> surface:     #141414;
     out property <color> card:        #1a1a1a;
     out property <color> border:      #2a2a2a;
-    out property <color> accent:      #76b900;
-    out property <color> accent-hover:#8ed600;
+    // Was NVIDIA green (#76b900) — the exact color of the Gaming tab/tile,
+    // so the whole panel (logo, nav highlights, Forge/Monitor/Settings) read
+    // as gaming-branded even outside the actual Gaming view. Now the same
+    // electric cyan used for SWARM OS's general system identity elsewhere
+    // (the stone-cipher lock screen, the master list) — Lucille's own color,
+    // not Gaming's. See gaming-accent below for Gaming's own identity.
+    out property <color> accent:      #00e5ff;
+    out property <color> accent-hover:#33eaff;
     out property <color> text:        #e0e0e0;
     out property <color> text-dim:    #808080;
     out property <color> text-bright: #ffffff;
     out property <color> danger:      #e05252;
     out property <color> warn:        #e0a020;
+
+    // Gaming's own identity — electric blue + black, deliberately distinct
+    // from the general panel accent above so Gaming reads as its own place,
+    // not "the rest of Lucille with a game list."
+    out property <color> gaming-bg:     #030308;
+    out property <color> gaming-card:   #0a0a14;
+    out property <color> gaming-accent: #2979ff;
+    out property <color> gaming-accent-hover: #5393ff;
 
     out property <length> radius:     6px;
     out property <length> top-bar-h:  48px;

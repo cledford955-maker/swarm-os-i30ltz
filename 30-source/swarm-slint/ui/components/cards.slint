@@ -5,7 +5,7 @@ export component StatTile inherits Rectangle {
     in property <string> label;
     in property <string> value;
 
-    background: SwarmTheme.card;
+    background: SwarmTheme.gaming-card;
     border-radius: SwarmTheme.radius;
     border-width: 1px;
     border-color: SwarmTheme.border;
@@ -16,7 +16,7 @@ export component StatTile inherits Rectangle {
         spacing: 2px;
         Text {
             text: value;
-            color: SwarmTheme.accent;
+            color: SwarmTheme.gaming-accent;
             font-size: 22px;
             font-weight: 700;
             horizontal-alignment: center;
@@ -41,10 +41,10 @@ export component GenreChip inherits TouchArea {
     clicked => { root.toggled(); }
 
     Rectangle {
-        background: active ? SwarmTheme.accent : SwarmTheme.card;
+        background: active ? SwarmTheme.gaming-accent : SwarmTheme.gaming-card;
         border-radius: 15px;
         border-width: 1px;
-        border-color: active ? SwarmTheme.accent : SwarmTheme.border;
+        border-color: active ? SwarmTheme.gaming-accent : SwarmTheme.border;
 
         Text {
             text: label;
@@ -64,14 +64,14 @@ export component SubTabButton inherits TouchArea {
     clicked => { root.selected(); }
 
     Rectangle {
-        background: active ? SwarmTheme.card : transparent;
+        background: active ? SwarmTheme.gaming-card : transparent;
         border-radius: SwarmTheme.radius;
         border-width: active ? 1px : 0px;
-        border-color: SwarmTheme.accent;
+        border-color: SwarmTheme.gaming-accent;
 
         Text {
             text: label;
-            color: active ? SwarmTheme.accent : SwarmTheme.text-dim;
+            color: active ? SwarmTheme.gaming-accent : SwarmTheme.text-dim;
             font-size: 12px;
             font-weight: active ? 700 : 400;
             horizontal-alignment: center;
@@ -87,10 +87,10 @@ export component GameCardWidget inherits Rectangle {
 
     width: 200px;
     height: 140px;
-    background: SwarmTheme.card;
+    background: SwarmTheme.gaming-card;
     border-radius: SwarmTheme.radius;
     border-width: 1px;
-    border-color: ta.has-hover ? SwarmTheme.accent : SwarmTheme.border;
+    border-color: ta.has-hover ? SwarmTheme.gaming-accent : SwarmTheme.border;
     clip: true;
 
     ta := TouchArea {
@@ -102,7 +102,7 @@ export component GameCardWidget inherits Rectangle {
         // thumbnail is still downloading (or if it never loads).
         Rectangle {
             height: 90px;
-            background: card.on-gfn ? #1a2e0a : #1a1a1a;
+            background: card.on-gfn ? #0a1a2e : #1a1a1a;
             clip: true;
 
             Image {
@@ -115,7 +115,7 @@ export component GameCardWidget inherits Rectangle {
             if card.on-gfn : Rectangle {
                 x: parent.width - 34px; y: 6px;
                 width: 28px; height: 16px;
-                background: SwarmTheme.accent;
+                background: SwarmTheme.gaming-accent;
                 border-radius: 3px;
                 Text {
                     text: "GFN";

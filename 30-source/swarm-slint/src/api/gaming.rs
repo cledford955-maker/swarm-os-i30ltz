@@ -1,14 +1,7 @@
-use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 const BASE: &str = "http://localhost:8401";
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ChatMsg {
-    pub role: String,
-    pub content: String,
-}
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct EnrichedGame {
@@ -93,64 +86,9 @@ impl GamingClient {
             .collect())
     }
 
-    // NOTE: GET /api/lucille/history exists server-side but has no caller yet —
-    // the chat session is purely in-memory (resets each app launch), and there's
-    // no session picker UI to resume a prior one. Add a client method here when
-    // that UI exists rather than carrying dead code in the meantime.
-
-    /// Streams a chat reply token-by-token via SSE. The server sends an
-    /// `event: session` frame first (see lucille_service.go) carrying the
-    /// session id — required so a caller with no prior session can persist it
-    /// for the next turn and keep multi-turn context continuous.
-    pub async fn chat_stream<F, S>(
-        &self,
-        messages: Vec<ChatMsg>,
-        session_id: Option<String>,
-        mut on_token: F,
-        mut on_session: S,
-    ) -> reqwest::Result<()>
-    where
-        F: FnMut(String) + Send,
-        S: FnMut(String) + Send,
-    {
-        #[derive(Serialize)]
-        struct Body {
-            messages: Vec<ChatMsg>,
-            #[serde(rename = "sessionId")]
-            session_id: String,
-        }
-
-        let resp = self.client.post(format!("{BASE}/api/lucille/chat/stream"))
-            .json(&Body { messages, session_id: session_id.unwrap_or_default() })
-            .send().await?;
-
-        let mut stream = resp.bytes_stream();
-        let mut buf = String::new();
-        let mut current_event = String::from("message");
-
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?;
-            buf.push_str(&String::from_utf8_lossy(&chunk));
-
-            while let Some(pos) = buf.find('\n') {
-                let line = buf[..pos].trim_end_matches('\r').to_string();
-                buf.drain(..=pos);
-
-                if line.is_empty() {
-                    current_event = String::from("message");
-                    continue;
-                }
-                if let Some(rest) = line.strip_prefix("event: ") {
-                    current_event = rest.to_string();
-                } else if let Some(rest) = line.strip_prefix("data: ") {
-                    if current_event == "session" {
-                        on_session(rest.to_string());
-                    } else if rest != "[DONE]" {
-                        on_token(rest.to_string());
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
+    // NOTE: GET /api/lucille/history and POST /api/lucille/chat/stream exist
+    // server-side but have no caller here anymore — the standalone gaming-chat
+    // tab that used them was replaced by Forge (LucyServer's general /lucy)
+    // 2026-09-19. Re-add a client method here if a gaming-context chat UI
+    // comes back, rather than carrying the dead code in the meantime.
 }

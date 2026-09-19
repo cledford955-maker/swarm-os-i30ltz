@@ -1,8 +1,8 @@
 import { LineEdit } from "std-widgets.slint";
 import { SwarmTheme } from "../globals.slint";
-import { ChatState } from "../chat_state.slint";
+import { ForgeState } from "../forge_state.slint";
 
-component ChatBubbleWidget inherits Rectangle {
+component ForgeBubbleWidget inherits Rectangle {
     in property <string> role;
     in property <string> content;
 
@@ -35,7 +35,7 @@ component ChatBubbleWidget inherits Rectangle {
     }
 }
 
-export component ChatView inherits Rectangle {
+export component ForgeView inherits Rectangle {
     background: SwarmTheme.bg;
 
     VerticalLayout {
@@ -43,7 +43,7 @@ export component ChatView inherits Rectangle {
         spacing: 10px;
 
         Text {
-            text: "💬 Lucille";
+            text: "🛠 Forge — Lucille's Coding Core";
             color: SwarmTheme.accent;
             font-size: 16px;
             font-weight: 700;
@@ -54,13 +54,13 @@ export component ChatView inherits Rectangle {
             vertical-stretch: 1;
             msg-col := VerticalLayout {
                 spacing: 10px;
-                for bubble[i] in ChatState.messages : ChatBubbleWidget {
+                for bubble[i] in ForgeState.messages : ForgeBubbleWidget {
                     role: bubble.role;
                     content: bubble.content;
                 }
 
-                if ChatState.is-streaming && ChatState.messages.length == 0 : Text {
-                    text: "Lucille is thinking...";
+                if ForgeState.is-streaming && ForgeState.messages.length == 0 : Text {
+                    text: "Forge is thinking...";
                     color: SwarmTheme.text-dim;
                     font-size: 12px;
                 }
@@ -74,11 +74,11 @@ export component ChatView inherits Rectangle {
             spacing: 8px;
 
             input := LineEdit {
-                placeholder-text: "Ask Lucille about your games...";
-                enabled: !ChatState.is-streaming;
+                placeholder-text: "Ask Forge to write, review, or debug code...";
+                enabled: !ForgeState.is-streaming;
                 accepted(text) => {
                     if text != "" {
-                        ChatState.send-message(text);
+                        ForgeState.send-message(text);
                         input.text = "";
                     }
                 }
@@ -86,19 +86,19 @@ export component ChatView inherits Rectangle {
 
             TouchArea {
                 width: 80px;
-                enabled: !ChatState.is-streaming;
+                enabled: !ForgeState.is-streaming;
                 clicked => {
                     if input.text != "" {
-                        ChatState.send-message(input.text);
+                        ForgeState.send-message(input.text);
                         input.text = "";
                     }
                 }
                 Rectangle {
-                    background: ChatState.is-streaming ? SwarmTheme.card : SwarmTheme.accent;
+                    background: ForgeState.is-streaming ? SwarmTheme.card : SwarmTheme.accent;
                     border-radius: SwarmTheme.radius;
                     Text {
                         text: "Send";
-                        color: ChatState.is-streaming ? SwarmTheme.text-dim : #0d0d0d;
+                        color: ForgeState.is-streaming ? SwarmTheme.text-dim : #0d0d0d;
                         font-weight: 700;
                         font-size: 13px;
                         horizontal-alignment: center;

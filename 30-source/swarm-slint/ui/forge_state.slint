@@ -1,10 +1,10 @@
-export struct ChatBubble {
+export struct ForgeBubble {
     role: string,      // "user" | "assistant"
     content: string,
 }
 
-export global ChatState {
-    in property <[ChatBubble]> messages: [];
+export global ForgeState {
+    in property <[ForgeBubble]> messages: [];
     in property <bool> is-streaming: false;
 
     callback send-message(string);

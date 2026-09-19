@@ -1,7 +1,14 @@
+use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 const BASE: &str = "http://localhost:5000";
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ChatMsg {
+    pub role: String,
+    pub content: String,
+}
 
 // Field names verified against LucyServer/Services/ISystemIntegrationService.cs —
 // ASP.NET's default Web JSON policy (camelCase) applies, no [JsonPropertyName] overrides exist.
@@ -52,6 +59,65 @@ impl LucyClient {
         self.client.post(format!("{BASE}/api/system/process/kill"))
             .json(&Body { pid })
             .send().await?;
+        Ok(())
+    }
+
+    /// Streams a chat reply token-by-token from LucyServer's general
+    /// orchestrator endpoint (`/lucy`, NOT `/api/lucy` — it sits outside the
+    /// `/api/` prefix and so isn't behind swarmAuthMiddleware, same as the
+    /// system-stats calls above; no auth header needed). This is the real
+    /// general-purpose Lucille — distinct from GamingClient::chat_stream,
+    /// which is GamingAgent's gaming-context chat on a different port.
+    ///
+    /// modelId defaults to the coding swarm's lead model (moonshotai/kimi-k2.6,
+    /// see frontend/lib/models/swarm.dart's default-coding-swarm) rather than
+    /// leaving it blank — StreamChat on the Go side falls back to a Nemotron
+    /// NIM model on an empty modelId, which would silently make this "coding"
+    /// panel gaming-flavored again.
+    ///
+    /// /lucy's SSE framing is simpler than GamingAgent's: plain `data: <chunk>`
+    /// lines with no `event:` frames, terminated by `data: [DONE]` — no
+    /// session id is emitted, so multi-turn context here is client-side only
+    /// (the full message history is resent every call, same as a stateless
+    /// completion API).
+    pub async fn chat_stream<F>(&self, messages: Vec<ChatMsg>, mut on_token: F) -> reqwest::Result<()>
+    where
+        F: FnMut(String) + Send,
+    {
+        #[derive(Serialize)]
+        struct Body {
+            #[serde(rename = "modelId")]
+            model_id: String,
+            messages: Vec<ChatMsg>,
+            #[serde(rename = "autoRoute")]
+            auto_route: bool,
+        }
+
+        let resp = self.client.post(format!("{BASE}/lucy"))
+            .json(&Body { model_id: "moonshotai/kimi-k2.6".to_string(), messages, auto_route: false })
+            .send().await?;
+
+        let mut stream = resp.bytes_stream();
+        let mut buf = String::new();
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            buf.push_str(&String::from_utf8_lossy(&chunk));
+
+            while let Some(pos) = buf.find('\n') {
+                let line = buf[..pos].trim_end_matches('\r').to_string();
+                buf.drain(..=pos);
+
+                if let Some(rest) = line.strip_prefix("data: ") {
+                    if rest != "[DONE]" {
+                        // The handler escapes literal newlines within a chunk as
+                        // the two characters \n (see LucyHandler's sseWrite) so a
+                        // multi-line reply still round-trips as a single SSE line.
+                        on_token(rest.replace("\\n", "\n"));
+                    }
+                }
+            }
+        }
         Ok(())
     }
 }
