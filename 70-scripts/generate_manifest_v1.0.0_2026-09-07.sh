@@ -38,13 +38,7 @@ OUT="$R/90-docs/MANIFEST_${DATE}.md"
   echo
   echo "## Releases"
   echo
-  if compgen -G "$R/10-releases/*/" >/dev/null 2>&1; then
-    for rel in "$R"/10-releases/*/; do
-      echo "- \`$(basename "$rel")\` — $(du -sh "$rel" 2>/dev/null | cut -f1)"
-    done
-  else
-    echo "_none yet — run \`70-scripts/restore_from_lucy-master_*\` or \`build_swarm_iso_*\`_"
-  fi
+  python "$R/70-scripts/swarm_iso_manager.py" list || echo '_Ventoy not mounted; no local ISO fallback._'
   echo
   echo "## 00-CURRENT pointers"
   echo

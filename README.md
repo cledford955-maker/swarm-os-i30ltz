@@ -1,61 +1,43 @@
-# LUCILLE — SWARM OS working drive
-`layout v1.0.0 · 2026-09-07 · SWARM OS v6.2.19`
+# SWARM OS — LUCILLE working drive
 
-This partition holds everything needed to **run** SWARM OS. The encrypted
-master drive ("lUCILLE"""/mnt/Lucy") remains the source of truth for history;
-this drive is the live working copy.
+`/mnt/Lucy/` (capital L) is the active source and build workspace. Start with `AGENTS.md`, `SWARM_AI_FEATURES.md`, and `/mnt/brains/swarm-memory/PROJECT_MEMORY.md`.
 
-## Layout
+## Build and keep releases
 
-| Folder | Holds |
+All active ISO files live **only** in `/mnt/ventoy/ISO/SWARM_OS/`. Keep the newest 10 rolling builds plus releases the user explicitly marks stable. Stable releases remain protected until unmarked. See [ISO_RELEASE_POLICY.md](ISO_RELEASE_POLICY.md).
+
+Run as your normal user:
+
+```bash
+/mnt/Lucy/70-scripts/build_swarm_iso.sh
+```
+
+The build verifies Ventoy before version stamping, writes the ISO directly there, runs the boot gate, then applies retention. It never copies an ISO to the desktop or `10-releases`. Old dated build commands forward to this one implementation.
+
+Use the **SWARM OS — Manage ISOs** desktop icon to mark/unmark stable builds. The old local ISO files can be migrated once using `70-scripts/migrate_swarm_isos.sh`, which verifies the copy before removing its source.
+
+## Code and test from CachyOS
+
+- **SWARM OS — Code** opens the source workspace in VS Code Insiders/VS Code.
+- **SWARM OS — Launch VM** opens the latest usable Ventoy ISO in a QEMU window with a separate virtual disk. This does not boot or write to the physical SWARM installation.
+- **SWARM OS — Build ISO** builds the current source directly to Ventoy.
+
+These launchers are installed on the CachyOS desktop and application menu. Their project copies are in `70-scripts/desktop/`. Script paths and VM details are in `ISO_RELEASE_POLICY.md`.
+
+## Working layout
+
+| Location | Purpose |
 |---|---|
-| `00-CURRENT/` | Symlinks to the newest of everything. **Start here.** |
-| `10-releases/` | Built ISOs, one dated+versioned folder each, with sha256 |
-| `20-runtime/` | Everything needed to RUN: `app/`, `bin/`, `LucyServer/`, `config/.env` |
-| `30-source/` | Source trees: `frontend/`, `lucille-core/`, `LucyServer/`, companion |
-| `40-iso-profile/` | archiso profile (`profiledef.sh`, `packages.x86_64`, `airootfs/`) |
-| `50-boot/` | GRUB themes, rEFInd icons, boot assets |
-| `60-boltz-brain/` | **Lucille's memory.** Identity, core facts, sessions, knowledge |
-| `70-scripts/` | Build, restore, VM and sync scripts |
-| `80-vm/` | QEMU/OVMF assets, `run_vm.sh`, qcow2 disks |
-| `90-docs/` | Guides, reviews, manifests |
-| `99-archive/` | Superseded versions and personal files — never deleted, just parked |
+| `/mnt/ventoy/ISO/SWARM_OS/` | Only active ISO store; latest pointer and stable markers |
+| `10-releases/` | Non-ISO artifacts; no new ISO output |
+| `20-runtime/.env` | Runtime secrets; never commit or expose |
+| `30-source/frontend/` | Flutter desktop shell |
+| `30-source/swarm-slint/` | Rust/Slint companion panel |
+| `30-source/LucyServer-go/` | Primary Go server |
+| `30-source/GamingAgent-go/` | Gaming service |
+| `40-iso-profile/` | Archiso live-system profile |
+| `grub_themes/` | CachyOS/SWARM GRUB themes |
+| `70-scripts/` | Current build, release, VM, and support scripts |
+| `80-vm/` | VM firmware, separate virtual disks, and tests |
 
-Numbers sort the folders into the order you actually use them, so `ls` reads
-top to bottom as: what's current, what shipped, what runs, what builds it.
-
-## Naming convention
-
-Every versioned file carries a version **and** a date:
-
-    <name>_v<major>.<minor>.<patch>_<YYYY-MM-DD>.<ext>
-
-    build_swarm_iso_v6.2.19_2026-09-07.sh
-    swarm-os-v6.2.19_2026-09-03_a1b2c3d4.iso
-    boltz_identity_v1.0.0_2026-09-07.md
-
-Superseded files move to `99-archive/superseded/` with their original date.
-Nothing is overwritten in place, and nothing is deleted.
-
-## Finding the newest thing
-
-    ls -l 00-CURRENT/                 # symlinks to current everything
-    ls -t 10-releases/                # releases, newest first
-    cat 90-docs/MANIFEST_*.md         # dated inventory
-
-## Rebuilding
-
-    ./70-scripts/build_swarm_iso_v6.2.19_2026-09-07.sh
-
-Requires `30-source/` and `40-iso-profile/` to be populated — see
-`70-scripts/restore_from_lucy-master_v1.0.0_2026-09-07.sh`.
-
-## Security note
-
-**No API keys on this drive.** `20-runtime/config/.env` is a symlink to
-`~/Documents/.env` (chmod 600, 25 keys). The real file never travels with the
-drive and is never offered to Syncthing. See `20-runtime/config/README.md` for
-how the app resolves it at runtime.
-
-`99-archive/_personal/` holds a Proton recovery-phrase PDF that should be moved
-off this drive entirely.
+Historical/orphaned directories and the read-only lucy-master mirror are not active build targets. Follow the restrictions in `AGENTS.md` before touching them. The Flutter SDK is on this drive; `70-scripts/setup-dev-deps.sh` prepares the host toolchain.

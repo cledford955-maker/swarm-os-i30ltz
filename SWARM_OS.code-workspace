@@ -1,0 +1,14 @@
+{
+  "folders": [
+    {"name": "SWARM desktop (Flutter)", "path": "30-source/frontend"},
+    {"name": "Companion panel (Slint)", "path": "30-source/swarm-slint"},
+    {"name": "LucyServer (Go)", "path": "30-source/LucyServer-go"},
+    {"name": "Build and release scripts", "path": "70-scripts"},
+    {"name": "Live ISO profile", "path": "40-iso-profile/swarm_os_iso_profile"}
+  ],
+  "settings": {
+    "dart.flutterSdkPath": "/mnt/Lucy/30-source/flutter-sdk",
+    "files.watcherExclude": {"**/target/**": true, "**/build/**": true, "**/airootfs/opt/**": true},
+    "search.exclude": {"**/target": true, "**/build": true, "**/airootfs/opt": true}
+  }
+}

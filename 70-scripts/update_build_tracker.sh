@@ -94,14 +94,14 @@ _Last updated: ${TS}_
 
 | Component | Version | Date | Notes |
 |---|---|---|---|
-| SWARM OS ISO | ${SWARM_VER} | ${TS} | \`10-releases/\` — auto-bumped on build |
+| SWARM OS ISO | ${SWARM_VER} | ${TS} | \`/mnt/ventoy/ISO/SWARM_OS/\` — auto-bumped on build |
 | Arch packages.x86_64 | — | 2026-09-12 | aspnet-runtime-10.0 added |
 
 ### Scripts
 
 | Script | Last Updated | Notes |
 |---|---|---|
-| \`build_swarm_iso_6.2.19_2026-09-08.sh\` | $(stat -c '%y' "$LUCY/70-scripts/build_swarm_iso_6.2.19_2026-09-08.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | Builds all components + ISO |
+| \`build_swarm_iso.sh\` | $(stat -c '%y' "$LUCY/70-scripts/build_swarm_iso.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | Builds all components + ISO |
 | \`sync_lucille_ai.sh\` | $(stat -c '%y' "$LUCY/70-scripts/sync_lucille_ai.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | rsync --checksum, Lucille-AI + I30LTZ-Recovery |
 | \`update_build_tracker.sh\` | $(stat -c '%y' "$LUCY/70-scripts/update_build_tracker.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | Regenerates this file |
 | \`unlock_slick.sh\` | $(stat -c '%y' "$LUCY/70-scripts/unlock_slick.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | Opens LUKS slick partition |

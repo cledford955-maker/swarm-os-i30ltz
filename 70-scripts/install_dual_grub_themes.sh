@@ -9,6 +9,25 @@ SWARM_ROOT=/mnt/swarm/@
 for target in / "$SWARM_ROOT"; do
  [[ -f "$target/etc/default/grub" && -f "$target/boot/grub/grub.cfg" && -f "$target/etc/grub.d/10_linux" ]] || exit 1
 done
+# arch-chroot requires the actual system root to be a mountpoint, not
+# merely a subdirectory of the mounted Btrfs top-level volume.
+SWARM_BIND_CREATED=0
+cleanup_mount() {
+ if (( SWARM_BIND_CREATED )); then
+  umount "$SWARM_ROOT"
+ fi
+}
+trap cleanup_mount EXIT
+if ! mountpoint -q "$SWARM_ROOT"; then
+ mount --bind "$SWARM_ROOT" "$SWARM_ROOT"
+ SWARM_BIND_CREATED=1
+fi
+# Fail before changing either menu if GRUB cannot resolve the installed root.
+SWARM_PROBED_UUID=$(arch-chroot "$SWARM_ROOT" grub-probe --target=fs_uuid /)
+[[ $SWARM_PROBED_UUID == 366134c3-3986-4475-b9de-4707d582656e ]] || {
+ echo 'GRUB could not identify the expected SWARM root filesystem.' >&2
+ exit 1
+}
 BACKUP_DIR="$PROJECT_DIR/grub_themes/backups/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BACKUP_DIR"
 rollback() {

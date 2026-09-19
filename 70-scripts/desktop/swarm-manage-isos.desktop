@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SWARM OS — Manage ISOs
+Comment=List, mark stable, or prune Ventoy releases
+Exec=/mnt/Lucy/70-scripts/release_menu.sh
+Path=/mnt/Lucy
+Icon=drive-removable-media
+Terminal=true
+Categories=Development;
