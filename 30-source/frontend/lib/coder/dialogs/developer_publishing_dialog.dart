@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../theme/swarm_colors.dart';
@@ -34,10 +35,10 @@ class _DeveloperPublishingDialogState extends State<DeveloperPublishingDialog> {
   @override
   void initState() {
     super.initState();
-    _revalidate();
+    unawaited(_revalidate());
   }
 
-  void _revalidate() {
+  Future<void> _revalidate() async {
     final manifestMap = {
       'id': _idCtrl.text.trim(),
       'name': _nameCtrl.text.trim(),
@@ -56,12 +57,13 @@ class _DeveloperPublishingDialogState extends State<DeveloperPublishingDialog> {
     final payloadPreview = '// Swarm Extension Entrypoint: ${_idCtrl.text}\nmodule.exports = { activate() { console.log("Started"); } };';
     final digest = PackageSigningService.instance.calculateDigest(payloadPreview);
 
-    final signed = PackageSigningService.instance.signPackage(
+    final signed = await PackageSigningService.instance.signPackage(
       manifest: ExtensionManifest.fromJson(manifestMap),
       payloadContent: payloadPreview,
       privateKeyHex: _privateKeyCtrl.text.trim(),
     );
 
+    if (!mounted) return;
     setState(() {
       _validationErrors = errs;
       _calculatedDigest = digest;
