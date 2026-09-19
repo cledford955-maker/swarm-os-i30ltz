@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -49,11 +50,46 @@ class OpenRouterBalanceService extends ChangeNotifier {
 
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
-    _apiKey = prefs.getString(_apiKeyPref);
+    // This widget's own 'openrouter_api_key' pref used to be the only place
+    // checked here — completely disconnected from the real 'OPENROUTER_API_KEY'
+    // every other part of the app (Settings, AiClient) reads, so the balance
+    // chip showed "no key" by default even with a working key configured.
+    // Same resolution chain as SettingsPage._resolveKey now.
+    _apiKey = prefs.getString(_apiKeyPref) ?? _resolveSharedKey(prefs);
     if (hasKey) {
       await fetchBalance();
       _startPolling();
     }
+  }
+
+  String? _resolveSharedKey(SharedPreferences prefs) {
+    final prefVal = prefs.getString('OPENROUTER_API_KEY');
+    if (prefVal != null && prefVal.trim().isNotEmpty) return prefVal.trim();
+
+    // /run/media/i30ltz/lucy-master/ is the read-only reference mirror, not a
+    // real source of a live key — kept last for old-install compatibility,
+    // not first.
+    const envPaths = [
+      '/etc/swarm_os.env',
+      './.env',
+      '../.env',
+      '/root/.env',
+      '/usr/local/bin/swarm_os/.env',
+      '/run/media/i30ltz/lucy-master/.env',
+    ];
+    for (final p in envPaths) {
+      final f = File(p);
+      if (!f.existsSync()) continue;
+      try {
+        for (final line in f.readAsLinesSync()) {
+          final trimmed = line.trim();
+          if (trimmed.startsWith('OPENROUTER_API_KEY=')) {
+            return trimmed.substring('OPENROUTER_API_KEY='.length).trim().replaceAll('"', '').replaceAll("'", '');
+          }
+        }
+      } catch (_) {}
+    }
+    return Platform.environment['OPENROUTER_API_KEY'];
   }
 
   Future<void> setApiKey(String key) async {

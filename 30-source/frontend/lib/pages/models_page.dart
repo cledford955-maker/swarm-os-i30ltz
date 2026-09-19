@@ -1,13 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../agent/agent_chat.dart';
 import '../models/agent.dart';
 import '../models/swarm.dart';
+import '../services/live_model_catalog_service.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../widgets/extensions_dialog.dart';
+
+/// Adapts a live-fetched OpenRouter model into a SwarmModel so it can flow
+/// through the existing model-card UI unchanged. Only ever built from data
+/// LiveModelCatalogService actually fetched — never a hand-typed guess.
+SwarmModel swarmModelFromLive(LiveModel m) {
+  return SwarmModel(
+    id: m.id,
+    name: m.name,
+    role: 'Live-verified · ${m.contextDisplay} context',
+    provider: m.isNvidiaFree ? ProviderId.nvidia : ProviderId.openrouter,
+    tier: m.isFree ? ModelTier.freeOnline : ModelTier.paidOnline,
+    pricePer1M: m.pricePer1MDisplay,
+    contextWindow: m.contextDisplay,
+    description: m.description.isNotEmpty ? m.description : 'Live model from OpenRouter — no static description available.',
+    keywords: const ['live'],
+  );
+}
 
 class ModelsPage extends ConsumerStatefulWidget {
   const ModelsPage({super.key});
@@ -20,6 +39,32 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
   String _searchQuery = '';
   String _selectedFilter = 'ALL';
   String _selectedAgentId = 'lucille';
+  String? _selectedLiveCategory;
+  List<LiveModel> _liveCategoryResults = [];
+  bool _loadingLiveCategory = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      p.Provider.of<LiveModelCatalogService>(context, listen: false).ensureLoaded();
+    });
+  }
+
+  Future<void> _selectLiveCategory(String category) async {
+    setState(() {
+      _selectedFilter = 'LIVE CATEGORY';
+      _selectedLiveCategory = category;
+      _loadingLiveCategory = true;
+    });
+    final catalog = p.Provider.of<LiveModelCatalogService>(context, listen: false);
+    final results = await catalog.fetchCategory(category);
+    if (!mounted) return;
+    setState(() {
+      _liveCategoryResults = results;
+      _loadingLiveCategory = false;
+    });
+  }
 
   Agent? get _selectedAgent =>
       agents.where((a) => a.id == _selectedAgentId).firstOrNull;
@@ -167,33 +212,57 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredModels = allModels.where((m) {
-      // Category filter
-      if (_selectedFilter == 'ON SALE' && !m.isOnSale) return false;
-      if (_selectedFilter == 'NVIDIA NIM' && m.provider != ProviderId.nvidia) return false;
-      if (_selectedFilter == 'OPENROUTER' && m.provider != ProviderId.openrouter) return false;
-      if (_selectedFilter == 'LOCAL' && m.provider != ProviderId.ollama) return false;
-      if (_selectedFilter == 'VIDEO' && !m.keywords.contains('video')) return false;
-      if (_selectedFilter == 'AUTOROUTER' && !m.keywords.contains('autorouter')) return false;
+    final liveCatalog = p.Provider.of<LiveModelCatalogService>(context);
 
-      // Text query
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
+    // A static OpenRouter-provider entry counts as "dead" once live data has
+    // loaded and that exact id isn't in it — before the first live fetch
+    // completes, nothing is excluded this way (liveCatalog.hasData is false),
+    // so the list is never empty on cold start.
+    bool isDeadStaticEntry(SwarmModel m) {
+      if (!liveCatalog.hasData) return false;
+      if (m.provider != ProviderId.openrouter && m.provider != ProviderId.nvidia) return false;
+      return !liveCatalog.exists(m.id);
+    }
+
+    List<SwarmModel> filteredModels;
+    if (_selectedFilter == 'LIVE CODING') {
+      filteredModels = liveCatalog.topCodingModels(limit: 100).map(swarmModelFromLive).toList();
+    } else if (_selectedFilter == 'LIVE CATEGORY' && _selectedLiveCategory != null) {
+      filteredModels = _liveCategoryResults.map(swarmModelFromLive).toList();
+    } else if (_selectedFilter == 'NVIDIA NIM' && liveCatalog.hasData) {
+      filteredModels = liveCatalog.nvidiaNimFree.map(swarmModelFromLive).toList();
+    } else {
+      filteredModels = allModels.where((m) {
+        if (isDeadStaticEntry(m)) return false;
+        // Category filter
+        if (_selectedFilter == 'ON SALE' && !m.isOnSale) return false;
+        if (_selectedFilter == 'NVIDIA NIM' && m.provider != ProviderId.nvidia) return false;
+        if (_selectedFilter == 'OPENROUTER' && m.provider != ProviderId.openrouter) return false;
+        if (_selectedFilter == 'LOCAL' && m.provider != ProviderId.ollama) return false;
+        if (_selectedFilter == 'VIDEO' && !m.keywords.contains('video')) return false;
+        if (_selectedFilter == 'AUTOROUTER' && !m.keywords.contains('autorouter')) return false;
+        return true;
+      }).toList();
+    }
+
+    if (_searchQuery.isNotEmpty && _selectedFilter != 'LIVE CODING' && _selectedFilter != 'LIVE CATEGORY') {
+      final query = _searchQuery.toLowerCase();
+      filteredModels = filteredModels.where((m) {
         final matchId = m.id.toLowerCase().contains(query);
         final matchName = m.name.toLowerCase().contains(query);
         final matchRole = m.role.toLowerCase().contains(query);
         final matchDesc = m.description.toLowerCase().contains(query);
         final matchKw = m.keywords.any((k) => k.toLowerCase().contains(query));
         return matchId || matchName || matchRole || matchDesc || matchKw;
-      }
-      return true;
-    }).toList();
+      }).toList();
+    }
 
-    final onSaleCount = allModels.where((m) => m.isOnSale).length;
-    final nvidiaCount = allModels.where((m) => m.provider == ProviderId.nvidia).length;
-    final openrouterCount = allModels.where((m) => m.provider == ProviderId.openrouter).length;
+    final onSaleCount = allModels.where((m) => m.isOnSale && !isDeadStaticEntry(m)).length;
+    final nvidiaCount = liveCatalog.hasData ? liveCatalog.nvidiaNimFree.length : allModels.where((m) => m.provider == ProviderId.nvidia).length;
+    final openrouterCount = allModels.where((m) => m.provider == ProviderId.openrouter && !isDeadStaticEntry(m)).length;
     final videoCount = allModels.where((m) => m.keywords.contains('video')).length;
     final autoRouterCount = allModels.where((m) => m.keywords.contains('autorouter')).length;
+    final deadCount = liveCatalog.hasData ? allModels.where(isDeadStaticEntry).length : 0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -548,12 +617,42 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               runSpacing: 8,
               children: [
                 _buildFilterChip('ALL', 'ALL (${allModels.length})', SwarmColors.accent),
+                _buildFilterChip('LIVE CODING', 'LIVE CODING (TOP ${liveCatalog.topCodingModels(limit: 100).length} 🔴)', SwarmColors.success),
                 _buildFilterChip('NVIDIA NIM', 'NVIDIA NIM ($nvidiaCount FREE)', SwarmColors.agentPurple),
                 _buildFilterChip('OPENROUTER', 'OPENROUTER ($openrouterCount)', SwarmColors.agentCyan),
                 _buildFilterChip('VIDEO', 'VIDEO ($videoCount 🎬)', SwarmColors.agentPink),
                 _buildFilterChip('AUTOROUTER', 'AUTOROUTER ($autoRouterCount ⚡)', SwarmColors.warning),
                 _buildFilterChip('ON SALE', 'ON SALE ($onSaleCount 🔥)', SwarmColors.success),
                 _buildFilterChip('LOCAL', 'LOCAL OFFLINE (OLLAMA)', SwarmColors.textMuted),
+                _buildLiveCategoryChip(),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Live catalog status — shows the ground truth this page is
+            // filtering against, and how many static entries it hid because
+            // they don't exist on OpenRouter right now.
+            Row(
+              children: [
+                Icon(
+                  liveCatalog.hasData ? Icons.wifi_tethering : (liveCatalog.loading ? Icons.sync : Icons.wifi_off),
+                  size: 13,
+                  color: liveCatalog.hasData ? SwarmColors.success : SwarmColors.textMuted,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  liveCatalog.hasData
+                      ? 'Live: ${liveCatalog.all.length} models from OpenRouter${liveCatalog.fetchedAt != null ? ' · fetched ${_timeAgo(liveCatalog.fetchedAt!)}' : ''}${deadCount > 0 ? ' · $deadCount static entries hidden (not on OpenRouter right now)' : ''}'
+                      : (liveCatalog.loading ? 'Fetching live OpenRouter catalog…' : 'Live catalog not loaded yet — showing static list only'),
+                  style: const TextStyle(color: SwarmColors.textMuted, fontSize: 11),
+                ),
+                if (liveCatalog.hasData) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => liveCatalog.refresh(),
+                    child: const Text('Refresh', style: TextStyle(color: SwarmColors.agentCyan, fontSize: 11, fontWeight: FontWeight.w600)),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -630,6 +729,45 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
         color: isSelected ? activeColor : SwarmColors.textSecondary,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
         fontSize: 11,
+      ),
+    );
+  }
+
+  String _timeAgo(DateTime t) {
+    final d = DateTime.now().difference(t);
+    if (d.inMinutes < 1) return 'just now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+    return '${d.inHours}h ago';
+  }
+
+  /// Live browse by one of OpenRouter's own real category values (confirmed
+  /// against the API, not guessed) — 'programming' covers coding; the rest
+  /// (roleplay, marketing, technology, science, translation, legal, finance,
+  /// health, trivia, academia) are the only other categories the API accepts.
+  Widget _buildLiveCategoryChip() {
+    final isSelected = _selectedFilter == 'LIVE CATEGORY';
+    return PopupMenuButton<String>(
+      onSelected: _selectLiveCategory,
+      itemBuilder: (ctx) => kOpenRouterCategories
+          .map((c) => PopupMenuItem(value: c, child: Text(c.toUpperCase())))
+          .toList(),
+      child: ChoiceChip(
+        label: Text(_selectedLiveCategory != null && isSelected
+            ? 'LIVE: ${_selectedLiveCategory!.toUpperCase()}${_loadingLiveCategory ? '…' : ' (${_liveCategoryResults.length})'}'
+            : 'LIVE CATEGORY ▾'),
+        selected: isSelected,
+        onSelected: (_) {},
+        selectedColor: SwarmColors.agentPink.withValues(alpha: 0.25),
+        backgroundColor: SwarmColors.bgElevated,
+        side: BorderSide(
+          color: isSelected ? SwarmColors.agentPink : SwarmColors.border,
+          width: isSelected ? 1.5 : 1.0,
+        ),
+        labelStyle: TextStyle(
+          color: isSelected ? SwarmColors.agentPink : SwarmColors.textSecondary,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          fontSize: 11,
+        ),
       ),
     );
   }

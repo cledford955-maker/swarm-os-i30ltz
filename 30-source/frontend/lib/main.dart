@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +21,7 @@ import 'services/gamepad_service.dart';
 import 'services/vital_service.dart';
 import 'services/sentinel_client.dart';
 import 'services/openrouter_balance_service.dart';
+import 'services/live_model_catalog_service.dart';
 import 'services/lucille_voice_service.dart';
 import 'services/wake_word_service.dart';
 import 'services/google_hub_service.dart';
@@ -61,6 +63,8 @@ void main() async {
   final vitalService = VitalService();
   final sentinelClient = SentinelClient();
   final openRouterBalanceService = OpenRouterBalanceService();
+  final liveModelCatalogService = LiveModelCatalogService();
+  unawaited(liveModelCatalogService.ensureLoaded());
   final voiceService = LucilleVoiceService();
   final wakeWordService = WakeWordService();
   final googleHubService = GoogleHubService();
@@ -81,6 +85,7 @@ void main() async {
           p.ChangeNotifierProvider.value(value: vitalService),
           p.Provider.value(value: sentinelClient),
           p.ChangeNotifierProvider.value(value: openRouterBalanceService),
+          p.ChangeNotifierProvider.value(value: liveModelCatalogService),
           p.ChangeNotifierProvider.value(value: voiceService),
           p.ChangeNotifierProvider.value(value: wakeWordService),
           p.Provider.value(value: googleHubService),
@@ -151,12 +156,13 @@ class _SwarmAppState extends State<SwarmApp> {
               children: [
                 if (child != null) WholeShellZoom(scale: ui.scale, child: child),
                 const Positioned(
-                  top: 10,
-                  right: 15,
+                  left: 0,
+                  right: 0,
+                  bottom: 10,
                   child: Material(
                     color: Colors.transparent,
                     child: SafeArea(
-                      child: OpenRouterBalanceWidget(),
+                      child: Center(child: OpenRouterBalanceWidget()),
                     ),
                   ),
                 ),
