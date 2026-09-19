@@ -443,6 +443,17 @@ menuentry "CachyOS (chainload)" --class cachyos --class gnu-linux --class os {
   search --no-floppy --fs-uuid --set=root A367-87E3
   chainloader /EFI/cachyos/grubx64.efi
 }
+    menuentry "EndeavourOS" --class endeavouros {
+        insmod btrfs
+        search --no-floppy --fs-uuid --set=other_os 0ac123f1-bbd1-4ea6-8fdd-930bd0d45e18
+        configfile (\$other_os)/@/boot/grub/grub.cfg
+    }
+    menuentry "Ventoy" --class ventoy {
+        insmod fat
+        insmod chain
+        search --no-floppy --fs-uuid --set=ventoy_efi E039-AD96
+        chainloader (\$ventoy_efi)/EFI/BOOT/BOOTX64.EFI
+    }
 menuentry "UEFI Firmware Settings" --class firmware {
     fwsetup
 }
@@ -454,6 +465,8 @@ menuentry "Shutdown" --class shutdown {
 }
 CUSTOMEOF
 chmod +x /etc/grub.d/40_custom
+
+echo 'GRUB_FONT="/boot/grub/themes/swarm_os/menu.pf2"' >> /etc/default/grub
 
 # Install snap-pac & grub-btrfs for automated rollback snapshots
 pacman -S --noconfirm --needed snap-pac grub-btrfs inotify-tools btrfs-progs || true
