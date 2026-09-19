@@ -365,7 +365,7 @@ final swarms = <String, SwarmConfig>{
     name: 'General Coding Swarm (Default)',
     role: 'Everyday Coding & Chat — Everyone Except System/Gaming/Eval Agents',
     isDefault: true,
-    estimatedPrice: r'~$0.63 / 1M (Blended Execution)',
+    estimatedPrice: r'~$0.81 / 1M (Blended Execution)',
     description: 'Default for every general-purpose and coding agent (Lucille, Forge, Droid, and the rest of the roster): Kimi K2.6, Qwen 2.5 Coder 32B, GLM 5.3, and DeepSeek R1. System-utility agents, Dr. Boltz, and gaming-tagged agents use nemotron-swarm instead — see their defaultSwarmId.',
     models: [
       allModels.firstWhere((m) => m.id == 'moonshotai/kimi-k2.6'),

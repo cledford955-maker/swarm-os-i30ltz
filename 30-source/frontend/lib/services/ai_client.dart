@@ -196,9 +196,11 @@ class AiClient {
       ...previousMessages,
     ];
 
-    // Default to the new Flagship Default Swarm leader (Claude Opus 4.6) if the model string is generic
-    String resolvedModel = (model == 'lucy' || model.isEmpty) 
-        ? 'anthropic/claude-opus-4.6' 
+    // Default to default-coding-swarm's first model if the model string is
+    // generic — derived from the swarm config itself (2026-09-19) so this
+    // can't drift out of sync with it the way a hardcoded literal did before.
+    String resolvedModel = (model == 'lucy' || model.isEmpty)
+        ? swarms['default-coding-swarm']!.models.first.id
         : model;
 
     // Check if user requested AutoRouter
