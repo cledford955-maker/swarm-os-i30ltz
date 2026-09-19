@@ -118,7 +118,6 @@ class SystemLauncher {
   static const String browserCmd = '$_fj firefox || $_fj chromium || $_fj google-chrome-stable || $_fj epiphany';
   static const String fileManagerCmd = 'thunar || pcmanfm || dolphin || nautilus';
   static const String monitorCmd = 'foot -e btop || alacritty -e btop || xterm -e htop || alacritty -e htop || foot -e htop || btop || htop';
-  static const String installerCmd = 'if [ -x /usr/local/bin/install_swarm_os.sh ]; then alacritty -e sudo /usr/local/bin/install_swarm_os.sh --disk /dev/nvme0n1 || foot -e sudo /usr/local/bin/install_swarm_os.sh --disk /dev/nvme0n1 || xterm -e sudo /usr/local/bin/install_swarm_os.sh --disk /dev/nvme0n1; else alacritty -e bash -lc "echo SWARM OS installer is only available from the live ISO; read -r" || xterm -e bash -lc "echo SWARM OS installer is only available from the live ISO; read -r"; fi';
   static const String antigravityIdeCmd = 'antigravity || "/run/media/i30ltz/lucy-master/Antigravity-x64/antigravity" || code';
   // chromium is the installed browser on SWARM OS (not google-chrome-stable) —
   // always try chromium before google-chrome-stable to avoid a silent fallback gap.

@@ -12,16 +12,43 @@ warn()  { echo -e "${YLW}  ⚠ $1${NC}"; }
 banner(){ echo -e "\n${CYN}  === $1 ===${NC}\n"; }
 
 # ── Disk detection ────────────────────────────────────────────────────────────
-# Usage: install_swarm_os.sh [--disk /dev/sdX]
+# Usage: install_swarm_os.sh [--disk /dev/sdX] [--non-interactive]
 # If --disk is not passed, the script auto-detects the largest non-removable disk
 # and asks for confirmation before touching anything.
+#
+# --non-interactive: for the graphical installer (LucyServer's /install
+# websocket session, driven by the Flutter "Install SWARM OS" flow) — the GUI
+# already made the operator confirm the exact disk in its own UI before this
+# process ever starts, so re-asking here would just hang forever (there is no
+# human typing into this particular stdin). Requires --disk explicitly; never
+# falls back to auto-detect non-interactively — a silent wrong-disk wipe is
+# far worse than a script that exits with an error.
 DISK=""
+NONINTERACTIVE=0
+PASSWORD_FILE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --disk) DISK="$2"; shift 2 ;;
+    --non-interactive|--yes) NONINTERACTIVE=1; shift ;;
+    # Root-readable-only tempfile holding the i30ltz account password, staged
+    # by the graphical installer (LucyServer's /install session) — read once,
+    # then unlinked immediately below. Never a CLI value: arguments are
+    # visible to any process via /proc/<pid>/cmdline, a file only root can
+    # read is not.
+    --password-file) PASSWORD_FILE="$2"; shift 2 ;;
     *)      shift ;;
   esac
 done
+
+if [ -n "$PASSWORD_FILE" ]; then
+  SWARM_INSTALL_PASSWORD="$(cat "$PASSWORD_FILE" 2>/dev/null || true)"
+  rm -f "$PASSWORD_FILE"
+fi
+
+if [ "$NONINTERACTIVE" -eq 1 ] && [ -z "$DISK" ]; then
+  echo -e "${RED}ERROR: --non-interactive requires --disk to be passed explicitly.${NC}"
+  exit 1
+fi
 
 if [ -z "$DISK" ]; then
   # Find non-removable physical disks, excluding any that already contain a
@@ -79,6 +106,12 @@ if [ ! -b "$TARGET_EFI" ] || [ ! -b "$TARGET_ROOT" ]; then
   echo -e "    parted -s $DISK mklabel gpt mkpart EFI fat32 1MiB 513MiB mkpart ROOT 513MiB 100% set 1 esp on"
   echo -e "    mkfs.fat -F32 $TARGET_EFI"
   echo ""
+  if [ "$NONINTERACTIVE" -eq 1 ]; then
+    echo -e "${RED}ERROR: partitions for $DISK don't exist yet — the graphical installer only${NC}"
+    echo -e "${RED}       formats an existing layout, it doesn't partition disks itself.${NC}"
+    echo "       Partition $DISK first (parted/gparted), then try again."
+    exit 1
+  fi
   read -r -p "Partitions are in place — continue? [y/N] " YN
   [[ "$YN" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 1; }
 fi
@@ -515,12 +548,34 @@ if ! grep -q '^SWARM_AUTH_TOKEN=' /etc/swarm_os.env 2>/dev/null; then
 fi
 EOF
 
-# If no usable host password hash was preserved above, set one now. This runs
-# as a normal foreground command (not through the heredoc above) so passwd's
-# prompts reach the real terminal instead of leftover heredoc input.
+# If no usable host password hash was preserved above, set one now.
+#
+# Interactive path: this runs as a normal foreground command (not through the
+# heredoc above) so passwd's prompts reach the real terminal instead of
+# leftover heredoc input.
+#
+# --non-interactive path (the graphical installer): `passwd` reads directly
+# from the controlling tty, same as `systemd-ask-password --no-tty` earlier
+# in this project's boot-gate work — it does NOT read from a piped stdin, so
+# it would hang forever with no way for the GUI to ever answer it. The GUI
+# collects the password in its own form and passes it via
+# SWARM_INSTALL_PASSWORD (an env var, never a CLI arg — args are visible to
+# any other process via /proc/<pid>/cmdline, this isn't); chpasswd, unlike
+# passwd, accepts "user:password" on stdin non-interactively.
 if [ -z "$HOST_PW_HASH" ] || [ "$HOST_PW_HASH" = "!" ] || [ "$HOST_PW_HASH" = "*" ]; then
-    echo "Please set a password for user 'i30ltz' (used for sudo and terminal commands):"
-    arch-chroot "$MOUNT_POINT" passwd i30ltz
+    if [ "$NONINTERACTIVE" -eq 1 ]; then
+        if [ -z "${SWARM_INSTALL_PASSWORD:-}" ]; then
+            echo -e "${RED}ERROR: no password set for i30ltz and none was provided.${NC}"
+            echo "The graphical installer must collect one and set SWARM_INSTALL_PASSWORD."
+            exit 1
+        fi
+        echo "Setting password for user 'i30ltz'..."
+        echo "i30ltz:${SWARM_INSTALL_PASSWORD}" | arch-chroot "$MOUNT_POINT" chpasswd
+        unset SWARM_INSTALL_PASSWORD
+    else
+        echo "Please set a password for user 'i30ltz' (used for sudo and terminal commands):"
+        arch-chroot "$MOUNT_POINT" passwd i30ltz
+    fi
 fi
 
 banner "Cleaning up..."

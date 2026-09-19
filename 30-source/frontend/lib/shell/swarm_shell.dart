@@ -15,6 +15,7 @@ import '../widgets/hive_watermark_overlay.dart';
 import '../widgets/lucille_voice_hud_button.dart';
 import '../widgets/hive_420_overlay.dart';
 import '../widgets/cpu_aura_wallpaper.dart';
+import '../widgets/swarm_ambient_background.dart';
 import 'desktop_geometry.dart';
 
 /// Top-level desktop shell — wraps all pages with edge drawers, seductive lips visualizer, and window manager
@@ -90,6 +91,14 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
           // 1b. Large Background Welcome Typography
           const Positioned.fill(
             child: HiveBackgroundWelcome(),
+          ),
+
+          // 1c. Ambient swarm — a slow drift of small robotic wasps behind
+          // all desktop content and every window, so the swarm reads as a
+          // constant presence across the whole shell rather than something
+          // confined to specific decorations.
+          const Positioned.fill(
+            child: SwarmAmbientBackground(),
           ),
 
           // 2. Base Desktop / Center Cards Content

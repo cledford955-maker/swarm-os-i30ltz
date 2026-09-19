@@ -5112,7 +5112,7 @@ dependencies = [
 
 [[package]]
 name = "swarm-slint"
-version = "6.2.57"
+version = "6.2.63"
 dependencies = [
  "chrono",
  "futures-util",

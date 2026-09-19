@@ -7,6 +7,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/launch_status.dart';
+import 'wasp_nest_decoration.dart';
+import 'swarm_tap_burst.dart';
 
 // ─── Hex Slot: a position in the grid ───
 class HexSlot {
@@ -291,22 +293,33 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
   Widget _buildSlotBackground(HexSlot slot, double w, double h) {
     final isDark = (slot.row + slot.col) % 2 == 0;
     final isHover = _hoverSlotKey == slot.key;
+    // Empty slots (no app assigned) get a wasp nest instead of just sitting
+    // dark — the swarm should read as a constant presence surrounding the
+    // apps, not empty space between them.
+    final isEmpty = !_slotMap.containsKey(slot.key);
 
     return AnimatedBuilder(
       animation: _pulseCtrl,
       builder: (_, __) {
         final pulse = 0.02 + _pulseCtrl.value * 0.015;
-        return CustomPaint(
-          size: Size(w, h),
-          painter: _HexPainter(
-            fillColor: isDark
-                ? const Color(0xFF0E0E22).withValues(alpha: isHover ? 0.9 : 0.6)
-                : const Color(0xFF12122E).withValues(alpha: isHover ? 0.9 : 0.5),
-            strokeColor: isHover
-                ? const Color(0xFF00D4FF).withValues(alpha: 0.5)
-                : const Color(0xFF1E1E44).withValues(alpha: 0.3 + pulse),
-            strokeWidth: isHover ? 2.0 : 1.0,
-          ),
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            CustomPaint(
+              size: Size(w, h),
+              painter: _HexPainter(
+                fillColor: isDark
+                    ? const Color(0xFF0E0E22).withValues(alpha: isHover ? 0.9 : 0.6)
+                    : const Color(0xFF12122E).withValues(alpha: isHover ? 0.9 : 0.5),
+                strokeColor: isHover
+                    ? const Color(0xFF00D4FF).withValues(alpha: 0.5)
+                    : const Color(0xFF1E1E44).withValues(alpha: 0.3 + pulse),
+                strokeWidth: isHover ? 2.0 : 1.0,
+              ),
+            ),
+            if (isEmpty && !isHover)
+              WaspNestDecoration(size: min(w, h) * 0.86, seed: slot.key.hashCode),
+          ],
         );
       },
     );
@@ -314,6 +327,7 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
 
   Widget _buildHexAgent(HexAgent agent, double w, double h, bool dragging) {
     final child = GestureDetector(
+      onTapDown: dragging ? null : (details) => triggerSwarmBurst(context, details.globalPosition),
       onTap: dragging ? null : () => widget.onAgentOpen?.call(agent),
       onLongPressStart: dragging ? null : (details) {
         setState(() {

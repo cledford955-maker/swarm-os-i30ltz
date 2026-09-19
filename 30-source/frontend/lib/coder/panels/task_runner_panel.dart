@@ -102,7 +102,56 @@ class _TaskRunnerPanelState extends State<TaskRunnerPanel> with SingleTickerProv
     try {
       final parts = [task.command, ...task.args.trim().split(RegExp(r'\s+'))].where((s) => s.isNotEmpty).toList();
       final workdir = task.workdir ?? widget.projectPath;
-      _process = await Process.start(parts.first, parts.skip(1).toList(), workingDirectory: workdir);
+      final absWorkdir = workdir != null ? Directory(workdir).absolute.path : Directory.current.absolute.path;
+
+      // Real isolation via systemd-run --user (a transient SERVICE unit,
+      // not --scope), not the fabricated "sandboxed" telemetry LucyServer's
+      // /api/sandbox/execute reports (found 2026-09-19: that endpoint has
+      // no cgroup, no enforced memory limit — MemoryPeakMb is literally
+      // `limit / 2`, not measured — and it can't run here anyway: it
+      // executes a code *string* in a fixed scratch dir with no streaming
+      // output, incompatible with a long-running `flutter run` against the
+      // real project).
+      //
+      // --scope was tried first and rejected: scope units only support
+      // cgroup/resource properties (MemoryMax, CPUQuota) — the actual
+      // sandboxing directives (NoNewPrivileges, ProtectSystem, ReadWritePaths)
+      // are ExecContext properties that only apply to service units, and
+      // systemd-run rejects them on a scope ("Unknown assignment") — verified
+      // by actually running both forms, not assumed. --pipe connects the
+      // transient service's stdio back to this process (so streaming output
+      // still works) and --wait blocks until it exits with the real exit code.
+      //
+      // Deliberately does NOT lock down $HOME (ProtectHome) — flutter/npm/
+      // gradle all write build caches under $HOME (~/.pub-cache, ~/.npm,
+      // ~/.gradle) and every builtin task above depends on that working.
+      // What this DOES enforce for real, via the kernel/cgroups — verified
+      // by actually testing a write outside ReadWritePaths and confirming
+      // "Read-only file system", not just trusting the flags: the running
+      // task can't touch OS files outside $HOME (ProtectSystem=strict —
+      // which also makes the project dir read-only unless explicitly
+      // allowed back in, hence ReadWritePaths below), can't gain privileges
+      // (NoNewPrivileges), and can't runaway on memory/CPU. Network stays
+      // open — build tools need it (pub get, npm install, git).
+      _process = await Process.start(
+        'systemd-run',
+        [
+          '--user', '--pipe', '--wait', '--collect', '--quiet',
+          '-p', 'NoNewPrivileges=yes',
+          '-p', 'ProtectSystem=strict',
+          '-p', 'ProtectControlGroups=yes',
+          '-p', 'ProtectKernelTunables=yes',
+          '-p', 'ProtectKernelModules=yes',
+          '-p', 'ReadWritePaths=$absWorkdir',
+          '-p', 'MemoryMax=4096M',
+          '-p', 'CPUQuota=400%',
+          '-p', 'WorkingDirectory=$absWorkdir',
+          '--',
+          parts.first,
+          ...parts.skip(1),
+        ],
+        workingDirectory: absWorkdir,
+      );
 
       if (task.command == 'flutter' && task.args.contains('run')) {
         HotReloadService.instance.registerActiveFlutterProcess(_process!);

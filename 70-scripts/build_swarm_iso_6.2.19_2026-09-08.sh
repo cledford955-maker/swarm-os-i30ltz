@@ -481,23 +481,28 @@ if [ -n "$BUILT_ISO" ]; then
     echo -e "  ${GREEN}✓ local${NC} keeping 2 ISOs in $OUT_DIR"
 
     # ── 8b: Ventoy sync ──────────────────────────────────────────────────
-    VENTOY_DEV="/dev/sda1"
     VENTOY_MNT="/mnt/ventoy"
-    VENTOY_ISO_DIR="$VENTOY_MNT/SWARM-OS"
+    VENTOY_ISO_DIR="$VENTOY_MNT/ISO/SWARM_OS"
     VENTOY_MOUNTED_HERE=0
 
     if ! mountpoint -q "$VENTOY_MNT" 2>/dev/null; then
-        if [ -b "$VENTOY_DEV" ]; then
+        # Resolve Ventoy's data partition by filesystem label (Ventoy's default
+        # label is literally "Ventoy") instead of a hardcoded /dev/sdX path —
+        # sda/sdb swap identities between boots on this machine, so a fixed
+        # device path here risks silently mounting the wrong disk entirely.
+        VENTOY_DEV="$(blkid -L Ventoy 2>/dev/null || true)"
+        if [ -n "$VENTOY_DEV" ] && [ -b "$VENTOY_DEV" ]; then
             sudo mkdir -p "$VENTOY_MNT"
             if sudo mount "$VENTOY_DEV" "$VENTOY_MNT" 2>/dev/null; then
                 VENTOY_MOUNTED_HERE=1
-                echo -e "  ${GREEN}✓ mounted${NC} $VENTOY_DEV → $VENTOY_MNT"
+                echo -e "  ${GREEN}✓ mounted${NC} $VENTOY_DEV (label Ventoy) → $VENTOY_MNT"
             else
                 echo -e "  ${YELLOW}⚠ Could not mount Ventoy ($VENTOY_DEV) — skipping Ventoy sync.${NC}"
                 echo -e "    Mount it yourself: sudo mount $VENTOY_DEV $VENTOY_MNT"
             fi
         else
-            echo -e "  ${YELLOW}⚠ Ventoy drive ($VENTOY_DEV) not present — skipping Ventoy sync.${NC}"
+            echo -e "  ${YELLOW}⚠ No partition labeled 'Ventoy' found — skipping Ventoy sync.${NC}"
+            echo -e "    Plug in the Ventoy drive, or mount it yourself at $VENTOY_MNT first."
         fi
     fi
 

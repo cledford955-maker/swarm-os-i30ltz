@@ -3,7 +3,7 @@
 # devices sees recent work. Runs on a timer (swarm-lucy-sync.timer), no-ops
 # when there's nothing to commit.
 #   origin                  -> cledford955-maker/swarm-os-i30ltz (whole project)
-#   i30ltz-recovery         -> cledford955-maker/i30ltz-recovery (30-source/i30ltz-recovery/ subtree)
+#   i30ltz-recovery         -> cledford955-maker/i30ltz-recovery (30-source/i30ltz-recovery(seperate-related-project)/ subtree)
 #   i30ltz-swarm-companion  -> cledford955-maker/i30ltz-swarm-companion (30-source/android_companion/swarm_os-companion/ subtree)
 set -euo pipefail
 
@@ -37,5 +37,12 @@ fi
 
 # Subtree push is idempotent — a no-op push (nothing new under the prefix
 # since the last split) still exits 0, so this runs every tick unconditionally.
-git subtree --quiet push --prefix=30-source/i30ltz-recovery i30ltz-recovery main
+#
+# --prefix must exactly match the CURRENT tracked directory path. Found
+# 2026-09-19: the i30ltz-recovery dir was renamed to add a
+# "(seperate-related-project)" suffix (2026-09-18) and this --prefix was
+# never updated — with `set -euo pipefail` active, that push's failure
+# aborted the script before the companion subtree push below it ever ran,
+# so BOTH downstream repos have likely been missing updates since the rename.
+git subtree --quiet push --prefix="30-source/i30ltz-recovery(seperate-related-project)" i30ltz-recovery main
 git subtree --quiet push --prefix=30-source/android_companion/swarm_os-companion i30ltz-swarm-companion main

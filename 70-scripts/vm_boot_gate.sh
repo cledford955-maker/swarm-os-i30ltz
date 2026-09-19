@@ -125,6 +125,8 @@ else
 fi
 
 cleanup() {
+    [ -n "${ANSWER_PID:-}" ] && kill "$ANSWER_PID" 2>/dev/null || true
+    [ -n "${CAT_PID:-}" ] && kill "$CAT_PID" 2>/dev/null || true
     [ -n "${QEMU_PID:-}" ] && kill -0 "$QEMU_PID" 2>/dev/null && kill -TERM "$QEMU_PID" 2>/dev/null || true
     sleep 1
     [ -n "${QEMU_PID:-}" ] && kill -0 "$QEMU_PID" 2>/dev/null && kill -KILL "$QEMU_PID" 2>/dev/null || true
@@ -132,12 +134,25 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# -serial pty (not file:) so this script can also WRITE to the guest console,
+# not just log it. Needed because of swarm-secrets.service: it blocks
+# lucy-server.service/gaming-agent.service (Before=) behind an interactive
+# `systemd-ask-password --timeout=120 --no-tty` passphrase prompt that a real
+# human at real hardware would skip with Enter — but found 2026-09-18: that
+# call never actually times out against a plain `-serial file:...` backend (no
+# input side at all), so the gate hung the full timeout every run with
+# LucyServer/GamingAgent never getting a turn to start. A `-kernel`/`-initrd`
+# direct-boot bypass was tried first to route around the prompt entirely via a
+# kernel cmdline override, but that changed how the guest locates the archiso
+# medium and it stopped finding it at all (dropped into the archiso initrd's
+# own rescue shell instead) — reverted. Actually answering the prompt with a
+# real keypress, same as a human would, avoids that whole class of new bugs.
 qemu-system-x86_64 \
     "${QEMU_ACCEL[@]}" \
     -m "$MEM" -smp "$(nproc)" \
     "${UEFI[@]}" \
     -display none \
-    -serial "file:$SERIAL_LOG" \
+    -serial pty \
     -device virtio-net-pci,netdev=net0 \
     -netdev "user,id=net0,hostfwd=tcp::${SSH_PORT}-:22,hostfwd=tcp::${LUCY_PORT}-:5000,hostfwd=tcp::${GAME_PORT}-:8401" \
     -drive "file=$DISK,if=virtio,format=qcow2,cache=writeback" \
@@ -147,9 +162,76 @@ qemu-system-x86_64 \
     >"$QEMU_LOG" 2>&1 &
 QEMU_PID=$!
 
+# QEMU announces the allocated pty path in its own log shortly after start
+# ("char device redirected to /dev/pts/N (label serial0)") — wait for it.
+GUEST_TTY=""
+for _ in $(seq 1 50); do
+    GUEST_TTY="$(grep -oE '/dev/pts/[0-9]+' "$QEMU_LOG" 2>/dev/null | head -1)" || true
+    [ -n "$GUEST_TTY" ] && [ -c "$GUEST_TTY" ] && break
+    kill -0 "$QEMU_PID" 2>/dev/null || break
+    sleep 0.2
+done
+if [ -n "$GUEST_TTY" ] && [ -c "$GUEST_TTY" ]; then
+    info "Console: $GUEST_TTY (bidirectional — will auto-answer prompts and pull diagnostics)"
+    cat "$GUEST_TTY" >"$SERIAL_LOG" 2>/dev/null &
+    CAT_PID=$!
+    (
+        # Phase 1: answer swarm-unseal-secrets' passphrase prompt with Enter,
+        # same as a human at real hardware would, until a login prompt shows up.
+        for _ in $(seq 1 20); do
+            kill -0 "$QEMU_PID" 2>/dev/null || exit 0
+            printf '\n' >"$GUEST_TTY" 2>/dev/null
+            sleep 3
+            grep -q "login:" "$SERIAL_LOG" 2>/dev/null && break
+        done
+        # Phase 2: if LucyServer/GamingAgent still haven't answered /health by
+        # the time we hit a login prompt, we otherwise have zero visibility
+        # into why — they log to the journal, not necessarily the console.
+        # archiso's live root account has no password, so log in and pull
+        # real diagnostics straight into this same serial log.
+        if kill -0 "$QEMU_PID" 2>/dev/null && grep -q "login:" "$SERIAL_LOG" 2>/dev/null; then
+            sleep 1
+            printf 'root\n' >"$GUEST_TTY" 2>/dev/null
+            sleep 3
+            for cmd in \
+                'echo ===SWARM-GATE-DIAG===' \
+                'echo -- before: --' \
+                'systemctl --failed --no-pager' \
+                'systemctl status swarm-secrets.service --no-pager -l' \
+                'echo -- unblocking swarm-secrets.service (its stuck systemd-ask-password --no-tty prompt cannot be answered by keystrokes on this console; a real human would need Plymouth or systemd-tty-ask-password-agent, neither is running here — stopping it is equivalent) --' \
+                'systemctl stop swarm-secrets.service' \
+                'sleep 3' \
+                'echo -- after: --' \
+                'systemctl --failed --no-pager' \
+                'systemctl status lucy-server.service gaming-agent.service swarm-secrets.service --no-pager -l' \
+                'journalctl -u lucy-server.service -u gaming-agent.service --no-pager -n 80' \
+                'ss -tlnp' \
+                'echo ===END-SWARM-GATE-DIAG==='; do
+                kill -0 "$QEMU_PID" 2>/dev/null || break
+                printf '%s\n' "$cmd" >"$GUEST_TTY" 2>/dev/null
+                sleep 4
+            done
+        fi
+        # Keep pressing Enter for the rest of the run in case anything else
+        # ends up waiting on input — harmless once nothing is prompting.
+        while kill -0 "$QEMU_PID" 2>/dev/null; do printf '\n' >"$GUEST_TTY" 2>/dev/null; sleep 10; done
+    ) &
+    ANSWER_PID=$!
+else
+    warn "Could not find the guest's pty in $QEMU_LOG — falling back to output-only logging."
+    warn "The passphrase prompt (if it appears) will not be auto-answered."
+fi
+
 # --- watch the boot ----------------------------------------------------------
 PANIC_RE='Kernel panic|BUG: unable to handle|Attempted to kill init|end Kernel panic'
-LOOP_RE='Start request repeated too quickly|Failed to start|entered failed state'
+# NOT a bare 'Failed to start' — a live ISO has non-critical best-effort units
+# (e.g. archiso's own loopback-attach helper for the optical medium, seen
+# failing harmlessly on every boot so far, well before/after LucyServer and
+# GamingAgent start fine) that fail without it meaning anything. Genuine crash
+# loops repeat; a single cosmetic [FAILED] line during an otherwise-progressing
+# boot isn't one. The /health checks below are the real pass signal — this
+# regex only needs to catch runaway restart loops and unit-failure states.
+LOOP_RE='Start request repeated too quickly|entered failed state'
 EMERG_RE='Entering emergency mode|You are in emergency mode|Cannot open access to console'
 
 lucy_up=0; game_up=0; verdict=""

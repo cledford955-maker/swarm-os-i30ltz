@@ -25,6 +25,7 @@ import 'pages/backend_page.dart';
 import 'pages/nvidia_page.dart';
 import 'pages/telemetry_page.dart';
 import 'pages/vm_manager_page.dart';
+import 'pages/install_swarm_os_page.dart';
 import 'pages/developer_ecosystem_page.dart';
 import 'pages/app_store_dashboard_page.dart';
 import 'pages/cloud_workspaces_page.dart';
@@ -91,6 +92,7 @@ final goRouter = GoRouter(
         GoRoute(path: '/memory', builder: (_, __) => const MemoryScreen()),
         GoRoute(path: '/agents', builder: (_, __) => const AgentsScreen()),
         GoRoute(path: '/vms', builder: (_, __) => const VmManagerPage()),
+        GoRoute(path: '/install', builder: (_, __) => const InstallSwarmOsPage()),
         GoRoute(path: '/ecosystem', builder: (_, __) => const DeveloperEcosystemPage()),
         GoRoute(path: '/appstore-dashboard', builder: (_, __) => const AppStoreDashboardPage()),
         GoRoute(path: '/cloud-workspaces', builder: (_, __) => const CloudWorkspacesPage()),

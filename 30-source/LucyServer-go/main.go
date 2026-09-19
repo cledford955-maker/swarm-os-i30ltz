@@ -62,6 +62,7 @@ func main() {
 	sysH := handlers.NewSystemHandler()
 	fsH := handlers.NewFilesystemHandler()
 	chatH := handlers.NewChatHandler()
+	installH := handlers.NewInstallHandler()
 
 	memAPI := openMemory()
 
@@ -85,6 +86,12 @@ func main() {
 		// the .NET original (both just call RunCommandAsync) — not a typo.
 		api.Post("/terminal/run", sysH.RunCommand)
 		api.Get("/terminal/ws", sysH.TerminalWebSocket)
+
+		// Graphical installer — the Flutter "Install SWARM OS" flow. Disk
+		// listing is a plain GET; the actual install runs over a WebSocket so
+		// the UI gets live output the same way the terminal does.
+		api.Get("/install/disks", installH.Disks)
+		api.Get("/install/ws", installH.WebSocket)
 		api.Get("/system/processes", sysH.Processes)
 		api.Post("/system/process/kill", sysH.KillProcess)
 		api.Get("/system/stats", sysH.Stats)

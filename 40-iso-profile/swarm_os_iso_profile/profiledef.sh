@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-iso_name="swarm-os-v6.2.57-88154714"
+iso_name="swarm-os-v6.2.63-1e9963b1"
 iso_label="SWARM_OS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="SWARM OS <https://github.com/swarm>"
-iso_application="SWARM OS · Lucille v6.2.57"
+iso_application="SWARM OS · Lucille v6.2.63"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="swarm"
 buildmodes=('iso')
+# uefi.grub (not uefi.systemd-boot) as of 2026-09-19 — systemd-boot has no
+# theming beyond a single background image (no custom fonts/colors, no
+# per-entry icons, no progress-bar styling), which made the swarm_os GRUB
+# theme (boot/grub/themes/swarm_os/) invisible on the actual UEFI boot path
+# real hardware and this project's QEMU/OVMF boot-gate testing both use.
+# GRUB reuses the SAME grub/grub.cfg either way (mkarchiso's uefi.grub and
+# bios.syslinux bootmodes share _make_common_bootmode_grub_cfg) — the same
+# console=/systemd.unit=/apparmor fixes already validated for the live boot
+# this session apply here too (both entries in grub.cfg were carrying the
+# same apparmor=1 that caused the LucyServer/GamingAgent Permission-denied
+# bug on systemd-boot; fixed here in the same pass as this bootmode switch).
 bootmodes=('bios.syslinux'
-           'uefi.systemd-boot')
+           'uefi.grub')
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
 airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')
@@ -45,6 +56,12 @@ file_permissions=(
   # (found 2026-09-14). This grants wheel sudo from boot; the installer
   # still re-applies/hardens the same rule on the target system.
   ["/etc/sudoers.d/10-wheel"]="0:0:440"
+  # Scoped NOPASSWD grant so LucyServer (User=swarm) can drive
+  # install_swarm_os.sh non-interactively from the graphical installer —
+  # see install_swarm_os.sh's --non-interactive flag and
+  # services/install.go. Same 0:0:440 requirement as 10-wheel: sudo
+  # silently ignores a sudoers.d file that isn't exactly root-owned, 0440.
+  ["/etc/sudoers.d/20-swarm-installer"]="0:0:440"
   ["/etc/containers"]="0:0:755"
   ["/etc/containers/registries.conf"]="0:0:644"
   ["/etc/containers/storage.conf"]="0:0:644"

@@ -9,7 +9,12 @@ set -euo pipefail
 # ─────────────────────────────────────────────────────────────────────────────
 
 LUCY="/mnt/Lucy"
-TRACKER="$LUCY/I30LTZ_RECOVERY_BUILD_TRACKER.md"
+# The tracker used to live at $LUCY root; moved under 30-source at some point
+# and the root copy was deleted (found 2026-09-18, sitting in .Trash-1000
+# since 2026-09-15) — this pointer was never updated to follow it. Running
+# the old path would have created a near-empty file there instead of
+# updating the real one (the splice below needs an existing file to work).
+TRACKER="$LUCY/30-source/i30ltz-recovery(seperate-related-project)/I30LTZ_RECOVERY_BUILD_TRACKER.md"
 TS=$(date '+%Y-%m-%d %H:%M')
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Updating I30LTZ Recovery build tracker..."
@@ -43,8 +48,15 @@ mtime() {
 # ── Gather versions ───────────────────────────────────────────────────────
 SWARM_VER=$(cat "$LUCY/VERSION" 2>/dev/null || echo "—")
 
-I30LTZ_BIN="$LUCY/30-source/i30ltz-recovery/target/release/i30ltz-recovery"
-I30LTZ_VER=$(grep '^version' "$LUCY/30-source/i30ltz-recovery/Cargo.toml" 2>/dev/null | head -1 | grep -oP '["\d][^"]+' | tr -d '"' || echo "—")
+# Project dir was renamed to add the "(seperate-related-project)" suffix at
+# some point (marking the 2026-09-18 decision to grow this into its own OS,
+# see that dir's own tracker doc) — several references to the old plain
+# "i30ltz-recovery" path never got updated; this one (found 2026-09-19 when
+# the Component Registry started showing all dashes for this row) is fixed
+# here, the doc's remaining stale copies fixed alongside it in the same pass.
+I30LTZ_DIR="$LUCY/30-source/i30ltz-recovery(seperate-related-project)"
+I30LTZ_BIN="$I30LTZ_DIR/target/release/i30ltz-recovery"
+I30LTZ_VER=$(grep '^version' "$I30LTZ_DIR/Cargo.toml" 2>/dev/null | head -1 | grep -oP '["\d][^"]+' | tr -d '"' || echo "—")
 
 SLINT_BIN="$LUCY/30-source/swarm-slint/target/release/swarm-slint"
 SLINT_VER=$(grep '^version' "$LUCY/30-source/swarm-slint/Cargo.toml" 2>/dev/null | head -1 | grep -oP '["\d][^"]+' | tr -d '"' || echo "—")
@@ -93,7 +105,7 @@ _Last updated: ${TS}_
 | \`sync_lucille_ai.sh\` | $(stat -c '%y' "$LUCY/70-scripts/sync_lucille_ai.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | rsync --checksum, Lucille-AI + I30LTZ-Recovery |
 | \`update_build_tracker.sh\` | $(stat -c '%y' "$LUCY/70-scripts/update_build_tracker.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | Regenerates this file |
 | \`unlock_slick.sh\` | $(stat -c '%y' "$LUCY/70-scripts/unlock_slick.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | Opens LUKS slick partition |
-| \`install_swarm_os.sh\` | $(stat -c '%y' "$LUCY/30-source/install_swarm_os.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | Live USB → NVMe installer |
+| \`install_swarm_os.sh\` | $(stat -c '%y' "$LUCY/install_swarm_os.sh" 2>/dev/null | cut -d' ' -f1 || echo "—") | Live USB → NVMe installer |
 REGISTRY
 )
 

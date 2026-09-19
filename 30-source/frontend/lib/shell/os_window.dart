@@ -1,8 +1,10 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'window_manager.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
+import '../widgets/swarm_motifs.dart';
 
 // ─── Resize handle dimensions ───
 const double _kCorner = 16.0; // corner grip square
@@ -149,60 +151,184 @@ class _TitleBar extends ConsumerWidget {
         child: Container(
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: SwarmColors.bgElevated,
-            border: const Border(bottom: BorderSide(color: SwarmColors.border)),
+            border: Border(bottom: BorderSide(color: SwarmColors.border)),
           ),
-          child: Row(children: [
-            // Window title + timestamp
-            Expanded(child: Row(children: [
-              Flexible(
-                child: Text(
-                  window.title,
-                  style: SwarmTextStyles.label.copyWith(
-                    color: window.isFocused
-                        ? SwarmColors.textPrimary
-                        : SwarmColors.textMuted,
+          child: Stack(
+            children: [
+              // Faint honeycomb texture etched into the bar — the swarm's
+              // presence on every window frame, not just empty decoration.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(painter: _TitleBarHoneycombPainter()),
+                ),
+              ),
+              Row(children: [
+                // A small sentinel wasp watching this window — ticks faster
+                // and brighter while focused, as if the swarm is alert to
+                // whichever window currently has your attention.
+                _WaspSentinel(active: window.isFocused),
+                const SizedBox(width: 8),
+
+                // Window title + timestamp
+                Expanded(child: Row(children: [
+                  Flexible(
+                    child: Text(
+                      window.title,
+                      style: SwarmTextStyles.label.copyWith(
+                        color: window.isFocused
+                            ? SwarmColors.textPrimary
+                            : SwarmColors.textMuted,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _formatCreatedAt(window.createdAt),
-                style: SwarmTextStyles.labelSmall.copyWith(
-                  fontSize: 9,
-                  color: SwarmColors.textMuted.withValues(alpha: 0.45),
-                  fontFamily: 'JetBrains Mono',
-                ),
-              ),
-            ])),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatCreatedAt(window.createdAt),
+                    style: SwarmTextStyles.labelSmall.copyWith(
+                      fontSize: 9,
+                      color: SwarmColors.textMuted.withValues(alpha: 0.45),
+                      fontFamily: 'JetBrains Mono',
+                    ),
+                  ),
+                ])),
 
-            // Maximize / restore
-            _TitleButton(
-              icon: window.isMaximized
-                  ? Icons.close_fullscreen
-                  : Icons.open_in_full,
-              cursor: SystemMouseCursors.click,
-              onTap: () =>
-                  ref.read(windowProvider.notifier).toggleMaximize(window.id),
-            ),
-            const SizedBox(width: 8),
+                // Maximize / restore
+                _TitleButton(
+                  icon: window.isMaximized
+                      ? Icons.close_fullscreen
+                      : Icons.open_in_full,
+                  cursor: SystemMouseCursors.click,
+                  onTap: () =>
+                      ref.read(windowProvider.notifier).toggleMaximize(window.id),
+                ),
+                const SizedBox(width: 8),
 
-            // Close
-            _TitleButton(
-              icon: Icons.close,
-              cursor: SystemMouseCursors.click,
-              hoverColor: const Color(0xFFFF5F57),
-              onTap: () =>
-                  ref.read(windowProvider.notifier).closeWindow(window.id),
-            ),
-          ]),
+                // Close
+                _TitleButton(
+                  icon: Icons.close,
+                  cursor: SystemMouseCursors.click,
+                  hoverColor: const Color(0xFFFF5F57),
+                  onTap: () =>
+                      ref.read(windowProvider.notifier).closeWindow(window.id),
+                ),
+              ]),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Title bar swarm chrome — honeycomb texture + sentinel wasp
+// ─────────────────────────────────────────────────────────────
+
+class _TitleBarHoneycombPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.6
+      ..color = SwarmColors.accent.withValues(alpha: 0.06);
+    const cell = 14.0;
+    const hexH = cell * 1.1547;
+    for (double row = -1; row * hexH * 0.75 < size.height + hexH; row++) {
+      for (double col = -1; col * cell < size.width + cell; col++) {
+        final offsetX = (row.toInt().isOdd ? cell * 0.5 : 0.0);
+        final c = Offset(col * cell + offsetX, row * hexH * 0.75);
+        final path = Path();
+        for (var i = 0; i < 6; i++) {
+          final a = pi / 6 + i * pi / 3;
+          final p = c + Offset(cos(a), sin(a)) * (cell * 0.46);
+          if (i == 0) {
+            path.moveTo(p.dx, p.dy);
+          } else {
+            path.lineTo(p.dx, p.dy);
+          }
+        }
+        path.close();
+        canvas.drawPath(path, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TitleBarHoneycombPainter old) => false;
+}
+
+class _WaspSentinel extends StatefulWidget {
+  final bool active;
+  const _WaspSentinel({required this.active});
+
+  @override
+  State<_WaspSentinel> createState() => _WaspSentinelState();
+}
+
+class _WaspSentinelState extends State<_WaspSentinel> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _WaspSentinel old) {
+    super.didUpdateWidget(old);
+    // Alert and quick while focused; slow to almost-idle otherwise — the
+    // swarm still watches an unfocused window, just less urgently.
+    _ctrl.duration = Duration(milliseconds: widget.active ? 1400 : 4200);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 16,
+      height: 16,
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, __) => CustomPaint(
+          painter: _SentinelPainter(phase: _ctrl.value, dim: !widget.active),
+        ),
+      ),
+    );
+  }
+}
+
+class _SentinelPainter extends CustomPainter {
+  final double phase;
+  final bool dim;
+  _SentinelPainter({required this.phase, required this.dim});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    if (dim) {
+      canvas.saveLayer(
+        Rect.fromLTWH(-size.width, -size.height, size.width * 2, size.height * 2),
+        Paint()..color = const Color(0x82FFFFFF),
+      );
+    }
+    paintMiniWasp(canvas, size.shortestSide * 0.85, phase);
+    if (dim) canvas.restore();
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _SentinelPainter old) => old.phase != phase || old.dim != dim;
 }
 
 class _TitleButton extends StatefulWidget {

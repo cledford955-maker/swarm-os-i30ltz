@@ -1,6 +1,8 @@
 # =============================================================================
 # SWARM OS · GRUB Theme (SWARM-OS · GRUB v6+)
-# High-DPI, Controller-Friendly, Nvidia Green (#76B900) UI
+# High-DPI, Controller-Friendly, Swarm-Alert Amber (#FFB300) UI
+# NVIDIA green (#76B900) stays on the selection-box artwork (select_*.png)
+# as the brand accent; all live theme.txt text moved to amber, see below.
 # =============================================================================
 
 # Desktop Background
@@ -15,6 +17,21 @@ terminal-width: "100%"
 terminal-height: "100%"
 terminal-border: "0"
 
+# All text on this theme is the same size/weight and the same color —
+# "20pt bold" everywhere per design direction (2026-09-18) — rather than the
+# previous mix of 14/16/18/20pt. One exception stays functional, not
+# decorative: the selected menu item is still visually distinct (inverted/
+# brighter) so you can tell what you're about to boot.
+# Color moved off the pure NVIDIA green (#76B900, still used as an accent on
+# borders/selection) to a harder amber/warning tone — reads more like a
+# hazard/swarm-alert palette than a stock "green terminal" theme.
+#
+# Swarm-attack imagery beyond what's below (big 3D per-entry icons, a
+# wasp-tiled progress bar fill) needs real image assets GRUB can composite —
+# it can't render vector/procedural art or animate. See the icon-generation
+# prompt for those; drop the PNGs into ./icons/ and ./ once made and this
+# theme will pick them up (icon_width/height below already sized for them).
+
 # Header Title Label
 + label {
     top = 8%
@@ -22,8 +39,8 @@ terminal-border: "0"
     width = 100%
     align = "center"
     text = "SWARM-OS · GRUB v6+"
-    color = "#76B900"
-    font = "DejaVu Sans Bold 28"
+    color = "#FFB300"
+    font = "DejaVu Sans Bold 20"
 }
 
 # Header Subtitle Label
@@ -33,60 +50,72 @@ terminal-border: "0"
     width = 100%
     align = "center"
     text = "Autonomous Kernel Environment · High Performance Architecture"
-    color = "#99CC33"
-    font = "DejaVu Sans Bold 16"
+    color = "#FFB300"
+    font = "DejaVu Sans Bold 20"
 }
 
 # Central Controller-Friendly Boot Menu Box
 + boot_menu {
-    left = 22%
-    top = 22%
-    width = 56%
-    height = 54%
-    
-    # Large 18-20pt Typography
-    item_font = "DejaVu Sans Bold 18"
+    left = 18%
+    top = 20%
+    width = 64%
+    height = 58%
+
+    # Unified 20pt Bold Typography — selected item stays bold/white so it's
+    # still readable as "this is the one about to boot", everything else
+    # matches size/weight exactly.
+    item_font = "DejaVu Sans Bold 20"
     selected_item_font = "DejaVu Sans Bold 20"
-    
-    # Colors (Nvidia Green & High Contrast White)
-    item_color = "#76B900"
+
+    item_color = "#FFB300"
     selected_item_color = "#FFFFFF"
-    
-    # Big Icons & High Spacing for Gamepad/Controller Visibility
-    icon_width = 48
-    icon_height = 48
-    item_height = 56
-    item_padding = 12
-    item_spacing = 10
-    
+
+    # Big icons — matches the hex desktop's icon scale (128px) instead of
+    # GRUB's cramped 48px default. Needs real per-entry artwork; see the
+    # icon-generation prompt. Row height/spacing scaled up to match.
+    icon_width = 128
+    icon_height = 128
+    item_height = 148
+    item_padding = 16
+    item_spacing = 14
+
     # 9-Slice Selection Highlight Box
     selected_item_pixmap_style = "select_*.png"
     menu_pixmap_style = ""
 }
 
 # Countdown Timer / Timeout Progress Bar
+# GRUB can't animate this bar, but per `info grub` (Theme file format ->
+# progress_bar) it DOES support a 9-slice styled-box fill via
+# `highlight_style` instead of a flat fg_color — a strip PNG of small wasp
+# silhouettes there reads as "the swarm filling in" even though nothing
+# moves frame to frame. fg_color/bg_color/border_color below are left in
+# place as the plain solid-color rendering GRUB falls back to until
+# highlight_style is actually set (uncomment once swarm_fill_*.png exists —
+# see the icon-generation prompt for that asset).
 + progress_bar {
     id = "__timeout__"
-    left = 28%
-    top = 80%
-    width = 44%
-    height = 14
+    left = 22%
+    top = 82%
+    width = 56%
+    height = 20
     show_text = true
-    font = "DejaVu Sans Bold 14"
-    text_color = "#76B900"
+    font = "DejaVu Sans Bold 20"
+    text_color = "#FFB300"
     align = "center"
     bg_color = "#101820"
-    fg_color = "#76B900"
-    border_color = "#76B900"
+    fg_color = "#FFB300"
+    # highlight_style = "swarm_fill_*.png"
+    border_color = "#FFB300"
 }
 
 # Footer Navigation Hints (Controller & Keyboard Friendly)
 + label {
-    top = 88%
+    top = 90%
     left = 0%
     width = 100%
     align = "center"
     text = "[ ▲ / ▼ ] Navigate   •   [ ✛ D-PAD ] Controller   •   [ ENTER / Ⓐ ] Boot   •   [ E ] Edit Entry   •   [ C ] Console"
-    color = "#76B900"
-    font = "DejaVu Sans Bold 16"
+    color = "#FFB300"
+    font = "DejaVu Sans Bold 20"
 }
