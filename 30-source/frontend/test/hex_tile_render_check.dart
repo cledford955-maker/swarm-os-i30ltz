@@ -81,9 +81,32 @@ void main() {
       ),
     );
     // Not pumpAndSettle: HexGrid's pulse controller repeats forever, so
-    // "settle" never arrives. A few fixed frames is enough for images/layout.
+    // "settle" never arrives. Explicitly wait for each real JPEG to finish
+    // decoding (large files, genuinely async) rather than guessing a frame
+    // count — that's what produced blank tiles on the first attempt.
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    for (final path in [
+      'assets/wallpapers/lucille_swarm_core.jpg',
+      'assets/wallpapers/forge_ide_core.jpg',
+      'assets/wallpapers/this_is_now_gaming.jpg',
+    ]) {
+      await tester.runAsync(() async {
+        final provider = AssetImage(path);
+        final stream = provider.resolve(ImageConfiguration.empty);
+        final completer = Completer<void>();
+        late ImageStreamListener listener;
+        listener = ImageStreamListener((info, _) {
+          stream.removeListener(listener);
+          completer.complete();
+        }, onError: (err, st) {
+          stream.removeListener(listener);
+          completer.completeError(err);
+        });
+        stream.addListener(listener);
+        await completer.future;
+      });
+    }
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
     final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(const Key('capture')));
