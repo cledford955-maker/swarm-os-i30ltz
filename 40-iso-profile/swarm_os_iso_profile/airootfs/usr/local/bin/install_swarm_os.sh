@@ -68,7 +68,7 @@ if [ -z "$DISK" ]; then
       DISK="$NAME"
       break
     fi
-  done < <(lsblk -dpno NAME,TYPE,RM,SIZE --bytes | awk '$2=="disk" && $3=="0" {print $4, $1}' | sort -rn)
+  done < <(lsblk -dpno NAME,TYPE,RM,SIZE --bytes | awk '$2=="disk" && $3=="0" && $1 !~ /zram/ {print $4, $1}' | sort -rn)
   if [ -z "$DISK" ]; then
     echo -e "${RED}ERROR: Could not auto-detect a target disk.${NC}"
     echo "Pass one explicitly:  sudo $0 --disk /dev/nvme0n1"
