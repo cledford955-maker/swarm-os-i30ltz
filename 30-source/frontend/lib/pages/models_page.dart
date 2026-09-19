@@ -694,10 +694,15 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: SwarmColors.border),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'No models found matching your search and filter criteria.',
-                    style: TextStyle(color: SwarmColors.textMuted),
+                    (_selectedFilter == 'LIVE CODING' && liveCatalog.loading) ||
+                            (_selectedFilter == 'LIVE CATEGORY' && _loadingLiveCategory)
+                        ? 'Fetching live results from OpenRouter…'
+                        : (_selectedFilter == 'LIVE CODING' || _selectedFilter == 'NVIDIA NIM') && !liveCatalog.hasData
+                            ? 'Live catalog hasn\'t loaded yet — check your connection and try Refresh above.'
+                            : 'No models found matching your search and filter criteria.',
+                    style: const TextStyle(color: SwarmColors.textMuted),
                   ),
                 ),
               )

@@ -1,13 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../models/agent.dart';
 import '../models/swarm.dart';
+import '../services/live_model_catalog_service.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../widgets/extensions_dialog.dart';
 import '../agent/agent_chat.dart';
+
+/// The real price for a model right now, and whether it still exists on
+/// OpenRouter at all — cross-checked against the live catalog rather than
+/// trusting the static SwarmModel.pricePer1M, which has been found stale.
+/// Local/Ollama models aren't OpenRouter-checkable and are never flagged.
+({String price, bool isDead}) liveModelStatus(SwarmModel m, LiveModelCatalogService liveCatalog) {
+  if (m.provider == ProviderId.ollama) {
+    return (price: m.pricePer1M ?? 'FREE', isDead: false);
+  }
+  if (!liveCatalog.hasData) {
+    return (price: m.pricePer1M ?? 'FREE', isDead: false);
+  }
+  final live = liveCatalog.byId(m.id);
+  if (live != null) return (price: live.pricePer1MDisplay, isDead: false);
+  return (price: m.pricePer1M ?? 'FREE', isDead: true);
+}
 
 class SwarmPage extends ConsumerStatefulWidget {
   const SwarmPage({super.key});
@@ -28,6 +46,9 @@ class _SwarmPageState extends ConsumerState<SwarmPage> {
   void initState() {
     super.initState();
     _refreshCustomSwarms();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      p.Provider.of<LiveModelCatalogService>(context, listen: false).ensureLoaded();
+    });
   }
 
   Future<void> _refreshCustomSwarms() async {
@@ -706,6 +727,8 @@ class _SwarmPageState extends ConsumerState<SwarmPage> {
   }
 
   Widget _buildAgentRoleCard(SwarmModel model, {required double cardWidth}) {
+    final liveCatalog = p.Provider.of<LiveModelCatalogService>(context);
+    final status = liveModelStatus(model, liveCatalog);
     Color accent = SwarmColors.accent;
     if (model.role.contains('Leader')) accent = SwarmColors.accent;
     if (model.role.contains('Systems')) accent = SwarmColors.agentPurple;
@@ -799,26 +822,40 @@ class _SwarmPageState extends ConsumerState<SwarmPage> {
               Row(
                 children: [
                   Text(
-                    model.pricePer1M ?? 'FREE',
+                    status.price,
                     style: TextStyle(
-                      color: model.pricePer1M == 'FREE' ? SwarmColors.success : SwarmColors.accentSky,
+                      color: status.price == 'FREE' ? SwarmColors.success : SwarmColors.accentSky,
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: SwarmColors.bgSurface,
-                  borderRadius: BorderRadius.circular(4),
+              if (status.isDead)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: SwarmColors.error.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: SwarmColors.error.withValues(alpha: 0.6)),
+                  ),
+                  child: const Text(
+                    '⚠ NOT ON OPENROUTER',
+                    style: TextStyle(color: SwarmColors.error, fontSize: 8, fontWeight: FontWeight.bold),
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: SwarmColors.bgSurface,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    model.provider.name.toUpperCase(),
+                    style: const TextStyle(color: SwarmColors.textMuted, fontSize: 8.5),
+                  ),
                 ),
-                child: Text(
-                  model.provider.name.toUpperCase(),
-                  style: const TextStyle(color: SwarmColors.textMuted, fontSize: 8.5),
-                ),
-              ),
             ],
           ),
         ],
@@ -956,14 +993,19 @@ class _SwarmPageState extends ConsumerState<SwarmPage> {
                               ),
                               child: const Text('SALE', style: TextStyle(color: SwarmColors.success, fontSize: 8, fontWeight: FontWeight.bold)),
                             ),
-                          Text(
-                            m.pricePer1M ?? 'FREE',
-                            style: TextStyle(
-                              color: m.pricePer1M == 'FREE' ? SwarmColors.success : SwarmColors.accentSky,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          Builder(builder: (ctx) {
+                            final st = liveModelStatus(m, p.Provider.of<LiveModelCatalogService>(ctx));
+                            return Text(
+                              st.isDead ? '⚠ DEAD' : st.price,
+                              style: TextStyle(
+                                color: st.isDead
+                                    ? SwarmColors.error
+                                    : (st.price == 'FREE' ? SwarmColors.success : SwarmColors.accentSky),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          }),
                         ],
                       ),
                     ],
@@ -1293,42 +1335,60 @@ class _CreateCustomSwarmDialogState extends State<_CreateCustomSwarmDialog> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: current.id,
-                  isExpanded: true,
-                  dropdownColor: SwarmColors.bgElevated,
-                  items: allModels.map((m) => DropdownMenuItem(
-                    value: m.id,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${m.name} (${m.provider.name.toUpperCase()})',
-                            style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+              child: Builder(builder: (ctx) {
+                final liveCatalog = p.Provider.of<LiveModelCatalogService>(ctx);
+                // Custom-swarm building is exactly where "no dead models"
+                // matters most — don't let a user pick one that will fail
+                // when they actually try to chat with it. Live-dead entries
+                // are dropped from the picker entirely, except `current`
+                // itself: a previously-saved swarm might already reference
+                // one, and DropdownButton crashes if its value isn't among
+                // its items — so it stays selectable (visibly flagged) only
+                // because it's already selected, never offered fresh.
+                final pickable = allModels.where((m) {
+                  if (m.id == current.id) return true;
+                  return !liveModelStatus(m, liveCatalog).isDead;
+                }).toList();
+                return DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: current.id,
+                    isExpanded: true,
+                    dropdownColor: SwarmColors.bgElevated,
+                    items: pickable.map((m) {
+                      final st = liveModelStatus(m, liveCatalog);
+                      return DropdownMenuItem(
+                        value: m.id,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${st.isDead ? '⚠ ' : ''}${m.name} (${m.provider.name.toUpperCase()})',
+                                style: TextStyle(color: st.isDead ? SwarmColors.error : SwarmColors.textPrimary, fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              st.isDead ? 'NOT ON OPENROUTER' : st.price,
+                              style: TextStyle(
+                                color: st.isDead ? SwarmColors.error : (st.price == 'FREE' ? SwarmColors.success : SwarmColors.accentSky),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          m.pricePer1M ?? 'FREE',
-                          style: TextStyle(
-                            color: m.pricePer1M == 'FREE' ? SwarmColors.success : SwarmColors.accentSky,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      final selected = allModels.firstWhere((m) => m.id == val);
-                      onSelected(selected);
-                    }
-                  },
-                ),
-              ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        final selected = allModels.firstWhere((m) => m.id == val);
+                        onSelected(selected);
+                      }
+                    },
+                  ),
+                );
+              }),
             ),
           ],
         ),
