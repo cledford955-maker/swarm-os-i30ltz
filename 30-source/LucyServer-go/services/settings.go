@@ -81,29 +81,26 @@ func VerifyLoginPassword(password string) (bool, string) {
 	return true, "Password verified"
 }
 
-// SetSudoPassword validates the password with sudo and saves it.
-// An empty password clears the stored sudo password.
+// SetSudoPassword validates that the password actually works with sudo. It
+// does NOT persist it — the earlier version wrote it to sudo_password.txt in
+// plaintext (0600), but nothing in this codebase or the .NET original it was
+// ported from ever read that file back. A plaintext root-capable password
+// sitting on disk with no consumer is pure liability with no offsetting
+// benefit, especially given this server has already had one RCE-class bug
+// (the loopback+origin gap fixed 2026-09-12) — removed 2026-09-19 rather than
+// hardened, since there is nothing to harden it *for*. If a real consumer
+// (e.g. first-boot auto-elevation) is built later, it should prompt fresh
+// each time rather than resurrect long-lived plaintext storage.
 func SetSudoPassword(password string) (bool, string) {
-	path := filepath.Join(lucyStateDir(), "sudo_password.txt")
 	if password == "" {
-		os.Remove(path)
-		return true, "Sudo password cleared successfully"
+		return true, "Sudo password check cleared"
 	}
-
-	// Validate that the password actually works with sudo.
 	cmd := exec.Command("sudo", "-S", "-k", "true")
 	cmd.Stdin = strings.NewReader(password + "\n")
 	if err := cmd.Run(); err != nil {
 		return false, "Invalid sudo password: authentication failed"
 	}
-
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return false, "Failed to create directory: " + err.Error()
-	}
-	if err := os.WriteFile(path, []byte(password), 0o600); err != nil {
-		return false, "Failed to save sudo password: " + err.Error()
-	}
-	return true, "Sudo password updated successfully"
+	return true, "Sudo password verified"
 }
 
 // envFilePath returns the path to the environment file.
