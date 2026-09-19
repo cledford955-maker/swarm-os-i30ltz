@@ -40,8 +40,7 @@
 > This is the single source of truth for what exists, what's broken, and what's next.
 > Humans: same rule. If you think of something, add it to IDEAS below.
 
-> **Master OS tracker — 2026-09-19:** Started the first build-order item, systemd hardware watchdog. Added the `system.conf.d/50-watchdog.conf` drop-in to the ISO profile with runtime, reboot, and kexec watchdog timeouts; ISO boot verification remains pending. Landlock sandboxing was then verified as already implemented and wired into `lucille-core` child spawning; its build and test suite pass. Gamescope FSR remains blocked because the referenced `/usr/bin/swarm-session` launcher is absent from the source profile.
-> Checkpoint journaling was audited next: the Git checkpoint/rollback library exists and builds, but `SafetyGate::checkpoint_and_apply()` is not called by the production router, so this tracker item remains partial.
+> **Master OS tracker — 2026-09-19:** Rebuilt the master implementation checklist (`SWARM_OS_IMPLEMENTATION_CHECKLIST.md`). Completed work moved to a **Landed** section so nothing is lost; open work re-evaluated with `[~]` partial, `[!]` blocked, and `[ ]` not-started markers. Gamescope FSR remains blocked because `/usr/bin/swarm-session` is absent. Checkpoint journaling remains partial (library built, no production call site). New **NVIDIA Blueprints & Skills** section added covering NIM skill registry, agent skill assignment, skill router, voice STT/TTS, embedding/rerank RAG, image generation, cuOpt optimization, Cosmos/Omniverse reasoning, NIM health dashboard, and ISO runtime staging.
 
 ---
 

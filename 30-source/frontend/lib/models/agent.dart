@@ -22,6 +22,11 @@ class Agent {
   final Color accent;
   final String defaultSwarmId;
   final List<String> tags;
+
+  /// Declarative NVIDIA NIM / skill capabilities this agent can invoke.
+  /// See [NvidiaNimSkillRegistry] in `lib/skills/nvidia_nim_skill.dart`.
+  final List<String> skillIds;
+
   final ({String label, String value}) metric;
   final String href;
   final String pricePer1M;
@@ -43,6 +48,7 @@ class Agent {
     required this.accent,
     required this.defaultSwarmId,
     required this.tags,
+    this.skillIds = const [],
     required this.metric,
     required this.href,
     required this.pricePer1M,
@@ -71,6 +77,7 @@ final List<Agent> agents = [
     accent: SwarmColors.lucilleCore,
     defaultSwarmId: 'default-coding-swarm',
     tags: ['system', 'orchestrator'],
+    skillIds: ['nvidia.nemotron.eval', 'nvidia.embeddings', 'nvidia.rerank'],
     metric: (label: 'Tasks', value: 'Active'),
     href: '/agent/lucille',
     pricePer1M: 'FREE / Local',
@@ -118,6 +125,7 @@ CRITICAL FILE SYSTEM & DIRECTORY BOUNDARY RULES:
     accent: SwarmColors.accent,
     defaultSwarmId: 'default-coding-swarm',
     tags: ['system', 'coder', 'lucille-core', 'forge'],
+    skillIds: ['nvidia.embeddings', 'nvidia.rerank', 'nvidia.image'],
     metric: (label: 'Tasks', value: 'Active'),
     href: '/forge',
     pricePer1M: 'FREE / Local',
@@ -140,6 +148,7 @@ CRITICAL FILE SYSTEM & DIRECTORY BOUNDARY RULES:
     accent: SwarmColors.agentCyan,
     defaultSwarmId: 'default-coding-swarm',
     tags: ['system', 'coder', 'lucille-core', 'droid'],
+    skillIds: ['nvidia.embeddings', 'nvidia.rerank'],
     metric: (label: 'Tasks', value: 'Active'),
     href: '/agent/droid',
     pricePer1M: 'FREE / Local',
@@ -161,6 +170,7 @@ CRITICAL FILE SYSTEM & DIRECTORY BOUNDARY RULES:
     accent: Color(0xFF00E5FF),
     defaultSwarmId: 'default-coding-swarm',
     tags: ['ui', 'design', 'claude', 'deepseek'],
+    skillIds: ['nvidia.image', 'nvidia.embeddings'],
     metric: (label: 'Engine', value: 'Tandem 2x'),
     href: '/agent/ui_tandem',
     pricePer1M: 'Claude 3.7 + DeepSeek R1',
@@ -185,6 +195,7 @@ Together, you never output generic MVP loading screens or boring widgets. You cr
     accent: Color(0xFF4285F4),
     defaultSwarmId: 'antigravity-swarm',
     tags: ['agent 2.0', 'planning', 'subagents', 'tools', 'google-agy'],
+    skillIds: ['nvidia.nemotron.eval', 'nvidia.cosmos', 'nvidia.omniverse', 'nvidia.cuopt'],
     metric: (label: 'Engine', value: 'AGY 2.0'),
     href: '/agent/antigravity',
     pricePer1M: 'Gemini 2.5 Pro / Flash',
@@ -223,6 +234,7 @@ To write or modify files on the system, output:
     accent: Color(0xFF00E676),
     defaultSwarmId: 'default-coding-swarm',
     tags: ['health', 'biometrics', 'meds', 'vital'],
+    skillIds: ['nvidia.tts', 'nvidia.stt'],
     metric: (label: 'Intake', value: '3x Scheduled'),
     href: '/agent/vital',
     pricePer1M: 'Med-Gemini',
@@ -244,6 +256,7 @@ To write or modify files on the system, output:
     accent: Color(0xFF00E5FF),
     defaultSwarmId: 'ide-workstation-swarm',
     tags: ['ide', 'coding', 'editor', 'antigravity-ide', 'google-agy'],
+    skillIds: ['nvidia.embeddings', 'nvidia.rerank', 'nvidia.image'],
     metric: (label: 'Workstation', value: 'Active'),
     href: '/agent/antigravity',
     pricePer1M: 'Native x64 / Electron',
@@ -293,6 +306,7 @@ You assist the developer with real-time code analysis, AST transformations, auto
     accent: SwarmColors.agentCyan,
     defaultSwarmId: 'nemotron-swarm',
     tags: ['news', 'gaming', 'linux'],
+    skillIds: ['nvidia.nemotron.eval'],
     metric: (label: 'Tasks', value: 'Active'),
     href: '/agent/nexus',
     pricePer1M: 'FREE / Local',
@@ -314,6 +328,7 @@ You assist the developer with real-time code analysis, AST transformations, auto
     accent: SwarmColors.agentCyan,
     defaultSwarmId: 'nemotron-swarm',
     tags: ['steam', 'games', 'rag'],
+    skillIds: ['nvidia.nemotron.eval', 'nvidia.embeddings', 'nvidia.rerank'],
     metric: (label: 'Tasks', value: 'Active'),
     href: '/agent/librarian',
     pricePer1M: 'FREE / Local',
@@ -335,6 +350,7 @@ You assist the developer with real-time code analysis, AST transformations, auto
     accent: SwarmColors.agentCyan,
     defaultSwarmId: 'nemotron-swarm',
     tags: ['geforce_now', 'cloud', 'epic'],
+    skillIds: ['nvidia.nemotron.eval'],
     metric: (label: 'Tasks', value: 'Active'),
     href: '/agent/streamer',
     pricePer1M: 'FREE / Local',
