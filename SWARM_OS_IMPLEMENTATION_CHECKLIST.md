@@ -6,7 +6,7 @@
 
 ## 1. System Reliability & Display Subsystem
 
-- [ ] **Enable systemd hardware watchdog**
+- [~] **Enable systemd hardware watchdog** *(source staged; ISO boot verification pending)*
   - Create `/etc/systemd/system.conf.d/50-watchdog.conf`:
     ```ini
     [Manager]
@@ -28,18 +28,20 @@
 
 ## 2. Kernel-Level Sandboxing (lucille-core, C++)
 
-- [ ] **Landlock LSM filesystem sandboxing**
+* [x] **Landlock LSM filesystem sandboxing**
   - Restrict child worker processes (Hermes Agent, OpenClaw) to read-only access across root
   - Write access permitted strictly inside the designated workspace directory
   - Layer on top of existing Seccomp + unprivileged namespace restrictions (not a replacement)
+  - Verified: `cmake --build 30-source/lucille-core/build` and `ctest --test-dir 30-source/lucille-core/build` passed
 
 ---
 
 ## 3. Change Journaling & Rollback
 
-- [ ] **Atomic Git-diff checkpoint journaling**
+- [~] **Atomic Git-diff checkpoint journaling** *(library implemented; production wiring pending)*
   - Before executing any mutating shell command or agent-suggested code modification, auto-create a lightweight Git commit/stash checkpoint in `lucille-core`
   - Wire into regression-test-failure path for instant rollback
+  - Gap found 2026-09-19: `SafetyGate::checkpoint_and_apply()` has no production call site; `SwarmRouter::route_and_execute()` still uses placeholder tool execution.
 
 ---
 

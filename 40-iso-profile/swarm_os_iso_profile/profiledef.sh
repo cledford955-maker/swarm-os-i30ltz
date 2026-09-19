@@ -49,6 +49,7 @@ file_permissions=(
   ["/etc/swarm_os.env.manifest"]="0:0:644"
   ["/usr/local/bin/swarm-unseal-secrets"]="0:0:755"
   ["/etc/systemd/system/swarm-secrets.service"]="0:0:644"
+  ["/etc/systemd/system.conf.d/50-watchdog.conf"]="0:0:644"
   ["/etc/subuid"]="0:0:644"
   ["/etc/subgid"]="0:0:644"
   # Live-boot swarm user is in the wheel group but had no sudoers rule

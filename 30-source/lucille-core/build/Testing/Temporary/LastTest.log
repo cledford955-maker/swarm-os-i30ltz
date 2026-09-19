@@ -1,0 +1,139 @@
+Start testing: Sep 19 09:17 EDT
+----------------------------------------------------------
+1/1 Testing: EngineTestSuite
+1/1 Test: EngineTestSuite
+Command: "/mnt/Lucy/30-source/lucille-core/build/test_engine"
+Directory: /mnt/Lucy/30-source/lucille-core/build
+"EngineTestSuite" start time: Sep 19 09:17 EDT
+Output:
+----------------------------------------------------------
+=====================================================
+        LUCILLE CORE ENGINE — FULL TEST SUITE        
+=====================================================
+
+--- 1. Testing Bootloader & Topology Discovery ---
+  [PASS] Bootloader sequence succeeded
+  [PASS] Non-root execution verified
+  [PASS] User ID is not 0
+  [PASS] Hardware logical core count > 0
+  [PASS] Hardware total RAM probed > 0
+  [PASS] P-cores set is non-empty
+  [PASS] E-cores set is non-empty
+
+--- 2. Testing Non-Blocking IPC Socket & 0660 Permissions ---
+[IpcServer] Listening on /tmp/lucille_ipc_unit_test.sock (epoll ET)
+  [PASS] IPC Server initialization succeeded on /tmp/lucille_ipc_unit_test.sock
+  [PASS] Socket file exists on disk
+  [PASS] Socket permissions are strictly 0660
+  [PASS] Socket file unlinked after shutdown
+
+--- 3. Testing Sandbox & SOUL.md SHA-256 Integrity ---
+  [PASS] SHA-256 hash computed successfully (acd1eec326719582...)
+  [PASS] SOUL file exists in report
+  [PASS] SHA-256 matched expected hash
+  [PASS] Cgroups v2 memory.high calculated at exactly 75% of RAM
+
+--- 4. Testing Compiler Diagnostic Regex & AST Context Extraction ---
+  [PASS] Compiler output flagged as having errors
+  [PASS] Total error count is 1
+  [PASS] Diagnostic item extracted
+  [PASS] Payload targets Kimi-2.6-Coder
+
+--- 5. Testing AVX2 SIMD Math & Quantization Pathways ---
+  Active SIMD capabilities: AVX2 FMA 
+  [PASS] L2 Normalization calculated non-zero norms
+  [PASS] Self dot-product of normalized vector is ~1.0
+  [PASS] Cosine distance is bounded [0.0, 2.0]
+  [PASS] Int8 vector dimensions match 384
+  [PASS] Int8 quantization reconstruction fidelity > 0.98 (actual: 1.000039)
+  [PASS] 384-dim binary vector packed into exactly 6 uint64 words (48 bytes)
+  [PASS] Self Hamming distance is 0
+  [PASS] Hamming distance between distinct vectors > 0
+
+--- 6. Testing SQLite Vector Memory Engine & RRF Hybrid Search ---
+  [PASS] VectorMemoryEngine initialization succeeded (WAL mode enabled)
+  [PASS] Logged conversation turn 1
+  [PASS] Logged conversation turn 2
+  [PASS] Inserted chunk 1 (Gamescope render)
+  [PASS] Inserted chunk 2 (Cgroups memory)
+  [PASS] Inserted chunk 3 (PipeWire lowlatency)
+[VectorMemory] Distance pruning: kept=1 dropped=2 threshold=-0.0420797 (mean=0.678101 σ=0.48012)
+  [PASS] Hybrid search returned results
+  [PASS] Top hybrid search result correctly ranked chunk 1 first
+  [PASS] Reciprocal Rank Fusion score computed: 0.032787
+  [PASS] Dense vector cosine distance ~0 for identical query embedding
+  [PASS] WAL checkpoint truncate executed successfully
+  [PASS] Ephemeral chunk pruning removed decaying session chunks
+
+--- 7. Testing Safety Gate, AST Syntax & p95 Circuit Breaker ---
+  [PASS] Valid C++ syntax accepted by AST validator
+  [PASS] Invalid unbalanced C++ syntax rejected: Mismatched bracket '}' against '('
+  [PASS] Valid tool JSON arguments approved by schema validator
+  [PASS] Tool JSON missing required 'command' rejected: Missing required schema field: 'command' in tool 'run_command'
+  [PASS] KV-cache prefix contains deterministic hash tag
+  [PASS] KV-cache prefix contains hardware state
+  [PASS] Circuit breaker is CLOSED under normal 200ms load
+  [PASS] Rolling p95 latency accurately reflects 200ms
+[SafetyGate] ⚠️ Circuit breaker TRIPPED (p95=2200ms > threshold=1500ms). Falling back to Local GGUF endpoint.
+  [PASS] Circuit breaker TRIPPED to OPEN state after p95 latency > 1500ms
+  [PASS] Circuit breaker state is OPEN
+  [PASS] Circuit breaker cleanly reset to CLOSED state
+
+--- 8. Testing Swarm Router & Two-Tier Speculative Routing ---
+  [PASS] Refactoring maps to Kimi 2.6 Coder
+  [PASS] Journal triage maps to GLM 5.6
+  [PASS] Safety proof maps to DeepSeek-R1
+  [PASS] Tool execution maps to Hermes 3 Agent
+  [PASS] Two-tier speculative task routed and executed successfully
+  [PASS] Tier 1 Drafter: Kimi-2.6-Coder
+  [PASS] Tier 2 Auditor: DeepSeek-R1
+  [PASS] DeepSeek-R1 Chain-of-Thought safety proof passed
+  [PASS] DeepSeek-R1 reasoning trace extracted: <think>
+1. Analyzing AST delta...
+  [PASS] AST pre-execution verification passed
+  [PASS] Tier 3 Execution executed in Hermes 3 sandbox
+
+--- 9. Testing HITL Security Interceptor & Emergency Controls ---
+  [PASS] Detected high-risk command 'rm -rf': Recursive forceful file deletion (rm -rf)
+  [PASS] Detected high-risk command 'dd if=': Raw block storage overwrite (dd)
+  [PASS] Detected high-risk command 'mkfs': Filesystem re-formatting (mkfs)
+  [PASS] Safe command 'ls -la' permitted without HITL interception
+  [PASS] Generated challenge ID: hitl_chal_1001_9383
+  [PASS] Challenge risk level is CRITICAL
+  [PASS] Challenge status is Pending
+  [PASS] Pending challenges list contains 1 item
+  [PASS] Challenge resolved as APPROVED
+  [PASS] Pending challenges list empty after resolution
+  [PASS] Emergency freeze/unfreeze endpoints verified
+
+--- 10. Testing Mesh Sync & E2E Encrypted Clipboard ---
+  [PASS] Ciphertext generated (AES-256-GCM)
+  [PASS] 12-byte IV generated
+  [PASS] 16-byte GCM authentication tag generated
+  [PASS] Serialized clipboard JSON payload
+  [PASS] Deserialized clipboard JSON successfully
+  [PASS] Decrypted clipboard payload successfully
+  [PASS] Decrypted text exactly matches plaintext
+  [PASS] Non-destructive rsync flags approved under SYNC-OPTIONS.md
+  [PASS] Destructive --delete flag rejected: FATAL: SYNC-OPTIONS.md strictly forbids destructive --delete flags
+
+--- 11. Testing WebSocket Telemetry Daemon (Port 9091) ---
+  [PASS] Tailscale mesh IP discovery completed: 100.82.1.19
+[TelemetryDaemon] ✓ WebSocket Telemetry Server listening on 127.0.0.1:9228 (Tailscale interface: lo)
+[TelemetryDaemon] ✓ SHM ring buffer open: /swarm_telemetry_shm (32832 bytes, 256 slots)
+  [PASS] WebSocket Telemetry Daemon started on 127.0.0.1:9228
+[TelemetryDaemon] WebSocket server stopped.
+  [PASS] Telemetry Daemon stopped cleanly
+
+=====================================================
+Test Summary: 84 passed, 0 failed.
+=====================================================
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Passed.
+"EngineTestSuite" end time: Sep 19 09:17 EDT
+"EngineTestSuite" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 19 09:17 EDT

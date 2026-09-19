@@ -19,6 +19,9 @@
 > This is the single source of truth for what exists, what's broken, and what's next.
 > Humans: same rule. If you think of something, add it to IDEAS below.
 
+> **Master OS tracker — 2026-09-19:** Started the first build-order item, systemd hardware watchdog. Added the `system.conf.d/50-watchdog.conf` drop-in to the ISO profile with runtime, reboot, and kexec watchdog timeouts; ISO boot verification remains pending. Landlock sandboxing was then verified as already implemented and wired into `lucille-core` child spawning; its build and test suite pass. Gamescope FSR remains blocked because the referenced `/usr/bin/swarm-session` launcher is absent from the source profile.
+> Checkpoint journaling was audited next: the Git checkpoint/rollback library exists and builds, but `SafetyGate::checkpoint_and_apply()` is not called by the production router, so this tracker item remains partial.
+
 ---
 
 ## ⚠️ ARCHITECTURE PIVOT (2026-09-11) — READ THIS BEFORE TOUCHING THE UI
