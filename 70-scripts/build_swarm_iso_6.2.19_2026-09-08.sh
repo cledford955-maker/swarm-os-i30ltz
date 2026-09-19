@@ -270,6 +270,11 @@ sed "s|$PROFILE_DIR/mirrorlist|/usr/local/share/swarm-os/mirrorlist|g" \
     "$PROFILE_DIR/pacman.conf" > "$AIROOTFS/usr/local/share/swarm-os/pacman.conf"
 chmod 0644 "$AIROOTFS/usr/local/share/swarm-os/mirrorlist" "$AIROOTFS/usr/local/share/swarm-os/pacman.conf"
 
+# mkarchiso's ISO GRUB runs from the image boot tree, not airootfs. Mirror the
+# theme there as well as in the installed root so the live boot menu can load it.
+mkdir -p "$PROFILE_DIR/grub/themes/swarm_os"
+cp -a "$AIROOTFS/boot/grub/themes/swarm_os/." "$PROFILE_DIR/grub/themes/swarm_os/"
+
 # 4f. Seal secrets into the ISO — encrypted, never plaintext  (2026-09-12 v1.0.0)
 #
 # This step used to write $LUCY/20-runtime/.env straight into
