@@ -876,6 +876,7 @@ You assist the developer with real-time code analysis, AST transformations, auto
     accent: SwarmColors.accent,
     defaultSwarmId: 'nemotron-swarm',
     tags: ['system', 'architect', 'luks2', 'dr_boltz', 'telemetry', 'antivirus', 'sentinel'],
+    skillIds: ['nvidia.nemotron.eval', 'nvidia.embeddings', 'nvidia.rerank'],
     metric: (label: 'Security', value: 'LUKS2 Armored'),
     href: '/agent/dr_boltz',
     pricePer1M: 'DeepSeek R1 / OpenRouter',

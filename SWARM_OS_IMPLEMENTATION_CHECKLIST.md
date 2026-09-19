@@ -138,7 +138,7 @@
 > Goal: turn the existing NVIDIA NIM catalog into first-class, reusable agent capabilities inside Swarm OS, not just a list of model IDs.
 
 ### 4.1 Blueprint: NVIDIA NIM Skill Registry
-- [ ] **Create `lib/skills/nvidia_nim_skill.dart`**
+- [x] **Create `lib/skills/nvidia_nim_skill.dart`**
   - Declarative skill definitions for each NIM category:
     - `nvidia/parakeet-ctc-1.1b:free` → speech-to-text
     - `nvidia/riva-tts-fastpitch:free` → text-to-speech
@@ -151,7 +151,7 @@
   - Each skill: input schema, output schema, default model, fallback model, cost tier
 
 ### 4.2 Blueprint: Agent Skill Assignment
-- [ ] **Extend `Agent` model with `skillIds`**
+- [x] **Extend `Agent` model with `skillIds`**
   - Add `List<String> skillIds` to `lib/models/agent.dart`
   - Assign relevant skills:
     - Lucille/Forge/Droid: coding + file-write
@@ -161,40 +161,39 @@
     - Antigravity: planning + tool use + subagent orchestration
 
 ### 4.3 Blueprint: Skill Router
-- [ ] **Create `lib/services/skill_router.dart`**
+- [x] **Create `lib/services/skill_router.dart`**
   - Maps a requested skill + agent context to a concrete `SwarmModel`
   - Respects `ProviderId.nvidia` free tier first, then OpenRouter fallback
   - Uses `LiveModelCatalogService` to validate the model still exists before calling
 
 ### 4.4 Blueprint: NVIDIA STT/TTS Voice Pipeline
-- [ ] **Implement `lib/services/nvidia_voice_service.dart`**
+- [~] **Implemented inside `SkillRouter`**
   - `transcribe(File audio)` → Parakeet CTC via OpenRouter `/audio/transcriptions`
   - `synthesize(String text)` → Riva FastPitch TTS via OpenRouter `/audio/speech`
   - Cache results in app temp dir
-  - Wire into Lucille chat voice input/output
+  - Remaining: wire into Lucille chat voice input/output and add dedicated `nvidia_voice_service.dart` facade
 
 ### 4.5 Blueprint: NVIDIA Embedding/Rerank RAG
-- [ ] **Implement `lib/services/nvidia_rag_service.dart`**
+- [~] **Implemented inside `SkillRouter`**
   - `embed(List<String> chunks)` → NV-Embed-QA 4
   - `rerank(String query, List<String> chunks)` → NV Rerank Large
-  - Store embeddings in `sqlite-vec` (existing)
-  - Use for agent long-term memory retrieval
+  - Remaining: store embeddings in `sqlite-vec` (existing) and add dedicated `nvidia_rag_service.dart` facade
 
 ### 4.6 Blueprint: NVIDIA Image Generation Skill
-- [ ] **Implement `lib/services/nvidia_image_service.dart`**
+- [~] **Implemented inside `SkillRouter`**
   - `generateImage(String prompt)` → SDXL Turbo NIM
-  - Return file path / bytes; display in UI Tandem / Forge preview panel
+  - Remaining: add dedicated `nvidia_image_service.dart` facade and display in UI Tandem / Forge preview panel
 
 ### 4.7 Blueprint: NVIDIA cuOpt Optimization Skill
-- [ ] **Implement `lib/services/nvidia_cuopt_service.dart`**
+- [~] **Implemented inside `SkillRouter`**
   - Wrap cuOpt NIM for scheduling / resource allocation problems
-  - First use case: optimize agent task queue ordering given latency/cost constraints
+  - Remaining: add dedicated `nvidia_cuopt_service.dart` facade and first use case (agent task queue ordering)
 
 ### 4.8 Blueprint: NVIDIA Cosmos / Omniverse Reasoning
-- [ ] **Create `lib/skills/physics_ai_skill.dart`**
+- [~] **Implemented inside `SkillRouter`**
   - `simulateWorld(String description)` → Cosmos World Model NIM
   - `reasonUsdAsset(String usdSnippet)` → Omniverse Asset Reasoner
-  - Expose as tools for Antigravity / UI Tandem
+  - Remaining: add dedicated `lib/skills/physics_ai_skill.dart` facade and expose as tools for Antigravity / UI Tandem
 
 ### 4.9 Blueprint: NVIDIA NIM Health & Cost Dashboard
 - [ ] **Add NVIDIA NIM panel to `models_page.dart`**
