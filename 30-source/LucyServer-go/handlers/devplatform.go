@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/go-chi/chi/v5"
 	"swarm-os/lucy-server/services"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -163,7 +164,9 @@ func ArtifactDownload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 	ct := art.ContentType
-	if ct == "" { ct = "application/octet-stream" }
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
 	w.Header().Set("Content-Type", ct)
 	w.Header().Set("X-Artifact-Sha256", art.Sha256)
 	w.Header().Set("Content-Disposition", `attachment; filename="`+art.Name+`"`)
@@ -205,9 +208,18 @@ func AiCoderTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"prompt required"}`, http.StatusBadRequest)
 		return
 	}
-	if body.Language == "" { body.Language = "dart" }
-	if body.Role == "" { body.Role = "FullStackEngineer" }
-	writeJSON(w, services.AiCoderDispatch(body.Title, body.Prompt, body.ActiveFilePath, body.Language, body.Role))
+	if body.Language == "" {
+		body.Language = "dart"
+	}
+	if body.Role == "" {
+		body.Role = "FullStackEngineer"
+	}
+	task, err := services.AiCoderDispatch(body.Title, body.Prompt, body.ActiveFilePath, body.Language, body.Role)
+	if err != nil {
+		writeJSON(w, map[string]any{"task": task, "error": err.Error()})
+		return
+	}
+	writeJSON(w, task)
 }
 
 func AiCoderSuggestFixes(w http.ResponseWriter, r *http.Request) {
@@ -243,7 +255,9 @@ func WorkspaceCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"name required"}`, http.StatusBadRequest)
 		return
 	}
-	if body.SSHPort == 0 { body.SSHPort = 22 }
+	if body.SSHPort == 0 {
+		body.SSHPort = 22
+	}
 	writeJSON(w, map[string]any{"workspace": services.WorkspaceCreate(body.Name, body.RemoteHost, body.SSHPort, body.Username, body.RemotePath)})
 }
 

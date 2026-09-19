@@ -180,6 +180,10 @@ PROFILE_ROOT="$SCRIPT_DIR/swarm_os_iso_profile"
 if [ ! -d "$PROFILE_ROOT/airootfs" ]; then
   PROFILE_ROOT="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile"
 fi
+ROOTFS_ARCHIVE="/usr/local/share/swarm-os/airootfs.tar"
+if [ ! -f "$ROOTFS_ARCHIVE" ] && [ -d "$PROFILE_ROOT/airootfs" ]; then
+  ROOTFS_ARCHIVE=""
+fi
 PROFILE_PACMAN_CONF="/usr/local/share/swarm-os/pacman.conf"
 if [ ! -f "$PROFILE_PACMAN_CONF" ]; then
   PROFILE_PACMAN_CONF="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile/pacman.conf"
@@ -238,7 +242,7 @@ fi
 info "fstab written"
 
 banner "Copying custom airootfs files..."
-if [ -d "$PROFILE_ROOT/airootfs/" ]; then
+if [ -n "$ROOTFS_ARCHIVE" ] || [ -d "$PROFILE_ROOT/airootfs/" ]; then
     # Backup base system auth files before copying airootfs
     cp -a "$MOUNT_POINT/etc/passwd" "$MOUNT_POINT/etc/passwd.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/group" "$MOUNT_POINT/etc/group.sys" 2>/dev/null || true
@@ -251,7 +255,11 @@ if [ -d "$PROFILE_ROOT/airootfs/" ]; then
     cp -a "$MOUNT_POINT/etc/fstab" "$MOUNT_POINT/etc/fstab.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/crypttab" "$MOUNT_POINT/etc/crypttab.sys" 2>/dev/null || true
 
-    cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
+    if [ -n "$ROOTFS_ARCHIVE" ]; then
+      tar -xpf "$ROOTFS_ARCHIVE" -C "$MOUNT_POINT"
+    else
+      cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
+    fi
 
     # Restore pristine system auth files (so users and render groups exist)
     [ -f "$MOUNT_POINT/etc/passwd.sys" ] && mv "$MOUNT_POINT/etc/passwd.sys" "$MOUNT_POINT/etc/passwd"

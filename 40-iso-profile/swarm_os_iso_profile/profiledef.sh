@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-iso_name="swarm-os-v6.2.65-46f99f3a"
+iso_name="swarm-os-v6.2.66-7f810068"
 iso_label="SWARM_OS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="SWARM OS <https://github.com/swarm>"
-iso_application="SWARM OS · Lucille v6.2.65"
+iso_application="SWARM OS · Lucille v6.2.66"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="swarm"
 buildmodes=('iso')

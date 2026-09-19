@@ -257,6 +257,12 @@ chmod +x "$AIROOTFS/usr/local/bin/install_swarm_os.sh"
 mkdir -p "$AIROOTFS/usr/local/share/swarm-os"
 cp -f "$PROFILE_DIR/packages.x86_64" "$AIROOTFS/usr/local/share/swarm-os/packages.x86_64"
 chmod 0644 "$AIROOTFS/usr/local/share/swarm-os/packages.x86_64"
+# The installer runs from the live ISO, so include the complete custom root
+# tree required for the installed graphical shell and backend services. Exclude
+# the staging directory itself to avoid recursively archiving this archive.
+tar -C "$AIROOTFS" --exclude='./usr/local/share/swarm-os' -cpf \
+    "$AIROOTFS/usr/local/share/swarm-os/airootfs.tar" .
+chmod 0644 "$AIROOTFS/usr/local/share/swarm-os/airootfs.tar"
 # pacstrap must use the ISO's official Arch core/extra repositories. Using the
 # live host's CachyOS pacman.conf can pull mesa-git and conflict with mesa.
 cp -f "$PROFILE_DIR/mirrorlist" "$AIROOTFS/usr/local/share/swarm-os/mirrorlist"
