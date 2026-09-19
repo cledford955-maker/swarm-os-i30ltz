@@ -10,8 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
 
 enum class VoicePersona(val displayName: String, val role: String, val gender: String) {
-    DR_I30LTZ("DR. I30LTZ", "Optimization · Eval · Security", "Male"),
-    LUCILLE("Lucille", "Assistant/Coder · SWARM OS Orchestrator", "Female")
+    DR_I30LTZ("DR. I30LTZ", "Optimization · Eval · Security", "Male")
 }
 
 class TtsVoiceManager(context: Context) : TextToSpeech.OnInitListener {
@@ -63,52 +62,27 @@ class TtsVoiceManager(context: Context) : TextToSpeech.OnInitListener {
         applyPersonaVoice(persona)
     }
 
-    fun togglePersona() {
-        val next = if (_currentPersona.value == VoicePersona.DR_I30LTZ) VoicePersona.LUCILLE else VoicePersona.DR_I30LTZ
-        setPersona(next)
-    }
-
     private fun applyPersonaVoice(persona: VoicePersona) {
         try {
             val availableVoices = tts?.voices ?: return
 
-            if (persona == VoicePersona.DR_I30LTZ) {
-                // DR. I30LTZ: Optimization, Eval & Security — deep, measured, authoritative
-                val maleVoice = availableVoices
-                    .filter { it.locale.language == "en" }
-                    .sortedWith(
-                        compareByDescending<Voice> {
-                            val n = it.name.lowercase()
-                            n.contains("roger") || n.contains("male_3") || n.contains("male_2") || n.contains("male") || n.contains("guy") || n.contains("christopher") || n.contains("en-us-x-sfg#male") || n.contains("en-us-x-iob") || n.contains("en-gb-x-rde")
-                        }
-                        .thenByDescending { it.quality }
-                        .thenByDescending { it.isNetworkConnectionRequired }
-                    )
-                    .firstOrNull()
+            // DR. I30LTZ: Optimization, Eval & Security — deep, measured, authoritative
+            val maleVoice = availableVoices
+                .filter { it.locale.language == "en" }
+                .sortedWith(
+                    compareByDescending<Voice> {
+                        val n = it.name.lowercase()
+                        n.contains("roger") || n.contains("male_3") || n.contains("male_2") || n.contains("male") || n.contains("guy") || n.contains("christopher") || n.contains("en-us-x-sfg#male") || n.contains("en-us-x-iob") || n.contains("en-gb-x-rde")
+                    }
+                    .thenByDescending { it.quality }
+                    .thenByDescending { it.isNetworkConnectionRequired }
+                )
+                .firstOrNull()
 
-                maleVoice?.let { tts?.setVoice(it) }
-                tts?.setPitch(0.76f) // Deep, resonant, seasoned older male timbre
-                tts?.setSpeechRate(0.88f) // Calm, measured, wise cadence
-                Log.d("TtsVoiceManager", "Configured DR. I30LTZ (Optimization/Eval/Security Male): Pitch=0.76, Rate=0.88")
-            } else {
-                // Lucille: Alluring, intelligent, velvety neural female voice
-                val femaleVoice = availableVoices
-                    .filter { it.locale.language == "en" }
-                    .sortedWith(
-                        compareByDescending<Voice> {
-                            val n = it.name.lowercase()
-                            n.contains("female") || n.contains("jenny") || n.contains("aria") || n.contains("sarah") || n.contains("samantha") || n.contains("en-us-x-sfg#female") || n.contains("en-us-x-tpf")
-                        }
-                        .thenByDescending { it.quality }
-                        .thenByDescending { it.isNetworkConnectionRequired }
-                    )
-                    .firstOrNull()
-
-                femaleVoice?.let { tts?.setVoice(it) }
-                tts?.setPitch(1.12f) // Velvety, alluring, vibrant female pitch
-                tts?.setSpeechRate(1.02f) // Expressive, silky AI goddess cadence
-                Log.d("TtsVoiceManager", "Configured LUCILLE (AI Goddess Female): Pitch=1.12, Rate=1.02")
-            }
+            maleVoice?.let { tts?.setVoice(it) }
+            tts?.setPitch(0.76f) // Deep, resonant, seasoned older male timbre
+            tts?.setSpeechRate(0.88f) // Calm, measured, wise cadence
+            Log.d("TtsVoiceManager", "Configured DR. I30LTZ (Optimization/Eval/Security Male): Pitch=0.76, Rate=0.88")
         } catch (e: Exception) {
             Log.e("TtsVoiceManager", "Error applying voice persona", e)
         }
@@ -138,8 +112,7 @@ class TtsVoiceManager(context: Context) : TextToSpeech.OnInitListener {
             
         if (cleanedText.isBlank()) return
         
-        val utteranceId = if (activePersona == VoicePersona.DR_I30LTZ) "DR_I30LTZ_SPEECH" else "LUCILLE_SPEECH"
-        tts?.speak(cleanedText, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+        tts?.speak(cleanedText, TextToSpeech.QUEUE_FLUSH, null, "DR_I30LTZ_SPEECH")
     }
 
     fun stop() {

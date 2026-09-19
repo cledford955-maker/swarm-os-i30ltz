@@ -36,12 +36,10 @@ fun AiLabScreen(
     chatMessages: List<AIChatEntity>,
     isSpeaking: Boolean,
     isMuted: Boolean,
-    selectedPersona: com.example.data.service.VoicePersona = com.example.data.service.VoicePersona.DR_I30LTZ,
     openRouterApiKey: String = "",
     selectedOpenRouterModel: String = "deepseek/deepseek-r1",
     onSendMessage: (String) -> Unit,
     onToggleMute: () -> Unit,
-    onTogglePersona: () -> Unit = {},
     onSaveOpenRouterKey: (String) -> Unit = {},
     onSaveOpenRouterModel: (String) -> Unit = {},
     onClearOpenRouterKey: () -> Unit = {}
@@ -78,21 +76,21 @@ fun AiLabScreen(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) "DR. I30LTZ Command Lab" else "Lucille AI Studio",
+                        text = "DR. I30LTZ Command Lab",
                         color = TextPrimary,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        imageVector = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) Icons.Default.ElectricBolt else Icons.Default.AutoAwesome,
+                        imageVector = Icons.Default.ElectricBolt,
                         contentDescription = "Icon",
-                        tint = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) LightningYellow else Color(0xFFE040FB),
+                        tint = LightningYellow,
                         modifier = Modifier.size(18.dp)
                     )
                 }
                 Text(
-                    text = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) "Optimization · Eval · Security (Wise Male)" else "Assistant/Coder · SWARM OS Orchestrator (Female)",
+                    text = "Optimization · Eval · Security (Wise Male)",
                     color = TextSecondary,
                     fontSize = 10.sp
                 )
@@ -102,7 +100,7 @@ fun AiLabScreen(
                 if (isSpeaking) {
                     Text(
                         text = "SPEAKING...",
-                        color = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) LightningYellow else Color(0xFFE040FB),
+                        color = LightningYellow,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(end = 8.dp)
@@ -121,67 +119,6 @@ fun AiLabScreen(
                         imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = "Mute",
                         tint = if (isMuted) TextMuted else LightningYellow
-                    )
-                }
-            }
-        }
-
-        // ─── Dual Persona Switcher (DR. I30LTZ vs Lucille) ───
-        Card(
-            colors = CardDefaults.cardColors(containerColor = CarbonSurfaceVariant),
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
-                .clickable { onTogglePersona() }
-                .border(
-                    1.dp,
-                    if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) LightningYellow.copy(alpha = 0.6f) else Color(0xFFE040FB).copy(alpha = 0.6f),
-                    RoundedCornerShape(10.dp)
-                )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) "👨‍🔬" else "👄",
-                        fontSize = 18.sp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = "VOICE PERSONA: ${selectedPersona.displayName.uppercase()}",
-                            color = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) LightningYellow else Color(0xFFE040FB),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                        )
-                        Text(
-                            text = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) "Optimization · Eval · Security (Deep Male Pitch 0.76)" else "Assistant/Coder · SWARM OS Orchestrator (Female Pitch 1.12)",
-                            color = TextSecondary,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-
-                Button(
-                    onClick = onTogglePersona,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) LightningYellow.copy(alpha = 0.2f) else Color(0xFFE040FB).copy(alpha = 0.2f)
-                    ),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = "SWITCH",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (selectedPersona == com.example.data.service.VoicePersona.DR_I30LTZ) LightningYellow else Color(0xFFE040FB)
                     )
                 }
             }

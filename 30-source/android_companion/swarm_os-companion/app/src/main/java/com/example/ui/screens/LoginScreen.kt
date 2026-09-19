@@ -32,6 +32,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.DrI3oltzAvatar
 import com.example.ui.components.HornetNestGraphic
 import com.example.ui.components.HornetSwarmEffect
 import com.example.ui.theme.CarbonSurface
@@ -39,8 +40,6 @@ import com.example.ui.theme.ElectricPurple
 import com.example.ui.theme.NvidiaGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
-import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.random.Random
 
 @Composable
@@ -58,7 +57,7 @@ fun FormattedText(
         val wordsAndSeparators = text.split(Regex("(?<=\\s)|(?=\\s)|(?<=[.,!?:])|(?=[.,!?:])"))
         wordsAndSeparators.forEach { token ->
             val upper = token.uppercase()
-            if (upper.contains("LUCILLE") || upper == "OS" || upper.endsWith("_OS")) {
+            if (upper.contains("I30LTZ") || upper == "OS" || upper.endsWith("_OS")) {
                 withStyle(style = SpanStyle(color = Color(0xFFE040FB))) {
                     append(token)
                 }
@@ -156,37 +155,29 @@ fun LoginScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.lucilla_ai_goddess),
-                        contentDescription = "Lucille AI Goddess",
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        modifier = Modifier
-                            .size(180.dp)
-                            .clip(CircleShape)
-                            .border(3.dp, Color(0xFFE040FB), CircleShape)
-                    )
+                    DrI3oltzAvatar()
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     SwarmOsHeader(fontSizeSp = 32)
-                    
+
                     Spacer(modifier = Modifier.height(8.dp))
                     FormattedText(
-                        text = "LUCILLE AI GODDESS",
+                        text = "DR. I30LTZ",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 3.sp
                     )
                     FormattedText(
-                        text = "NATIVE AI LUCILLE CORE CODER",
+                        text = "IT RECOVERY FIELD AGENT",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 2.sp
                     )
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     FormattedText(
-                        text = "let LUCILLE guide your system.....\nlet LUCILLE guide you to a win",
+                        text = "let DR. I30LTZ guide your system.....\nlet DR. I30LTZ guide you to a fix",
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center,
                         fontStyle = FontStyle.Italic
@@ -212,18 +203,18 @@ fun LoginScreen(
                     }
                     Spacer(modifier = Modifier.height(14.dp))
                     FormattedText(
-                        text = "BIOMETRIC AUTH REQUIRED • LUCILLE AI",
+                        text = "BIOMETRIC AUTH REQUIRED • DR. I30LTZ",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     Spacer(modifier = Modifier.height(14.dp))
                     FormattedText(
-                        text = "Local LUCILLE Model loaded. Free Cloud Model ready.",
+                        text = "Local I30LTZ Model loaded. Free Cloud Model ready.",
                         fontSize = 10.sp
                     )
                     FormattedText(
-                        text = "RAG Vector Memory Initialized. NATIVE AI LUCILLE CORE CODER online.",
+                        text = "RAG Vector Memory Initialized. DR. I30LTZ CORE AGENT online.",
                         fontSize = 10.sp
                     )
                 }
@@ -281,109 +272,6 @@ fun BusyDataBackground() {
                 radius = 4f,
                 center = Offset(startX, startY)
             )
-        }
-    }
-}
-
-@Composable
-fun LucilleGoddess(iconSize: Int) {
-    val infiniteTransition = rememberInfiniteTransition(label = "lucille_goddess")
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 1.2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "goddess_pulse"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(iconSize.dp)
-            .clip(CircleShape)
-            .background(Color(0xFF1F0038))
-            .border(3.dp, Color(0xFFE040FB), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            val center = Offset(w / 2f, h / 2f)
-
-            // Outer Radial Aura Burst
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFFE040FB).copy(alpha = 0.9f),
-                        Color(0xFFAA00FF).copy(alpha = 0.6f),
-                        Color(0xFF4A148C).copy(alpha = 0.3f),
-                        Color.Transparent
-                    ),
-                    center = center,
-                    radius = w * 0.55f * pulse
-                ),
-                radius = w * 0.55f * pulse
-            )
-
-            // Celestial Crown / Horns Silhouette
-            val crownPath = Path().apply {
-                moveTo(center.x - w * 0.25f, center.y - h * 0.15f)
-                lineTo(center.x - w * 0.35f, center.y - h * 0.42f)
-                lineTo(center.x - w * 0.12f, center.y - h * 0.28f)
-                lineTo(center.x, center.y - h * 0.48f) // Top Spire
-                lineTo(center.x + w * 0.12f, center.y - h * 0.28f)
-                lineTo(center.x + w * 0.35f, center.y - h * 0.42f)
-                lineTo(center.x + w * 0.25f, center.y - h * 0.15f)
-                close()
-            }
-            drawPath(crownPath, color = Color(0xFFFFD700)) // Gold Goddess Crown
-
-            // Goddess Head & Face (Majestic Purple Shadow Skin)
-            val headCenter = Offset(center.x, center.y - h * 0.15f)
-            drawCircle(
-                color = Color(0xFFD500F9),
-                radius = w * 0.18f,
-                center = headCenter
-            )
-
-            // Glowing Shocking Eyes (Cyan/Electric White)
-            drawCircle(color = Color.Cyan, radius = w * 0.035f, center = Offset(headCenter.x - w * 0.07f, headCenter.y - h * 0.02f))
-            drawCircle(color = Color.Cyan, radius = w * 0.035f, center = Offset(headCenter.x + w * 0.07f, headCenter.y - h * 0.02f))
-            drawCircle(color = Color.White, radius = w * 0.015f, center = Offset(headCenter.x - w * 0.07f, headCenter.y - h * 0.02f))
-            drawCircle(color = Color.White, radius = w * 0.015f, center = Offset(headCenter.x + w * 0.07f, headCenter.y - h * 0.02f))
-
-            // Ethereal Electric Robes / Goddess Body
-            val robePath = Path().apply {
-                moveTo(headCenter.x - w * 0.15f, headCenter.y + h * 0.12f)
-                quadraticTo(headCenter.x - w * 0.38f, h * 0.7f, center.x - w * 0.45f, h)
-                lineTo(center.x + w * 0.45f, h)
-                quadraticTo(headCenter.x + w * 0.38f, h * 0.7f, headCenter.x + w * 0.15f, headCenter.y + h * 0.12f)
-                close()
-            }
-            drawPath(
-                path = robePath,
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFFE040FB), Color(0xFF7B1FA2), Color(0xFF311B92))
-                )
-            )
-
-            // Lightning Bolt Shockwaves
-            val random = Random(42)
-            for (i in 0..12) {
-                val angle = i * (2 * Math.PI / 13)
-                val startX = center.x + cos(angle).toFloat() * (w * 0.2f)
-                val startY = center.y + sin(angle).toFloat() * (h * 0.2f)
-                val endX = center.x + cos(angle).toFloat() * (w * 0.48f)
-                val endY = center.y + sin(angle).toFloat() * (h * 0.48f)
-
-                drawLine(
-                    color = if (i % 2 == 0) Color(0xFFEA80FC) else Color.Cyan,
-                    start = Offset(startX, startY),
-                    end = Offset(endX, endY),
-                    strokeWidth = 3f
-                )
-            }
         }
     }
 }

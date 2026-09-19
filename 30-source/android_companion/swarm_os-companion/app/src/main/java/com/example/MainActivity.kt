@@ -339,18 +339,15 @@ class MainActivity : FragmentActivity() {
                                     NavigationTab.AI_LAB -> {
                                         val openRouterApiKey by viewModel.openRouterApiKey.collectAsStateWithLifecycle()
                                         val selectedOpenRouterModel by viewModel.selectedOpenRouterModel.collectAsStateWithLifecycle()
-                                        val currentVoicePersona by viewModel.currentVoicePersona.collectAsStateWithLifecycle()
 
                                         AiLabScreen(
                                             chatMessages = chatMessages,
                                             isSpeaking = isVoiceSpeaking,
                                             isMuted = isVoiceMuted,
-                                            selectedPersona = currentVoicePersona,
                                             openRouterApiKey = openRouterApiKey,
                                             selectedOpenRouterModel = selectedOpenRouterModel,
                                             onSendMessage = { viewModel.sendAiUserMessage(it) },
                                             onToggleMute = { viewModel.toggleMuteVoice() },
-                                            onTogglePersona = { viewModel.toggleVoicePersona() },
                                             onSaveOpenRouterKey = { viewModel.saveOpenRouterApiKey(it) },
                                             onSaveOpenRouterModel = { viewModel.saveOpenRouterModel(it) },
                                             onClearOpenRouterKey = { viewModel.clearOpenRouterApiKey() }

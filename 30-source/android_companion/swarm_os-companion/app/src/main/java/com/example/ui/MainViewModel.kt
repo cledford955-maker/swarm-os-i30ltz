@@ -109,18 +109,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Voice State
     val isVoiceMuted = repository.isVoiceMuted
     val isVoiceSpeaking = repository.isVoiceSpeaking
-    val currentVoicePersona = ttsVoiceManager.currentPersona
-
-    fun setVoicePersona(persona: com.example.data.service.VoicePersona) {
-        ttsVoiceManager.setPersona(persona)
-    }
-
-    fun toggleVoicePersona() {
-        ttsVoiceManager.togglePersona()
-    }
 
     // Active Speech Text for DR. I30LTZ avatar
-    private val _avatarSpeech = MutableStateFlow<String?>("⚡ Greetings! I am DR. I30LTZ — Creator of Lucille. Ask me anything to optimize your device & PC!")
+    private val _avatarSpeech = MutableStateFlow<String?>("⚡ Greetings! I am DR. I30LTZ — your IT Field Agent. Ask me anything to optimize your device & PC!")
     val avatarSpeech: StateFlow<String?> = _avatarSpeech
 
     // Is Optimizing Flag

@@ -73,8 +73,8 @@ fun CarbonBackgroundCanvas(modifier: Modifier = Modifier) {
             center = electricCenter
         )
 
-        // Persistent Diagonal App Watermark: NATIVE AI LUCILLE CORE CODER
-        val watermarkText = "NATIVE AI LUCILLE CORE CODER"
+        // Persistent Diagonal App Watermark: DR. I30LTZ NATIVE CORE CODER
+        val watermarkText = "DR. I30LTZ NATIVE CORE CODER"
         val paint = Paint().apply {
             color = android.graphics.Color.argb(35, 224, 64, 251) // Semi-transparent electric purple
             textSize = 34f

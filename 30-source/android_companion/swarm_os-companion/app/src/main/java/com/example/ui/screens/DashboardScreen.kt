@@ -69,7 +69,7 @@ fun DashboardScreen(
                         )
                     }
                     Text(
-                        text = "DR. i3OLTZ IT Agent • Powered by LUCILLE CORE",
+                        text = "DR. i3OLTZ IT Agent • Powered by SWARM CORE",
                         color = TextSecondary,
                         fontSize = 12.sp
                     )
@@ -92,7 +92,7 @@ fun DashboardScreen(
             }
         }
 
-        // Lucilla AI Purple Electricity Goddess Front Page Hero Card
+        // DR. I30LTZ Purple Electricity Front Page Hero Card
         item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = CarbonSurface),
@@ -111,7 +111,7 @@ fun DashboardScreen(
                     modifier = Modifier.padding(18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Lucilla AI Title & Watermark Header
+                    // DR. I30LTZ Title & Watermark Header
                     Surface(
                         color = Color(0xFFE040FB).copy(alpha = 0.15f),
                         shape = RoundedCornerShape(12.dp),
@@ -129,7 +129,7 @@ fun DashboardScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "LUCILLE AI • NATIVE CORE CODER",
+                                text = "DR. I30LTZ • NATIVE CORE CODER",
                                 color = Color(0xFFE040FB),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
@@ -149,7 +149,7 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
-                        text = "LUCILLE CORE CODER",
+                        text = "DR. I30LTZ CORE CODER",
                         color = Color(0xFFE040FB),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
@@ -187,7 +187,7 @@ fun DashboardScreen(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("OPTIMIZING SYSTEM VIA LUCILLE AI...")
+                            Text("OPTIMIZING SYSTEM VIA DR. I30LTZ AI...")
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Bolt,
@@ -196,7 +196,7 @@ fun DashboardScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                "1-TAP LUCILLE AI SUPERCHARGER",
+                                "1-TAP DR. I30LTZ SUPERCHARGER",
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 14.sp
                             )
@@ -232,7 +232,7 @@ fun DashboardScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("SSE TUNNEL:", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("CONNECTED TO LUCILLE", color = NvidiaGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("CONNECTED TO 13E457-THUNDERI30LT", color = NvidiaGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(modifier = Modifier.weight(1f))
