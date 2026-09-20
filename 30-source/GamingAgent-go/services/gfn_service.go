@@ -46,7 +46,7 @@ func (s *GfnService) GetCatalog() ([]models.GfnGame, error) {
 	games, err := s.fetchCatalog()
 	if err != nil {
 		// Return stale cache rather than failing hard
-		if stale, _ := s.cache.get(); len(stale) > 0 {
+		if stale, ok := s.cache.getStale(); ok && len(stale) > 0 {
 			return stale, nil
 		}
 		return nil, err

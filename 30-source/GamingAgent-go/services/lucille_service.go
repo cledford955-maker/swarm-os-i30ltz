@@ -17,7 +17,15 @@ import (
 
 const (
 	nemotronEndpoint = "https://integrate.api.nvidia.com/v1/chat/completions"
-	nemotronModel    = "nvidia/llama-3.3-nemotron-super-49b-v1"
+	// nemotronModel was "nvidia/llama-3.3-nemotron-super-49b-v1", which NVIDIA
+	// retired 2026-08-26 (HTTP 410 Gone on every call, verified 2026-09-20).
+	// Its replacement is a reasoning model: it streams "reasoning_content"
+	// deltas before the real "content" delta. Both callNemotron's streaming
+	// parser and the non-streaming Message.Content read below only look at
+	// the content field, so the chain-of-thought is already filtered out
+	// without any parsing changes — but it does eat into max_tokens, which
+	// is why the budgets below were raised.
+	nemotronModel = "nvidia/nemotron-3.5-lightning-30b-a3b"
 )
 
 type LucilleService struct {
@@ -71,7 +79,10 @@ Respond ONLY as JSON matching LucilleEvalResult schema.`
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": sb.String()},
 		},
-		"max_tokens":  1024,
+		// 3072 not 1024: this is a reasoning model now (see nemotronModel
+		// comment) — the chain-of-thought before the real JSON answer can
+		// itself run several hundred tokens.
+		"max_tokens":  3072,
 		"temperature": 0.7,
 	}
 
@@ -196,9 +207,10 @@ func (s *LucilleService) callNemotron(messages []models.ChatMessage, stream bool
 	}
 
 	payload := map[string]any{
-		"model":       nemotronModel,
-		"messages":    msgs,
-		"max_tokens":  2048,
+		"model":    nemotronModel,
+		"messages": msgs,
+		// Same reasoning-overhead reasoning as Eval's 3072 above.
+		"max_tokens":  3072,
 		"temperature": 0.7,
 		"stream":      stream,
 	}

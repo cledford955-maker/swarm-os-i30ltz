@@ -12,15 +12,35 @@ import (
 
 type SteamService struct {
 	client *http.Client
+	cache  *cached[[]models.SteamGame]
 }
 
 func NewSteamService() *SteamService {
 	return &SteamService{
 		client: &http.Client{Timeout: 15 * time.Second},
+		// Short TTL relative to GFN's 12h: playtime changes while the user
+		// is actively playing, but every intersection/eval/chat call was
+		// previously hitting Steam fresh with zero caching at all.
+		cache: newCache[[]models.SteamGame](10 * time.Minute),
 	}
 }
 
 func (s *SteamService) GetLibrary() ([]models.SteamGame, error) {
+	if games, ok := s.cache.get(); ok {
+		return games, nil
+	}
+	games, err := s.fetchLibrary()
+	if err != nil {
+		if stale, ok := s.cache.getStale(); ok && len(stale) > 0 {
+			return stale, nil
+		}
+		return nil, err
+	}
+	s.cache.set(games)
+	return games, nil
+}
+
+func (s *SteamService) fetchLibrary() ([]models.SteamGame, error) {
 	key := os.Getenv("STEAM_API_KEY")
 	id64 := os.Getenv("STEAM_ID64")
 	if key == "" || id64 == "" {
