@@ -90,9 +90,8 @@ func (s *GamesService) GetIntersection() ([]models.EnrichedGame, error) {
 			Genres:          []string{},
 		}
 		if gfn != nil {
-			eg.GfnId = gfn.Id
-			eg.GfnUrl = fmt.Sprintf("https://play.geforcenow.com/games?game-id=%s", gfn.Id)
-			eg.Description = gfn.Description
+			eg.GfnId = fmt.Sprintf("%d", gfn.Id)
+			eg.GfnUrl = fmt.Sprintf("https://play.geforcenow.com/games?game-id=%d", gfn.Id)
 			eg.Publisher = gfn.Publisher
 			if gfn.Genres != nil {
 				eg.Genres = gfn.Genres

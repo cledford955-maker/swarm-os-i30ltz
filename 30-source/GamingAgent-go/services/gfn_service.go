@@ -11,9 +11,17 @@ import (
 	"swarm-os/gaming-agent/models"
 )
 
-const gfnCatalogURL = "https://static.nvidiagrid.net/supported-public-game-content/Games.json"
+// gfnCatalogURL was previously "https://static.nvidiagrid.net/supported-public-game-content/Games.json",
+// which NVIDIA has since removed (returns 403 AccessDenied). Verified 2026-09-20 that the live,
+// unauthenticated catalog now lives under supported-public-game-list/locales/.
+const gfnCatalogURL = "https://static.nvidiagrid.net/supported-public-game-list/locales/gfnpc-en-US.json"
 
 var nonAlphanumRe = regexp.MustCompile(`[^a-z0-9]`)
+
+// steamAppIdRe pulls the numeric Steam app id out of a GFN entry's steamUrl,
+// e.g. "https://store.steampowered.com/app/1358020" -> 1358020. The feed no
+// longer carries a separate steamAppId field.
+var steamAppIdRe = regexp.MustCompile(`/app/(\d+)`)
 
 // subtitleRe strips ": subtitle" or " - subtitle" so "Tainted Grail: The Fall of Avalon"
 // can still match a GFN entry that only lists "Tainted Grail".
@@ -70,6 +78,11 @@ func (s *GfnService) fetchCatalog() ([]models.GfnGame, error) {
 	var games []models.GfnGame
 	if err := json.NewDecoder(resp.Body).Decode(&games); err != nil {
 		return nil, fmt.Errorf("gfn decode: %w", err)
+	}
+	for i := range games {
+		if m := steamAppIdRe.FindStringSubmatch(games[i].SteamUrl); m != nil {
+			fmt.Sscanf(m[1], "%d", &games[i].SteamAppId)
+		}
 	}
 	return games, nil
 }

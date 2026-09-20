@@ -21,15 +21,14 @@ type SteamResponse struct {
 // ── GFN ──────────────────────────────────────────────────────────────────────
 
 type GfnGame struct {
-	Id          string   `json:"id"`
-	Title       string   `json:"title"`
-	SteamUrl    string   `json:"steamUrl"`
-	SteamAppId  int      `json:"steamAppId"`
-	Status      string   `json:"status"`
-	Genres      []string `json:"genres"`
-	Description string   `json:"description"`
-	Publisher   string   `json:"publisher"`
-	ReleaseYear int      `json:"releaseYear"`
+	Id         int64    `json:"id"`
+	Title      string   `json:"title"`
+	SteamUrl   string   `json:"steamUrl"`
+	SteamAppId int      `json:"-"`
+	Status     string   `json:"status"`
+	Genres     []string `json:"genres"`
+	Publisher  string   `json:"publisher"`
+	Store      string   `json:"store"`
 }
 
 // ── Enriched game (intersection result) ──────────────────────────────────────
