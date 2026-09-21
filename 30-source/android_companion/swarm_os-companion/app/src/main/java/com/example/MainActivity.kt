@@ -60,19 +60,18 @@ class MainActivity : FragmentActivity() {
 
                     override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                         super.onAuthenticationError(errorCode, errString)
-                        onSuccess()
+                        android.widget.Toast.makeText(this@MainActivity, errString, android.widget.Toast.LENGTH_LONG).show()
                     }
 
                     override fun onAuthenticationFailed() {
                         super.onAuthenticationFailed()
-                        onSuccess()
                     }
                 }
             )
 
             val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                .setTitle("SWARM_OS Biometric Authentication")
-                .setSubtitle("Touch fingerprint sensor to unlock system")
+                .setTitle("Unlock I30LTZ Companion")
+                .setSubtitle("Use your fingerprint or Android screen lock")
                 .setAllowedAuthenticators(
                     BiometricManager.Authenticators.BIOMETRIC_STRONG or
                     BiometricManager.Authenticators.BIOMETRIC_WEAK or
@@ -82,7 +81,8 @@ class MainActivity : FragmentActivity() {
 
             biometricPrompt.authenticate(promptInfo)
         } else {
-            onSuccess()
+            android.widget.Toast.makeText(this, "Set an Android screen lock or enroll biometrics in Settings, then try again.", android.widget.Toast.LENGTH_LONG).show()
+            startActivity(android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS))
         }
     }
 
@@ -140,7 +140,7 @@ class MainActivity : FragmentActivity() {
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "SWARM OS COMPANION  •  i30ltz  •  v6.2.12",
+                                    text = "I30LTZ COMPANION  •  v${com.example.BuildConfig.VERSION_NAME}",
                                     color = Color(0xFFE040FB),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
@@ -332,6 +332,7 @@ class MainActivity : FragmentActivity() {
 
                                     NavigationTab.ANTIVIRUS -> AntivirusScreen(
                                         threatScore = stats.threatScore,
+                                        report = avatarSpeech.orEmpty(),
                                         isScanning = isOptimizing,
                                         onRunScan = { viewModel.runAntivirusScan() }
                                     )

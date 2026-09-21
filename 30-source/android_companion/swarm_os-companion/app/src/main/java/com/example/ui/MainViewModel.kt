@@ -207,7 +207,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun runAntivirusScan() {
         viewModelScope.launch {
             _isOptimizing.value = true
-            _avatarSpeech.value = "⚡ Scanning phone packages, USB ports, and Wi-Fi tunnel for malware..."
+            _avatarSpeech.value = "⚡ Reading device configuration; no malware scan is performed."
             val scanResult = repository.runAntivirusScan()
             _systemStats.value = systemInfoManager.getLiveSystemStats()
             _avatarSpeech.value = "⚡ ${scanResult.summaryMessage}"
@@ -282,24 +282,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun downloadIso(isoName: String) {
-        if (_isoDownloadProgress.value > 0f && _isoDownloadProgress.value < 1f) return
-        viewModelScope.launch {
-            _isoDownloadProgress.value = 0.01f
-            for (i in 1..100) {
-                kotlinx.coroutines.delay(20)
-                _isoDownloadProgress.value = i / 100f
-            }
-            repository.speakAloud("$isoName downloaded successfully.")
-        }
+        _avatarSpeech.value = "SWARM ISO releases are managed on the paired computer at /mnt/ventoy/ISO/SWARM_OS/. No phone download started."
     }
 
     fun toggleUsbMount() {
-        _isUsbMounted.value = !_isUsbMounted.value
-        if (_isUsbMounted.value) {
-            repository.speakAloud("USB Mass Storage Emulation active. Connect phone to PC to boot Live OS.")
-        } else {
-            repository.speakAloud("USB Mass Storage disconnected.")
-        }
+        _isUsbMounted.value = false
+        _avatarSpeech.value = "USB boot emulation needs a supported rooted kernel and is not provided by this app."
     }
 
     fun askDrI3oltzGrub(issue: String) {
@@ -319,21 +307,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.contains("`")) {
                     val fallbackRegex = Regex("`(.*?)`")
                     val fallbackMatch = fallbackRegex.find(response)
-                    _grubCommandProposal.value = fallbackMatch?.groupValues?.get(1) ?: "ls (hd0,gpt1)"
+                    _grubCommandProposal.value = fallbackMatch?.groupValues?.get(1).orEmpty()
                 } else {
-                    _grubCommandProposal.value = "ls (hd0,gpt1)/boot"
+                    _grubCommandProposal.value = ""
                 }
             }
-            _avatarSpeech.value = "⚡ GRUB command recommended. Review before injecting via USB HID."
+            _avatarSpeech.value = response
         }
     }
 
     fun sendHidCommand(command: String) {
-        repository.speakAloud("Typing command via USB HID...")
+        val clipboard = getApplication<Application>().getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Recovery command", command))
+        _avatarSpeech.value = "Command copied. Nothing has been executed."
     }
 
     fun sendHidEnter() {
-        repository.speakAloud("Executing GRUB command on PC.")
+        _avatarSpeech.value = "USB keyboard injection is not supported by this app. Use the connected computer's terminal."
     }
 
     override fun onCleared() {

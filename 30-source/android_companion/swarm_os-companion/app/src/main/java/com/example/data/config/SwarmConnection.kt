@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
  */
 class SwarmConnection(context: Context) {
     private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        securePreferences(context.applicationContext, PREFS_NAME)
 
     var host: String
         get() = prefs.getString(KEY_HOST, DEFAULT_HOST) ?: DEFAULT_HOST
@@ -53,12 +53,12 @@ class SwarmConnection(context: Context) {
         val target = "$host:$port"
         return when {
             httpCode == 401 || httpCode == 403 ->
-                "LucyServer at $target rejected the auth token. Enter the SWARM_AUTH_TOKEN from 13E457-THUNDERI30LT under Remote PC → CHANGE NODE."
+                "LucyServer at $target rejected the auth token. Save CachyOS’s configured access token under Remote PC → CHANGE NODE."
             t is ConnectException && t.message.orEmpty().contains("ECONNREFUSED") ->
-                "Reached $host, but nothing is listening on port $port. Start LucyServer on 13E457-THUNDERI30LT, and make sure it listens on its Tailscale address, not only 127.0.0.1."
+                "Reached $host, but nothing is listening on port $port. Start LucyServer on CachyOS, and make sure it listens on its Tailscale address, not only 127.0.0.1."
             t is SocketTimeoutException || t is NoRouteToHostException || t?.message.orEmpty().contains("timeout", ignoreCase = true) ->
-                "No route to $target. Turn on Tailscale on this phone, and check that 13E457-THUNDERI30LT is online (tailscale status)."
-            t is UnknownHostException -> "Can't resolve \"$host\". Use 13E457-THUNDERI30LT's Tailscale IP, e.g. $DEFAULT_HOST."
+                "No route to $target. Turn on Tailscale on this phone, and check that CachyOS is online (tailscale status)."
+            t is UnknownHostException -> "Can't resolve \"$host\". Use CachyOS's Tailscale IP, e.g. $DEFAULT_HOST."
             httpCode != null -> "LucyServer at $target answered HTTP $httpCode."
             else -> "Connection to $target failed: ${t?.message ?: "unknown error"}"
         }
@@ -73,7 +73,7 @@ class SwarmConnection(context: Context) {
         // Matches LucyServer-go's swarmAuthMiddleware fallback (main.go),
         // used whenever SWARM_AUTH_TOKEN isn't set in the environment —
         // which is the case on this drive's /20-runtime/.env today.
-        // 13E457-THUNDERI30LT (CachyOS daily driver, renamed from LUCILLE
+        // CachyOS (CachyOS daily driver, renamed from LUCILLE
         // 2026-09-19) as of 2026-09-16 (`tailscale status`). SWARM OS on
         // the same machine is 100.82.1.20 — switch under Remote PC → CHANGE NODE.
         const val DEFAULT_HOST = "100.82.1.19"

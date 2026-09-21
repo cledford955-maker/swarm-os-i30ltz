@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -197,6 +198,7 @@ func (h *AndroidHandler) Start(w http.ResponseWriter, r *http.Request) {
 	h.mu.Unlock()
 	accepted = true
 	go h.build(job, project)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	writeJSON(w, map[string]string{"id": id, "state": "running"})
 }
@@ -224,6 +226,9 @@ func (h *AndroidHandler) build(job *AndroidBuild, project string) {
 	if e == nil {
 		cmd := exec.CommandContext(ctx, "sh", "./gradlew", "--no-daemon", "--console=plain", "assembleDebug")
 		cmd.Dir = project
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+		cmd.WaitDelay = 5 * time.Second
 		// Do not forward service API keys/tokens into Gradle subprocesses.
 		cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.Getenv("HOME"), "LANG=C.UTF-8", "ANDROID_HOME=" + sdk, "ANDROID_SDK_ROOT=" + sdk}
 		if java := os.Getenv("JAVA_HOME"); java != "" {

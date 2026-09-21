@@ -37,162 +37,16 @@ data class CheatCommand(
 )
 
 val emergencyCommands = listOf(
-    // --- LIVE BOOT & INSTALLATION ---
-    CheatCommand(
-        "Live ISO Login (Ventoy / Native)",
-        "Login as root with blank password (just press Enter when prompted).",
-        "root",
-        "INSTALLATION"
-    ),
-    CheatCommand(
-        "Run SWARM OS Full Installer",
-        "Executes the automated LUKS2 encrypted btrfs installer script.",
-        "cd /run/media/i30ltz/lucy-master/Luccile-v+ && sudo ./install_swarm_os.sh",
-        "INSTALLATION"
-    ),
-    CheatCommand(
-        "Mount Installer Drive (Ventoy)",
-        "Mount your USB storage if booted into live ISO before running installer.",
-        "sudo mkdir -p /mnt/repo && sudo mount /dev/sdX1 /mnt/repo",
-        "INSTALLATION"
-    ),
-    CheatCommand(
-        "Create LUKS2 Encrypted Partition",
-        "Format NVMe partition with AES-XTS-512 LUKS2 encryption container.",
-        "sudo cryptsetup luksFormat --type luks2 /dev/nvme0n1p2",
-        "INSTALLATION"
-    ),
-    CheatCommand(
-        "Open LUKS Container",
-        "Unlock and map the encrypted partition to /dev/mapper/swarm-root.",
-        "sudo cryptsetup open /dev/nvme0n1p2 swarm-root",
-        "INSTALLATION"
-    ),
-    CheatCommand(
-        "Format & Mount Btrfs Root",
-        "Create btrfs filesystem and mount to /mnt/swarm_os.",
-        "sudo mkfs.btrfs -f /dev/mapper/swarm-root && sudo mount /dev/mapper/swarm-root /mnt/swarm_os",
-        "INSTALLATION"
-    ),
-    CheatCommand(
-        "Set Passwords Before Reboot",
-        "Enter chroot to set root and i30ltz user passwords before first boot.",
-        "sudo arch-chroot /mnt/swarm_os passwd && sudo arch-chroot /mnt/swarm_os passwd i30ltz",
-        "INSTALLATION"
-    ),
-    CheatCommand(
-        "Unmount & Safe Reboot",
-        "Cleanly sync, unmount, close LUKS2 container, and reboot into SWARM OS.",
-        "sudo umount -R /mnt/swarm_os && sudo cryptsetup close swarm-root && sudo reboot",
-        "INSTALLATION"
-    ),
-
-    // --- SYSTEM SERVICES & UI RECOVERY ---
-    CheatCommand(
-        "Check UI Status",
-        "See why the Flutter UI might have crashed or stopped working.",
-        "systemctl status swarm-ui",
-        "SERVICES"
-    ),
-    CheatCommand(
-        "View UI Logs",
-        "See the full crash log for the Swarm OS GUI.",
-        "journalctl -u swarm-ui -e",
-        "SERVICES"
-    ),
-    CheatCommand(
-        "Restart UI",
-        "Force restart the Flutter cage UI if it's stuck on a black screen.",
-        "sudo systemctl restart swarm-ui",
-        "SERVICES"
-    ),
-    CheatCommand(
-        "Check Backend Status",
-        "Check if the LucyServer .NET backend is running.",
-        "systemctl status lucy-server",
-        "SERVICES"
-    ),
-    CheatCommand(
-        "View Backend Logs",
-        "View errors from the LucyServer backend.",
-        "journalctl -u lucy-server -e",
-        "SERVICES"
-    ),
-    CheatCommand(
-        "Restart Backend",
-        "Force restart the backend if it stops responding.",
-        "sudo systemctl restart lucy-server",
-        "SERVICES"
-    ),
-    CheatCommand(
-        "Run UI Manually (Cage Kiosk)",
-        "Run the UI directly from a root prompt to watch its output in real-time.",
-        "cage -d /opt/swarm_os/swarm_flutter",
-        "SERVICES"
-    ),
-
-    // --- STORAGE & BOOTLOADER REPAIR ---
-    CheatCommand(
-        "Check Storage Drives & UUIDs",
-        "List all block devices and UUIDs to verify root & EFI partitions.",
-        "lsblk -f",
-        "STORAGE & BOOT"
-    ),
-    CheatCommand(
-        "Mount Existing LUKS System",
-        "Rescue mount an existing SWARM OS install into /mnt/swarm_os.",
-        "sudo cryptsetup open /dev/nvme0n1p2 swarm-root && sudo mount /dev/mapper/swarm-root /mnt/swarm_os",
-        "STORAGE & BOOT"
-    ),
-    CheatCommand(
-        "Fix Corrupted File System",
-        "Run filesystem check if dropped to initramfs recovery prompt.",
-        "fsck /dev/mapper/swarm-root",
-        "STORAGE & BOOT"
-    ),
-    // --- BLUETOOTH & REMOTE ACCESS ---
-    CheatCommand(
-        "Start Bluetooth Service",
-        "Starts bluez daemon in live ISO or installed OS.",
-        "sudo systemctl start bluetooth",
-        "BLUETOOTH & SSH"
-    ),
-    CheatCommand(
-        "Launch Bluetooth Interactive Tool",
-        "Opens bluetoothctl to scan and pair wireless keyboards.",
-        "bluetoothctl",
-        "BLUETOOTH & SSH"
-    ),
-    CheatCommand(
-        "Scan for Bluetooth Keyboard",
-        "Turn on controller power, agent, and start scanning for keyboard MAC.",
-        "power on && agent on && default-agent && scan on",
-        "BLUETOOTH & SSH"
-    ),
-    CheatCommand(
-        "Pair, Trust & Connect Keyboard",
-        "Pair and trust keyboard MAC so it auto-reconnects on every boot.",
-        "pair XX:XX:XX:XX:XX:XX && trust XX:XX:XX:XX:XX:XX && connect XX:XX:XX:XX:XX:XX",
-        "BLUETOOTH & SSH"
-    ),
-    CheatCommand(
-        "Start SSH Server (Phone Control)",
-        "Start SSH daemon so you can control and install from your phone without keyboard.",
-        "sudo systemctl start sshd",
-        "BLUETOOTH & SSH"
-    ),
-    CheatCommand(
-        "Find PC IP Address",
-        "Show local IP address assigned to PC on Wi-Fi/Ethernet.",
-        "ip -br a",
-        "BLUETOOTH & SSH"
-    ),
-    CheatCommand(
-        "Connect from Phone via SSH",
-        "SSH into PC from phone terminal (Termux / ConnectBot) with blank password.",
-        "ssh root@<PC_IP_ADDRESS>",
-        "BLUETOOTH & SSH"
-    )
+    CheatCommand("Inspect disks", "Read-only. Identify disks, UUIDs and filesystems before any installer or repair operation.", "lsblk -o NAME,SIZE,MODEL,FSTYPE,UUID,MOUNTPOINTS", "RECOVERY"),
+    CheatCommand("Inspect mounted filesystems", "Read-only. Confirm which filesystem and subvolume are actually mounted.", "findmnt -o TARGET,SOURCE,FSTYPE,OPTIONS", "RECOVERY"),
+    CheatCommand("Check boot mode", "Read-only. EFI firmware exposes this directory; its absence indicates legacy boot.", "test -d /sys/firmware/efi && echo UEFI || echo Legacy", "RECOVERY"),
+    CheatCommand("Recent boot errors", "Read-only. Review logs before changing services or filesystems.", "journalctl -b -p err --no-pager", "RECOVERY"),
+    CheatCommand("SWARM desktop logs", "Read-only. Run on the SWARM system being diagnosed.", "journalctl -b -u swarm-ui -u lucy-server --no-pager -n 100", "RECOVERY"),
+    CheatCommand("SWARM installer help", "Read usage on the mounted development drive. Installation must target a disk chosen by the owner after backup.", "bash /mnt/Lucy/30-source/install_swarm_os.sh --help", "INSTALLATION"),
+    CheatCommand("List canonical ISO releases", "Read-only. Ventoy must be mounted. Stable labels are set explicitly by the owner.", "python3 /mnt/Lucy/70-scripts/swarm_iso_manager.py list", "INSTALLATION"),
+    CheatCommand("Check network addresses", "Read-only. Use a trusted private connection and configured credentials for remote access.", "ip -br address", "NETWORK"),
+    CheatCommand("ADB device authorization", "Read-only. A device must report device, not unauthorized or offline, before installing an APK.", "adb devices -l", "ANDROID"),
+    CheatCommand("Build Android debug APK", "Runs project Gradle code on a computer with Java and Android SDK. Use trusted source only.", "./gradlew assembleDebug", "ANDROID")
 )
 
 @Composable
@@ -238,14 +92,14 @@ fun CheatSheetScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    text = "SWARM OS & EMERGENCY CHEAT SHEET",
+                    text = "I30LTZ RECOVERY REFERENCE",
                     color = NvidiaGreen,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    text = "Live install, Ventoy login, LUKS2, and system recovery commands",
+                    text = "Read-only diagnosis and explicit build commands",
                     color = TextMuted,
                     fontSize = 10.sp
                 )

@@ -43,11 +43,15 @@ fun CdrGitPanel(
     onStageAll: () -> Unit,
     onCommit: (String) -> Unit,
     onPush: () -> Unit,
+    onSetOrigin: (String) -> Unit,
     onPull: () -> Unit,
     onSaveCredentials: (String, String, String, String) -> Unit
 ) {
     var commitMessage by remember { mutableStateOf("") }
     LaunchedEffect(commitSequence) { if (commitSequence > 0) commitMessage = "" }
+    var showOrigin by remember { mutableStateOf(false) }
+    var remoteUrl by remember { mutableStateOf("") }
+    if(showOrigin) AlertDialog(onDismissRequest = {showOrigin=false}, title={Text("GitHub repository")}, text={OutlinedTextField(remoteUrl,{remoteUrl=it},label={Text("https://github.com/owner/repo.git")})}, confirmButton={TextButton(onClick={onSetOrigin(remoteUrl);showOrigin=false}){Text("Set origin")}}, dismissButton={TextButton(onClick={showOrigin=false}){Text("Cancel")}})
     var showCredentialsDialog by remember { mutableStateOf(false) }
 
     if (showCredentialsDialog) {
@@ -119,6 +123,8 @@ fun CdrGitPanel(
             return@Column
         }
 
+        TextButton(onClick={showOrigin=true}, enabled=!gitState.isBusy){Text("Set GitHub repository (origin)")}
+        Text(if(hasCredentials) "GitHub sign-in saved on this phone" else "GitHub sign-in not saved — open key settings", color=TextMuted, modifier=Modifier.padding(horizontal=10.dp), fontSize=11.sp)
         // ── File lists ────────────────────────────────────────────────────────────
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (gitState.staged.isNotEmpty()) {

@@ -136,6 +136,19 @@ object CdrGitService {
         require(result.isSuccessful) { "Pull needs attention: ${result.mergeResult ?: result.rebaseResult}. Resolve conflicts before pushing." }
     }
 
+    fun setOrigin(root: File, url: String): Result<Unit> = runGit(root) { git ->
+        val uri = URI(url.trim())
+        require(uri.scheme == "https" && uri.host == "github.com" && uri.userInfo == null && uri.path.count { it == '/' } >= 2) { "Use an HTTPS GitHub repository URL without credentials." }
+        git.repository.config.apply {
+            setString("remote", "origin", "url", url.trim())
+            setString("remote", "origin", "fetch", "+refs/heads/*:refs/remotes/origin/*")
+            val branch = git.repository.branch
+            setString("branch", branch, "remote", "origin")
+            setString("branch", branch, "merge", "refs/heads/$branch")
+            save()
+        }
+    }
+
     private fun runGit(root: File, block: (Git) -> Unit): Result<Unit> =
         try {
             Git.open(root).use { git -> block(git) }

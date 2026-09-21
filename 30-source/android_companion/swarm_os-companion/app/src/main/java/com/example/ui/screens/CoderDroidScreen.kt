@@ -204,6 +204,7 @@ fun CoderDroidScreen(
                         onUnstage      = { viewModel.onEvent(CoderDroidEvent.UnstageFile(it)) },
                         onStageAll     = { viewModel.onEvent(CoderDroidEvent.StageAll) },
                         onCommit       = { viewModel.onEvent(CoderDroidEvent.Commit(it)) },
+                        onSetOrigin = { viewModel.onEvent(CoderDroidEvent.SetOrigin(it)) },
                         onPush         = { viewModel.onEvent(CoderDroidEvent.Push) },
                         onPull         = { viewModel.onEvent(CoderDroidEvent.Pull) },
                         onSaveCredentials = { u, t, n, e -> viewModel.onEvent(CoderDroidEvent.SetGitCredentials(u, t, n, e)) }

@@ -7,6 +7,7 @@ import com.example.data.service.SystemInfoManager
 import com.example.data.service.SystemStats
 import com.example.data.service.TtsVoiceManager
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -50,23 +51,20 @@ class AppRepository(
     /// if measured, for nodes that had never been contacted. Real numbers
     /// arrive when refreshDeviceTelemetry() actually reaches the node.
     suspend fun seedDefaultTailscaleDevicesIfEmpty() {
-        val count = database.deviceSyncDao().getDeviceCount()
-        if (count == 0) {
-            for ((name, ip) in listOf(
-                "a17 (Tailscale Workstation)" to "100.105.12.17",
-                "a16 (Tailscale Server)" to "100.105.12.16",
-            )) {
-                database.deviceSyncDao().insertDevice(
-                    DeviceSyncEntity(
-                        deviceName = name,
-                        deviceType = "Tailscale Node",
-                        connectionType = "Tailscale Mesh (100.x)",
-                        ipAddress = ip,
-                        isConnected = false,
-                        lastSyncTime = 0L,
-                        syncStatus = "Never contacted"
-                    )
-                )
+        val dao = database.deviceSyncDao()
+        val devices = dao.getAllDevices().first()
+        // Migrate only the two exact old seeded rows, preserving user-added devices.
+        for (device in devices) {
+            val replacement = when {
+                device.deviceName == "a17 (Tailscale Workstation)" && device.ipAddress == "100.105.12.17" -> "CachyOS" to swarmConnection.host
+                device.deviceName == "a16 (Tailscale Server)" && device.ipAddress == "100.105.12.16" -> "SWARM OS" to "100.82.1.20"
+                else -> null
+            }
+            replacement?.let { (name, ip) -> dao.updateDevice(device.copy(deviceName=name, ipAddress=ip, isConnected=false, lastSyncTime=0, syncStatus="Address updated; refresh to test")) }
+        }
+        if(devices.isEmpty()) {
+            for ((name,ip) in listOf("CachyOS" to swarmConnection.host, "SWARM OS" to "100.82.1.20")) {
+                dao.insertDevice(DeviceSyncEntity(deviceName=name, deviceType="PC", connectionType="Tailscale", ipAddress=ip, isConnected=false, lastSyncTime=0, syncStatus="Not tested"))
             }
         }
     }
@@ -181,62 +179,13 @@ class AppRepository(
     }
 
     suspend fun runAntivirusScan(): SystemScanEntity {
-        // 1. Check local Android packages
-        var threatsFound = 0
-        var localLog = ""
-        try {
-            val process = Runtime.getRuntime().exec("pm list packages -f")
-            val output = process.inputStream.bufferedReader().readText()
-            val packageCount = output.lines().filter { it.isNotBlank() }.size
-            localLog = "Local Android Scan: Audited $packageCount installed packages.\n"
-            if (output.contains("com.metasploit") || output.contains("com.hacker")) {
-                threatsFound++
-                localLog += "WARNING: Suspicious packages detected!\n"
-            } else {
-                localLog += "Zero local malware threats.\n"
-            }
-        } catch (e: Exception) {
-            localLog = "Local Android Scan Error: ${e.message}\n"
+        val report = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { systemInfoManager.securityAudit() }.getOrElse { "Device audit failed: ${it.message}" }
         }
-
-        // 2. Trigger remote PC scan via LucyServer
-        var remoteLog = ""
-        try {
-            val jsonMedia = "application/json".toMediaType()
-            val reqBody = "{\"Command\":\"/run/media/i30ltz/lucy-master/Luccile-v+/run_antivirus.sh\"}".toRequestBody(jsonMedia)
-            val request = okhttp3.Request.Builder()
-                .url("${swarmConnection.httpBase()}/api/run_command")
-                .addHeader("X-Swarm-Auth", swarmConnection.authToken)
-                .post(reqBody)
-                .build()
-            val client = okhttp3.OkHttpClient()
-            val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                client.newCall(request).execute()
-            }
-            if (response.isSuccessful) {
-                remoteLog = "Remote PC Bridge Scan:\n${response.body?.string() ?: "Success"}"
-            } else {
-                remoteLog = "Remote PC Bridge Scan failed: HTTP ${response.code}"
-            }
-        } catch (e: Exception) {
-            remoteLog = "Remote PC Bridge Scan network error: ${e.message}\n"
-        }
-
-        val scan = SystemScanEntity(
-            scanType = "Deep Antivirus & Phone-to-PC Audit",
-            score = if (threatsFound > 0) 40 else 99,
-            threatsFoundCount = threatsFound,
-            ramFreedMb = 12,
-            junkCleanedMb = 0,
-            summaryMessage = "$localLog\n$remoteLog"
-        )
-
+        val scan = SystemScanEntity(scanType = "Device configuration audit (not malware scan)", score = -1,
+            threatsFoundCount = 0, ramFreedMb = 0, junkCleanedMb = 0, summaryMessage = report)
         database.systemScanDao().insertScan(scan)
-        if (threatsFound > 0) {
-            ttsVoiceManager.speak("Warning! Threats detected during the antivirus scan.")
-        } else {
-            ttsVoiceManager.speak("Antivirus scan complete. Phone and PC bridge are fully secured with zero active threats.")
-        }
+        ttsVoiceManager.speak("Device configuration audit finished. Review the findings on screen. Malware status has not been assessed.")
         return scan
     }
 

@@ -263,9 +263,9 @@ fun DashboardScreen(
                 )
 
                 LightningGauge(
-                    percentage = stats.threatScore,
-                    label = "SECURITY",
-                    subLabel = "PROTECTED",
+                    percentage = stats.storagePercentage,
+                    label = "STORAGE",
+                    subLabel = "${stats.freeStorageGb} GB free",
                     color = ElectricCyan
                 )
 

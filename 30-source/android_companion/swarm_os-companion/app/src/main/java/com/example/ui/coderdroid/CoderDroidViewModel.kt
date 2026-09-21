@@ -51,6 +51,7 @@ sealed class CoderDroidEvent {
     data class UnstageFile(val path: String) : CoderDroidEvent()
     object StageAll : CoderDroidEvent()
     data class Commit(val message: String) : CoderDroidEvent()
+    data class SetOrigin(val url: String) : CoderDroidEvent()
     object Push : CoderDroidEvent()
     object Pull : CoderDroidEvent()
     data class SetGitCredentials(val username: String, val token: String, val authorName: String, val authorEmail: String) : CoderDroidEvent()
@@ -92,6 +93,7 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
             is CoderDroidEvent.UnstageFile      -> unstageFiles(listOf(event.path))
             CoderDroidEvent.StageAll            -> stageAll()
             is CoderDroidEvent.Commit           -> commit(event.message)
+            is CoderDroidEvent.SetOrigin -> withGitRoot { root -> CdrGitService.setOrigin(root, event.url) }
             CoderDroidEvent.Push                -> push()
             CoderDroidEvent.Pull                -> pull()
             is CoderDroidEvent.SetGitCredentials -> setGitCredentials(event.username, event.token, event.authorName, event.authorEmail)

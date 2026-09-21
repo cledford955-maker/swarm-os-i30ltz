@@ -25,8 +25,8 @@ data class SystemStats(
     val batteryHealth: String,
     val isCharging: Boolean,
     val runningProcessCount: Int,
-    val swapZramSimulatedMb: Long,
-    val threatScore: Int // 100 = safe, <70 = risks found
+    val swapTotalMb: Long,
+    val threatScore: Int // Legacy field: -1 means unassessed; never a malware verdict.
 )
 
 class SystemInfoManager(private val context: Context) {
@@ -56,50 +56,56 @@ class SystemInfoManager(private val context: Context) {
         // Battery
         val iFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         val batteryStatus = context.registerReceiver(null, iFilter)
-        val level = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: 85
+        val level = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: 100
-        val batteryPct = ((level / scale.toFloat()) * 100).roundToInt()
-        val temp = (batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 320) / 10.0f
+        val batteryPct = if (level >= 0 && scale > 0) ((level / scale.toFloat()) * 100).roundToInt() else -1
+        val temp = (batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10.0f
         val status = batteryStatus?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
 
-        val healthCode = batteryStatus?.getIntExtra(BatteryManager.EXTRA_HEALTH, BatteryManager.BATTERY_HEALTH_GOOD) ?: BatteryManager.BATTERY_HEALTH_GOOD
+        val healthCode = batteryStatus?.getIntExtra(BatteryManager.EXTRA_HEALTH, BatteryManager.BATTERY_HEALTH_UNKNOWN) ?: BatteryManager.BATTERY_HEALTH_UNKNOWN
         val batteryHealth = when(healthCode) {
             BatteryManager.BATTERY_HEALTH_GOOD -> "Good / Optimal"
             BatteryManager.BATTERY_HEALTH_OVERHEAT -> "Overheating Warning"
             BatteryManager.BATTERY_HEALTH_DEAD -> "Degraded"
             BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "Over Voltage"
-            else -> "Normal"
+            else -> "Unknown"
         }
 
         // Processes & Swap / ZRAM calculation
-        val runningProcesses = actManager.runningAppProcesses?.size ?: 24
-        val swapMb = (totalRamMb * 0.25).toLong() // Calculated ZRAM Swap buffer
+        val runningProcesses = actManager.runningAppProcesses?.size ?: 0
+        val swapMb = runCatching { java.io.File("/proc/meminfo").useLines { lines -> lines.first { it.startsWith("SwapTotal:") }.split(Regex("\\s+"))[1].toLong() / 1024 } }.getOrDefault(-1L)
 
-        // Safety score based on RAM usage & temp
-        val threatScore = when {
-            temp > 42.0f -> 65
-            ramPercentage > 85 -> 72
-            else -> 98
-        }
+        val threatScore = -1
 
         return SystemStats(
             totalRamMb = totalRamMb,
             usedRamMb = usedRamMb,
             freeRamMb = freeRamMb,
             ramPercentage = ramPercentage,
-            totalStorageGb = String.format("%.1f", totalStorageGb).toDoubleOrNull() ?: 128.0,
-            usedStorageGb = String.format("%.1f", usedStorageGb).toDoubleOrNull() ?: 45.0,
-            freeStorageGb = String.format("%.1f", freeStorageGb).toDoubleOrNull() ?: 83.0,
+            totalStorageGb = kotlin.math.round(totalStorageGb * 10) / 10,
+            usedStorageGb = kotlin.math.round(usedStorageGb * 10) / 10,
+            freeStorageGb = kotlin.math.round(freeStorageGb * 10) / 10,
             storagePercentage = storagePercentage,
             batteryLevel = batteryPct,
             batteryTemperature = temp,
             batteryHealth = batteryHealth,
             isCharging = isCharging,
             runningProcessCount = runningProcesses,
-            swapZramSimulatedMb = swapMb,
+            swapTotalMb = swapMb,
             threatScore = threatScore
         )
+    }
+
+    fun securityAudit(): String {
+        val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+        val debug = android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.ADB_ENABLED, 0) == 1
+        val visible = context.packageManager.getInstalledApplications(0).size
+        return "Device configuration audit — ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date())}\n" +
+            "Android security patch: ${android.os.Build.VERSION.SECURITY_PATCH}\n" +
+            "Screen lock configured: ${keyguard.isDeviceSecure}\nUSB debugging enabled: $debug\n" +
+            "Applications visible to this app: $visible (Android restricts visibility).\n" +
+            "This is not a malware scan. Other apps' private data, live microphone/camera use, PC security and network encryption were not inspected. Use Android's security and privacy settings for those checks."
     }
 
     /// Real optimization, real numbers.

@@ -157,7 +157,7 @@ fun AiLabScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = if (openRouterApiKey.isNotBlank()) "ACTIVE: $selectedOpenRouterModel" else "Tap to set personal OpenRouter Key",
+                                text = if (openRouterApiKey.isNotBlank()) "Selected: $selectedOpenRouterModel" else "Tap to set personal OpenRouter Key",
                                 color = if (openRouterApiKey.isNotBlank()) NvidiaGreen else TextMuted,
                                 fontSize = 11.sp
                             )
@@ -170,7 +170,7 @@ fun AiLabScreen(
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
-                                text = if (openRouterApiKey.isNotBlank()) "ONLINE" else "CONFIG",
+                                text = if (openRouterApiKey.isNotBlank()) "SAVED" else "CONFIG",
                                 color = if (openRouterApiKey.isNotBlank()) NvidiaGreen else ElectricPurple,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -306,14 +306,14 @@ fun AiLabScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column {
-                                    Text("LOCAL GGUF SWARM DOWNLOADS", color = NvidiaGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                    Text("Kimi-1.5, Qwen2.5-Coder, DeepSeek-R1 (Air-Gapped)", color = TextMuted, fontSize = 9.sp)
+                                    Text("OFFLINE AI", color = NvidiaGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Text("No inference runtime or GGUF model installed", color = TextMuted, fontSize = 9.sp)
                                 }
                                 Surface(
                                     color = NvidiaGreen,
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
-                                    Text("DOWNLOADED", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                    Text("UNAVAILABLE", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                                 }
                             }
                         }

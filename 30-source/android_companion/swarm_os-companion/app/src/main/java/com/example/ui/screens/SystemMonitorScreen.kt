@@ -200,7 +200,7 @@ fun SystemMonitorScreen(
                         InfoStat("Used", "${stats.usedRamMb} MB")
                         InfoStat("Free", "${stats.freeRamMb} MB")
                         InfoStat("Total", "${stats.totalRamMb} MB")
-                        InfoStat("ZRAM", "${stats.swapZramSimulatedMb} MB")
+                        InfoStat("SWAP", if (stats.swapTotalMb < 0) "Unavailable" else "${stats.swapTotalMb} MB")
                     }
                 } else {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
