@@ -4,6 +4,7 @@
 // and trade/bump animations. Each hex opens an agent window.
 // ═══════════════════════════════════════════════════════════════
 
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/launch_status.dart';
@@ -46,6 +47,14 @@ class HexAgent {
   // Optional real artwork clipped into the hex shape behind the icon —
   // most agents don't have one, and render exactly as before.
   final String? previewImagePath;
+  // Set when this tile is a user-installed app (App Store): the pacman
+  // package name, used by the desktop's right-click menu to offer
+  // Delete Icon / Uninstall App.
+  final String? packageName;
+  // Absolute path to the app's real icon file (png/svg/xpm) scraped from
+  // its .desktop entry at install time. Rendered inside the hex instead of
+  // the generic Material icon when present.
+  final String? iconFilePath;
   int slotRow;
   int slotCol;
 
@@ -60,6 +69,8 @@ class HexAgent {
     this.routePath,
     this.mock = false,
     this.previewImagePath,
+    this.packageName,
+    this.iconFilePath,
     this.slotRow = 0,
     this.slotCol = 0,
   });
@@ -69,6 +80,10 @@ class HexAgent {
 
 // ─── Callback for opening agent windows ───
 typedef OnAgentOpen = void Function(HexAgent agent);
+
+/// Callback for right-clicking an agent tile — receives the agent and the
+/// global screen position where the menu should appear.
+typedef OnAgentContextMenu = void Function(HexAgent agent, Offset position);
 
 // ═══════════════════════════════════════════════════════════
 // HEX GRID WIDGET
@@ -80,6 +95,8 @@ class HexGrid extends StatefulWidget {
   final int rows;
   final double hexSize;
   final OnAgentOpen? onAgentOpen;
+  // Right-click handler — when null, right-clicks are ignored.
+  final OnAgentContextMenu? onAgentContextMenu;
   // When false, slot-background hexagons are hidden so a wallpaper shows through.
   final bool showSlotBackgrounds;
   // Checker layout (desktop rails): square cells, an icon only on every
@@ -95,6 +112,7 @@ class HexGrid extends StatefulWidget {
     this.rows = 4,
     this.hexSize = 52,
     this.onAgentOpen,
+    this.onAgentContextMenu,
     this.showSlotBackgrounds = true,
     this.checker = false,
     this.mirror = false,
@@ -333,6 +351,9 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
     final child = GestureDetector(
       onTapDown: dragging ? null : (details) => triggerSwarmBurst(context, details.globalPosition),
       onTap: dragging ? null : () => widget.onAgentOpen?.call(agent),
+      onSecondaryTapUp: dragging
+          ? null
+          : (details) => widget.onAgentContextMenu?.call(agent, details.globalPosition),
       onLongPressStart: dragging ? null : (details) {
         setState(() {
           _draggingId = agent.id;
@@ -573,11 +594,28 @@ class _HexTile extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    agent.icon,
-                    color: agent.color.withValues(alpha: agent.mock ? 0.45 : 0.9),
-                    size: width * 0.28,
-                  ),
+                  // User-installed apps render their real icon file (from the
+                  // .desktop entry) instead of a generic Material glyph.
+                  if (agent.iconFilePath != null && agent.iconFilePath!.isNotEmpty)
+                    SizedBox(
+                      width: width * 0.34,
+                      height: width * 0.34,
+                      child: Image.file(
+                        File(agent.iconFilePath!),
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          agent.icon,
+                          color: agent.color.withValues(alpha: agent.mock ? 0.45 : 0.9),
+                          size: width * 0.28,
+                        ),
+                      ),
+                    )
+                  else
+                    Icon(
+                      agent.icon,
+                      color: agent.color.withValues(alpha: agent.mock ? 0.45 : 0.9),
+                      size: width * 0.28,
+                    ),
                   SizedBox(height: height * 0.03),
                   Text(
                     agent.name,

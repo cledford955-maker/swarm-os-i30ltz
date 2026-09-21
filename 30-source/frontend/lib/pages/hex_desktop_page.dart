@@ -21,6 +21,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/hex_grid.dart';
 import '../shell/window_manager.dart';
 import '../services/system_launcher.dart';
+import '../services/user_apps_service.dart';
+import '../services/app_installer_service.dart';
 import '../models/swarm_apps.dart';
 import '../widgets/swarm_terminal.dart';
 import '../widgets/companion_telemetry.dart';
@@ -56,6 +58,16 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     _ctrl = ScrollController();
     HardwareKeyboard.instance.addHandler(_onKey);
     _loadPrefs();
+    // User-installed apps (App Store) render as their own desktop tiles —
+    // listen so a fresh install/uninstall updates the desktop immediately.
+    UserAppsService.instance.addListener(_onUserAppsChanged);
+  }
+
+  void _onUserAppsChanged() {
+    if (!mounted) return;
+    setState(() {
+      _spaces = _buildInitialSpaces();
+    });
   }
 
   Future<void> _loadPrefs() async {
@@ -101,6 +113,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
 
   @override
   void dispose() {
+    UserAppsService.instance.removeListener(_onUserAppsChanged);
     HardwareKeyboard.instance.removeHandler(_onKey);
     _ctrl.dispose();
     super.dispose();
@@ -131,7 +144,10 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
   }
 
   List<_DesktopSpace> _buildInitialSpaces() => [
-    _DesktopSpace(name: 'ORIGIN', agents: _toHexAgents(SwarmAppCategory.origin)),
+    _DesktopSpace(name: 'ORIGIN', agents: [
+      ..._toHexAgents(SwarmAppCategory.origin),
+      ..._userAppTiles(),
+    ]),
     _DesktopSpace(name: 'SYSTEM', agents: _toHexAgents(SwarmAppCategory.system)),
     _DesktopSpace(name: 'GAMING & MEDIA', agents: _toHexAgents(SwarmAppCategory.gamingMedia)),
     _DesktopSpace(name: 'DROID', agents: _toHexAgents(SwarmAppCategory.droid)),
@@ -157,6 +173,27 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     mock: app.mock,
     previewImagePath: app.previewImage,
   );
+
+  // ────────────────────────────────────────────────────────────
+  // User-installed apps (App Store) — real desktop tiles with the
+  // package's actual icon file when one was found at install time.
+  // ────────────────────────────────────────────────────────────
+
+  List<HexAgent> _userAppTiles() =>
+      UserAppsService.instance.apps.map((app) => HexAgent(
+            id: app.id,
+            name: app.name,
+            icon: Icons.apps_rounded,
+            color: SwarmColors.accent,
+            bgColor: _t,
+            execCommand: app.execCommand,
+            // Marks this tile as a user-installed app so the right-click
+            // menu can offer Delete Icon / Uninstall App.
+            packageName: app.packageName,
+            iconFilePath: app.iconPath,
+          )).toList();
+
+  bool _isUserApp(HexAgent agent) => agent.packageName != null;
 
   // ────────────────────────────────────────────────────────────
   // Actions
@@ -212,6 +249,178 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       size: windowSize,
       content: _placeholder(agent),
     ));
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Right-click context menu on desktop tiles
+  // ────────────────────────────────────────────────────────────
+
+  void _showTileContextMenu(HexAgent agent, Offset position) {
+    final isUserApp = _isUserApp(agent);
+    final menu = <PopupMenuEntry<String>>[
+      PopupMenuItem(
+        value: 'open',
+        height: 36,
+        child: Row(children: [
+          const Icon(Icons.launch_rounded, size: 15, color: SwarmColors.accent),
+          const SizedBox(width: 10),
+          Text('Open', style: const TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+        ]),
+      ),
+      const PopupMenuDivider(),
+      PopupMenuItem(
+        value: 'appstore',
+        height: 36,
+        child: Row(children: [
+          const Icon(Icons.apps_rounded, size: 15, color: SwarmColors.accent),
+          const SizedBox(width: 10),
+          Text('App Store…', style: const TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+        ]),
+      ),
+      if (isUserApp) ...[
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'delete_icon',
+          height: 36,
+          child: Row(children: [
+            const Icon(Icons.delete_outline_rounded, size: 15, color: SwarmColors.statusIdle),
+            const SizedBox(width: 10),
+            Text('Delete Icon', style: const TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'uninstall',
+          height: 36,
+          child: Row(children: [
+            const Icon(Icons.delete_sweep_rounded, size: 15, color: SwarmColors.statusCritical),
+            const SizedBox(width: 10),
+            Text('Uninstall App', style: const TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+          ]),
+        ),
+      ],
+    ];
+
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx, position.dy,
+        overlay.size.width - position.dx, overlay.size.height - position.dy,
+      ),
+      color: SwarmColors.bgElevated,
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: SwarmColors.border)),
+      items: menu,
+    ).then((choice) {
+      if (choice == null || !mounted) return;
+      switch (choice) {
+        case 'open':
+          _openAgent(agent);
+        case 'appstore':
+          context.go('/appstore');
+        case 'delete_icon':
+          _deleteIcon(agent);
+        case 'uninstall':
+          _uninstallApp(agent);
+      }
+    });
+  }
+
+  Future<void> _deleteIcon(HexAgent agent) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SwarmColors.bgElevated,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: SwarmColors.border)),
+        title: Text('Delete ${agent.name} icon?',
+            style: const TextStyle(
+                color: SwarmColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Text(
+          'Removes the icon from your desktop only. The app stays installed — '
+          'you can re-add it from the App Store.',
+          style: const TextStyle(color: SwarmColors.textSecondary, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: SwarmColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete Icon', style: TextStyle(color: SwarmColors.statusIdle)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await UserAppsService.instance.removeIcon(agent.id);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: SwarmColors.bgElevated,
+        content: Text('🗑️ ${agent.name} icon removed — app still installed',
+            style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12)),
+        duration: const Duration(seconds: 3),
+      ));
+    }
+  }
+
+  Future<void> _uninstallApp(HexAgent agent) async {
+    final pkg = agent.packageName;
+    if (pkg == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SwarmColors.bgElevated,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: SwarmColors.border)),
+        title: Text('Uninstall ${agent.name}?',
+            style: const TextStyle(
+                color: SwarmColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Text(
+          'Opens a terminal to remove the $pkg package (pacman -Rns) and '
+          'deletes its desktop icon. Settings and user data are removed too.',
+          style: const TextStyle(color: SwarmColors.textSecondary, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: SwarmColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Uninstall', style: TextStyle(color: SwarmColors.statusCritical)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final ok = await AppInstallerService.instance.uninstallAndCleanup(pkg);
+    if (!mounted) return;
+    if (ok) {
+      await UserAppsService.instance.removeByPackage(pkg);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: SwarmColors.statusOnline,
+          content: Text('🗑️ ${agent.name} uninstalled — icon removed',
+              style: const TextStyle(color: Colors.black, fontSize: 12)),
+          duration: const Duration(seconds: 3),
+        ));
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: SwarmColors.statusCritical,
+        content: Text('⚠️ Uninstall did not complete',
+            style: TextStyle(color: Colors.white, fontSize: 12)),
+        duration: const Duration(seconds: 4),
+      ));
+    }
   }
 
   void _addSpace() {
@@ -309,6 +518,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
             // Checker layout holds one icon per row.
             rows: agents.length.clamp(1, 80),
             onAgentOpen: _openAgent,
+            onAgentContextMenu: _showTileContextMenu,
             showSlotBackgrounds: false,
             checker: true,
             mirror: mirror,

@@ -223,7 +223,7 @@ class UserAppsService extends ChangeNotifier {
           return null; // hidden entry — not a launchable desktop app
         }
       }
-      if (icon != null) map['icon'] = await resolveIconPath(icon!);
+      if (icon != null) map['icon'] = await resolveIconPath(icon);
       return map;
     } catch (_) {
       return null;
