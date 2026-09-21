@@ -108,6 +108,10 @@ alsa-utils
 bluez
 bluez-utils
 
+# MPRIS media control (Spotify, Chrome/YouTube tabs, any MPRIS-compliant
+# player) for GamingAgent's media-control API, 2026-09-20.
+playerctl
+
 # ===== Storage & Hardware =====
 nvme-cli
 smartmontools

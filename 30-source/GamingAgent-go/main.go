@@ -32,6 +32,7 @@ func main() {
 	steamSvc := services.NewSteamService()
 	gamesSvc := services.NewGamesService(gfnSvc, steamSvc, database)
 	lucilleSvc := services.NewLucilleService(gfnSvc, steamSvc, database)
+	mediaSvc := services.NewMediaService()
 
 	// Warm GFN catalog in background
 	go gfnSvc.WarmCache()
@@ -42,6 +43,7 @@ func main() {
 	gamesH := handlers.NewGamesHandler(gamesSvc)
 	favH := handlers.NewFavoritesHandler(database)
 	lucilleH := handlers.NewLucilleHandler(lucilleSvc, database)
+	mediaH := handlers.NewMediaHandler(mediaSvc)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
@@ -70,6 +72,10 @@ func main() {
 		r.Get("/games/intersection", gamesH.Intersection)
 		r.Get("/games/genres", gfnH.Genres)
 		r.Get("/games/prices/{appId}", gamesH.Prices)
+		// Now-playing is read-only status, same trust level as the catalog
+		// routes above; play/pause/skip/volume are mutating and sit in the
+		// protected group below next to /games/favorite.
+		r.Get("/media/status", mediaH.Status)
 
 		// Everything below either mutates persistent state, spends the
 		// owner's NVIDIA_API_KEY quota per call, or returns past chat
@@ -83,6 +89,8 @@ func main() {
 			r.Use(originGate)
 			r.Use(swarmAuthMiddleware)
 			r.Post("/games/favorite", favH.Upsert)
+			r.Post("/media/control", mediaH.Control)
+			r.Post("/media/volume", mediaH.Volume)
 			// Nemotron calls: eval is expensive (full analysis), chat is per-turn.
 			// 5/min on eval prevents runaway quota burn; 20/min on chat covers
 			// fast interactive use. stream shares the chat limit.

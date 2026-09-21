@@ -394,6 +394,57 @@ WebAuthn endpoints stay in place — they work if a FIDO2 key is ever added late
 
 ## IDEAS / TODO 💡
 
+### Ship Steam in the ISO (marked 2026-09-20, not built yet — user said hold)
+Steam isn't in `packages.x86_64` and has no `.desktop`/hex-desktop launcher anywhere in the project — the
+user's been testing GamingAgent against a manually-installed Steam on their dev CachyOS box, not a real
+SWARM OS install. When this gets built for real: add `steam` to `packages.x86_64`, and whatever launcher
+gets created (`.desktop` entry and/or a hex-desktop tile in `swarm_apps.dart`) **must** launch it as
+`steam -cef-disable-gpu`, not bare `steam` — the bare binary crashes on this hardware/driver combo (Steam's
+CEF-based UI failing GPU compositing init), confirmed directly by the user. See also the gaming-overlay
+work below — Steam itself is the reference point for what that overlay should feel like.
+
+### Gaming overlay — Lucille-controlled HUD/browser/media (started 2026-09-20)
+User wants a Steam-style overlay: a browser/walkthrough page (separate overlay page, not embedded-in-HUD;
+hold a modifier key + click to make that page go transparent so the game shows through; walkthrough videos
+open in a small window positioned center or right-edge, not too big, scrollable in all directions), Lucille
+voice control (wake word "Hey Lucille"/"Hey Lucy", realistic/seductive voice — **this already substantially
+exists**: `frontend/lib/services/wake_word_service.dart` + `lucille_voice_service.dart` already do wake-flag
+polling → Groq/OpenAI/Gemini Whisper transcription → OpenRouter chat with a "seductive, warm, velvet,
+intimate" Lucille system prompt → multi-provider TTS (Fish Audio → OpenRouter → ElevenLabs, already tuned
+breathy/intimate `stability:0.35 style:0.65` → Edge-TTS → espeak fallback chain). Needs auditing for whether
+it's actually wired to a real acoustic wake-word listener (something must write `/tmp/lucille_wake.flag` —
+not yet located) and whether `ELEVEN_VOICE_ID` is set, then extending into the gaming-overlay context
+specifically rather than rebuilt from scratch. Also wants a separate gameplay HUD (system stats, Lucille
+commentary, GFN/game info, now-playing) controlled by Lucille, and media control for
+Spotify/YouTube-in-browser ("control music youtube spotifi"). Still-open questions from the user (asked via
+AskUserQuestion 2026-09-20, dismissed — pick back up when they're ready): what "GX" refers to (a launcher?
+gamescope?), and confirmation on HUD content/summon-hotkey.
+
+**First slice built 2026-09-20 — media control backend, GamingAgent-go.** New `services/media_service.go`
+wraps `playerctl` (added to `packages.x86_64`, see above — MPRIS covers Spotify + any browser tab playing
+audio + any other MPRIS-compliant player uniformly, no per-service API/OAuth needed for either "youtube" or
+"spotifi"). New `models.MediaStatus`/`MediaControlRequest`/`MediaVolumeRequest`, new `handlers/media.go`,
+three new routes: `GET /api/media/status` (open, read-only, matches the catalog routes' trust level),
+`POST /api/media/control` (play/pause/play-pause/next/previous/stop) and `POST /api/media/volume` — both in
+the existing protected group next to `/games/favorite` (loopback bypass or `X-Swarm-Auth`/bearer token),
+since these let a caller pause/skip/change volume on whatever the user's listening to. Action validated
+against an allowlist at the handler boundary (400 on garbage input, not a raw exec error). Status never
+errors just because nothing's playing — `available:false` is the normal idle state, not a failure.
+**Honestly verified, not overclaimed:** `playerctl` isn't installed in this dev sandbox and there's no
+passwordless sudo to install it here, so the actual MPRIS calls against a real running player (Spotify,
+a YouTube tab) are NOT live-tested — only the code paths reachable without it: status gracefully returns
+`{"available":false}` when the binary or any player is missing, invalid actions get a clean 400, out-of-range
+volume gets a clean 400, and a valid action against a missing binary surfaces the real exec error via 502
+(confirmed protected-route auth/loopback-bypass wiring is correct in the process — requests reached the
+actual playerctl call, weren't rejected at the auth layer). `go build`/`go vet`/`gofmt -l`/`go test ./...`
+all clean. **Needs a real smoke test on the actual SWARM OS system** once `playerctl` ships via the package
+list — play something in Spotify or a YouTube tab and hit `/api/media/status` for real.
+
+**Not yet built:** the overlay window itself (Slint or Flutter — undecided), browser-in-overlay vs.
+launch-real-Chrome (undecided), the transparency-on-modifier-hold interaction, the video window, wiring
+Lucille chat's tool-call pattern (like `LucilleEvalResult`'s `set_genre_filter`/`pin_games`) to drive overlay
+actions including the new media endpoints above.
+
 ### Mock tool wiring instructions (2026-09-15 — user wants all 4 kept, wire up when ready)
 Each lives in `30-source/frontend/lib/models/swarm_apps.dart` under "MOCK IDEAS", tagged `mock: true`.
 To wire one up for real: add `execCommand:` or `routePath:` to its `SwarmApp` entry and flip `mock: true`
