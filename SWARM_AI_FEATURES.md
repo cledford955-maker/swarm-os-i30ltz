@@ -1,5 +1,35 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **Lucille's chat backend, final state 2026-09-20 — OpenRouter's Kimi K2.5, after two provider swaps in one
+> day.** Journey, each step user-requested or verify-first-then-acted: NVIDIA NIM's dead Nemotron model
+> (fixed) → NIM's `nvidia/nemotron-3.5-lightning-30b-a3b` (working, fast) → user asked for "nim kimi3": NIM's
+> `moonshotai/kimi-k3` (verified real and live first) — worked correctly but NIM's hosting of it was severely
+> slow, a **bare direct call with zero GamingAgent involvement took 105 seconds** for a 64-token reply,
+> confirmed twice hitting GamingAgent's own 120s timeout exactly. User separately confirmed Nemotron was
+> responsive for them in VS Code at the same time, narrowing this to kimi-k3-on-NIM specifically, not a
+> blanket outage. User then asked for "kimi 2.5 openrouter": verified `moonshotai/kimi-k2.5` is real and live
+> on OpenRouter first, switched provider entirely (endpoint, auth — `OPENROUTER_API_KEY` not
+> `NVIDIA_API_KEY` — and OpenRouter's recommended `HTTP-Referer`/`X-Title` headers). **Verified live: 6.7s for
+> a chat reply and 2.9s for an ACTION-protocol reply** (vs. NIM kimi-k3's 105s+) — dramatically faster, same
+> `content`/`reasoning` delta-split streaming behavior confirmed so the parser needed no changes.
+>
+> Given the constant name had already needed renaming twice in one day (`nemotronModel`→`nimModel`→dead),
+> switched to fully **provider-agnostic naming this time**: `chatEndpoint`/`chatModel`/`chatAPIKeyEnv` in
+> `services/lucille_service.go`, `callNim`→`callChat`, every remaining "NIM"/"Nemotron" reference in
+> `main.go` and `CLAUDE.md` (now "Lucille's chat backend," explicitly instructing readers to check the three
+> source constants rather than trust any doc, itself included) reworded to be provider-neutral too — the
+> point is a fourth swap next time doesn't need a fourth rename.
+>
+> **Found and fixed a real regression from the model swap, not just reported it:** kimi-k2.5 produces a
+> longer, more deeply-nested JSON shape for `/api/lucille/eval` than the schema's system prompt asks for,
+> and got cut off mid-object at the existing 3072 max_tokens, producing "unexpected end of JSON input."
+> Bumped Eval's budget to 6144, verified live — parse error gone, real coherent content comes back (52s,
+> slower than Chat but still well inside the timeout). **Still a soft, honestly-reported gap, not chased
+> further:** even with room to finish, kimi-k2.5 populated `summary` but left `genreFilters`/`pinGames`/
+> `sortBy`/`systemSuggestions` null rather than filling the full flat schema — a prompt-compliance difference
+> between models, not a crash, and not pursued further since it's a genuine "good enough, diminishing
+> returns" line rather than something actually broken.
+
 > **GamingAgent finished, not just investigated — 2026-09-20:** User remembered GamingAgent had a blocking problem but thought it was fixed, asked for a full check in order of importance, then explicitly asked for the whole thing finished properly rather than left half-done. Two passes, both against the live external APIs, not just `go build`:
 > **Pass 1 — the remembered problem + first live bug found.** (1) bo55 confirmed genuinely fixed: neither `gaming-agent.service` nor `lucy-server.service` depend on `network-online.target` anymore. (2) Found `GfnService`'s catalog URL (`services/gfn_service.go`) dead — NVIDIA returns a real S3-style 403 AccessDenied on it now, no key involved. Found NVIDIA's current path via web search, verified live (200 OK, ~409KB real catalog): `static.nvidiagrid.net/supported-public-game-list/locales/gfnpc-en-US.json`. The response shape changed too — `id` is now a JSON number not a string (would have hard-failed decode even after the URL fix), `steamAppId` no longer exists as its own field (now parsed from `steamUrl` via regex), `description`/`releaseYear` don't exist in the feed at all anymore (`models.GfnGame` updated to match). (3) `STEAM_API_KEY` in `.env` confirmed dead by calling Steam's own API directly with it — 403 straight from Steam, not from this code. Blocks `/api/games/intersection` and `/api/steam/library`; needs the user to regenerate it at steamcommunity.com/dev/apikey, not fixable here.
 > **Pass 2 — user said "finish it, everything needs to be completely done."** Went endpoint-by-endpoint against the real live APIs instead of stopping at the one bug already found, and found two more real, currently-broken dependencies: **Nemotron model was dead** — `nvidia/llama-3.3-nemotron-super-49b-v1` (`services/lucille_service.go`) returns HTTP 410 Gone, retired by NVIDIA 2026-08-26, meaning `/api/lucille/eval`, `/chat`, and `/chat/stream` had been silently failing (still HTTP 200, but with `{"error":...}` bodies) for weeks. Queried NVIDIA's live `/v1/models` list, found and verified a working replacement: `nvidia/nemotron-3.5-lightning-30b-a3b` — it's a reasoning model that streams `reasoning_content` deltas before the real `content` delta, which the existing parser already filters correctly (it only ever read `.Content`), but needed `max_tokens` raised (1024/2048 → 3072) so the chain-of-thought doesn't eat the whole budget before the real answer arrives. **CheapShark pricing was silently broken for every single lookup** — `GetPrices` (`services/games_service.go`) sent Go's bare default User-Agent; CheapShark now hard-requires a descriptive one and returns 400 for anything else, which `GetPrices` was decoding as "no results" for every appId, even famous ones (tested with Half-Life 2/220). Fixed with an explicit UA header. **Also found and fixed a real bug in the cache primitive itself** (`services/cache.go`): `GetCatalog`'s "return stale cache rather than failing hard" fallback could never actually fire — `cached.get()` enforces its TTL check on every call, so by the time you're in the post-fetch-failure fallback branch, the cache has necessarily already expired, and a second `get()` call returns false every time. Added a real `getStale()` (returns the last value regardless of age, `ok=false` only if nothing was ever cached) and switched the fallback to use it — locked in with 5 new unit tests in `services/cache_test.go` covering the exact scenario that was broken. Applied the same real caching (10min TTL + working stale-fallback) to `SteamService`, which previously had none at all — every call hit Steam fresh.

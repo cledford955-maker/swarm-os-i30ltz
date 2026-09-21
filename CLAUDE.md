@@ -139,7 +139,7 @@ All OSes, the companion phones and Claude share one append-only memory log at `/
 All services read these at runtime via `EnvironmentFile=/etc/swarm_os.env`:
 
 - `STEAM_API_KEY`, `STEAM_ID64` — Steam Web API
-- `NVIDIA_API_KEY` — NVIDIA NIM (`https://integrate.api.nvidia.com/v1`) — see "NVIDIA NIM / Lucille" below for which model is actually live right now
+- `NVIDIA_API_KEY` — NVIDIA NIM (`https://integrate.api.nvidia.com/v1`) — not currently used by GamingAgent's Lucille chat (see "Lucille's chat backend" below), but still a valid key for direct NIM calls elsewhere
 - `ANTHROPIC_API_KEY`, `CLAUDE_API_KEY` — Anthropic Claude
 - `OPENROUTER_API_KEY` — OpenRouter multi-model
 - `GROQ_API_KEY` — Groq fast inference
@@ -149,19 +149,20 @@ All services read these at runtime via `EnvironmentFile=/etc/swarm_os.env`:
 
 ---
 
-## NVIDIA NIM / Lucille
+## Lucille's chat backend
 
-Lucille is the SWARM OS AI. GamingAgent calls an NVIDIA NIM-hosted model for gaming evaluations and chat —
-**not necessarily a Nemotron model**; the constant is named `nimModel`/`nimEndpoint` in
-`services/lucille_service.go` precisely because NVIDIA NIM hosts many third-party models beyond NVIDIA's own
-Nemotron line, and this has already changed twice (2026-09-20 alone): the original
-`nvidia/llama-3.3-nemotron-super-49b-v1` was retired by NVIDIA (HTTP 410), replaced with
-`nvidia/nemotron-3.5-lightning-30b-a3b`, then swapped again on request to `moonshotai/kimi-k3`. **Check
-`nimModel` in that file for the actual current model — don't trust this doc or the section header's name.**
+Lucille is the SWARM OS AI. GamingAgent calls a chat-completions API for gaming evaluations and chat — which
+provider and model is **not stable enough to name here**: it changed three times in one day (2026-09-20):
+NVIDIA NIM's `nvidia/llama-3.3-nemotron-super-49b-v1` (retired by NVIDIA, HTTP 410) → NIM's
+`nvidia/nemotron-3.5-lightning-30b-a3b` (fixed) → NIM's `moonshotai/kimi-k3` (user-requested swap, but NIM's
+hosting of it was severely slow — 105s for a 64-token reply, verified directly) → OpenRouter's
+`moonshotai/kimi-k2.5` (current, ~8.8s for an equivalent call). The three constants in
+`services/lucille_service.go` — `chatEndpoint`, `chatModel`, `chatAPIKeyEnv` — are named provider-agnostically
+on purpose, precisely so a future switch doesn't leave stale identifiers *and* a stale doc both pointing at
+the wrong thing at once. **Read those three constants for what's actually live. Do not trust this section,
+its header, or any other doc for the current model/provider/key — update this note if you change them, but
+verify from source regardless.**
 
-- **Endpoint:** `https://integrate.api.nvidia.com/v1/chat/completions` (generic NIM chat completions — same
-  regardless of which model `nimModel` names)
-- **Key:** `NVIDIA_API_KEY` from environment
 - **GamingAgent routes:** `GET /api/lucille/eval`, `POST /api/lucille/chat`, `POST /api/lucille/chat/stream`
 
 ---
