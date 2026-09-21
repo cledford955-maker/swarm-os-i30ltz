@@ -18,7 +18,10 @@ class LiveModel {
   final List<String> inputModalities;
   final List<String> outputModalities;
 
-  const LiveModel({
+  // Not const: _paidTwinExists is set by LiveModelCatalogService after the
+  // whole catalog loads (a :free variant only counts as "on sale" relative
+  // to its paid twin, which can't be known from one JSON record alone).
+  LiveModel({
     required this.id,
     required this.name,
     required this.description,
@@ -59,6 +62,57 @@ class LiveModel {
     final per1M = promptPricePerToken! * 1000000;
     if (per1M < 0.01) return '\$${per1M.toStringAsFixed(4)} / 1M';
     return '\$${per1M.toStringAsFixed(2)} / 1M';
+  }
+
+  /// "$X.XX / 1M" from the real per-token completion (output) price — the
+  /// number that actually dominates agent-loop costs, since coding agents
+  /// emit far more tokens than they read.
+  String get outputPricePer1MDisplay {
+    if (isFree) return 'FREE';
+    if (completionPricePerToken == null) return '—';
+    final per1M = completionPricePerToken! * 1000000;
+    if (per1M < 0.01) return '\$${per1M.toStringAsFixed(4)} / 1M';
+    return '\$${per1M.toStringAsFixed(2)} / 1M';
+  }
+
+  /// Blended 3:1 input:output cost per 1M — the standard approximation for
+  /// agentic coding traffic. This is the number the "$2 ceiling" check uses.
+  double get blendedPricePer1M {
+    if (isFree) return 0;
+    final p = promptPricePerToken ?? 0;
+    final c = completionPricePerToken ?? 0;
+    return (p * 3 + c) / 4 * 1000000;
+  }
+
+  String get blendedPriceDisplay {
+    if (isFree) return 'FREE';
+    final v = blendedPricePer1M;
+    if (v < 0.01) return '\$${v.toStringAsFixed(4)} / 1M';
+    return '\$${v.toStringAsFixed(2)} / 1M';
+  }
+
+  /// The base id without OpenRouter's `:free` / `:batch` variant suffix.
+  String get baseId {
+    for (final suffix in [':free', ':batch']) {
+      if (id.endsWith(suffix)) return id.substring(0, id.length - suffix.length);
+    }
+    return id;
+  }
+
+  /// True when this exact id is a discounted variant of a pricier base model
+  /// (a `:free` twin of a paid model = 100% off; a `:batch` variant = ~50%
+  /// off OpenRouter's documented batch discount). Only meaningful once the
+  /// whole catalog is loaded — computed by LiveModelCatalogService.
+  bool get isDiscountedVariant => id.endsWith(':free') && _paidTwinExists ||
+      id.endsWith(':batch');
+  bool _paidTwinExists = false;
+  set hasPaidTwin(bool v) => _paidTwinExists = v;
+
+  /// Discount percentage vs the paid base twin, when detectable.
+  int? get discountPercent {
+    if (id.endsWith(':free') && _paidTwinExists) return 100;
+    if (id.endsWith(':batch')) return 50; // OpenRouter's documented batch rate
+    return null;
   }
 
   String get contextDisplay {
@@ -120,6 +174,34 @@ class LiveModelCatalogService extends ChangeNotifier {
       _all.where((m) => m.isNvidiaFree).toList()
         ..sort((a, b) => a.name.compareTo(b.name));
 
+  /// The current-generation flagship families the top swarm is built from.
+  /// Anything in these families that exists live shows up in the TOP filter.
+  static const _flagshipFamilies = [
+    'moonshotai/kimi-k2.6', 'moonshotai/kimi-k3',
+    'qwen/qwen3.6', 'qwen/qwen3-max',
+    'z-ai/glm-5.3', 'z-ai/glm-5.2',
+    'deepseek/deepseek-v4', 'deepseek/deepseek-r2',
+    'nvidia/nemotron-3',
+  ];
+
+  /// Live flagship models from the top families, ranked cheapest-blended
+  /// first. This is the "top models" list — current generation only, no
+  /// retired generations, no $5+/1M premium tier unless it's in a family
+  /// the user explicitly asked for.
+  List<LiveModel> topFlagshipModels({int limit = 50}) {
+    final matches = _all.where((m) =>
+        _flagshipFamilies.any(m.baseId.startsWith) &&
+        !m.id.endsWith(':batch')).toList();
+    matches.sort((a, b) => a.blendedPricePer1M.compareTo(b.blendedPricePer1M));
+    return matches.take(limit).toList();
+  }
+
+  /// Live models on "sale" — discounted variants of pricier base models:
+  /// `:free` twins of paid models (100% off) and `:batch` variants (~50%
+  /// off). Detected from the live catalog itself, not hand-maintained.
+  List<LiveModel> get onSaleModels => _all.where((m) => m.isDiscountedVariant).toList()
+        ..sort((a, b) => (b.discountPercent ?? 0).compareTo(a.discountPercent ?? 0));
+
   Future<void> ensureLoaded() async {
     if (hasData && _fetchedAt != null && DateTime.now().difference(_fetchedAt!) < _cacheTtl) {
       return;
@@ -148,6 +230,7 @@ class LiveModelCatalogService extends ChangeNotifier {
           .toList();
       _all = list;
       _byId = {for (final m in list) m.id: m};
+      _markDiscountedVariants();
       _fetchedAt = DateTime.now();
       _categoryCache.clear();
       unawaited(_saveToCache());
@@ -158,6 +241,18 @@ class LiveModelCatalogService extends ChangeNotifier {
 
     _loading = false;
     notifyListeners();
+  }
+
+  /// Flags `:free` variants that have a paid base twin on the catalog right
+  /// now — those are the genuine "100% OFF" sale entries. A `:free` with no
+  /// paid twin is just a permanently-free model, not a sale.
+  void _markDiscountedVariants() {
+    for (final m in _all) {
+      if (m.id.endsWith(':free')) {
+        m.hasPaidTwin = _byId.containsKey(m.baseId) &&
+            (_byId[m.baseId]!.promptPricePerToken ?? 0) > 0;
+      }
+    }
   }
 
   /// Live-ranked models for one of OpenRouter's real categories (e.g.
@@ -234,6 +329,7 @@ class LiveModelCatalogService extends ChangeNotifier {
           .toList();
       _all = list;
       _byId = {for (final m in list) m.id: m};
+      _markDiscountedVariants();
       final fa = json['fetchedAt'] as String?;
       if (fa != null) _fetchedAt = DateTime.tryParse(fa);
     } catch (_) {}

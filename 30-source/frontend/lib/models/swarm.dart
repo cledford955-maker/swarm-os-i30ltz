@@ -371,23 +371,39 @@ final allModels = <SwarmModel>[
   const SwarmModel(id: 'z-ai/glm-5.3', name: 'GLM 5.3', role: 'General Coding Agent', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.91 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '1.3M', description: 'Zhipu/Z.ai\'s current flagship — substituted for the requested "GLM 5.6", which does not exist on OpenRouter; 5.3 is the real current top of that line.', keywords: ['glm', 'zhipu', 'z-ai', 'coding', 'default']),
   const SwarmModel(id: 'nvidia/nemotron-3-ultra-550b-a55b', name: 'Nemotron 3 Ultra', role: 'System, Eval & Gaming Reasoner', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.60 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '256K', description: 'NVIDIA\'s current flagship Nemotron — the default for system-utility agents, Dr. Boltz, and gaming-tagged agents; separate from GamingAgent\'s own direct-NVIDIA-API Lucille eval pipeline, which is unaffected by this swarm.', keywords: ['nvidia', 'nemotron', 'system', 'eval', 'gaming', 'default']),
 
+  // ─── Cost-Efficient Top Tier (2026-09-21) — the "top swarm" members.
+  // All verified live on OpenRouter at write time with real per-token prices.
+  // These are the current-generation flagships that still price under $2/1M
+  // blended — the sweet spot the user asked for: top-tier quality without
+  // the $5-15/1M Opus/GPT-5-Pro pricing.
+  const SwarmModel(id: 'qwen/qwen3.6-plus', name: 'Qwen 3.6 Plus', role: 'Top-Tier General Coding Agent', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.33 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '256K', description: 'Alibaba\'s Qwen 3.6 Plus — flagship-tier reasoning and coding at a fraction of Western flagship pricing. The sweet spot of the Qwen 3.6 line.', keywords: ['qwen', '3.6', 'plus', 'coding', 'top', 'default']),
+  const SwarmModel(id: 'z-ai/glm-5.3-flash', name: 'GLM 5.3 Flash', role: 'High-Speed Top-Tier Coder', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.09 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '1M', description: 'Z.ai\'s GLM 5.3 Flash — near-flagship quality at 1/10th flagship price with a 1M context window. The cost-efficiency king of the GLM 5.3 line.', keywords: ['glm', 'flash', 'z-ai', 'coding', 'top', 'cheap', 'default']),
+  const SwarmModel(id: 'deepseek/deepseek-v4-pro', name: 'DeepSeek V4 Pro', role: 'Deep Reasoning & Heavy Coding', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.95 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '128K', description: 'DeepSeek\'s V4 Pro — o1-class reasoning and multi-file coding at open-weight pricing. The strongest DeepSeek for hard problems.', keywords: ['deepseek', 'v4', 'pro', 'reasoning', 'coding', 'top', 'default']),
+  const SwarmModel(id: 'deepseek/deepseek-v4-flash', name: 'DeepSeek V4 Flash', role: 'Ultra-Cheap High-Quality Coder', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.06 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '128K', description: 'DeepSeek V4 Flash — the cheapest model in the top tier. Near-V4-Pro quality for routine coding at pennies per million tokens.', keywords: ['deepseek', 'v4', 'flash', 'coding', 'top', 'cheap', 'default']),
+  const SwarmModel(id: 'z-ai/glm-5.3-flashx', name: 'GLM 5.3 FlashX', role: 'Turbo Throughput Engine', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.37 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '1M', description: 'The throughput variant of GLM 5.3 Flash — maximum tokens-per-second for agentic pipelines that need speed over depth.', keywords: ['glm', 'flashx', 'z-ai', 'turbo', 'top']),
+
 ];
 
 /// Pre-configured System Swarms
 final swarms = <String, SwarmConfig>{
   // ─── NEW DEFAULT FLAGSHIP SWARM (For Everyone) ──────────────────────────
+  // 2026-09-21: rebuilt as the cost-efficient TOP swarm. Every member is a
+  // current-generation flagship that blends under ~$0.50/1M — top-tier
+  // quality without the $5-15/1M Opus/GPT-5-Pro tier. Anything pricier is
+  // a deliberate opt-in (heavy-cloud-council) rather than the default.
   'default-coding-swarm': SwarmConfig(
     id: 'default-coding-swarm',
-    name: 'General Coding Swarm (Default)',
+    name: 'Top Swarm (Cost-Efficient Flagships)',
     role: 'Everyday Coding & Chat — Everyone Except System/Gaming/Eval Agents',
     isDefault: true,
-    estimatedPrice: r'~$0.81 / 1M (Blended Execution)',
-    description: 'Default for every general-purpose and coding agent (Lucille, Forge, Droid, and the rest of the roster): Kimi K2.6, Qwen 2.5 Coder 32B, GLM 5.3, and DeepSeek R1. System-utility agents, Dr. Boltz, and gaming-tagged agents use nemotron-swarm instead — see their defaultSwarmId.',
+    estimatedPrice: r'~$0.45 / 1M (Blended Execution)',
+    description: "The top swarm: Kimi K2.6, Qwen 3.6 Plus, GLM 5.3 Flash, and DeepSeek V4 Pro/Flash — current-generation flagships, all under \$1/1M. Highest models by default; pick heavy-cloud-council only when you deliberately want the \$5+/1M tier.",
     models: [
       allModels.firstWhere((m) => m.id == 'moonshotai/kimi-k2.6'),
-      allModels.firstWhere((m) => m.id == 'qwen/qwen-2.5-coder-32b-instruct'),
-      allModels.firstWhere((m) => m.id == 'z-ai/glm-5.3'),
-      allModels.firstWhere((m) => m.id == 'deepseek/deepseek-r1'),
+      allModels.firstWhere((m) => m.id == 'qwen/qwen3.6-plus'),
+      allModels.firstWhere((m) => m.id == 'z-ai/glm-5.3-flash'),
+      allModels.firstWhere((m) => m.id == 'deepseek/deepseek-v4-pro'),
+      allModels.firstWhere((m) => m.id == 'deepseek/deepseek-v4-flash'),
     ],
   ),
 

@@ -17,13 +17,19 @@ import '../providers/skill_router_providers.dart';
 /// through the existing model-card UI unchanged. Only ever built from data
 /// LiveModelCatalogService actually fetched — never a hand-typed guess.
 SwarmModel swarmModelFromLive(LiveModel m) {
+  final sale = m.discountPercent;
   return SwarmModel(
     id: m.id,
     name: m.name,
     role: 'Live-verified · ${m.contextDisplay} context',
     provider: m.isNvidiaFree ? ProviderId.nvidia : ProviderId.openrouter,
     tier: m.isFree ? ModelTier.freeOnline : ModelTier.paidOnline,
-    pricePer1M: m.pricePer1MDisplay,
+    pricePer1M: m.blendedPriceDisplay,
+    originalPricePer1M: sale != null && sale < 100
+        ? m.pricePer1MDisplay
+        : null,
+    isOnSale: sale != null,
+    saleDiscount: sale != null ? '$sale% OFF' : null,
     contextWindow: m.contextDisplay,
     description: m.description.isNotEmpty ? m.description : 'Live model from OpenRouter — no static description available.',
     keywords: const ['live'],
@@ -226,8 +232,37 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
       return !liveCatalog.exists(m.id);
     }
 
+    // Live price enrichment: when the live catalog has loaded, every static
+    // card that matches a live id gets its real current price + sale state
+    // instead of the hand-typed (possibly stale) one. This is what makes the
+    // whole library show live prices, not just the live filters.
+    SwarmModel withLivePrice(SwarmModel m) {
+      if (!liveCatalog.hasData) return m;
+      final live = liveCatalog.byId(m.id);
+      if (live == null) return m;
+      final sale = live.discountPercent;
+      return SwarmModel(
+        id: m.id,
+        name: m.name,
+        role: m.role,
+        provider: m.provider,
+        tier: live.isFree ? ModelTier.freeOnline : m.tier,
+        pricePer1M: live.blendedPriceDisplay,
+        originalPricePer1M: sale != null && sale < 100 ? live.pricePer1MDisplay : null,
+        isOnSale: sale != null,
+        saleDiscount: sale != null ? '$sale% OFF' : null,
+        contextWindow: live.contextDisplay,
+        description: m.description,
+        keywords: m.keywords,
+      );
+    }
+
     List<SwarmModel> filteredModels;
-    if (_selectedFilter == 'LIVE CODING') {
+    if (_selectedFilter == 'TOP MODELS') {
+      filteredModels = liveCatalog.topFlagshipModels(limit: 50).map(swarmModelFromLive).toList();
+    } else if (_selectedFilter == 'LIVE ON SALE') {
+      filteredModels = liveCatalog.onSaleModels.map(swarmModelFromLive).toList();
+    } else if (_selectedFilter == 'LIVE CODING') {
       filteredModels = liveCatalog.topCodingModels(limit: 100).map(swarmModelFromLive).toList();
     } else if (_selectedFilter == 'LIVE CATEGORY' && _selectedLiveCategory != null) {
       filteredModels = _liveCategoryResults.map(swarmModelFromLive).toList();
@@ -244,7 +279,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
         if (_selectedFilter == 'VIDEO' && !m.keywords.contains('video')) return false;
         if (_selectedFilter == 'AUTOROUTER' && !m.keywords.contains('autorouter')) return false;
         return true;
-      }).toList();
+      }).map(withLivePrice).toList();
     }
 
     if (_searchQuery.isNotEmpty && _selectedFilter != 'LIVE CODING' && _selectedFilter != 'LIVE CATEGORY') {
@@ -619,6 +654,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               runSpacing: 8,
               children: [
                 _buildFilterChip('ALL', 'ALL (${allModels.length})', SwarmColors.accent),
+                _buildFilterChip('TOP MODELS', 'TOP MODELS (${liveCatalog.hasData ? liveCatalog.topFlagshipModels(limit: 50).length : 0} 🏆)', SwarmColors.lucilleCore),
+                _buildFilterChip('LIVE ON SALE', 'LIVE ON SALE (${liveCatalog.hasData ? liveCatalog.onSaleModels.length : 0} 🔥)', SwarmColors.success),
                 _buildFilterChip('LIVE CODING', 'LIVE CODING (TOP ${liveCatalog.topCodingModels(limit: 100).length} 🔴)', SwarmColors.success),
                 _buildFilterChip('NVIDIA NIM', 'NVIDIA NIM ($nvidiaCount FREE)', SwarmColors.agentPurple),
                 _buildFilterChip('OPENROUTER', 'OPENROUTER ($openrouterCount)', SwarmColors.agentCyan),
@@ -1165,28 +1202,36 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Text(
-                    m.pricePer1M ?? 'FREE',
-                    style: TextStyle(
-                      color: m.pricePer1M == 'FREE' ? SwarmColors.success : SwarmColors.accentSky,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (m.originalPricePer1M != null) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      m.originalPricePer1M!,
-                      style: const TextStyle(
-                        color: SwarmColors.textMuted,
-                        decoration: TextDecoration.lineThrough,
-                        fontSize: 10,
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        m.pricePer1M ?? 'FREE',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: m.pricePer1M == 'FREE' ? SwarmColors.success : SwarmColors.accentSky,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
+                    if (m.originalPricePer1M != null) ...[
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          m.originalPricePer1M!,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: SwarmColors.textMuted,
+                            decoration: TextDecoration.lineThrough,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
               if (m.contextWindow != null)
                 Container(
