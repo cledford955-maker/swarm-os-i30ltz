@@ -48,6 +48,10 @@
     <windowRule title="SWARM OS*" serverDecoration="no" maximized="yes"/>
     <!-- Lucille panel (swarm-slint): floating companion, no compositor title bar -->
     <windowRule title="Lucille" serverDecoration="no"/>
+    <!-- Gaming overlay (swarm-overlay, 2026-09-20): dashboard + browser-widget
+         windows, floating and resizable over a running game, same chromeless
+         style as the Lucille panel above (title starts "SWARM Overlay —"). -->
+    <windowRule title="SWARM Overlay*" serverDecoration="no"/>
   </windowRules>
 
 </openbox_config>

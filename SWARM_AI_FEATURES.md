@@ -460,13 +460,40 @@ correctly failed with `UnsupportedWindowHandle` — expected and correct, since 
 display here to attach a window to; that's the one thing that still needs a real on-screen smoke test on the
 actual SWARM OS desktop session, everything else about this architecture is now confirmed.
 
-**Not yet built:** the real overlay crate (new standalone Rust project, not embedded inside swarm-slint's own
-Slint scene graph — wry/tao create their own native window via the compositor, so this runs as its own
-process/binary), widget-mode vs. full-page-mode UI, the transparency-on-modifier-hold interaction, the video
-window, labwc window rules for the new overlay windows (existing `rc.xml` already supports floating
-undecorated windows via `windowRule` — Lucille panel already does this, same pattern applies), wiring Lucille
-chat's tool-call pattern (like `LucilleEvalResult`'s `set_genre_filter`/`pin_games`) to drive overlay actions
-including the new media endpoints above, and the separate "launch Opera GX / Chrome as an app" capability.
+**Real overlay crate built 2026-09-20 — `30-source/swarm-overlay/`.** Standalone Rust binary (not embedded
+in swarm-slint's own Slint scene graph — wry/tao create their own native window via the compositor, so this
+is its own process), two modes selected by CLI arg or `SWARM_OVERLAY_MODE` env var:
+- `dashboard` (default) — full-page HUD, Xbox-Game-Bar-style. `assets/dashboard.html` baked into the binary
+  via `include_str!` (not served over HTTP — see the Cargo.toml comment: confirmed live 2026-09-20 that
+  GamingAgent's `originGate` rejects a real HTTP Origin not on its allowlist, while a baked-in page's
+  `fetch()` calls send no Origin and pass through as a trusted native client, exactly like curl/the Android
+  app already do). Wired to real, already-working GamingAgent endpoints: now-playing widget polls
+  `GET /api/media/status` every 4s with play/pause/next/prev/volume controls hitting `/api/media/control` and
+  `/api/media/volume`; a Lucille chat panel round-trips through `/api/lucille/chat` with session continuity.
+  Walkthrough/web panel is a stub pointing at the `browser` mode below rather than duplicating it.
+- `browser <url>` — a single resizable/movable widget window pointed at a URL (second arg or
+  `SWARM_OVERLAY_URL`), for walkthroughs and general web browsing layered over a game. Defaults to Google if
+  no URL given.
+
+Both modes **verified two ways**: (1) real build against this system's actual `libwebkit2gtk-4.1.so.0`
+(2.52.6), `libgtk-3.so.0`, `libsoup-3.0.so.0`, `libjavascriptcoregtk-4.1.so.0` — `cargo build` clean, zero
+warnings, both binaries run up through webview creation and only fail on `UnsupportedWindowHandle` (expected
+— no real Wayland/X11 display in this dev sandbox to attach a window to, not a code defect); (2) the
+dashboard's actual JS/fetch logic against a **live GamingAgent-go instance**, driven through the Claude
+Browser tool end-to-end: confirmed real 200 OK responses from `/api/media/status`, correct "Nothing playing"
+render when no MPRIS player is active, and a real Nemotron round-trip through the Lucille chat panel. Added
+`labwc/rc.xml` window rule (`SWARM Overlay*` → `serverDecoration="no"`, same chromeless style as the Lucille
+panel) — XML validated well-formed after the edit.
+
+**Not yet built:** widget-mode vs. full-page-mode *switching* (currently two separate launches, not a toggle
+within one running instance), the transparency-on-modifier-hold interaction the user specifically asked for,
+the video window for walkthrough videos, autostart/labwc launch wiring (nothing launches this yet — no
+`labwc/autostart` entry, no hotkey, no voice trigger), wiring Lucille chat's tool-call pattern (like
+`LucilleEvalResult`'s `set_genre_filter`/`pin_games`) to drive overlay actions directly instead of the user
+manually typing into the chat panel, and the separate "launch Opera GX / Chrome as an installed app"
+capability (Opera GX confirmed by the user 2026-09-20 to be a real Chromium-based gaming browser — not in
+Arch's official repos, AUR-only, so shipping it in the ISO needs an AUR-helper build step that doesn't exist
+in this project yet; out of scope for now, launching it if already installed doesn't need that).
 
 ### Mock tool wiring instructions (2026-09-15 — user wants all 4 kept, wire up when ready)
 Each lives in `30-source/frontend/lib/models/swarm_apps.dart` under "MOCK IDEAS", tagged `mock: true`.

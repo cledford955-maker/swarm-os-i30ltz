@@ -20,9 +20,6 @@ path = "src/main.rs"
 wry = "0.35"
 tao = { version = "0.24", default-features = false, features = ["rwh_05"] }
 
-# For talking to GamingAgent-go's REST API (media control, Lucille chat) —
-# same crates swarm-slint already uses for its own API client, for consistency.
-tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.12", features = ["json"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# GamingAgent-go's API (media control, Lucille chat) is called from inside
+# the embedded webview's own JS via fetch(), not from Rust — see
+# assets/dashboard.html — so no HTTP client crate is needed here.
