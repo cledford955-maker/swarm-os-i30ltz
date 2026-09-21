@@ -42,6 +42,7 @@ PROFILE_DIR="$LUCY/40-iso-profile/swarm_os_iso_profile"
 AIROOTFS="$PROFILE_DIR/airootfs"
 FLUTTER_DIR="$LUCY/30-source/frontend"
 SLINT_DIR="$LUCY/30-source/swarm-slint"
+OVERLAY_DIR="$LUCY/30-source/swarm-overlay"
 SOURCE_DIR="$LUCY/30-source"
 LUCY_SERVER_GO_DIR="$SOURCE_DIR/LucyServer-go"
 GOOGLE_WORKSPACE_DIR="$SOURCE_DIR/GoogleWorkspaceService"
@@ -169,6 +170,10 @@ echo -e "\n  Compiling swarm-slint Lucille panel (v${NEW_VER})..."
 (cd "$SLINT_DIR" && SWARM_VERSION="${NEW_VER}" cargo build --release)
 echo -e "  ${GREEN}✓ swarm-slint Lucille panel compiled.${NC}"
 
+echo -e "\n  Compiling swarm-overlay gaming overlay (v${NEW_VER})..."
+(cd "$OVERLAY_DIR" && cargo build --release)
+echo -e "  ${GREEN}✓ swarm-overlay compiled.${NC}"
+
 # -----------------------------------------------------------------------------
 # Step 3: Build LucyServer Subsystem (Go — task #23, ported from .NET LucyServer)
 # -----------------------------------------------------------------------------
@@ -212,6 +217,16 @@ mkdir -p "$AIROOTFS/opt/swarm_os/swarm-slint"
 cp -f "$SLINT_DIR/target/release/swarm-slint" "$AIROOTFS/opt/swarm_os/swarm-slint/swarm-slint"
 chmod +x "$AIROOTFS/opt/swarm_os/swarm-slint/swarm-slint"
 echo -e "  ${GREEN}✓ swarm-slint Lucille panel staged.${NC}"
+
+# 4a3. swarm-overlay gaming overlay binary -> /opt/swarm_os/swarm-overlay/
+# Single static binary — dashboard HTML is compiled in via include_str!, no
+# bundle dir needed. Summoned by Shift+Tab (see labwc/rc.xml + the toggle
+# script in airootfs/usr/local/bin), not autostarted.
+rm -rf "$AIROOTFS/opt/swarm_os/swarm-overlay"
+mkdir -p "$AIROOTFS/opt/swarm_os/swarm-overlay"
+cp -f "$OVERLAY_DIR/target/release/swarm-overlay" "$AIROOTFS/opt/swarm_os/swarm-overlay/swarm-overlay"
+chmod +x "$AIROOTFS/opt/swarm_os/swarm-overlay/swarm-overlay"
+echo -e "  ${GREEN}✓ swarm-overlay staged.${NC}"
 
 # 4b. LucyServer (Go binary) -> /opt/swarm_os/LucyServer/
 rm -rf "$AIROOTFS/opt/swarm_os/LucyServer"

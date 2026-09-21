@@ -7,15 +7,11 @@ import '../agent/agent_chat.dart';
 import '../models/agent.dart';
 import '../models/swarm.dart';
 import '../services/live_model_catalog_service.dart';
-import '../services/nvidia_voice_service.dart';
-import '../services/nvidia_rag_service.dart';
-import '../services/nvidia_image_service.dart';
-import '../services/nvidia_cuopt_service.dart';
-import '../services/physics_ai_service.dart';
 import '../skills/nvidia_nim_skill.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../widgets/extensions_dialog.dart';
+import '../providers/skill_router_providers.dart';
 
 /// Adapts a live-fetched OpenRouter model into a SwarmModel so it can flow
 /// through the existing model-card UI unchanged. Only ever built from data
@@ -1312,8 +1308,6 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
     final voiceService = ref.watch(nvidiaVoiceServiceProvider);
     final ragService = ref.watch(nvidiaRagServiceProvider);
     final imageService = ref.watch(nvidiaImageServiceProvider);
-    final cuoptService = ref.watch(nvidiaCuOptServiceProvider);
-    final physicsService = ref.watch(physicsAiServiceProvider);
 
     final nimSkills = NvidiaNimSkillRegistry.all;
     final freeNimModels = catalog.hasData ? catalog.nvidiaNimFree : <LiveModel>[];
@@ -1542,7 +1536,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               Expanded(
                 child: _buildNimTestButton(
                   'Test Embed',
-                  Icons.vector_square_rounded,
+                  Icons.data_array_rounded,
                   SwarmColors.success,
                   () async {
                     final agent = getAgent('librarian') ?? agents.first;
