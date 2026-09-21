@@ -3,6 +3,7 @@ import '../services/app_installer_service.dart';
 import '../services/user_apps_service.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
+import '../widgets/agent_avatar.dart';
 
 /// SWARM OS — App Store
 ///
@@ -358,9 +359,12 @@ class _ResultRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: accent.withValues(alpha: 0.35)),
           ),
-          child: Icon(
-            pkg.isAur ? Icons.egg_alt_rounded : Icons.inventory_2_rounded,
-            color: accent, size: 20,
+          child: Center(
+            child: AppIconOrb(
+              icon: pkg.isAur ? Icons.egg_alt_rounded : Icons.inventory_2_rounded,
+              color: accent,
+              size: 32,
+            ),
           ),
         ),
         title: Row(children: [

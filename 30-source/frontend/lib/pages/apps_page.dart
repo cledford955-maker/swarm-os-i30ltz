@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../services/system_launcher.dart';
+import '../widgets/agent_avatar.dart';
 
 class AppItem {
   final String id;
@@ -452,7 +453,13 @@ class _AppsPageState extends ConsumerState<AppsPage> {
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(color: app.accentColor.withValues(alpha: 0.3)),
                                       ),
-                                      child: Icon(app.icon, color: app.accentColor, size: 24),
+                                      child: Center(
+                                        child: AppIconOrb(
+                                          icon: app.icon,
+                                          color: app.accentColor,
+                                          size: 38,
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(width: 14),
                                     Expanded(
