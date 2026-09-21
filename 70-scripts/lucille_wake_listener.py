@@ -29,9 +29,8 @@ BUSY_PATH = RUNTIME_DIR / 'busy'
 WAKE_GRAMMAR = ['hey lucille', 'hey lucy', 'hey lucifer', '[unk]']
 POST_TRIGGER_COOLDOWN = 6.0  # covers Dart's own ack speech + its 4s follow-up recording
 
-# Literal phrases only — guessing at phonetic mis-hears without real audio to test
-# against would just be superstition. Widen this once real usage shows what Vosk's
-# generic English model actually mishears "Lucille"/"Lucy" as.
+# The constrained decoder includes a distractor and unknown speech so unrelated
+# speech need not be forced into either wake phrase. Match complete phrases only.
 WAKE_RE = re.compile(r'\bhey\s+luc(?:y|ille)\b', re.IGNORECASE)
 
 _running = True
@@ -94,9 +93,33 @@ def _busy():
         return False
 
 
+class SpeechDecoder:
+    def __init__(self, model):
+        from vosk import KaldiRecognizer
+        self.full = KaldiRecognizer(model, SAMPLE_RATE)
+        self.wake = KaldiRecognizer(model, SAMPLE_RATE, json.dumps(WAKE_GRAMMAR))
+        self.segments = []
+
+    def reset(self):
+        self.full.Reset()
+        self.wake.Reset()
+        self.segments.clear()
+
+    def feed(self, data):
+        if self.wake.AcceptWaveform(data):
+            self.segments.append(json.loads(self.wake.Result()).get('text', ''))
+        if not self.full.AcceptWaveform(data):
+            return None
+        full_text = json.loads(self.full.Result()).get('text', '')
+        self.segments.append(json.loads(self.wake.FinalResult()).get('text', ''))
+        prompt = _recognized_prompt(' '.join(self.segments), full_text)
+        self.reset()
+        return prompt
+
+
 def main():
     try:
-        from vosk import Model, KaldiRecognizer
+        from vosk import Model
     except ImportError:
         print('lucille_wake_listener: python-vosk not installed', file=sys.stderr)
         return 1
@@ -116,8 +139,7 @@ def main():
     model = Model(MODEL_PATH)
 
     while _running:
-        recognizer = KaldiRecognizer(model, SAMPLE_RATE)
-        wake_recognizer = KaldiRecognizer(model, SAMPLE_RATE, json.dumps(WAKE_GRAMMAR))
+        decoder = SpeechDecoder(model)
         proc = _start_arecord()
         cooldown_until = 0.0
         selector = selectors.DefaultSelector()
@@ -131,19 +153,12 @@ def main():
                     break  # arecord died; restart it in the outer loop
 
                 if _should_skip(time.monotonic(), cooldown_until, os.path.exists(FLAG_PATH)) or _busy():
-                    recognizer.Reset()
-                    wake_recognizer.Reset()
+                    decoder.reset()
                     continue  # draining audio during cooldown, or prior trigger not consumed yet
 
-                recognizer.AcceptWaveform(data)
-                if wake_recognizer.AcceptWaveform(data):
-                    wake_text = json.loads(wake_recognizer.Result()).get('text', '')
-                    full_text = json.loads(recognizer.FinalResult()).get('text', '')
-                    text = _recognized_prompt(wake_text, full_text)
-                    if text and _fire(text, WAKE_RE.search(text)):
-                        cooldown_until = time.monotonic() + POST_TRIGGER_COOLDOWN
-                    recognizer.Reset()
-                    wake_recognizer.Reset()
+                text = decoder.feed(data)
+                if text and _fire(text, WAKE_RE.search(text)):
+                    cooldown_until = time.monotonic() + POST_TRIGGER_COOLDOWN
         finally:
             selector.close()
             proc.stdout.close()

@@ -10,8 +10,13 @@ set -eu
 
 BIN="/opt/swarm_os/swarm-overlay/swarm-overlay"
 
+ACTION="${1:-toggle}"
+case "$ACTION" in
+  show|hide|toggle) ;;
+  *) echo 'Usage: swarm-overlay-toggle.sh [show|hide|toggle]' >&2; exit 2 ;;
+esac
 if pgrep -f "$BIN dashboard" >/dev/null 2>&1; then
-  pkill -f "$BIN dashboard"
-else
+  if [ "$ACTION" != show ]; then pkill -f "$BIN dashboard"; fi
+elif [ "$ACTION" != hide ]; then
   "$BIN" dashboard &
 fi

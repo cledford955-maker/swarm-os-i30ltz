@@ -293,9 +293,17 @@ if [ ! -d "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME" ]; then
         "https://alphacephei.com/vosk/models/$WAKE_MODEL_NAME.zip"
     (cd "$WAKE_MODEL_CACHE" && unzip -q "$WAKE_MODEL_NAME.zip" && rm -f "$WAKE_MODEL_NAME.zip")
 fi
-mkdir -p "$AIROOTFS/opt/swarm_os/models"
-rm -rf "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us"
-cp -a "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME" "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us"
+# Reject incomplete cached downloads and symlinked staging destinations.
+for model_file in am/final.mdl conf/model.conf graph/HCLr.fst graph/Gr.fst; do
+    test -s "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME/$model_file" || {
+        echo "Incomplete Vosk model cache: missing $model_file" >&2; exit 1;
+    }
+done
+for model_dir in "$AIROOTFS/opt" "$AIROOTFS/opt/swarm_os" "$AIROOTFS/opt/swarm_os/models" "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us"; do
+    [[ ! -L "$model_dir" ]] || { echo "Refusing symlinked model destination: $model_dir" >&2; exit 1; }
+done
+mkdir -p "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us"
+cp -a "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME/." "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us/"
 install -Dm755 "$LUCY/70-scripts/lucille_wake_listener.py" "$AIROOTFS/usr/local/bin/lucille_wake_listener.py"
 echo -e "  ${GREEN}✓ Lucille wake-word listener + Vosk model staged.${NC}"
 

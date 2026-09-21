@@ -1,5 +1,16 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **Gaming + OS-wide wake follow-through — 2026-09-21: source fixes and host verification DONE; fresh ISO boot PENDING.** Continued the interrupted conversation, including the real acoustic test the previous AI never completed. The initial unrestricted Vosk decoder dropped “hey” from all four synthesized positive samples, so the literal regex alone never fired. Listener now uses a constrained wake decoder (both names, unknown speech and a “hey lucifer” distractor) alongside unrestricted command transcription; it waits for the full utterance endpoint so commands are not clipped. All eight real-model synthetic samples pass, including four negatives; this demonstrates integration, not human accent/noisy-room accuracy. Repro: `python3 70-scripts/tests/wake_acoustic_smoke.py`.
+>
+> **Closed integration gaps:** wake events now publish atomically with private permissions under `$XDG_RUNTIME_DIR/lucille-wake/`, refuse existing files/symlinks and do not log command text. Shell busy marker suppresses self-triggering during replies and recovers after crashes; microphone reads are interruptible for clean shutdown. Poll latency reduced from 4s to 250ms and callbacks serialized. Voice chat now goes through the real local GamingAgent instead of a separate hardcoded cloud model, keeps bounded conversation context, handles backend errors, and dispatches only the dashboard's allowed media/browser actions. Show/hide overlay commands are idempotent rather than both toggling. Installer now translates the wake service's User AND Group from swarm to i30ltz. Model staging validates required files and rejects symlinked parent destinations without recursive deletion. Updated listener, cached model and canonical installer staged in airootfs.
+>
+> **Verified on the CachyOS development host:** GamingAgent explicitly rebuilt, deployed to the existing `swarm-gaming-dev.service`, started and health-checked. Steam is **working now**: `/api/steam/library` and intersection return 367 games; the older dead-key blocker below is superseded by this live result. GFN returns 1550 games, genres returns 18, pricing and media-status endpoints return 200, and Lucille chat returns a real nonempty reply without provider error. Two simultaneous 16kHz microphone captures both succeeded with nonzero samples. The new listener ran under a temporary systemd user unit with the real capture device and stopped cleanly; that temporary unit was removed, not installed as a permanent CachyOS listener.
+>
+> **Validation:** 13 Python regression tests, eight real-Vosk synthetic cases, two Flutter voice integration tests, four Rust overlay tests, GamingAgent Go tests/vet/build, targeted Dart analysis and Linux debug build passed. Shell syntax, Python compilation and systemd unit verification passed. Flutter tests cover local-backend routing, history, media action dispatch and recovery from provider/unsupported-action failures. They mute TTS; audible reply quality and human-spoken wake accuracy still require a live session.
+>
+> **Remaining deployment boundary:** Ventoy UUID check passes and mount is writable, but `sudo -n true` requires a password. No new ISO was built or booted in this pass, and no installed SWARM OS service was changed. Run the canonical builder as the normal user: `/mnt/Lucy/70-scripts/build_swarm_iso.sh`; then boot the resulting Ventoy ISO and test both wake phrases while a game/browser has focus. Never treat this host/source validation as that boot test.
+
+
 > **DONE — Gaming re-verified end-to-end + real OS-wide "Hey Lucille"/"Hey Lucy" wake-word listener
 > built, 2026-09-21.** User asked to confirm gaming was completely wired up and to close the
 > long-flagged gap where the wake phrase had no real acoustic listener behind it.
@@ -889,3 +900,5 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 *Last updated: 2026-09-20 — au9 diagnostic export wired through Telemetry, collector and ISO staging; live host archive verified.*
 
 *Last updated: 2026-09-21 — EPP AC/battery power policy implemented, staged and fixture-tested; SWARM boot verification pending.*
+
+*Last updated: 2026-09-21 — finished interrupted gaming/wake integration and host checks; privileged ISO build and human voice test on booted SWARM remain pending.*

@@ -79,16 +79,13 @@ func (s *LucilleService) Eval() (*models.LucilleEvalResult, error) {
 	}
 	sb.WriteString(fmt.Sprintf("\nTotal GFN catalog size: %d games\n", len(gfnGames)))
 
-	systemPrompt := `You are Lucille, the SWARM OS gaming AI. Analyze the user's Steam library and suggest dashboard actions.
-You MUST call these tools with JSON args:
-- set_genre_filter(genres: string[]) — genre chips to activate
-- pin_games(titles: string[]) — up to 4 game titles to pin
-- set_sort_order(by: "playtime"|"name"|"gfn") — default sort
-- favorite_games(titles: string[]) — up to 3 to auto-favourite
-Also provide:
-- summary: one paragraph about play patterns
-- system_suggestions: 2-3 SWARM OS improvement ideas based on what they play
-Respond ONLY as JSON matching LucilleEvalResult schema.`
+	systemPrompt := `You are Lucille, the SWARM OS gaming AI. Analyze the user's Steam library.
+Return ONLY one flat JSON object with exactly these fields (not tool calls or nested actions):
+{"genreFilters":["Action"],"pinGames":["Exact game title"],"sortBy":"playtime","favoriteGames":["Exact game title"],"summary":"One paragraph about play patterns","systemSuggestions":["First suggestion","Second suggestion"],"topGames":[{"name":"Exact game title","hours":1.5,"onGfn":true}]}
+Use actual titles and hours from the supplied library. Pin at most 4 titles, favorite at most 3.
+sortBy must be playtime, name, or gfn. Provide 2-3 systemSuggestions.
+Every array must be an array, never null; use [] if no applicable data.
+There are no tools to call. Do not use snake_case field names or wrap this object in another object.`
 
 	payload := map[string]any{
 		"model": chatModel,

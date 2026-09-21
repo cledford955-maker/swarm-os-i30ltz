@@ -376,6 +376,14 @@ fi
 sed -i 's/^#\?\s*%wheel ALL=(ALL:ALL)\s*ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 rm -f /etc/sudoers.d/01-wheel-nopasswd
 
+# Match PipeWire and wake IPC to the installed user's actual UID.
+SWARM_RUNTIME_UID=\$(id -u i30ltz)
+for runtime_service in swarm-ui.service lucille-wake-listener.service; do
+    if [ -f "/etc/systemd/system/\$runtime_service" ]; then
+        sed -i "s|/run/user/1000|/run/user/\$SWARM_RUNTIME_UID|g" "/etc/systemd/system/\$runtime_service"
+    fi
+done
+
 # Configure swarm-ui kiosk to auto-login as user i30ltz
 if [ -f /etc/systemd/system/swarm-ui.service ]; then
     sed -i 's/^User=.*/User=i30ltz/' /etc/systemd/system/swarm-ui.service
@@ -406,10 +414,10 @@ fi
 # (google-workspace.service was missed in the original fix for this same
 # bug on the other two services — found+added 2026-09-13.)
 for svc in gaming-agent.service lucy-server.service google-workspace.service lucille-wake-listener.service; do
-    if [ -f "/etc/systemd/system/$svc" ]; then
-        sed -i 's/^Group=swarm$/Group=i30ltz/' "/etc/systemd/system/$svc"
-        sed -i 's/^User=swarm$/User=i30ltz/' "/etc/systemd/system/$svc"
-        sed -i 's|swarm:swarm|i30ltz:i30ltz|g' "/etc/systemd/system/$svc"
+    if [ -f "/etc/systemd/system/\$svc" ]; then
+        sed -i 's/^Group=swarm$/Group=i30ltz/' "/etc/systemd/system/\$svc"
+        sed -i 's/^User=swarm$/User=i30ltz/' "/etc/systemd/system/\$svc"
+        sed -i 's|swarm:swarm|i30ltz:i30ltz|g' "/etc/systemd/system/\$svc"
     fi
 done
 
@@ -502,21 +510,21 @@ cat > /opt/swarm_os/swarm-ollama-pull.sh <<'PULLEOF'
 LOG=/var/log/swarm-ollama-pull.log
 STAMP=/var/lib/swarm-ollama-pulled
 
-[ -f "$STAMP" ] && exit 0  # already ran — skip
+[ -f "\$STAMP" ] && exit 0  # already ran — skip
 
-exec >> "$LOG" 2>&1
-echo "[$(date)] Starting Swarm OS Ollama first-boot pull..."
+exec >> "\$LOG" 2>&1
+echo "[\$(date)] Starting Swarm OS Ollama first-boot pull..."
 
 # Wait for Ollama to be ready (max 60s)
-for i in $(seq 1 12); do
+for i in \$(seq 1 12); do
   curl -sf http://localhost:11434/ > /dev/null && break
-  echo "[$(date)] Waiting for Ollama... ($i/12)"
+  echo "[\$(date)] Waiting for Ollama... (\$i/12)"
   sleep 5
 done
 
 pull() {
-  echo "[$(date)] Pulling $1..."
-  ollama pull "$1" && echo "[$(date)] ✓ $1 done" || echo "[$(date)] ✗ $1 failed (skip)"
+  echo "[\$(date)] Pulling \$1..."
+  ollama pull "\$1" && echo "[\$(date)] ✓ \$1 done" || echo "[\$(date)] ✗ \$1 failed (skip)"
 }
 
 # ── Models ≤7B — safe for integrated GPU + shared RAM ──────────────────────
@@ -533,8 +541,8 @@ pull qwen2.5-coder:7b     # 4.7GB  — Alibaba code specialist
 pull deepseek-r1:7b       # 4.7GB  — DeepSeek reasoning distill
 
 # Mark done so this service never runs again
-touch "$STAMP"
-echo "[$(date)] Swarm OS Ollama pull complete."
+touch "\$STAMP"
+echo "[\$(date)] Swarm OS Ollama pull complete."
 PULLEOF
 chmod +x /opt/swarm_os/swarm-ollama-pull.sh
 

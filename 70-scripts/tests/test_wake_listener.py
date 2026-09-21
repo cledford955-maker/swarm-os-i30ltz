@@ -70,5 +70,56 @@ class FireTests(unittest.TestCase):
                 wake.FLAG_PATH = original
 
 
+class RegressionTests(unittest.TestCase):
+    def test_preserves_command_when_generic_decoder_drops_hey(self):
+        self.assertEqual(wake._recognized_prompt('hey lucille [unk]',
+                         'lucille open the overlay'), 'hey lucille open the overlay')
+
+    def test_does_not_wake_on_distractor_or_bare_name(self):
+        for phrase in ['hey lucifer', '[unk] lucy', 'lucille']:
+            self.assertIsNone(wake._recognized_prompt(phrase, phrase))
+
+    def test_existing_symlink_is_not_followed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'target'
+            target.write_text('keep me')
+            flag = Path(directory) / 'wake.flag'
+            flag.symlink_to(target)
+            original = wake.FLAG_PATH
+            wake.FLAG_PATH = str(flag)
+            try:
+                self.assertFalse(wake._fire('hey lucy', wake.WAKE_RE.search('hey lucy')))
+                self.assertEqual(target.read_text(), 'keep me')
+                self.assertTrue(flag.is_symlink())
+                self.assertEqual(sorted(p.name for p in Path(directory).iterdir()), ['target', 'wake.flag'])
+            finally:
+                wake.FLAG_PATH = original
+
+    def test_pending_event_is_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            flag = Path(directory) / 'wake.flag'
+            flag.write_text('first command')
+            original = wake.FLAG_PATH
+            wake.FLAG_PATH = str(flag)
+            try:
+                self.assertFalse(wake._fire('hey lucy', wake.WAKE_RE.search('hey lucy')))
+                self.assertEqual(flag.read_text(), 'first command')
+            finally:
+                wake.FLAG_PATH = original
+
+    def test_busy_marker_recovers_after_shell_crash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original = wake.BUSY_PATH
+            wake.BUSY_PATH = Path(directory) / 'busy'
+            try:
+                self.assertFalse(wake._busy())
+                wake.BUSY_PATH.touch()
+                self.assertTrue(wake._busy())
+                os.utime(wake.BUSY_PATH, (0, 0))
+                self.assertFalse(wake._busy())
+            finally:
+                wake.BUSY_PATH = original
+
+
 if __name__ == '__main__':
     unittest.main()
