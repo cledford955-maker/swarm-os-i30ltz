@@ -397,7 +397,7 @@ final swarms = <String, SwarmConfig>{
     role: 'Everyday Coding & Chat — Everyone Except System/Gaming/Eval Agents',
     isDefault: true,
     estimatedPrice: r'~$0.45 / 1M (Blended Execution)',
-    description: "The top swarm: Kimi K2.6, Qwen 3.6 Plus, GLM 5.3 Flash, and DeepSeek V4 Pro/Flash — current-generation flagships, all under \$1/1M. Highest models by default; pick heavy-cloud-council only when you deliberately want the \$5+/1M tier.",
+    description: 'The top swarm: Kimi K2.6, Qwen 3.6 Plus, GLM 5.3 Flash, and DeepSeek V4 Pro/Flash — current-generation flagships, all under \$1/1M. Highest models by default; pick heavy-cloud-council only when you deliberately want the \$5+/1M tier.',
     models: [
       allModels.firstWhere((m) => m.id == 'moonshotai/kimi-k2.6'),
       allModels.firstWhere((m) => m.id == 'qwen/qwen3.6-plus'),
