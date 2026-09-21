@@ -496,13 +496,22 @@ syntax-checked (`sh -n`), rc.xml re-validated well-formed after the edit. **Not 
 instance** — same display-less-sandbox limit as everything else in this feature; the binary exits on
 `UnsupportedWindowHandle` before pgrep would ever see it as "running" here, so the toggle logic needs a real
 smoke test (hit Shift+Tab twice on the actual SWARM OS desktop, confirm it opens then closes) once there's a
-real display to test against. **Deliberately not done, needs a decision later:** actually staging the
-compiled `swarm-overlay` binary into the ISO (`/opt/swarm_os/swarm-overlay/`, matching how `swarm-slint` gets
-built+copied in `build_swarm_iso.sh` around its own staging step) requires editing `build_swarm_iso.sh` —
-held off per this session's earlier explicit instruction not to touch that file (see the 2026-09-19
-reconciliation entry above). The toggle script and keybind above reference `/opt/swarm_os/swarm-overlay/
-swarm-overlay` as if it's already staged there; it isn't yet, so `S-Tab` will currently fail silently
-(`pgrep`/exec against a path that doesn't exist) until that staging step gets added.
+real display to test against.
+
+**Build-script staging added 2026-09-20** — the "don't touch `build_swarm_iso.sh`" hold-off from the
+2026-09-19 reconciliation pass was about a *different* concurrent AI editing build scripts specifically;
+user confirmed 2026-09-20 today's concurrent AI is on NVIDIA NIM/skills work instead, unrelated, so this was
+clear to do. Checked the file's own git history first (`git log -- 70-scripts/build_swarm_iso.sh`, last
+touched 2026-09-19T13:14 — stable, not actively churning) before editing. Added `OVERLAY_DIR`, a compile
+step mirroring swarm-slint's (`cargo build --release`) right after it in Step 2, and a staging step mirroring
+swarm-slint's (`cp` the release binary to `/opt/swarm_os/swarm-overlay/`, `chmod +x`) right after it in
+Step 4. `bash -n` syntax-checked clean. **Release-mode build confirmed clean too** (not just the debug build
+tested earlier — release is a separate Cargo profile with its own fresh compile, so debug succeeding didn't
+guarantee this): `cargo build --release` finished in 2m43s, zero warnings, binary present at exactly
+`target/release/swarm-overlay` (the path the new staging step copies from), 4.6MB, linked against the same
+real `libwebkit2gtk-4.1.so.0`/`libgtk-3.so.0`/`libsoup-3.0.so.0` as the debug build. The full
+`build_swarm_iso.sh` pipeline for swarm-overlay — compile step through staging step — is now confirmed
+correct end to end, not just written and hoped-correct.
 
 **Also not yet built:** widget-mode vs. full-page-mode *switching* (currently two separate launches, not a toggle
 within one running instance), the transparency-on-modifier-hold interaction the user specifically asked for,
