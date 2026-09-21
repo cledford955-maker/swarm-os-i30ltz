@@ -197,8 +197,26 @@ func (s *LucilleService) buildContextMessages() []models.ChatMessage {
 	return []models.ChatMessage{
 		{Role: "system", Content: "You are Lucille, the SWARM OS AI. You know about the user's Steam library and NVIDIA GeForce NOW catalog. Be helpful, concise, and gaming-focused."},
 		{Role: "system", Content: sb.String()},
+		{Role: "system", Content: lucilleActionProtocol},
 	}
 }
+
+// lucilleActionProtocol lets Lucille actually do things from the gaming
+// overlay's chat panel instead of only answering questions about them. The
+// overlay's dashboard.html parses a trailing "ACTION: verb [arg]" line out
+// of the reply text via regex and dispatches it locally (media control,
+// opening a browser widget, launching an app) — this system message is the
+// other half of that contract, so the exact verb spelling here must match
+// what dashboard.html's dispatchAction() recognizes.
+const lucilleActionProtocol = `If, and only if, the user is asking you to DO something (not just answer a question), end your reply with exactly one extra line in this exact format, after your normal reply text:
+ACTION: <verb> [arg]
+
+Valid verbs:
+  media_play, media_pause, media_play_pause, media_next, media_previous, media_stop — control whatever's currently playing (no arg)
+  open_browser <url or search text> — open a walkthrough/web page in a new window
+  open_app <chrome|opera-gx> — launch an installed browser app
+
+Only ever use these exact verbs. Never invent a new verb. If the user is just chatting or asking a question, do not include an ACTION line at all.`
 
 func (s *LucilleService) callNemotron(messages []models.ChatMessage, stream bool, onToken func(string)) (string, error) {
 	msgs := make([]map[string]string, len(messages))
