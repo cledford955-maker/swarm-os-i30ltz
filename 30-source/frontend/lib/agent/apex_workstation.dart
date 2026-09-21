@@ -12,7 +12,19 @@ import '../theme/swarm_text_styles.dart';
 import '../theme/lucide_compat.dart';
 import '../coder/coder_page.dart';
 import '../coder/panels/profile_manager_panel.dart';
+import '../coder/panels/android_panel.dart';
+import '../coder/panels/signing_panel.dart';
+import '../coder/panels/device_explorer_panel.dart';
+import '../coder/panels/task_runner_panel.dart';
+import '../coder/panels/extensions_panel.dart';
+import '../coder/panels/publisher_portal_panel.dart';
+import '../coder/panels/controller_settings_panel.dart';
+import '../coder/panels/apple_panel.dart';
+import '../coder/panels/ollama_panel.dart';
+import '../services/workspace_state_service.dart';
 import '../widgets/extensions_dialog.dart';
+import '../widgets/swarm_terminal.dart';
+import 'agent_chat.dart';
 
 enum ApexView { explorer, search, git, android, signing, deviceFiles, tasks, extensions, publisher, controller, apple, ollama, settings }
 
@@ -301,6 +313,9 @@ class _ApexWorkstationState extends ConsumerState<ApexWorkstation> {
   }
 
   Widget _buildSidebar() {
+    // Real panels need the active workspace path — same persisted workspace
+    // CoderPage itself loads (WorkspaceStateService), so both surfaces agree.
+    final workspace = WorkspaceStateService.instance.snapshot.workspacePath;
     return Row(
       children: [
         Container(
@@ -312,14 +327,14 @@ class _ApexWorkstationState extends ConsumerState<ApexWorkstation> {
             ApexView.explorer => const _CoderPageWrapper(showSidebar: true),
             ApexView.search => const _CoderPageWrapper(showSidebar: true, initialPanel: 'search'),
             ApexView.git => const _CoderPageWrapper(showSidebar: true, initialPanel: 'git'),
-            ApexView.android => const AndroidSdkPanel(),
-            ApexView.signing => const SigningPanel(),
+            ApexView.android => AndroidPanel(projectPath: workspace),
+            ApexView.signing => SigningPanel(projectPath: workspace),
             ApexView.deviceFiles => const DeviceExplorerPanel(),
-            ApexView.tasks => const TaskRunnerPanel(),
+            ApexView.tasks => TaskRunnerPanel(projectPath: workspace),
             ApexView.extensions => const ExtensionsPanel(),
             ApexView.publisher => const PublisherPortalPanel(),
             ApexView.controller => const ControllerSettingsPanel(),
-            ApexView.apple => const ApplePanel(),
+            ApexView.apple => ApplePanel(projectPath: workspace),
             ApexView.ollama => const OllamaPanel(),
             ApexView.settings => const ProfileManagerPanel(),
           },
@@ -372,7 +387,10 @@ class _CoderPageWrapper extends StatelessWidget {
   }
 }
 
-// AI Panel for Apex
+// AI Panel for Apex — the real streaming AgentChatPanel (LucyServer /lucy
+// SSE pipeline with per-agent model selection), not a placeholder. The
+// 'apex' agent id carries its own model assignment + persona from
+// models/agent.dart, so this is a full AI pair programmer in the IDE.
 class _ApexAiPanel extends ConsumerWidget {
   const _ApexAiPanel();
 
@@ -402,27 +420,16 @@ class _ApexAiPanel extends ConsumerWidget {
               ],
             ),
           ),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(LucideIcons.bot, size: 48, color: SwarmColors.accent.withValues(alpha: 0.3)),
-                  const SizedBox(height: 16),
-                  Text('APEX AI PAIR PROGRAMMER', style: SwarmTextStyles.label.copyWith(color: SwarmColors.textMuted)),
-                  const SizedBox(height: 8),
-                  Text('AI chat integration coming soon', style: SwarmTextStyles.codeSmall),
-                ],
-              ),
-            ),
-          ),
+          // The real chat — streams from the agent's assigned swarm model.
+          const Expanded(child: AgentChatPanel(agentId: 'apex')),
         ],
       ),
     );
   }
 }
 
-// Terminal Panel for Apex
+// Terminal Panel for Apex — the real SwarmTerminal (multi-pane, PTY-backed,
+// with copy/paste context menu), not a placeholder.
 class _ApexTerminalPanel extends StatelessWidget {
   const _ApexTerminalPanel();
 
@@ -445,32 +452,11 @@ class _ApexTerminalPanel extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text('APEX TERMINAL', style: SwarmTextStyles.codeSmall.copyWith(color: SwarmColors.accent)),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.add_rounded, size: 16),
-                  onPressed: () {},
-                  tooltip: 'New Terminal',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 16),
-                  onPressed: () {},
-                  tooltip: 'Close Terminal',
-                ),
               ],
             ),
           ),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(LucideIcons.terminal, size: 48, color: SwarmColors.textMuted.withValues(alpha: 0.3)),
-                  const SizedBox(height: 16),
-                  Text('INTEGRATED TERMINAL', style: SwarmTextStyles.label.copyWith(color: SwarmColors.textMuted)),
-                  const SizedBox(height: 8),
-                  Text('Terminal integration via AgentTerminalPanel', style: SwarmTextStyles.codeSmall),
-                ],
-              ),
-            ),
+          const Expanded(
+            child: SwarmTerminal(initialPanes: 1),
           ),
         ],
       ),
@@ -478,392 +464,12 @@ class _ApexTerminalPanel extends StatelessWidget {
   }
 }
 
-// ─── Sub-Panels (Android, Signing, Device Files, Tasks, Extensions, Publisher, Controller, Apple, Ollama) ────────────────────────────────────────
-
-Future<void> _runApexCmd(BuildContext context, String name, String command) async {
-  // Use SystemLauncher or similar
-  // For now, placeholder
-}
-
-class AndroidSdkPanel extends ConsumerWidget {
-  const AndroidSdkPanel({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('DROID & EMULATORS', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _buildSection('Containers & Mirroring', [
-            _DeviceRow(
-              icon: Icons.android_rounded,
-              name: 'Waydroid Container (Android 13)',
-              status: 'Online',
-              onTap: () => _runApexCmd(context, 'Waydroid Container', 'waydroid session start &'),
-            ),
-            _DeviceRow(
-              icon: Icons.cast_connected,
-              name: 'scrcpy Low-Latency Mirror',
-              status: 'Ready',
-              onTap: () => _runApexCmd(context, 'scrcpy Screen Mirror', 'scrcpy --stay-awake &'),
-            ),
-            _DeviceRow(
-              icon: Icons.phone_android,
-              name: 'Pixel 8 Pro (USB ADB)',
-              status: 'Online',
-              onTap: () => _runApexCmd(context, 'ADB Shell', 'foot -e adb shell &'),
-            ),
-          ]),
-          const SizedBox(height: 16),
-          _buildSection('AVD & System Emulators', [
-            _ActionRow(
-              icon: Icons.play_arrow_rounded,
-              label: 'Launch Waydroid Full UI',
-              onAction: () => _runApexCmd(context, 'Waydroid UI', 'waydroid show-full-ui &'),
-            ),
-            _ActionRow(
-              icon: Icons.smart_screen_rounded,
-              label: 'Start Android AVD (Pixel 7 API 34)',
-              onAction: () => _runApexCmd(context, 'Android AVD', 'emulator -avd Pixel_7_API_34 &'),
-            ),
-            _ActionRow(
-              icon: Icons.sports_esports_rounded,
-              label: 'Start Gamescope Emulation Runtime',
-              onAction: () => _runApexCmd(context, 'Gamescope', 'gamescope -W 1920 -H 1080 -r 60 -- steam -gamepadui &'),
-            ),
-          ]),
-          const SizedBox(height: 16),
-          _buildSection('ADB Development Tools', [
-            _ActionRow(
-              icon: Icons.bug_report_rounded,
-              label: 'Live ADB Logcat Terminal',
-              onAction: () => _runApexCmd(context, 'ADB Logcat', 'foot -e adb logcat &'),
-            ),
-            _ActionRow(
-              icon: Icons.install_mobile_rounded,
-              label: 'Install APK Package',
-              onAction: () => _runApexCmd(context, 'ADB Install', 'foot -e bash -c "echo Drag and drop APK:; read f; adb install \$f" &'),
-            ),
-            _ActionRow(
-              icon: Icons.terminal_rounded,
-              label: 'Interactive ADB Root Shell',
-              onAction: () => _runApexCmd(context, 'ADB Root Shell', 'foot -e adb shell &'),
-            ),
-          ]),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: SwarmTextStyles.labelSmall.copyWith(color: SwarmColors.textMuted)),
-        const SizedBox(height: 8),
-        ...children,
-      ],
-    );
-  }
-}
-
-class _DeviceRow extends StatelessWidget {
-  final IconData icon;
-  final String name;
-  final String status;
-  final VoidCallback onTap;
-
-  const _DeviceRow({required this.icon, required this.name, required this.status, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: SwarmColors.accent),
-      title: Text(name, style: const TextStyle(color: SwarmColors.textPrimary)),
-      subtitle: Text(status, style: const TextStyle(color: SwarmColors.textMuted, fontSize: 11)),
-      trailing: const Icon(Icons.chevron_right_rounded, color: SwarmColors.textMuted),
-      onTap: onTap,
-      dense: true,
-    );
-  }
-}
-
-class _ActionRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onAction;
-
-  const _ActionRow({required this.icon, required this.label, required this.onAction});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: SwarmColors.agentCyan),
-      title: Text(label, style: const TextStyle(color: SwarmColors.textPrimary)),
-      trailing: const Icon(Icons.play_arrow_rounded, color: SwarmColors.agentCyan, size: 20),
-      onTap: onAction,
-      dense: true,
-    );
-  }
-}
-
-class SigningPanel extends StatelessWidget {
-  const SigningPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('SIGNING & PUBLISHING', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _ActionRow(
-            icon: Icons.verified_rounded,
-            label: 'Configure Keystore',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.shield_rounded,
-            label: 'Sign APK/AAB',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.cloud_upload_rounded,
-            label: 'Upload to Play Console',
-            onAction: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class DeviceExplorerPanel extends StatelessWidget {
-  const DeviceExplorerPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('DEVICE FILE EXPLORER', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _ActionRow(
-            icon: Icons.folder_rounded,
-            label: 'Browse Device Storage',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.download_rounded,
-            label: 'Pull Files from Device',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.upload_rounded,
-            label: 'Push Files to Device',
-            onAction: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class TaskRunnerPanel extends StatelessWidget {
-  const TaskRunnerPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('TASK RUNNER', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _ActionRow(
-            icon: Icons.play_arrow_rounded,
-            label: 'Run Build Task',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.bug_report_rounded,
-            label: 'Debug Task',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.list_alt_rounded,
-            label: 'Task History',
-            onAction: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ExtensionsPanel extends StatelessWidget {
-  const ExtensionsPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('EXTENSIONS', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _ActionRow(
-            icon: Icons.extension_rounded,
-            label: 'Browse Marketplace',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.manage_accounts_rounded,
-            label: 'Installed Extensions',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.settings_rounded,
-            label: 'Extension Settings',
-            onAction: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class PublisherPortalPanel extends StatelessWidget {
-  const PublisherPortalPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('PUBLISHER PORTAL', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _ActionRow(
-            icon: Icons.rocket_launch_rounded,
-            label: 'Create Release',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.analytics_rounded,
-            label: 'View Analytics',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.people_rounded,
-            label: 'User Feedback',
-            onAction: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ControllerSettingsPanel extends StatelessWidget {
-  const ControllerSettingsPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('CONTROLLER SETTINGS', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _ActionRow(
-            icon: LucideIcons.gamepad2,
-            label: 'Configure Gamepad',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: LucideIcons.keyboard,
-            label: 'Keybindings',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: LucideIcons.monitor,
-            label: 'Display Settings',
-            onAction: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ApplePanel extends StatelessWidget {
-  const ApplePanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('APPLE DEVELOPMENT', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _ActionRow(
-            icon: Icons.apple_rounded,
-            label: 'Xcode Project',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.verified_rounded,
-            label: 'Code Signing',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.cloud_upload_rounded,
-            label: 'TestFlight Upload',
-            onAction: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class OllamaPanel extends StatelessWidget {
-  const OllamaPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('OLLAMA LOCAL MODELS', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _ActionRow(
-            icon: LucideIcons.cpu,
-            label: 'Manage Models',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.play_arrow_rounded,
-            label: 'Start Server',
-            onAction: () {},
-          ),
-          _ActionRow(
-            icon: Icons.settings_rounded,
-            label: 'Configuration',
-            onAction: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ─── Sub-Panels ─────────────────────────────────────────────────────────────
+// All activity-bar views now render the REAL panels from lib/coder/panels/
+// (AndroidPanel, SigningPanel, DeviceExplorerPanel, TaskRunnerPanel,
+// ExtensionsPanel, PublisherPortalPanel, ControllerSettingsPanel, ApplePanel,
+// OllamaPanel) — the placeholder stubs that used to live here were deleted
+// 2026-09-21. They duplicated the coder panels with every action a no-op.
 
 // ─── Small Components ────────────────────────────────────────────────────────
 
