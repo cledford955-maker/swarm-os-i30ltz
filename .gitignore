@@ -85,3 +85,6 @@ _to_delete/
 70-scripts/**/__pycache__/
 80-vm/desktop/
 grub_themes/backups/
+
+# Local diagnostic archives may contain identifying system details.
+10-releases/diagnostics/

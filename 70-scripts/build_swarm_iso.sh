@@ -278,6 +278,9 @@ echo -e "  ${GREEN}✓ lucille-core staged to /usr/bin/lucille-core.${NC}"
 # 4d. Stage OS Foundation configs
 "$SOURCE_DIR/deploy_swarm_os_foundation.sh" "$AIROOTFS"
 
+# Local diagnostic export, shared by Telemetry UI and CLI.
+install -Dm755 "$LUCY/70-scripts/collect_swarm_diagnostics.py" "$AIROOTFS/usr/local/bin/swarm-diagnostics"
+
 # 4e-installer. Stage install script into live ISO so it can be run from TTY
 mkdir -p "$AIROOTFS/usr/local/bin"
 cp -f "$LUCY/install_swarm_os.sh" "$AIROOTFS/usr/local/bin/install_swarm_os.sh"

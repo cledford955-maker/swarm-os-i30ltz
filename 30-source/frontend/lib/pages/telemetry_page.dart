@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/swarm_colors.dart';
+import '../widgets/diagnostics_export.dart';
 import '../theme/swarm_text_styles.dart';
 
 class CoreLoad {
@@ -235,6 +236,9 @@ class _TelemetryPageState extends ConsumerState<TelemetryPage> {
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+
+            const DiagnosticsExport(),
             const SizedBox(height: 24),
 
             // Top Row: Global Hardware Gauges

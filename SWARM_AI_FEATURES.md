@@ -1,5 +1,7 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **DONE — au9 diagnostic bundle implementation, 2026-09-20:** Telemetry (`/telemetry`) now has a real **Save diagnostic bundle** control with native destination-folder picker, optional service journals, busy/error states and selectable output path. Uses `70-scripts/collect_swarm_diagnostics.py` on the CachyOS development host and `/usr/local/bin/swarm-diagnostics` in SWARM; canonical ISO builder stages the same collector and the package manifest explicitly includes Python. Collects host OS/kernel, disks/memory/space, system and development service states, loopback health checks, and optionally bounded current-boot SWARM journals. No sudo, uploads, environment files or source trees; common credential formats are redacted, archive permissions are 0600, missing commands/permissions and timeouts are recorded. Archive README explains review requirements and host-versus-ISO scope. Verified redaction, timeout/failure/output limits and archive validity/permissions with Python tests; Flutter widget interaction test and targeted Dart analysis passed; full Linux debug build succeeded (`build/linux/x64/debug/bundle/swarm_flutter`). Live CachyOS collection succeeded: LucyServer :5000 returned 200; GamingAgent :8401 refused connection (recorded faithfully). Future ISO runtime/hardware verification still requires a fresh boot; this entry does not claim one.
+
 > **Lucille's chat backend, final state 2026-09-20 — OpenRouter's Kimi K2.5, after two provider swaps in one
 > day.** Journey, each step user-requested or verify-first-then-acted: NVIDIA NIM's dead Nemotron model
 > (fixed) → NIM's `nvidia/nemotron-3.5-lightning-30b-a3b` (working, fast) → user asked for "nim kimi3": NIM's
@@ -834,3 +836,5 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 *Last updated: 2026-09-19 — dual CachyOS/SWARM GRUB themes and Cachy C icon prepared; current-install activation pending administrator command.*
 
 *Last updated: 2026-09-19 — fixed dual-GRUB installer root mount setup; activation retry pending.*
+
+*Last updated: 2026-09-20 — au9 diagnostic export wired through Telemetry, collector and ISO staging; live host archive verified.*

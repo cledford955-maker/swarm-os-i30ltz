@@ -207,3 +207,6 @@ gnupg
 # companion phones find LUCILLE on Wi-Fi when Tailscale is down.
 avahi
 nss-mdns
+
+# SWARM diagnostic collector (standard-library Python).
+python
