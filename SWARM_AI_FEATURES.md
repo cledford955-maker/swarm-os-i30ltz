@@ -440,10 +440,33 @@ actual playerctl call, weren't rejected at the auth layer). `go build`/`go vet`/
 all clean. **Needs a real smoke test on the actual SWARM OS system** once `playerctl` ships via the package
 list — play something in Spotify or a YouTube tab and hit `/api/media/status` for real.
 
-**Not yet built:** the overlay window itself (Slint or Flutter — undecided), browser-in-overlay vs.
-launch-real-Chrome (undecided), the transparency-on-modifier-hold interaction, the video window, wiring
-Lucille chat's tool-call pattern (like `LucilleEvalResult`'s `set_genre_filter`/`pin_games`) to drive overlay
-actions including the new media endpoints above.
+**Architecture decided 2026-09-20** — user answered directly: embed a real browser (not launch external
+Chrome) in a moveable/resizable window over the game, plus a "full page" mode combining it with Spotify/other
+widgets, Xbox-Game-Bar-style. Also resolved: "GX" = Opera GX (a real Chromium-based gaming browser, user
+confirmed) — separate, simpler capability (Lucille launching an installed browser app), not part of the
+embedded-overlay work itself.
+
+**Feasibility fully validated 2026-09-20, before committing real build time.** Chose `wry` (the Rust webview
+library behind Tauri — wraps WebKitGTK on Linux) + `tao` (window creation) over CEF: fits naturally next to
+the existing Rust/Slint panel, far lighter to build/ship than bundling Chromium, and Linux WebKitGTK is
+mature enough for modern JS-heavy sites (YouTube, Spotify Web Player). Scaffolded a throwaway proof-of-concept
+at a scratch path (not committed) with a resizable/movable window + real embedded webview: **built 100% clean
+against this exact system's real libraries** — `libwebkit2gtk-4.1.so.0` (2.52.6), `libgtk-3.so.0`,
+`libsoup-3.0.so.0`, `libjavascriptcoregtk-4.1.so.0` all present and linked, zero missing native deps. Hit and
+fixed one real Cargo version-pinning issue along the way (wry 0.35 needs `raw-window-handle 0.5`, but `tao`
+0.24's default feature pulls `0.6` — fixed with `default-features = false, features = ["rwh_05"]` on the tao
+dependency; worth remembering for the real crate's `Cargo.toml`). Running the POC binary in this sandbox
+correctly failed with `UnsupportedWindowHandle` — expected and correct, since there's no real Wayland/X11
+display here to attach a window to; that's the one thing that still needs a real on-screen smoke test on the
+actual SWARM OS desktop session, everything else about this architecture is now confirmed.
+
+**Not yet built:** the real overlay crate (new standalone Rust project, not embedded inside swarm-slint's own
+Slint scene graph — wry/tao create their own native window via the compositor, so this runs as its own
+process/binary), widget-mode vs. full-page-mode UI, the transparency-on-modifier-hold interaction, the video
+window, labwc window rules for the new overlay windows (existing `rc.xml` already supports floating
+undecorated windows via `windowRule` — Lucille panel already does this, same pattern applies), wiring Lucille
+chat's tool-call pattern (like `LucilleEvalResult`'s `set_genre_filter`/`pin_games`) to drive overlay actions
+including the new media endpoints above, and the separate "launch Opera GX / Chrome as an app" capability.
 
 ### Mock tool wiring instructions (2026-09-15 — user wants all 4 kept, wire up when ready)
 Each lives in `30-source/frontend/lib/models/swarm_apps.dart` under "MOCK IDEAS", tagged `mock: true`.

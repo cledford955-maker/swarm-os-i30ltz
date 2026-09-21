@@ -1,0 +1,28 @@
+[package]
+name = "swarm-overlay"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "swarm-overlay"
+path = "src/main.rs"
+
+[dependencies]
+# wry wraps WebKitGTK on Linux — a real, modern browser engine (confirmed
+# 2026-09-20 against this system's actual libwebkit2gtk-4.1 2.52.6), not a
+# crippled embedded view. tao creates the native resizable/movable window.
+#
+# Version pinning note: wry 0.35 depends on raw-window-handle 0.5, but tao's
+# default feature set pulls raw-window-handle 0.6 — they silently produce
+# "trait not implemented" errors if left on defaults. Pin tao to rwh_05
+# explicitly; don't remove this without re-verifying the pairing still holds
+# if either version gets bumped.
+wry = "0.35"
+tao = { version = "0.24", default-features = false, features = ["rwh_05"] }
+
+# For talking to GamingAgent-go's REST API (media control, Lucille chat) —
+# same crates swarm-slint already uses for its own API client, for consistency.
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

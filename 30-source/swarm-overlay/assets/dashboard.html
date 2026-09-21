@@ -1,0 +1,212 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SWARM Overlay</title>
+<style>
+  :root {
+    --bg: #05060a;
+    --panel: #0d0f16;
+    --panel-border: #1c2230;
+    --accent: #00e5ff;
+    --accent-dim: #00e5ff55;
+    --text: #e8f4f8;
+    --text-muted: #7d8a9a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Inter", "Segoe UI", sans-serif;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  h1 {
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 4px 0;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .panel h2 {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 10px 0;
+  }
+
+  /* Now Playing */
+  #media-empty { color: var(--text-muted); font-size: 13px; }
+  #media-body { display: none; gap: 10px; flex-direction: column; }
+  .media-track { display: flex; gap: 10px; align-items: center; }
+  .media-art {
+    width: 48px; height: 48px; border-radius: 6px; background: #1c2230;
+    background-size: cover; background-position: center; flex-shrink: 0;
+  }
+  .media-title { font-size: 14px; font-weight: 600; }
+  .media-artist { font-size: 12px; color: var(--text-muted); }
+  .media-controls { display: flex; gap: 8px; align-items: center; }
+  .media-controls button {
+    background: #14181f; border: 1px solid var(--panel-border); color: var(--text);
+    border-radius: 6px; width: 34px; height: 34px; cursor: pointer; font-size: 14px;
+  }
+  .media-controls button:hover { border-color: var(--accent-dim); color: var(--accent); }
+  .media-controls input[type=range] { flex: 1; accent-color: var(--accent); }
+
+  /* Lucille chat */
+  #chat-log { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 10px; }
+  .chat-msg { font-size: 13px; padding: 6px 10px; border-radius: 8px; max-width: 85%; }
+  .chat-msg.user { background: #14181f; align-self: flex-end; }
+  .chat-msg.assistant { background: #0a1a1e; border: 1px solid var(--accent-dim); align-self: flex-start; }
+  #chat-form { display: flex; gap: 8px; }
+  #chat-input {
+    flex: 1; background: #14181f; border: 1px solid var(--panel-border); color: var(--text);
+    border-radius: 6px; padding: 8px 10px; font-size: 13px;
+  }
+  #chat-form button {
+    background: var(--accent); color: #05060a; border: none; border-radius: 6px;
+    padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+
+  .soon { color: var(--text-muted); font-size: 12px; font-style: italic; }
+</style>
+</head>
+<body>
+  <h1>SWARM Overlay</h1>
+
+  <div class="panel">
+    <h2>Now Playing</h2>
+    <div id="media-empty">Nothing playing.</div>
+    <div id="media-body">
+      <div class="media-track">
+        <div class="media-art" id="media-art"></div>
+        <div>
+          <div class="media-title" id="media-title"></div>
+          <div class="media-artist" id="media-artist"></div>
+        </div>
+      </div>
+      <div class="media-controls">
+        <button id="btn-prev" title="Previous">&#9198;</button>
+        <button id="btn-playpause" title="Play/Pause">&#9199;</button>
+        <button id="btn-next" title="Next">&#9197;</button>
+        <input type="range" id="vol" min="0" max="1" step="0.01">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Lucille</h2>
+    <div id="chat-log"></div>
+    <form id="chat-form">
+      <input id="chat-input" type="text" placeholder="Ask Lucille..." autocomplete="off">
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>Walkthrough / Web</h2>
+    <div class="soon">Open a browser widget window for this — full-page mode stays lightweight for the HUD panels above.</div>
+  </div>
+
+<script>
+const API = "http://127.0.0.1:8401";
+
+async function refreshMedia() {
+  try {
+    const res = await fetch(`${API}/api/media/status`);
+    const s = await res.json();
+    const empty = document.getElementById('media-empty');
+    const body = document.getElementById('media-body');
+    if (!s.available) {
+      empty.style.display = 'block';
+      body.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    body.style.display = 'flex';
+    document.getElementById('media-title').textContent = s.title || '(untitled)';
+    document.getElementById('media-artist').textContent = s.artist || '';
+    document.getElementById('media-art').style.backgroundImage = s.artUrl ? `url('${s.artUrl}')` : 'none';
+    document.getElementById('btn-playpause').textContent = s.status === 'Playing' ? '⏸' : '▶';
+    if (s.volumeKnown) document.getElementById('vol').value = s.volume;
+  } catch (e) {
+    document.getElementById('media-empty').textContent = 'GamingAgent unreachable.';
+    document.getElementById('media-empty').style.display = 'block';
+    document.getElementById('media-body').style.display = 'none';
+  }
+}
+
+async function mediaControl(action) {
+  try {
+    await fetch(`${API}/api/media/control`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    });
+  } catch (_) {}
+  refreshMedia();
+}
+
+document.getElementById('btn-prev').onclick = () => mediaControl('previous');
+document.getElementById('btn-next').onclick = () => mediaControl('next');
+document.getElementById('btn-playpause').onclick = () => mediaControl('play-pause');
+document.getElementById('vol').oninput = async (e) => {
+  try {
+    await fetch(`${API}/api/media/volume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ volume: parseFloat(e.target.value) }),
+    });
+  } catch (_) {}
+};
+
+refreshMedia();
+setInterval(refreshMedia, 4000);
+
+// Lucille chat — plain non-streaming /api/lucille/chat, one turn per submit.
+let sessionId = '';
+function appendChatMsg(role, text) {
+  const log = document.getElementById('chat-log');
+  const el = document.createElement('div');
+  el.className = `chat-msg ${role}`;
+  el.textContent = text;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+document.getElementById('chat-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendChatMsg('user', text);
+  try {
+    const res = await fetch(`${API}/api/lucille/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        messages: [{ role: 'user', content: text }],
+      }),
+    });
+    const data = await res.json();
+    sessionId = data.sessionId || sessionId;
+    appendChatMsg('assistant', data.error ? `(error: ${data.error})` : data.reply);
+  } catch (err) {
+    appendChatMsg('assistant', '(GamingAgent unreachable)');
+  }
+});
+</script>
+</body>
+</html>
