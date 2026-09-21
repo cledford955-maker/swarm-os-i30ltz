@@ -1,5 +1,54 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **DONE — Gaming re-verified end-to-end + real OS-wide "Hey Lucille"/"Hey Lucy" wake-word listener
+> built, 2026-09-21.** User asked to confirm gaming was completely wired up and to close the
+> long-flagged gap where the wake phrase had no real acoustic listener behind it.
+>
+> **Gaming re-verified, not just re-read from docs** — `go build`/`go vet`/`gofmt -l`/`go test ./...` all
+> clean in `GamingAgent-go`; every route the earlier 2026-09-20 entry claims is actually registered in
+> `main.go` with a real (non-stub) handler; `gaming-agent.service` enabled and correctly staged every
+> build; `playerctl` present in `packages.x86_64`; the gaming dashboard Artifact is genuinely launched via
+> `system_launcher.dart`; swarm-slint's gaming API client has no mock path. `swarm-overlay` (the Steam-style
+> HUD/browser overlay) turned out to be further along than this file's own gaming-overlay section
+> described — fully committed, tested, staged, and Shift+Tab-keybound already, not a "throwaway POC" (that
+> description was an earlier, superseded note in the same section). **One real gap found and fixed:**
+> `webkit2gtk-4.1` — the shared library `swarm-overlay`'s embedded webview (wry/tao) links against,
+> confirmed via `ldd` on the built binary — was never in `packages.x86_64`, so a fresh install would have
+> the overlay staged and keybound but failing to launch with a missing library (only worked in this dev
+> sandbox because CachyOS gaming meta-packages happen to pull it in already). Added to `packages.x86_64`.
+> Only remaining gap is still the dead `STEAM_API_KEY` — needs the user to regenerate it, not a code fix.
+>
+> **New: real acoustic wake-word listener**, closing the gap the gaming-overlay section already named:
+> `frontend/lib/services/wake_word_service.dart` had a complete chat/TTS pipeline that only *reacted* to
+> `/tmp/lucille_wake.flag` — nothing ever wrote it. New `70-scripts/lucille_wake_listener.py` runs
+> continuous local speech recognition via **Vosk** (`vosk-api`/`python-vosk`, confirmed in Arch's `extra`
+> repo — chosen over pocketsphinx (poor Arch packaging, weak accuracy on "Lucille") and
+> openWakeWord/Porcupine (both need a custom-trained acoustic model for "Hey Lucille"/"Hey Lucy" that can't
+> be produced in this environment — no GPU, no training pipeline); Vosk needs no custom training since
+> detection is just "does the recognized text contain the phrase"), piping `arecord` (16kHz mono, the same
+> tool `wake_word_service.dart` already uses) into a `KaldiRecognizer`. On a match it writes the flag file
+> (with any trailing captured command text, 0600 permissions) — no Dart changes needed, the consumer
+> contract already existed. New systemd unit `lucille-wake-listener.service`, enabled, `User=swarm` +
+> `SupplementaryGroups=audio` + `XDG_RUNTIME_DIR=/run/user/1000` (mirrors the audio-relevant parts of
+> `swarm-ui.service`) — a background **system** service independent of any window's focus is what makes
+> this genuinely OS-wide, not gated on the Flutter shell being the focused app, so it keeps listening
+> whether the user is mid-game, in a browser, or idle. `build_swarm_iso.sh` fetches+caches the ~40MB Vosk
+> small-English model once (`20-runtime/vosk-model-cache/`, gitignored, gated on the cache dir existing so
+> repeat builds don't re-download) and stages both it and the listener script into the ISO, same pattern as
+> the existing diagnostics-collector staging. `setup-dev-deps.sh` gained `curl`/`unzip` for the fetch step.
+> **Verified:** 8 new unit tests (`70-scripts/tests/test_wake_listener.py`) cover wake-phrase matching
+> (both phrases, negative cases like "hey lucifer"/bare "lucille"), trailing-command extraction, debounce/
+> cooldown logic, and flag-file writing/permissions — all pass without Vosk installed (import is deferred
+> to `main()` so the pure logic is testable standalone). `python3 -m py_compile`, `bash -n` on both changed
+> shell scripts, and `systemd-analyze verify` on the new unit all clean. **Honest limit, not glossed
+> over:** this dev sandbox has no microphone/audio hardware, so real acoustic pickup — does Vosk's generic
+> English model actually catch "Hey Lucille" reliably, does PipeWire happily let this listener and Dart's
+> own `arecord` calls coexist — is unverified and needs a real boot, same as every other hardware-dependent
+> feature in this project's history. Wake-phrase matching is deliberately literal-only for now (no guessed
+> phonetic mis-hears) — worth revisiting once real usage shows what actually gets mis-transcribed.
+
+> **EPP power policy implemented and wired — 2026-09-21:** Tracker system-tuning item now has `/usr/lib/swarm/epp-tune.sh`, `/etc/default/swarm-epp`, a oneshot service and boot-enabled 20-second timer staged in airootfs, with root ownership/executable mode in profiledef. Uses balance_performance on AC/desktops and balance_power on system battery, validates advertised CPU values, respects performance governors and active power managers, verifies writes, and exposes read-only `--status`. No governor/boost/thermal changes. Nine fixture tests passed, unit syntax verified using staged executable path; live CachyOS status yielded to power-profiles-daemon without changing the host. Existing installer rootfs-copy path carries the timer and script to installed SWARM. **Partial only for fresh ISO boot/real hardware service verification**, not claimed here. Documentation: `70-scripts/EPP_POWER_POLICY.md`. Apex and Gaming code untouched.
+
 > **DONE — au9 diagnostic bundle implementation, 2026-09-20:** Telemetry (`/telemetry`) now has a real **Save diagnostic bundle** control with native destination-folder picker, optional service journals, busy/error states and selectable output path. Uses `70-scripts/collect_swarm_diagnostics.py` on the CachyOS development host and `/usr/local/bin/swarm-diagnostics` in SWARM; canonical ISO builder stages the same collector and the package manifest explicitly includes Python. Collects host OS/kernel, disks/memory/space, system and development service states, loopback health checks, and optionally bounded current-boot SWARM journals. No sudo, uploads, environment files or source trees; common credential formats are redacted, archive permissions are 0600, missing commands/permissions and timeouts are recorded. Archive README explains review requirements and host-versus-ISO scope. Verified redaction, timeout/failure/output limits and archive validity/permissions with Python tests; Flutter widget interaction test and targeted Dart analysis passed; full Linux debug build succeeded (`build/linux/x64/debug/bundle/swarm_flutter`). Live CachyOS collection succeeded: LucyServer :5000 returned 200; GamingAgent :8401 refused connection (recorded faithfully). Future ISO runtime/hardware verification still requires a fresh boot; this entry does not claim one.
 
 > **Lucille's chat backend, final state 2026-09-20 — OpenRouter's Kimi K2.5, after two provider swaps in one
@@ -443,10 +492,10 @@ voice control (wake word "Hey Lucille"/"Hey Lucy", realistic/seductive voice —
 exists**: `frontend/lib/services/wake_word_service.dart` + `lucille_voice_service.dart` already do wake-flag
 polling → Groq/OpenAI/Gemini Whisper transcription → OpenRouter chat with a "seductive, warm, velvet,
 intimate" Lucille system prompt → multi-provider TTS (Fish Audio → OpenRouter → ElevenLabs, already tuned
-breathy/intimate `stability:0.35 style:0.65` → Edge-TTS → espeak fallback chain). Needs auditing for whether
-it's actually wired to a real acoustic wake-word listener (something must write `/tmp/lucille_wake.flag` —
-not yet located) and whether `ELEVEN_VOICE_ID` is set, then extending into the gaming-overlay context
-specifically rather than rebuilt from scratch. Also wants a separate gameplay HUD (system stats, Lucille
+breathy/intimate `stability:0.35 style:0.65` → Edge-TTS → espeak fallback chain). **Acoustic wake-word
+listener now built, see the 2026-09-21 entry near the top of this file** — the "not yet located" writer of
+`/tmp/lucille_wake.flag` is `70-scripts/lucille_wake_listener.py` + `lucille-wake-listener.service`.
+`ELEVEN_VOICE_ID` confirmed set in `.env`. Also wants a separate gameplay HUD (system stats, Lucille
 commentary, GFN/game info, now-playing) controlled by Lucille, and media control for
 Spotify/YouTube-in-browser ("control music youtube spotifi"). Still-open questions from the user (asked via
 AskUserQuestion 2026-09-20, dismissed — pick back up when they're ready): what "GX" refers to (a launcher?
@@ -838,3 +887,5 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 *Last updated: 2026-09-19 — fixed dual-GRUB installer root mount setup; activation retry pending.*
 
 *Last updated: 2026-09-20 — au9 diagnostic export wired through Telemetry, collector and ISO staging; live host archive verified.*
+
+*Last updated: 2026-09-21 — EPP AC/battery power policy implemented, staged and fixture-tested; SWARM boot verification pending.*

@@ -110,7 +110,7 @@
 
 ### 2.6 System Tuning
 - [ ] **TCP MSS clamping on Tailscale via nftables**
-- [ ] **EPP dynamic power script** (`/usr/lib/swarm/epp-tune.sh`)
+- [~] **EPP dynamic power script** (`/usr/lib/swarm/epp-tune.sh`) — implemented and wired to boot-enabled `swarm-epp.timer` (2026-09-21). AC/battery policy, advertised-value validation, readback, existing power-manager precedence, configuration and status mode complete. Nine fixture tests and systemd unit validation pass; CachyOS read-only status correctly yields to power-profiles-daemon. Fresh SWARM boot/hardware write verification pending. See `70-scripts/EPP_POWER_POLICY.md`.
 
 ### 2.7 Developer Grants
 - [ ] **AMD AI Developer Program** ($100 credits)

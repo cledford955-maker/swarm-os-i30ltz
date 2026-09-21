@@ -281,6 +281,24 @@ echo -e "  ${GREEN}✓ lucille-core staged to /usr/bin/lucille-core.${NC}"
 # Local diagnostic export, shared by Telemetry UI and CLI.
 install -Dm755 "$LUCY/70-scripts/collect_swarm_diagnostics.py" "$AIROOTFS/usr/local/bin/swarm-diagnostics"
 
+# Lucille's OS-wide wake-word listener (lucille-wake-listener.service). The
+# Vosk model is fetched once into a persistent cache outside $WORK_DIR (which
+# gets wiped every run) so repeat builds don't re-download ~40MB every time.
+WAKE_MODEL_NAME="vosk-model-small-en-us-0.15"
+WAKE_MODEL_CACHE="$LUCY/20-runtime/vosk-model-cache"
+if [ ! -d "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME" ]; then
+    echo -e "  Fetching Vosk wake-word model (first run only, ~40MB)..."
+    mkdir -p "$WAKE_MODEL_CACHE"
+    curl -fsSL -o "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME.zip" \
+        "https://alphacephei.com/vosk/models/$WAKE_MODEL_NAME.zip"
+    (cd "$WAKE_MODEL_CACHE" && unzip -q "$WAKE_MODEL_NAME.zip" && rm -f "$WAKE_MODEL_NAME.zip")
+fi
+mkdir -p "$AIROOTFS/opt/swarm_os/models"
+rm -rf "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us"
+cp -a "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME" "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us"
+install -Dm755 "$LUCY/70-scripts/lucille_wake_listener.py" "$AIROOTFS/usr/local/bin/lucille_wake_listener.py"
+echo -e "  ${GREEN}✓ Lucille wake-word listener + Vosk model staged.${NC}"
+
 # 4e-installer. Stage install script into live ISO so it can be run from TTY
 mkdir -p "$AIROOTFS/usr/local/bin"
 cp -f "$LUCY/install_swarm_os.sh" "$AIROOTFS/usr/local/bin/install_swarm_os.sh"

@@ -15,6 +15,9 @@ lost+found/
 *.qcow2
 *.fd
 
+# --- downloaded model caches (fetched fresh by build_swarm_iso.sh) --
+20-runtime/vosk-model-cache/
+
 # --- ISO profile payload (configs kept, bundled apps excluded) ------
 40-iso-profile/*/airootfs/opt/
 40-iso-profile/*/airootfs/usr/lib/

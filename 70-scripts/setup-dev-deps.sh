@@ -25,7 +25,9 @@ sudo pacman -Sy --needed \
     git \
     clang \
     libgtk-3-0 \
-    gtk3
+    gtk3 \
+    curl \
+    unzip
 
 echo ""
 echo "All done. Flutter SDK is at /mnt/Lucy/30-source/flutter-sdk/"
