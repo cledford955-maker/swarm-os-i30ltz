@@ -22,7 +22,13 @@ data class CoderDroidState(
     val gitState: CdrGitState = CdrGitState(),
     val gitHasCredentials: Boolean = false,
     val cloneInProgress: Boolean = false,
-    val cloneError: String? = null
+    val cloneError: String? = null,
+    val gitAuthorName: String = "",
+    val gitAuthorEmail: String = "",
+    val gitUsername: String = "",
+    val notice: String? = null,
+    val savedSequence: Int = 0,
+    val commitSequence: Int = 0
 )
 
 sealed class CoderDroidEvent {
@@ -34,6 +40,8 @@ sealed class CoderDroidEvent {
     data class OpenWorkspace(val root: File) : CoderDroidEvent()
     object ToggleSidebar : CoderDroidEvent()
     object ToggleTerminal : CoderDroidEvent()
+    object ShowGitPanel : CoderDroidEvent()
+    object DismissNotice : CoderDroidEvent()
     object ToggleGitPanel : CoderDroidEvent()
     object RefreshGit : CoderDroidEvent()
     data class StageFile(val path: String) : CoderDroidEvent()
@@ -42,7 +50,7 @@ sealed class CoderDroidEvent {
     data class Commit(val message: String) : CoderDroidEvent()
     object Push : CoderDroidEvent()
     object Pull : CoderDroidEvent()
-    data class SetGitCredentials(val username: String, val token: String) : CoderDroidEvent()
+    data class SetGitCredentials(val username: String, val token: String, val authorName: String, val authorEmail: String) : CoderDroidEvent()
     data class CloneRepo(val url: String) : CoderDroidEvent()
     object DismissCloneError : CoderDroidEvent()
 }
@@ -55,7 +63,10 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
     private val gitCredentials by lazy { CdrGitCredentials(getApplication()) }
 
     init {
-        _state.update { it.copy(gitHasCredentials = gitCredentials.hasCredentials) }
+        _state.update { it.copy(gitHasCredentials = gitCredentials.hasCredentials, gitUsername = gitCredentials.username,
+            gitAuthorName = gitCredentials.authorName, gitAuthorEmail = gitCredentials.authorEmail) }
+        val saved = getApplication<Application>().getSharedPreferences("cdr_workspace", 0).getString("root", null)
+        saved?.let { File(it) }?.takeIf { it.isDirectory && it.canRead() }?.let { openWorkspace(it) }
     }
 
     fun onEvent(event: CoderDroidEvent) {
@@ -68,6 +79,8 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
             is CoderDroidEvent.OpenWorkspace    -> openWorkspace(event.root)
             CoderDroidEvent.ToggleSidebar       -> toggleSidebar()
             CoderDroidEvent.ToggleTerminal      -> toggleTerminal()
+            CoderDroidEvent.ShowGitPanel -> { _state.update { it.copy(sidebarVisible = true, gitPanelVisible = true) }; refreshGit() }
+            CoderDroidEvent.DismissNotice -> _state.update { it.copy(notice = null) }
             CoderDroidEvent.ToggleGitPanel      -> toggleGitPanel()
             CoderDroidEvent.RefreshGit          -> refreshGit()
             is CoderDroidEvent.StageFile        -> stageFiles(listOf(event.path))
@@ -76,7 +89,7 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
             is CoderDroidEvent.Commit           -> commit(event.message)
             CoderDroidEvent.Push                -> push()
             CoderDroidEvent.Pull                -> pull()
-            is CoderDroidEvent.SetGitCredentials -> setGitCredentials(event.username, event.token)
+            is CoderDroidEvent.SetGitCredentials -> setGitCredentials(event.username, event.token, event.authorName, event.authorEmail)
             is CoderDroidEvent.CloneRepo        -> cloneRepo(event.url)
             CoderDroidEvent.DismissCloneError   -> _state.update { it.copy(cloneError = null) }
         }
@@ -106,6 +119,9 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     private fun closeTab(tabId: String) {
+        if (_state.value.tabs.any { it.id == tabId && it.isDirty }) {
+            _state.update { it.copy(notice = "Save this file before closing it.") }; return
+        }
         val tabs = _state.value.tabs.filter { it.id != tabId }
         val newActive = when {
             _state.value.activeTabId != tabId -> _state.value.activeTabId
@@ -127,13 +143,18 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
         val tab = _state.value.tabs.find { it.id == tabId } ?: return
         if (!isWithinWorkspace(tab.fileNode.file)) return   // never write outside the project
         viewModelScope.launch(Dispatchers.IO) {
-            tab.fileNode.file.writeText(content)
-            markDirty(tabId, false)
-            refreshGit()
+            runCatching { tab.fileNode.file.writeText(content) }.fold(
+                onSuccess = { markDirty(tabId, false); _state.update { it.copy(savedSequence = it.savedSequence + 1) }; refreshGit() },
+                onFailure = { err -> _state.update { it.copy(notice = "Save failed: ${err.message}") } }
+            )
         }
     }
 
     private fun openWorkspace(root: File) {
+        if (_state.value.tabs.any { it.isDirty }) {
+            _state.update { it.copy(notice = "Save changed files before switching projects.") }; return
+        }
+        getApplication<Application>().getSharedPreferences("cdr_workspace", 0).edit().putString("root", root.absolutePath).apply()
         // Switching projects clears all open tabs — nothing from the old project leaks in
         _state.update { it.copy(workspaceRoot = root, workspaceName = root.name, tabs = emptyList(), activeTabId = null, gitState = CdrGitState()) }
         refreshGit()
@@ -152,7 +173,7 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
         val root = _state.value.workspaceRoot ?: return
         viewModelScope.launch(Dispatchers.IO) {
             val result = CdrGitService.status(root)
-            _state.update { it.copy(gitState = result) }
+            _state.update { if (it.workspaceRoot == root && !it.gitState.isBusy) it.copy(gitState = result) else it }
         }
     }
 
@@ -168,8 +189,13 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun commit(message: String) {
         if (message.isBlank()) return
+        if (_state.value.tabs.any { it.isDirty }) {
+            _state.update { it.copy(notice = "Save changed files before committing.") }; return
+        }
         withGitRoot { root ->
-            CdrGitService.commit(root, message, authorName = "CoderDroid", authorEmail = "coderdroid@swarm-os.local")
+            CdrGitService.commit(root, message, gitCredentials.authorName, gitCredentials.authorEmail).onSuccess {
+                _state.update { it.copy(commitSequence = it.commitSequence + 1, notice = "Commit saved locally. Use Push to send it to GitHub.") }
+            }
         }
     }
 
@@ -189,12 +215,16 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
      */
     private fun cloneRepo(url: String) {
         val trimmed = url.trim()
-        if (trimmed.isBlank()) return
+        if (trimmed.isBlank() || _state.value.cloneInProgress) return
+        if (_state.value.tabs.any { it.isDirty }) { _state.update { it.copy(notice = "Save changed files before cloning another project.") }; return }
         val repoName = trimmed
             .trimEnd('/')
             .substringAfterLast('/')
             .removeSuffix(".git")
             .ifBlank { "repo" }
+        if (!repoName.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,100}"))) {
+            _state.update { it.copy(cloneError = "Repository name is not a valid project folder.") }; return
+        }
         val dest = File(getApplication<Application>().filesDir, "projects/$repoName")
 
         _state.update { it.copy(cloneInProgress = true, cloneError = null) }
@@ -212,18 +242,23 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    private fun setGitCredentials(username: String, token: String) {
+    private fun setGitCredentials(username: String, token: String, authorName: String, authorEmail: String) {
         gitCredentials.username = username
-        gitCredentials.token = token
-        _state.update { it.copy(gitHasCredentials = gitCredentials.hasCredentials) }
+        if (token.isNotBlank()) gitCredentials.token = token
+        gitCredentials.authorName = authorName
+        gitCredentials.authorEmail = authorEmail
+        _state.update { it.copy(gitHasCredentials = gitCredentials.hasCredentials, gitUsername = username,
+            gitAuthorName = authorName, gitAuthorEmail = authorEmail, notice = "Git settings saved on this phone.") }
     }
 
     /** Runs a git mutation on IO, then refreshes status — sets lastError on failure. */
     private fun withGitRoot(block: (File) -> Result<Unit>) {
         val root = _state.value.workspaceRoot ?: return
+        if (_state.value.gitState.isBusy) return
         _state.update { it.copy(gitState = it.gitState.copy(isBusy = true, lastError = null)) }
         viewModelScope.launch(Dispatchers.IO) {
-            val result = block(root)
+            val result = runCatching { block(root).getOrThrow() }
+            if (_state.value.workspaceRoot != root) return@launch
             result.exceptionOrNull()?.let { err ->
                 _state.update { it.copy(gitState = it.gitState.copy(isBusy = false, lastError = err.message ?: "git operation failed")) }
                 return@launch
