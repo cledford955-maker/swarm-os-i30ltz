@@ -4,7 +4,7 @@
 Runs as its own systemd service (lucille-wake-listener.service), independent of any
 particular window having focus — that's what makes it OS-wide rather than tied to the
 Flutter shell being the active app. Everything else in the voice pipeline already exists
-(frontend/lib/services/wake_word_service.dart polls /tmp/lucille_wake.flag, transcribes
+(frontend/lib/services/wake_word_service.dart polls $XDG_RUNTIME_DIR/lucille-wake/wake.flag, transcribes
 the follow-up command via Groq/OpenAI/Gemini, asks Lucille, speaks the reply); this script
 only supplies the missing producer of that flag file. Speech recognition is fully local
 (Vosk) — no audio is sent anywhere just to detect the wake phrase.
@@ -13,6 +13,9 @@ import json
 import os
 import re
 import signal
+import selectors
+import tempfile
+from pathlib import Path
 import subprocess
 import sys
 import time
@@ -20,7 +23,10 @@ import time
 MODEL_PATH = os.environ.get('LUCILLE_WAKE_MODEL_PATH', '/opt/swarm_os/models/vosk-small-en-us')
 SAMPLE_RATE = 16000
 CHUNK_BYTES = 4000  # ~0.125s of 16-bit mono PCM at 16kHz
-FLAG_PATH = '/tmp/lucille_wake.flag'
+RUNTIME_DIR = Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}')) / 'lucille-wake'
+FLAG_PATH = str(RUNTIME_DIR / 'wake.flag')
+BUSY_PATH = RUNTIME_DIR / 'busy'
+WAKE_GRAMMAR = ['hey lucille', 'hey lucy', 'hey lucifer', '[unk]']
 POST_TRIGGER_COOLDOWN = 6.0  # covers Dart's own ack speech + its 4s follow-up recording
 
 # Literal phrases only — guessing at phonetic mis-hears without real audio to test
@@ -53,14 +59,39 @@ def _should_skip(now, cooldown_until, flag_pending):
 
 def _fire(text, match):
     command = _extract_command(text, match)
+    temporary = None
     try:
-        fd = os.open(FLAG_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        # Publish only complete files; never follow or overwrite an existing flag.
+        fd, temporary = tempfile.mkstemp(dir=Path(FLAG_PATH).parent, prefix='.wake-')
         with os.fdopen(fd, 'w') as f:
             f.write(command)
+        os.link(temporary, FLAG_PATH)
     except OSError as exc:
-        print(f'lucille_wake_listener: failed to write {FLAG_PATH}: {exc}', file=sys.stderr)
-        return
-    print(f'lucille_wake_listener: wake phrase detected, command={command!r}', file=sys.stderr)
+        print(f'lucille_wake_listener: cannot publish wake event: {exc}', file=sys.stderr)
+        return False
+    finally:
+        if temporary is not None:
+            os.unlink(temporary)
+    print('lucille_wake_listener: wake phrase detected', file=sys.stderr)
+    return True
+
+
+def _recognized_prompt(wake_text, full_text):
+    """Use constrained decoding for the names and unrestricted decoding for commands."""
+    match = WAKE_RE.search(wake_text)
+    if not match:
+        return None
+    full_match = re.search(r'\bluc(?:y|ille)\b', full_text, re.IGNORECASE)
+    command = _extract_command(full_text, full_match) if full_match else ''
+    return match.group() + (' ' + command if command else '')
+
+
+def _busy():
+    try:
+        # Recover after a shell crash instead of staying muted forever.
+        return time.time() - BUSY_PATH.stat().st_mtime < 180
+    except FileNotFoundError:
+        return False
 
 
 def main():
@@ -77,34 +108,51 @@ def main():
     signal.signal(signal.SIGTERM, _handle_stop)
     signal.signal(signal.SIGINT, _handle_stop)
 
+    RUNTIME_DIR.mkdir(mode=0o700, exist_ok=True)
+    info = RUNTIME_DIR.lstat()
+    if RUNTIME_DIR.is_symlink() or info.st_uid != os.getuid() or info.st_mode & 0o077:
+        print('lucille_wake_listener: unsafe runtime directory', file=sys.stderr)
+        return 1
     model = Model(MODEL_PATH)
 
     while _running:
         recognizer = KaldiRecognizer(model, SAMPLE_RATE)
+        wake_recognizer = KaldiRecognizer(model, SAMPLE_RATE, json.dumps(WAKE_GRAMMAR))
         proc = _start_arecord()
         cooldown_until = 0.0
+        selector = selectors.DefaultSelector()
+        selector.register(proc.stdout, selectors.EVENT_READ)
         try:
             while _running:
-                data = proc.stdout.read(CHUNK_BYTES)
+                if not selector.select(timeout=0.25):
+                    continue
+                data = os.read(proc.stdout.fileno(), CHUNK_BYTES)
                 if not data:
                     break  # arecord died; restart it in the outer loop
 
-                if _should_skip(time.time(), cooldown_until, os.path.exists(FLAG_PATH)):
+                if _should_skip(time.monotonic(), cooldown_until, os.path.exists(FLAG_PATH)) or _busy():
+                    recognizer.Reset()
+                    wake_recognizer.Reset()
                     continue  # draining audio during cooldown, or prior trigger not consumed yet
 
-                if recognizer.AcceptWaveform(data):
-                    text = (json.loads(recognizer.Result()).get('text') or '').strip()
-                    if text:
-                        match = WAKE_RE.search(text)
-                        if match:
-                            _fire(text, match)
-                            cooldown_until = time.time() + POST_TRIGGER_COOLDOWN
+                recognizer.AcceptWaveform(data)
+                if wake_recognizer.AcceptWaveform(data):
+                    wake_text = json.loads(wake_recognizer.Result()).get('text', '')
+                    full_text = json.loads(recognizer.FinalResult()).get('text', '')
+                    text = _recognized_prompt(wake_text, full_text)
+                    if text and _fire(text, WAKE_RE.search(text)):
+                        cooldown_until = time.monotonic() + POST_TRIGGER_COOLDOWN
+                    recognizer.Reset()
+                    wake_recognizer.Reset()
         finally:
+            selector.close()
+            proc.stdout.close()
             proc.terminate()
             try:
                 proc.wait(timeout=2)
             except subprocess.TimeoutExpired:
                 proc.kill()
+                proc.wait()
 
         if _running:
             time.sleep(1)  # brief backoff before restarting a dead arecord
