@@ -11,6 +11,7 @@ import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../theme/lucide_compat.dart';
 import '../coder/coder_page.dart';
+import '../coder/panels/profile_manager_panel.dart';
 import '../widgets/extensions_dialog.dart';
 
 enum ApexView { explorer, search, git, android, signing, deviceFiles, tasks, extensions, publisher, controller, apple, ollama, settings }
@@ -28,7 +29,6 @@ class _ApexWorkstationState extends ConsumerState<ApexWorkstation> {
   bool _bottomPanelOpen = true;
   double _sidebarWidth = 280.0;
   double _aiPanelWidth = 320.0;
-  final double _bottomPanelHeight = 250.0;
 
   @override
   Widget build(BuildContext context) {
@@ -202,79 +202,79 @@ class _ApexWorkstationState extends ConsumerState<ApexWorkstation> {
             icon: LucideIcons.files,
             view: ApexView.explorer,
             active: _activeView == ApexView.explorer,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.explorer ? ApexView.explorer : ApexView.explorer),
+            onTap: () => setState(() => _activeView = ApexView.explorer),
           ),
           _ActivityIcon(
             icon: LucideIcons.search,
             view: ApexView.search,
             active: _activeView == ApexView.search,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.search ? ApexView.explorer : ApexView.search),
+            onTap: () => setState(() => _activeView = ApexView.search),
           ),
           _ActivityIcon(
             icon: LucideIcons.gitBranch,
             view: ApexView.git,
             active: _activeView == ApexView.git,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.git ? ApexView.explorer : ApexView.git),
+            onTap: () => setState(() => _activeView = ApexView.git),
           ),
           _ActivityIcon(
             icon: Icons.android_rounded,
             view: ApexView.android,
             active: _activeView == ApexView.android,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.android ? ApexView.explorer : ApexView.android),
+            onTap: () => setState(() => _activeView = ApexView.android),
           ),
           _ActivityIcon(
             icon: LucideIcons.signature,
             view: ApexView.signing,
             active: _activeView == ApexView.signing,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.signing ? ApexView.explorer : ApexView.signing),
+            onTap: () => setState(() => _activeView = ApexView.signing),
           ),
           _ActivityIcon(
             icon: LucideIcons.hardDrive,
             view: ApexView.deviceFiles,
             active: _activeView == ApexView.deviceFiles,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.deviceFiles ? ApexView.explorer : ApexView.deviceFiles),
+            onTap: () => setState(() => _activeView = ApexView.deviceFiles),
           ),
           _ActivityIcon(
             icon: LucideIcons.playCircle,
             view: ApexView.tasks,
             active: _activeView == ApexView.tasks,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.tasks ? ApexView.explorer : ApexView.tasks),
+            onTap: () => setState(() => _activeView = ApexView.tasks),
           ),
           _ActivityIcon(
             icon: LucideIcons.puzzle,
             view: ApexView.extensions,
             active: _activeView == ApexView.extensions,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.extensions ? ApexView.explorer : ApexView.extensions),
+            onTap: () => setState(() => _activeView = ApexView.extensions),
           ),
           _ActivityIcon(
             icon: LucideIcons.rocket,
             view: ApexView.publisher,
             active: _activeView == ApexView.publisher,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.publisher ? ApexView.explorer : ApexView.publisher),
+            onTap: () => setState(() => _activeView = ApexView.publisher),
           ),
           _ActivityIcon(
             icon: LucideIcons.gamepad2,
             view: ApexView.controller,
             active: _activeView == ApexView.controller,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.controller ? ApexView.explorer : ApexView.controller),
+            onTap: () => setState(() => _activeView = ApexView.controller),
           ),
           _ActivityIcon(
             icon: Icons.apple_rounded,
             view: ApexView.apple,
             active: _activeView == ApexView.apple,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.apple ? ApexView.explorer : ApexView.apple),
+            onTap: () => setState(() => _activeView = ApexView.apple),
           ),
           _ActivityIcon(
             icon: LucideIcons.cpu,
             view: ApexView.ollama,
             active: _activeView == ApexView.ollama,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.ollama ? ApexView.explorer : ApexView.ollama),
+            onTap: () => setState(() => _activeView = ApexView.ollama),
           ),
           _ActivityIcon(
             icon: LucideIcons.settings,
             view: ApexView.settings,
             active: _activeView == ApexView.settings,
-            onTap: () => setState(() => _activeView = _activeView == ApexView.settings ? ApexView.explorer : ApexView.settings),
+            onTap: () => setState(() => _activeView = ApexView.settings),
           ),
         ],
       ),
@@ -321,8 +321,7 @@ class _ApexWorkstationState extends ConsumerState<ApexWorkstation> {
             ApexView.controller => const ControllerSettingsPanel(),
             ApexView.apple => const ApplePanel(),
             ApexView.ollama => const OllamaPanel(),
-            ApexView.settings => const SettingsPanel(),
-            _ => const SizedBox.shrink(),
+            ApexView.settings => const ProfileManagerPanel(),
           },
         ),
         MouseRegion(
@@ -479,111 +478,7 @@ class _ApexTerminalPanel extends StatelessWidget {
   }
 }
 
-// Import required panels
-import '../coder/panels/android_panel.dart';
-import '../coder/panels/signing_panel.dart';
-import '../coder/panels/device_explorer_panel.dart';
-import '../coder/panels/task_runner_panel.dart';
-import '../coder/panels/extensions_panel.dart';
-import '../coder/panels/publisher_portal_panel.dart';
-import '../coder/panels/controller_settings_panel.dart';
-import '../coder/panels/apple_panel.dart';
-import '../coder/panels/ollama_panel.dart';
-import '../coder/panels/profile_manager_panel.dart' show SettingsPanel;
-
-// ─── Small Components ────────────────────────────────────────────────────────
-
-class _IconBtn extends StatefulWidget {
-  final IconData icon;
-  final bool active;
-  final VoidCallback onTap;
-  final String tooltip;
-
-  const _IconBtn({required this.icon, required this.active, required this.onTap, required this.tooltip});
-
-  @override
-  State<_IconBtn> createState() => _IconBtnState();
-}
-
-class _IconBtnState extends State<_IconBtn> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: widget.tooltip,
-      child: InkWell(
-        onTap: widget.onTap,
-        onHover: (v) => setState(() => _hovered = v),
-        borderRadius: BorderRadius.circular(4),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: widget.active 
-                ? SwarmColors.accent.withValues(alpha: 0.15) 
-                : _hovered ? SwarmColors.bgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(
-            widget.icon,
-            size: 14,
-            color: widget.active ? SwarmColors.accent : SwarmColors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActivityIcon extends StatefulWidget {
-  final IconData icon;
-  final ApexView view;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _ActivityIcon({required this.icon, required this.view, required this.active, required this.onTap});
-
-  @override
-  State<_ActivityIcon> createState() => _ActivityIconState();
-}
-
-class _ActivityIconState extends State<_ActivityIcon> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: InkWell(
-        onTap: widget.onTap,
-        onHover: (v) => setState(() => _hovered = v),
-        borderRadius: BorderRadius.circular(8),
-        focusColor: SwarmColors.accent.withValues(alpha: 0.3),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: widget.active ? SwarmColors.accent : Colors.transparent,
-                width: 2,
-              )
-            ),
-          ),
-          child: Icon(
-            widget.icon,
-            size: 22,
-            color: widget.active ? SwarmColors.textPrimary : _hovered ? SwarmColors.textSecondary : SwarmColors.textMuted,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Sub-Panels (Android, Signing, Device Files, Tasks, Extensions, Publisher, Controller, Apple, Ollama, Settings) ────────────────────────────────────────
+// ─── Sub-Panels (Android, Signing, Device Files, Tasks, Extensions, Publisher, Controller, Apple, Ollama) ────────────────────────────────────────
 
 Future<void> _runApexCmd(BuildContext context, String name, String command) async {
   // Use SystemLauncher or similar
@@ -970,38 +865,93 @@ class OllamaPanel extends StatelessWidget {
   }
 }
 
-class SettingsPanel extends StatelessWidget {
-  const SettingsPanel({super.key});
+// ─── Small Components ────────────────────────────────────────────────────────
+
+class _IconBtn extends StatefulWidget {
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  const _IconBtn({required this.icon, required this.active, required this.onTap, required this.tooltip});
+
+  @override
+  State<_IconBtn> createState() => _IconBtnState();
+}
+
+class _IconBtnState extends State<_IconBtn> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
-    return FocusScope(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('APEX SETTINGS', style: SwarmTextStyles.label.copyWith(color: SwarmColors.accent)),
-          const SizedBox(height: 16),
-          _ActionRow(
-            icon: LucideIcons.palette,
-            label: 'Theme & Appearance',
-            onAction: () {},
+    return Tooltip(
+      message: widget.tooltip,
+      child: InkWell(
+        onTap: widget.onTap,
+        onHover: (v) => setState(() => _hovered = v),
+        borderRadius: BorderRadius.circular(4),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: widget.active 
+                ? SwarmColors.accent.withValues(alpha: 0.15) 
+                : _hovered ? SwarmColors.bgHover : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
           ),
-          _ActionRow(
-            icon: LucideIcons.keyboard,
-            label: 'Keybindings',
-            onAction: () {},
+          child: Icon(
+            widget.icon,
+            size: 14,
+            color: widget.active ? SwarmColors.accent : SwarmColors.textSecondary,
           ),
-          _ActionRow(
-            icon: LucideIcons.terminal,
-            label: 'Terminal Settings',
-            onAction: () {},
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityIcon extends StatefulWidget {
+  final IconData icon;
+  final ApexView view;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _ActivityIcon({required this.icon, required this.view, required this.active, required this.onTap});
+
+  @override
+  State<_ActivityIcon> createState() => _ActivityIconState();
+}
+
+class _ActivityIconState extends State<_ActivityIcon> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: InkWell(
+        onTap: widget.onTap,
+        onHover: (v) => setState(() => _hovered = v),
+        borderRadius: BorderRadius.circular(8),
+        focusColor: SwarmColors.accent.withValues(alpha: 0.3),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: widget.active ? SwarmColors.accent : Colors.transparent,
+                width: 2,
+              )
+            ),
           ),
-          _ActionRow(
-            icon: LucideIcons.gitBranch,
-            label: 'Git Integration',
-            onAction: () {},
+          child: Icon(
+            widget.icon,
+            size: 22,
+            color: widget.active ? SwarmColors.textPrimary : _hovered ? SwarmColors.textSecondary : SwarmColors.textMuted,
           ),
-        ],
+        ),
       ),
     );
   }
