@@ -1309,7 +1309,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
     final ragService = ref.read(nvidiaRagServiceProvider);
     final imageService = ref.read(nvidiaImageServiceProvider);
 
-    final nimSkills = NvidiaNimSkillRegistry.all;
+    const nimSkills = NvidiaNimSkillRegistry.all;
     final freeNimModels = catalog.hasData ? catalog.nvidiaNimFree : <LiveModel>[];
 
     return Container(
@@ -1471,9 +1471,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                             ),
                           ),
                         ),
-                        if (isAvailable && liveModel != null)
+                        if (isAvailable)
                           Text(
-                            liveModel.pricePer1MDisplay,
+                            liveModel!.pricePer1MDisplay,
                             style: const TextStyle(
                               color: SwarmColors.success,
                               fontSize: 9,

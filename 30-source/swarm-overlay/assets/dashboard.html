@@ -88,7 +88,7 @@
   .app-buttons { display: flex; gap: 8px; }
   .app-buttons button {
     background: #14181f; border: 1px solid var(--panel-border); color: var(--text);
-    border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+    border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; white-space: nowrap;
   }
   .app-buttons button:hover { border-color: var(--accent-dim); color: var(--accent); }
 
@@ -98,6 +98,9 @@
   .chat-msg.user { background: #14181f; align-self: flex-end; }
   .chat-msg.assistant { background: #0a1a1e; border: 1px solid var(--accent-dim); align-self: flex-start; }
   .chat-msg.action { background: transparent; border: 1px dashed var(--accent-dim); color: var(--text-muted); font-size: 11px; align-self: flex-start; }
+  .chat-msg.assistant.thinking { color: var(--text-muted); font-style: italic; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  #chat-input:disabled, #chat-form button:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -142,7 +145,7 @@
 
   <div class="panel">
     <h2>Apps</h2>
-    <div class="media-controls">
+    <div class="app-buttons">
       <button type="button" id="btn-chrome">Chrome</button>
       <button type="button" id="btn-opera-gx">Opera GX</button>
     </div>
@@ -252,6 +255,7 @@ function appendChatMsg(role, text) {
   el.textContent = text;
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
+  return el;
 }
 
 const MEDIA_ACTIONS = new Set(['media_play', 'media_pause', 'media_play_pause', 'media_next', 'media_previous', 'media_stop']);
@@ -276,6 +280,17 @@ function extractAction(replyText) {
   return { text: replyText.slice(0, m.index).trim(), verb: m[1], arg: m[2] };
 }
 
+// Nemotron is a reasoning model with real chain-of-thought before it
+// answers — occasionally, under NVIDIA-side load, this has been observed to
+// take up to (and even exceed) GamingAgent's own 120s upstream timeout with
+// zero bytes back in the meantime. A silent, frozen chat panel for up to two
+// minutes reads as broken even when it isn't, so show a "thinking" bubble
+// immediately and disable the form until a reply (or error) lands.
+function setChatBusy(busy) {
+  document.getElementById('chat-input').disabled = busy;
+  document.querySelector('#chat-form button').disabled = busy;
+}
+
 document.getElementById('chat-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const input = document.getElementById('chat-input');
@@ -283,6 +298,8 @@ document.getElementById('chat-form').addEventListener('submit', async (e) => {
   if (!text) return;
   input.value = '';
   appendChatMsg('user', text);
+  setChatBusy(true);
+  const thinkingEl = appendChatMsg('assistant thinking', 'Lucille is thinking…');
   try {
     const res = await fetch(`${API}/api/lucille/chat`, {
       method: 'POST',
@@ -293,6 +310,7 @@ document.getElementById('chat-form').addEventListener('submit', async (e) => {
       }),
     });
     const data = await res.json();
+    thinkingEl.remove();
     sessionId = data.sessionId || sessionId;
     if (data.error) {
       appendChatMsg('assistant', `(error: ${data.error})`);
@@ -302,7 +320,10 @@ document.getElementById('chat-form').addEventListener('submit', async (e) => {
     if (shown) appendChatMsg('assistant', shown);
     if (verb) dispatchAction(verb, arg);
   } catch (err) {
+    thinkingEl.remove();
     appendChatMsg('assistant', '(GamingAgent unreachable)');
+  } finally {
+    setChatBusy(false);
   }
 });
 </script>

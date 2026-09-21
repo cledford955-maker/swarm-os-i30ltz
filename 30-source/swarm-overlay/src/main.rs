@@ -112,13 +112,24 @@ fn open_browser_widget(url: &str) {
 /// schema since the message set is small and unlikely to grow much):
 ///   open_browser:<url>   — spawn a browser-widget window at url
 ///   open_app:<name>      — launch an installed app (chrome | opera-gx)
-fn handle_ipc_message(message: String) {
-    if let Some(url) = message.strip_prefix("open_browser:") {
-        open_browser_widget(url);
-    } else if let Some(name) = message.strip_prefix("open_app:") {
-        launch_app(name);
+/// Pure parse of an IPC message into (verb, payload) — split out from
+/// handle_ipc_message so the parsing itself is unit-testable without
+/// spawning real processes (see the tests module at the bottom of this file).
+fn parse_ipc_message(message: &str) -> Option<(&str, &str)> {
+    if let Some(rest) = message.strip_prefix("open_browser:") {
+        Some(("open_browser", rest))
+    } else if let Some(rest) = message.strip_prefix("open_app:") {
+        Some(("open_app", rest))
     } else {
-        eprintln!("[swarm-overlay] unrecognized IPC message: {message}");
+        None
+    }
+}
+
+fn handle_ipc_message(message: String) {
+    match parse_ipc_message(&message) {
+        Some(("open_browser", url)) => open_browser_widget(url),
+        Some(("open_app", name)) => launch_app(name),
+        _ => eprintln!("[swarm-overlay] unrecognized IPC message: {message}"),
     }
 }
 
@@ -206,4 +217,37 @@ fn main() -> wry::Result<()> {
             _ => {}
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_open_browser() {
+        assert_eq!(
+            parse_ipc_message("open_browser:https://example.com"),
+            Some(("open_browser", "https://example.com"))
+        );
+    }
+
+    #[test]
+    fn parses_open_app() {
+        assert_eq!(parse_ipc_message("open_app:chrome"), Some(("open_app", "chrome")));
+        assert_eq!(parse_ipc_message("open_app:opera-gx"), Some(("open_app", "opera-gx")));
+    }
+
+    #[test]
+    fn rejects_unknown_verbs() {
+        assert_eq!(parse_ipc_message("nonsense"), None);
+        assert_eq!(parse_ipc_message("open_browser"), None); // missing ':' separator
+        assert_eq!(parse_ipc_message(""), None);
+    }
+
+    #[test]
+    fn empty_payload_still_parses() {
+        // Empty url/app name parses fine here — validity is the caller's
+        // problem (open_browser_widget/launch_app), not the parser's.
+        assert_eq!(parse_ipc_message("open_browser:"), Some(("open_browser", "")));
+    }
 }

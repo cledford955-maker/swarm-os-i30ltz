@@ -513,15 +513,78 @@ real `libwebkit2gtk-4.1.so.0`/`libgtk-3.so.0`/`libsoup-3.0.so.0` as the debug bu
 `build_swarm_iso.sh` pipeline for swarm-overlay — compile step through staging step — is now confirmed
 correct end to end, not just written and hoped-correct.
 
-**Also not yet built:** widget-mode vs. full-page-mode *switching* (currently two separate launches, not a toggle
-within one running instance), the transparency-on-modifier-hold interaction the user specifically asked for,
-the video window for walkthrough videos, voice-triggered summon (only the hotkey exists so far), wiring
-Lucille chat's tool-call pattern (like
-`LucilleEvalResult`'s `set_genre_filter`/`pin_games`) to drive overlay actions directly instead of the user
-manually typing into the chat panel, and the separate "launch Opera GX / Chrome as an installed app"
-capability (Opera GX confirmed by the user 2026-09-20 to be a real Chromium-based gaming browser — not in
-Arch's official repos, AUR-only, so shipping it in the ISO needs an AUR-helper build step that doesn't exist
-in this project yet; out of scope for now, launching it if already installed doesn't need that).
+**"Do it all" pass 2026-09-20 — everything on the remaining list built.** User asked to work through the full
+remaining gap list top to bottom. All six items:
+
+1. **Transparency-on-hold** — window + webview both created with `with_transparent(true)`; the event loop
+   tracks `WindowEvent::ModifiersChanged` and calls `evaluate_script` to toggle a `swarm-overlay-peek` CSS
+   class on `<body>` when Super is held/released (`ModifiersState::super_key()`). `dashboard.html`'s body now
+   sits at `rgba(5,6,10,0.92)` normally (not fully opaque — matches the window's own transparency) and fades
+   to `opacity: 0.12` + transparent background while peeking.
+2. **Video window mode** — new `video <url>` mode: smaller (420×300) default size, positioned at the primary
+   monitor's right edge via `event_loop.primary_monitor()` (still a normal movable/resizable window
+   afterward). Confirmed the position-calculation code doesn't panic when there's no real monitor (this
+   sandbox) — falls through cleanly to the same expected `UnsupportedWindowHandle` as every other mode.
+3. **Widget vs. full-page as one integrated choice** — new `with_ipc_handler` on the dashboard's webview
+   (`window.ipc.postMessage`) lets the dashboard spawn real `browser`-mode widget windows on demand
+   (`open_browser:<url>`) via `Command::new(current_exe).arg("browser").arg(url).spawn()`, and launch apps
+   (`open_app:<name>`). The dashboard's Walkthrough/Web panel now has a real search-or-URL input wired to this
+   instead of a stub.
+4. **Lucille tool-call wiring — the real thing, not just planned.** `lucille_service.go`'s system prompt
+   (`lucilleActionProtocol`) instructs Nemotron to end a reply with a trailing `ACTION: <verb> [arg]` line
+   only when the user asked her to actually do something. `dashboard.html` parses that line out via regex,
+   strips it from the displayed reply, and dispatches to the matching handler (media control, open_browser,
+   open_app) — showing a small dashed "→ action" confirmation bubble in the chat log.
+5. **Voice-triggered summon** — `wake_word_service.dart`'s `_askLucilleAI` now checks spoken text against an
+   overlay-intent regex before sending it to the AI chat pipeline; a match ("open/show/close/hide/toggle/
+   bring up/pull up ... overlay") shells out to the same `swarm-overlay-toggle.sh` the hotkey uses instead of
+   asking Nemotron.
+6. **Opera GX / Chrome app launching** — `launch_app()` tries a candidate-binary fallback list per app
+   (`chrome`: google-chrome-stable → google-chrome → chromium; `opera-gx`: opera-gx → opera), wired to both
+   the dashboard's Apps buttons and the ACTION protocol's `open_app` verb.
+
+**What's genuinely verified vs. what isn't, stated honestly:**
+- **Real, live, end-to-end confirmed**: the ACTION protocol round-trip. Asked the real running Lucille chat
+  "please pause the music" — Nemotron correctly replied "Music paused." with a trailing `ACTION: media_pause`
+  line; the dashboard correctly stripped it from the displayed text, showed "→ pause", and fired a real
+  `POST /api/media/control` (502, expected — no MPRIS player active here, same as the earlier media-control
+  verification). Separately confirmed the negative case — "what genres are popular on GFN?" got a real answer
+  with **no** spurious ACTION line, so the model isn't over-triggering.
+- **Real, live, end-to-end confirmed**: the Walkthrough/Web and Apps panels' JS logic — driven through an
+  actual browser via the Claude Browser tool, `openBrowser()` correctly detects a bare search phrase
+  ("zelda walkthrough") vs. a real URL and builds the right target, and both Apps buttons fire the right
+  `open_app:` message.
+- **NOT verified, and said so rather than assumed**: the Rust-side IPC handler and actual process-spawning
+  (`open_browser_widget`, `launch_app`) never executed through a real wry webview, because that needs a real
+  Wayland/X11 display this sandbox doesn't have — `window.ipc` doesn't exist outside one, so the dashboard
+  JS's `sendIpc()` helper degrades to a console.log in dev/testing rather than throwing. Built confidence a
+  different way instead: added `parse_ipc_message` as a pure, unit-tested function (4 new tests, all passing)
+  covering the string-parsing half, and directly confirmed the real underlying mechanism outside the app —
+  `google-chrome-stable` actually exists and spawns on this system (version 153.0.8010.47 confirmed via
+  direct exec), and `opera-gx` genuinely isn't installed while `opera` is, confirming `launch_app`'s fallback
+  chain would correctly land on `opera`. Needs one real smoke test on the actual SWARM OS desktop (Shift+Tab,
+  hold Super, type a search, click an app button) before calling this fully proven.
+- Transparency and video-mode positioning: same as everything else built this session without a display —
+  confirmed the code runs without panicking up through webview creation, not confirmed visually.
+- Voice-triggered summon: the regex itself was tested directly with 12 real cases (all passing, including
+  tricky negatives like "is there a game overlay conflict"), `flutter analyze` clean — not tested with an
+  actual microphone/wake-word pipeline, which this environment has no way to exercise.
+
+**Real, non-obvious thing found along the way**: multi-turn Lucille chat conversations (accumulated Steam/GFN
+context + the now-longer ACTION-protocol system prompt + prior turns) occasionally take Nemotron 20 seconds
+to, once, a full 2 minutes — hit GamingAgent's own 120s upstream client timeout exactly once during testing,
+observed directly via GamingAgent's own request log (`"...120.017210022s"`) and the resulting
+`context deadline exceeded (Client.Timeout exceeded while awaiting headers)` error shown in the chat panel.
+This is real NVIDIA NIM API latency/load variance, not a bug in this code, and switching to the already-built
+streaming endpoint wouldn't fully fix it either (the observed timeout happened waiting for the *first* byte,
+not partway through a slow generation). Fixed the actual UX problem this causes instead: the chat panel
+previously just sat frozen and silent for up to two minutes with zero feedback — added a pulsing "Lucille is
+thinking…" bubble shown immediately on submit and removed when the reply (or error) lands, with the input
+and Send button disabled meanwhile so a second message can't queue up mid-wait.
+
+Nothing left unaddressed from the "do it all" list — everything has real code, and every claim above about
+what's tested says exactly what was and wasn't, rather than assuming success where a display was needed to
+actually know.
 
 ### Mock tool wiring instructions (2026-09-15 — user wants all 4 kept, wire up when ready)
 Each lives in `30-source/frontend/lib/models/swarm_apps.dart` under "MOCK IDEAS", tagged `mock: true`.

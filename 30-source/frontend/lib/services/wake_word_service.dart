@@ -230,7 +230,37 @@ class WakeWordService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Matches spoken requests to summon/dismiss the gaming overlay (e.g.
+  /// "open the overlay", "hide overlay", "bring up the overlay") so they're
+  /// handled locally via the same toggle script the Shift+Tab hotkey uses
+  /// (see labwc/rc.xml + airootfs/usr/local/bin/swarm-overlay-toggle.sh),
+  /// instead of being sent to the AI as a chat prompt.
+  static final RegExp _overlayIntentRe =
+      RegExp(r'\b(open|show|close|hide|toggle|bring up|pull up)\b.*\boverlay\b', caseSensitive: false);
+
+  bool _isOverlayIntent(String prompt) => _overlayIntentRe.hasMatch(prompt);
+
+  Future<void> _toggleOverlay() async {
+    const scriptPath = '/usr/local/bin/swarm-overlay-toggle.sh';
+    try {
+      final result = await Process.run(scriptPath, []);
+      if (result.exitCode == 0) {
+        await LucilleVoiceService().speak('There you go, hun.');
+      } else {
+        if (kDebugMode) print('swarm-overlay-toggle.sh exited ${result.exitCode}: ${result.stderr}');
+        await LucilleVoiceService().speak("Hmm, the overlay didn't want to cooperate.");
+      }
+    } catch (e) {
+      if (kDebugMode) print('swarm-overlay-toggle.sh error: $e');
+      await LucilleVoiceService().speak("I can't reach the overlay from here, hun.");
+    }
+  }
+
   Future<void> _askLucilleAI(String prompt) async {
+    if (_isOverlayIntent(prompt)) {
+      await _toggleOverlay();
+      return;
+    }
     try {
       final apiKey = await _resolveKey('OPENROUTER_API_KEY');
 
