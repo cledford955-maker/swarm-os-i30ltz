@@ -1473,7 +1473,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         ),
                         if (isAvailable)
                           Text(
-                            liveModel!.pricePer1MDisplay,
+                            liveModel.pricePer1MDisplay,
                             style: const TextStyle(
                               color: SwarmColors.success,
                               fontSize: 9,

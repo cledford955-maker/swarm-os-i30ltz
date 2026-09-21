@@ -36,7 +36,7 @@ Two Wayland clients run under **labwc** compositor, started by `swarm-ui.service
 |---|---|---|---|
 | Flutter shell | Dart (Flutter) | `30-source/frontend/` | Full desktop: wallpaper, app drawer, floating windows, voice HUD |
 | Lucille panel | Rust + Slint | `30-source/swarm-slint/` | Companion window: gaming, chat, monitor tabs |
-| GamingAgent | Go | `30-source/GamingAgent-go/` | Port 8401 — Steam/GFN/Nemotron API |
+| GamingAgent | Go | `30-source/GamingAgent-go/` | Port 8401 — Steam/GFN/NVIDIA NIM API |
 | LucyServer | .NET 10 → Go (in progress) | `30-source/LucyServer/` + `LucyServer-go/` | Primary agent, ~100 endpoints |
 | lucille-core | C++20 | `30-source/lucille-core/` | Native AI engine — do not modify |
 
@@ -139,7 +139,7 @@ All OSes, the companion phones and Claude share one append-only memory log at `/
 All services read these at runtime via `EnvironmentFile=/etc/swarm_os.env`:
 
 - `STEAM_API_KEY`, `STEAM_ID64` — Steam Web API
-- `NVIDIA_API_KEY` — NVIDIA NIM / Nemotron (`https://integrate.api.nvidia.com/v1`)
+- `NVIDIA_API_KEY` — NVIDIA NIM (`https://integrate.api.nvidia.com/v1`) — see "NVIDIA NIM / Lucille" below for which model is actually live right now
 - `ANTHROPIC_API_KEY`, `CLAUDE_API_KEY` — Anthropic Claude
 - `OPENROUTER_API_KEY` — OpenRouter multi-model
 - `GROQ_API_KEY` — Groq fast inference
@@ -149,14 +149,20 @@ All services read these at runtime via `EnvironmentFile=/etc/swarm_os.env`:
 
 ---
 
-## Nemotron / Lucille
+## NVIDIA NIM / Lucille
 
-Lucille is the SWARM OS AI. GamingAgent calls Nemotron for gaming evaluations:
+Lucille is the SWARM OS AI. GamingAgent calls an NVIDIA NIM-hosted model for gaming evaluations and chat —
+**not necessarily a Nemotron model**; the constant is named `nimModel`/`nimEndpoint` in
+`services/lucille_service.go` precisely because NVIDIA NIM hosts many third-party models beyond NVIDIA's own
+Nemotron line, and this has already changed twice (2026-09-20 alone): the original
+`nvidia/llama-3.3-nemotron-super-49b-v1` was retired by NVIDIA (HTTP 410), replaced with
+`nvidia/nemotron-3.5-lightning-30b-a3b`, then swapped again on request to `moonshotai/kimi-k3`. **Check
+`nimModel` in that file for the actual current model — don't trust this doc or the section header's name.**
 
-- **Endpoint:** `https://integrate.api.nvidia.com/v1/chat/completions`
-- **Model:** `nvidia/llama-3.3-nemotron-super-49b-v1`
+- **Endpoint:** `https://integrate.api.nvidia.com/v1/chat/completions` (generic NIM chat completions — same
+  regardless of which model `nimModel` names)
 - **Key:** `NVIDIA_API_KEY` from environment
-- **GamingAgent route:** `GET /api/lucille/eval`
+- **GamingAgent routes:** `GET /api/lucille/eval`, `POST /api/lucille/chat`, `POST /api/lucille/chat/stream`
 
 ---
 

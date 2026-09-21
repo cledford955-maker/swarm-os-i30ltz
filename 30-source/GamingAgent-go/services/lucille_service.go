@@ -15,17 +15,29 @@ import (
 	"swarm-os/gaming-agent/models"
 )
 
+// nimEndpoint is NVIDIA NIM's generic OpenAI-compatible chat completions
+// endpoint — not model-specific, whatever nimModel names is what actually
+// answers. Was called nemotronEndpoint/nemotronModel/callNemotron until
+// 2026-09-20, when the model moved off NVIDIA's own Nemotron line entirely
+// (to moonshotai/kimi-k3, also NIM-hosted) — renamed throughout so the code
+// doesn't keep calling something "Nemotron" that no longer is one.
 const (
-	nemotronEndpoint = "https://integrate.api.nvidia.com/v1/chat/completions"
-	// nemotronModel was "nvidia/llama-3.3-nemotron-super-49b-v1", which NVIDIA
-	// retired 2026-08-26 (HTTP 410 Gone on every call, verified 2026-09-20).
-	// Its replacement is a reasoning model: it streams "reasoning_content"
-	// deltas before the real "content" delta. Both callNemotron's streaming
-	// parser and the non-streaming Message.Content read below only look at
-	// the content field, so the chain-of-thought is already filtered out
-	// without any parsing changes — but it does eat into max_tokens, which
-	// is why the budgets below were raised.
-	nemotronModel = "nvidia/nemotron-3.5-lightning-30b-a3b"
+	nimEndpoint = "https://integrate.api.nvidia.com/v1/chat/completions"
+	// nimModel history: "nvidia/llama-3.3-nemotron-super-49b-v1" (retired by
+	// NVIDIA 2026-08-26, HTTP 410) -> "nvidia/nemotron-3.5-lightning-30b-a3b"
+	// (fixed 2026-09-20) -> "moonshotai/kimi-k3" (swapped 2026-09-20, user
+	// request — verified live first: real 200 response, noticeably more
+	// concise chain-of-thought than the Nemotron model it replaced, e.g. 33
+	// total tokens vs. 140 for an equivalent trivial prompt).
+	//
+	// Both models above are reasoning models: they stream "reasoning_content"
+	// deltas before the real "content" delta. Both callNim's streaming parser
+	// and the non-streaming Message.Content read below only look at the
+	// content field, so the chain-of-thought is already filtered out without
+	// any parsing changes — confirmed this holds for kimi-k3 too before
+	// switching — but it does eat into max_tokens, which is why the budgets
+	// below were raised when this was still Nemotron and still apply here.
+	nimModel = "moonshotai/kimi-k3"
 )
 
 type LucilleService struct {
@@ -44,7 +56,7 @@ func NewLucilleService(gfn *GfnService, steam *SteamService, database *sql.DB) *
 	}
 }
 
-// Eval builds context from real Steam + GFN data and asks Nemotron for dashboard actions.
+// Eval builds context from real Steam + GFN data and asks the NIM model for dashboard actions.
 func (s *LucilleService) Eval() (*models.LucilleEvalResult, error) {
 	steamGames, _ := s.steam.GetLibrary()
 	gfnGames, _ := s.gfn.GetCatalog()
@@ -74,12 +86,12 @@ Also provide:
 Respond ONLY as JSON matching LucilleEvalResult schema.`
 
 	payload := map[string]any{
-		"model": nemotronModel,
+		"model": nimModel,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": sb.String()},
 		},
-		// 3072 not 1024: this is a reasoning model now (see nemotronModel
+		// 3072 not 1024: this is a reasoning model now (see nimModel
 		// comment) — the chain-of-thought before the real JSON answer can
 		// itself run several hundred tokens.
 		"max_tokens":  3072,
@@ -87,7 +99,7 @@ Respond ONLY as JSON matching LucilleEvalResult schema.`
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", nemotronEndpoint, bytes.NewReader(body))
+	req, _ := http.NewRequest("POST", nimEndpoint, bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+os.Getenv("NVIDIA_API_KEY"))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -103,7 +115,7 @@ Respond ONLY as JSON matching LucilleEvalResult schema.`
 		} `json:"choices"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || len(raw.Choices) == 0 {
-		return &models.LucilleEvalResult{Error: "failed to parse Nemotron response"}, nil
+		return &models.LucilleEvalResult{Error: "failed to parse NIM response"}, nil
 	}
 
 	content := raw.Choices[0].Message.Content
@@ -121,7 +133,7 @@ Respond ONLY as JSON matching LucilleEvalResult schema.`
 	return &result, nil
 }
 
-// Chat sends a multi-turn message to Nemotron with Steam/GFN context injected.
+// Chat sends a multi-turn message to the NIM model with Steam/GFN context injected.
 func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleChatResponse, error) {
 	sessionId := req.SessionId
 	if sessionId == "" {
@@ -131,7 +143,7 @@ func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleCha
 	messages := s.buildContextMessages()
 	messages = append(messages, req.Messages...)
 
-	reply, err := s.callNemotron(messages, false, nil)
+	reply, err := s.callNim(messages, false, nil)
 	if err != nil {
 		return &models.LucilleChatResponse{SessionId: sessionId, Error: err.Error()}, nil
 	}
@@ -143,7 +155,7 @@ func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleCha
 	return &models.LucilleChatResponse{Reply: reply, SessionId: sessionId}, nil
 }
 
-// ChatStream calls Nemotron with streaming=true and writes SSE chunks to w.
+// ChatStream calls the NIM model with streaming=true and writes SSE chunks to w.
 func (s *LucilleService) ChatStream(req models.LucilleChatRequest, w http.ResponseWriter) {
 	sessionId := req.SessionId
 	if sessionId == "" {
@@ -163,7 +175,7 @@ func (s *LucilleService) ChatStream(req models.LucilleChatRequest, w http.Respon
 	messages = append(messages, req.Messages...)
 
 	var fullReply strings.Builder
-	_, _ = s.callNemotron(messages, true, func(token string) {
+	_, _ = s.callNim(messages, true, func(token string) {
 		fullReply.WriteString(token)
 		fmt.Fprintf(w, "data: %s\n\n", token)
 		if f, ok := w.(http.Flusher); ok {
@@ -218,14 +230,14 @@ Valid verbs:
 
 Only ever use these exact verbs. Never invent a new verb. If the user is just chatting or asking a question, do not include an ACTION line at all.`
 
-func (s *LucilleService) callNemotron(messages []models.ChatMessage, stream bool, onToken func(string)) (string, error) {
+func (s *LucilleService) callNim(messages []models.ChatMessage, stream bool, onToken func(string)) (string, error) {
 	msgs := make([]map[string]string, len(messages))
 	for i, m := range messages {
 		msgs[i] = map[string]string{"role": m.Role, "content": m.Content}
 	}
 
 	payload := map[string]any{
-		"model":    nemotronModel,
+		"model":    nimModel,
 		"messages": msgs,
 		// Same reasoning-overhead reasoning as Eval's 3072 above.
 		"max_tokens":  3072,
@@ -234,7 +246,7 @@ func (s *LucilleService) callNemotron(messages []models.ChatMessage, stream bool
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", nemotronEndpoint, bytes.NewReader(body))
+	req, _ := http.NewRequest("POST", nimEndpoint, bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+os.Getenv("NVIDIA_API_KEY"))
 	req.Header.Set("Content-Type", "application/json")
 
