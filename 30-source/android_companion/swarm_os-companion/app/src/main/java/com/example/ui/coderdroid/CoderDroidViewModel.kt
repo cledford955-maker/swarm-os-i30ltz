@@ -28,7 +28,8 @@ data class CoderDroidState(
     val gitUsername: String = "",
     val notice: String? = null,
     val savedSequence: Int = 0,
-    val commitSequence: Int = 0
+    val commitSequence: Int = 0,
+    val drafts: Map<String, String> = emptyMap()
 )
 
 sealed class CoderDroidEvent {
@@ -38,6 +39,8 @@ sealed class CoderDroidEvent {
     data class MarkDirty(val tabId: String, val dirty: Boolean) : CoderDroidEvent()
     data class SaveTab(val tabId: String, val content: String) : CoderDroidEvent()
     data class OpenWorkspace(val root: File) : CoderDroidEvent()
+    data class Edit(val tabId: String, val content: String) : CoderDroidEvent()
+    object SaveAll : CoderDroidEvent()
     object ToggleSidebar : CoderDroidEvent()
     object ToggleTerminal : CoderDroidEvent()
     object ShowGitPanel : CoderDroidEvent()
@@ -71,6 +74,8 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
 
     fun onEvent(event: CoderDroidEvent) {
         when (event) {
+            is CoderDroidEvent.Edit -> _state.update { it.copy(drafts = it.drafts + (event.tabId to event.content), tabs = it.tabs.map { tab -> if(tab.id == event.tabId) tab.copy(isDirty = true) else tab }) }
+            CoderDroidEvent.SaveAll -> _state.value.drafts.forEach { (id, content) -> saveTab(id, content) }
             is CoderDroidEvent.OpenFile         -> openFile(event.node)
             is CoderDroidEvent.CloseTab         -> closeTab(event.tabId)
             is CoderDroidEvent.SwitchTab        -> switchTab(event.tabId)
@@ -144,7 +149,7 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
         if (!isWithinWorkspace(tab.fileNode.file)) return   // never write outside the project
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { tab.fileNode.file.writeText(content) }.fold(
-                onSuccess = { markDirty(tabId, false); _state.update { it.copy(savedSequence = it.savedSequence + 1) }; refreshGit() },
+                onSuccess = { if (_state.value.drafts[tabId] == content) markDirty(tabId, false); _state.update { it.copy(savedSequence = it.savedSequence + 1) }; refreshGit() },
                 onFailure = { err -> _state.update { it.copy(notice = "Save failed: ${err.message}") } }
             )
         }
@@ -156,7 +161,7 @@ class CoderDroidViewModel(application: Application) : AndroidViewModel(applicati
         }
         getApplication<Application>().getSharedPreferences("cdr_workspace", 0).edit().putString("root", root.absolutePath).apply()
         // Switching projects clears all open tabs — nothing from the old project leaks in
-        _state.update { it.copy(workspaceRoot = root, workspaceName = root.name, tabs = emptyList(), activeTabId = null, gitState = CdrGitState()) }
+        _state.update { it.copy(workspaceRoot = root, workspaceName = root.name, tabs = emptyList(), drafts = emptyMap(), activeTabId = null, gitState = CdrGitState()) }
         refreshGit()
     }
 

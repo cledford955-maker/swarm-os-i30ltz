@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -116,7 +118,7 @@ fun CoderDroidScreen(
                 } else {
                     Toast.makeText(
                         context,
-                        "Folder not accessible directly. Ensure Syncthing synced SWARM_OS to /storage/emulated/0/Syncthing/SWARM_OS/",
+                        "Folder not accessible directly. Use Clone to edit an app-private working copy; Android may restrict direct access to this folder.",
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -124,6 +126,9 @@ fun CoderDroidScreen(
         }
     }
 
+    var showAndroidTools by remember { mutableStateOf(false) }
+    LaunchedEffect(state.notice) { state.notice?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show(); viewModel.onEvent(CoderDroidEvent.DismissNotice) } }
+    if (showAndroidTools) CdrAndroidTools(state.workspaceRoot, state.tabs.any { it.isDirty }, onDismiss = { showAndroidTools = false }, onProjectCreated = { viewModel.onEvent(CoderDroidEvent.OpenWorkspace(it)) })
     var showCloneDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.cloneError) {
@@ -160,7 +165,7 @@ fun CoderDroidScreen(
             gitPanelActive  = state.gitPanelVisible,
             gitHasChanges   = state.gitState.hasChanges,
             onOpenDrI30LTZ  = {
-                // Open the DR. I30LTZ Recovery project from Syncthing-synced folder
+                // Open the I30LTZ Recovery OS project from Syncthing-synced folder
                 val candidates = listOf(
                     File(Environment.getExternalStorageDirectory(), "Syncthing/SWARM_OS/i30ltz-recovery"),
                     File(Environment.getExternalStorageDirectory(), "SWARM_OS/i30ltz-recovery"),
@@ -172,13 +177,18 @@ fun CoderDroidScreen(
                 } else {
                     Toast.makeText(
                         context,
-                        "DR. I30LTZ project not found. Ensure Syncthing is syncing SWARM_OS → phone.",
+                        "DR. I30LTZ project not found. Clone its Git repository first.",
                         Toast.LENGTH_LONG
                     ).show()
                 }
             }
         )
 
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { viewModel.onEvent(CoderDroidEvent.SaveAll) }, enabled = state.tabs.any { it.isDirty }) { Text("Save all") }
+            Button(onClick = { viewModel.onEvent(CoderDroidEvent.ShowGitPanel) }) { Text("Commit") }
+            OutlinedButton(onClick = { showAndroidTools = true }) { Text("Build APK / ADB") }
+        }
         // ── Main area ──────────────────────────────────────────────────────────
         Row(modifier = Modifier.weight(1f)) {
 
@@ -187,7 +197,8 @@ fun CoderDroidScreen(
                     CdrGitPanel(
                         gitState       = state.gitState,
                         hasCredentials = state.gitHasCredentials,
-                        modifier       = Modifier.width(240.dp).fillMaxHeight(),
+                        username = state.gitUsername, authorName = state.gitAuthorName, authorEmail = state.gitAuthorEmail, commitSequence = state.commitSequence,
+                        modifier       = Modifier.fillMaxWidth().fillMaxHeight(),
                         onRefresh      = { viewModel.onEvent(CoderDroidEvent.RefreshGit) },
                         onStage        = { viewModel.onEvent(CoderDroidEvent.StageFile(it)) },
                         onUnstage      = { viewModel.onEvent(CoderDroidEvent.UnstageFile(it)) },
@@ -195,7 +206,7 @@ fun CoderDroidScreen(
                         onCommit       = { viewModel.onEvent(CoderDroidEvent.Commit(it)) },
                         onPush         = { viewModel.onEvent(CoderDroidEvent.Push) },
                         onPull         = { viewModel.onEvent(CoderDroidEvent.Pull) },
-                        onSaveCredentials = { u, t -> viewModel.onEvent(CoderDroidEvent.SetGitCredentials(u, t)) }
+                        onSaveCredentials = { u, t, n, e -> viewModel.onEvent(CoderDroidEvent.SetGitCredentials(u, t, n, e)) }
                     )
                 } else {
                     CdrFileTreePanel(
@@ -222,7 +233,8 @@ fun CoderDroidScreen(
 
                 CdrMonacoEditorView(
                     tab              = activeTab,
-                    onContentChanged = { viewModel.onEvent(CoderDroidEvent.MarkDirty(it, true)) },
+                    onContentChanged = { id, content -> viewModel.onEvent(CoderDroidEvent.Edit(id, content)) },
+                    drafts = state.drafts,
                     onSaveRequested  = { tabId, content -> viewModel.onEvent(CoderDroidEvent.SaveTab(tabId, content)) },
                     modifier         = Modifier.weight(1f).fillMaxWidth()
                 )
@@ -330,7 +342,7 @@ private fun CdrTopBar(
             }
         }
 
-        // Quick-open row for DR. I30LTZ Recovery project
+        // Quick-open row for I30LTZ Recovery OS project
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -343,7 +355,7 @@ private fun CdrTopBar(
         ) {
             Icon(Icons.Default.Bolt, null, tint = LightningYellow, modifier = Modifier.size(11.dp))
             Text(
-                text = "DR. I30LTZ Recovery",
+                text = "I30LTZ Recovery OS",
                 color = LightningYellow,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
