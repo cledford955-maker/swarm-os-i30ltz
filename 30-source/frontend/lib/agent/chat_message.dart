@@ -4,6 +4,7 @@ import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../models/agent.dart';
 import '../services/lucille_voice_service.dart';
+import '../widgets/agent_avatar.dart';
 import 'agent_chat.dart';
 
 /// Renders a single chat message bubble with right-click context menu and 1-tap copy.
@@ -87,17 +88,12 @@ class ChatMessageBubble extends StatelessWidget {
         mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!isUser) ...[
-            // Agent avatar
+            // Agent avatar — 3-D animated orb
             Container(
               width: 28,
               height: 28,
               margin: const EdgeInsets.only(right: 10, top: 2),
-              decoration: BoxDecoration(
-                color: agent.accent.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: agent.accent.withValues(alpha: 0.3)),
-              ),
-              child: Icon(agent.icon, size: 14, color: agent.accent),
+              child: AgentAvatar(agentId: agent.id, size: 28),
             ),
           ],
           Flexible(

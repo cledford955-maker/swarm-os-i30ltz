@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/agent.dart';
 import '../services/lucille_voice_service.dart';
 import '../theme/swarm_colors.dart';
+import 'agent_avatar.dart';
 
 class SwarmVoiceOption {
   final String id;
@@ -720,7 +721,7 @@ class _AgentVoicePromptSettingsState extends State<AgentVoicePromptSettings> {
                             color: agent.accent.withValues(alpha: 0.2),
                             border: Border.all(color: agent.accent, width: 1.2),
                           ),
-                          child: Icon(agent.icon, color: agent.accent, size: 13),
+                          child: AgentAvatar(agentId: agent.id, size: 26),
                         ),
                         const SizedBox(width: 8),
                         Expanded(

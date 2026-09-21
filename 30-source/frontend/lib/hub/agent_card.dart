@@ -4,6 +4,7 @@ import '../agent/agent_chat.dart';
 import '../models/agent.dart';
 import '../models/swarm.dart';
 import '../widgets/hexagon_painter.dart';
+import '../widgets/agent_avatar.dart';
 
 class AgentCard extends ConsumerStatefulWidget {
   final Agent agent;
@@ -121,11 +122,11 @@ class _AgentCardState extends ConsumerState<AgentCard>
                                 : null,
                           ),
                         ),
-                        // Icon
-                        Icon(
-                          a.icon,
-                          color: a.isOnline ? a.color : a.color.withValues(alpha: 0.3),
-                          size: s * 0.18,
+                        // 3-D animated avatar orb
+                        AgentAvatar(
+                          agentId: a.id,
+                          size: s * 0.30,
+                          dimmed: !a.isOnline,
                         ),
                         const SizedBox(height: 3),
                         // Name

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../services/launch_status.dart';
 import 'wasp_nest_decoration.dart';
 import 'swarm_tap_burst.dart';
+import 'agent_avatar.dart';
 
 // ─── Hex Slot: a position in the grid ───
 class HexSlot {
@@ -603,18 +604,24 @@ class _HexTile extends StatelessWidget {
                       child: Image.file(
                         File(agent.iconFilePath!),
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Icon(
-                          agent.icon,
-                          color: agent.color.withValues(alpha: agent.mock ? 0.45 : 0.9),
-                          size: width * 0.28,
+                        errorBuilder: (_, __, ___) => AppIconOrb(
+                          icon: agent.icon,
+                          color: agent.color,
+                          size: width * 0.34,
+                          dimmed: agent.mock,
                         ),
                       ),
                     )
                   else
-                    Icon(
-                      agent.icon,
-                      color: agent.color.withValues(alpha: agent.mock ? 0.45 : 0.9),
-                      size: width * 0.28,
+                    // Featured agents get their animated 3-D orb; every
+                    // other tile gets the same glossy sphere treatment
+                    // around its glyph.
+                    AgentAvatar.maybeFor(
+                      agentId: agent.id,
+                      icon: agent.icon,
+                      color: agent.color,
+                      size: width * 0.34,
+                      dimmed: agent.mock,
                     ),
                   SizedBox(height: height * 0.03),
                   Text(

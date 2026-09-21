@@ -11,6 +11,7 @@ import '../skills/nvidia_nim_skill.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../widgets/extensions_dialog.dart';
+import '../widgets/agent_avatar.dart';
 import '../providers/skill_router_providers.dart';
 
 /// Adapts a live-fetched OpenRouter model into a SwarmModel so it can flow
@@ -470,11 +471,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
-                                      agent.icon,
-                                      size: 16,
-                                      color: isSelected ? agent.accent : SwarmColors.textMuted,
-                                    ),
+                                    AgentAvatar(agentId: agent.id, size: 18),
                                     const SizedBox(width: 8),
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -982,7 +979,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         value: a.id,
                         child: Row(
                           children: [
-                            Icon(a.icon, size: 14, color: a.accent),
+                            AgentAvatar(agentId: a.id, size: 16),
                             const SizedBox(width: 8),
                             Text('Assign to ${a.name}', style: const TextStyle(fontSize: 12, color: Colors.white)),
                           ],
@@ -1323,7 +1320,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         value: a.id,
                         child: Row(
                           children: [
-                            Icon(a.icon, size: 14, color: a.accent),
+                            AgentAvatar(agentId: a.id, size: 16),
                             const SizedBox(width: 8),
                             Text('Assign to ${a.name}', style: const TextStyle(fontSize: 12, color: Colors.white)),
                           ],

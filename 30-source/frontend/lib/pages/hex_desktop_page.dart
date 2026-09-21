@@ -23,9 +23,11 @@ import '../shell/window_manager.dart';
 import '../services/system_launcher.dart';
 import '../services/user_apps_service.dart';
 import '../services/app_installer_service.dart';
+import '../models/agent.dart';
 import '../models/swarm_apps.dart';
 import '../widgets/swarm_terminal.dart';
 import '../widgets/companion_telemetry.dart';
+import '../widgets/agent_avatar.dart';
 import '../theme/swarm_colors.dart';
 import '../shell/desktop_geometry.dart';
 
@@ -692,10 +694,15 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
   // ────────────────────────────────────────────────────────────
 
   Widget _placeholder(HexAgent agent) {
+    // Featured agents get their animated 3-D orb; everything else keeps
+    // a large dimmed orb of its own color.
+    final featured = getAgent(agent.id);
     return Container(
       color: const Color(0xFF0A0A18),
       child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(agent.icon, color: agent.color.withValues(alpha: 0.25), size: 48),
+        featured != null
+            ? AgentAvatar(agentId: agent.id, size: 72)
+            : AppIconOrb(icon: agent.icon, color: agent.color, size: 72),
         const SizedBox(height: 12),
         Text(agent.name, style: TextStyle(
           color: agent.color.withValues(alpha: 0.4), fontSize: 18)),

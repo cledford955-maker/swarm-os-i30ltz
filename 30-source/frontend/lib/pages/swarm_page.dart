@@ -9,6 +9,7 @@ import '../services/live_model_catalog_service.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../widgets/extensions_dialog.dart';
+import '../widgets/agent_avatar.dart';
 import '../agent/agent_chat.dart';
 
 /// The real price for a model right now, and whether it still exists on
@@ -371,11 +372,7 @@ class _SwarmPageState extends ConsumerState<SwarmPage> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
-                                      agent.icon,
-                                      size: 16,
-                                      color: isSelected ? agent.accent : SwarmColors.textMuted,
-                                    ),
+                                    AgentAvatar(agentId: agent.id, size: 18),
                                     const SizedBox(width: 8),
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,7 +663,7 @@ class _SwarmPageState extends ConsumerState<SwarmPage> {
                         value: a.id,
                         child: Row(
                           children: [
-                            Icon(a.icon, size: 14, color: a.accent),
+                            AgentAvatar(agentId: a.id, size: 16),
                             const SizedBox(width: 8),
                             Text(
                               'Assign to ${a.name}',
@@ -1079,7 +1076,7 @@ class _SwarmPageState extends ConsumerState<SwarmPage> {
                     value: a.id,
                     child: Row(
                       children: [
-                        Icon(a.icon, size: 14, color: a.accent),
+                        AgentAvatar(agentId: a.id, size: 16),
                         const SizedBox(width: 8),
                         Text(
                           'Assign to ${a.name}',

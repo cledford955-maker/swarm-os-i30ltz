@@ -4,6 +4,7 @@ import '../theme/swarm_colors.dart';
 import '../services/system_launcher.dart';
 import '../models/swarm_apps.dart';
 import '../widgets/extensions_dialog.dart';
+import '../widgets/agent_avatar.dart';
 import '../shell/companion_bridge_dialog.dart';
 
 class DesktopApp {
@@ -142,29 +143,11 @@ class _AppIconState extends State<_AppIcon> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: SwarmColors.bgSurface,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: SwarmColors.border,
-                    width: 1.5,
-                  ),
-                ),
-                child: Icon(
-                  widget.app.icon,
-                  size: 32,
-                  color: _hovered ? SwarmColors.accent : SwarmColors.textPrimary,
-                ),
+              // 3-D glossy icon orb — matches the agent avatars' look.
+              AppIconOrb(
+                icon: widget.app.icon,
+                color: _hovered ? SwarmColors.accent : SwarmColors.textPrimary,
+                size: 64,
               ),
               const SizedBox(height: 8),
               Text(
