@@ -1305,9 +1305,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
   }
 
   Widget _buildNimDashboard(WidgetRef ref, LiveModelCatalogService catalog) {
-    final voiceService = ref.watch(nvidiaVoiceServiceProvider);
-    final ragService = ref.watch(nvidiaRagServiceProvider);
-    final imageService = ref.watch(nvidiaImageServiceProvider);
+    final voiceService = ref.read(nvidiaVoiceServiceProvider);
+    final ragService = ref.read(nvidiaRagServiceProvider);
+    final imageService = ref.read(nvidiaImageServiceProvider);
 
     final nimSkills = NvidiaNimSkillRegistry.all;
     final freeNimModels = catalog.hasData ? catalog.nvidiaNimFree : <LiveModel>[];
@@ -1514,7 +1514,6 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   Icons.record_voice_over_rounded,
                   SwarmColors.agentPink,
                   () async {
-                    final agent = getAgent('vital') ?? agents.first;
                     try {
                       final path = await voiceService.speakWithDefaultAgent(
                         'NVIDIA Riva FastPitch test from SWARM OS dashboard.',
@@ -1539,7 +1538,6 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   Icons.data_array_rounded,
                   SwarmColors.success,
                   () async {
-                    final agent = getAgent('librarian') ?? agents.first;
                     try {
                       final vectors = await ragService.embedWithDefaultAgent([
                         'SWARM OS is a Flutter desktop AI operating system.',
@@ -1565,7 +1563,6 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   Icons.image_rounded,
                   SwarmColors.agentPurple,
                   () async {
-                    final agent = getAgent('ui_tandem') ?? agents.first;
                     try {
                       final img = await imageService.generateWithDefaultAgent(
                         'Cyberpunk SWARM OS desktop, neon cyan and magenta, glassmorphism UI',
