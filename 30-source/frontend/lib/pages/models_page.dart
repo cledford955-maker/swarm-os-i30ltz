@@ -7,6 +7,12 @@ import '../agent/agent_chat.dart';
 import '../models/agent.dart';
 import '../models/swarm.dart';
 import '../services/live_model_catalog_service.dart';
+import '../services/nvidia_voice_service.dart';
+import '../services/nvidia_rag_service.dart';
+import '../services/nvidia_image_service.dart';
+import '../services/nvidia_cuopt_service.dart';
+import '../services/physics_ai_service.dart';
+import '../skills/nvidia_nim_skill.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../widgets/extensions_dialog.dart';
@@ -684,6 +690,10 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
             ),
             const SizedBox(height: 16),
 
+            // ─── NVIDIA NIM Health / Cost Dashboard ────────────────────────────
+            _buildNimDashboard(ref, liveCatalog),
+            const SizedBox(height: 16),
+
             // ─── Model Cards Grid ──────────────────────────────────────────────
             if (filteredModels.isEmpty)
               Container(
@@ -1294,6 +1304,322 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNimDashboard(WidgetRef ref, LiveModelCatalogService catalog) {
+    final voiceService = ref.watch(nvidiaVoiceServiceProvider);
+    final ragService = ref.watch(nvidiaRagServiceProvider);
+    final imageService = ref.watch(nvidiaImageServiceProvider);
+    final cuoptService = ref.watch(nvidiaCuOptServiceProvider);
+    final physicsService = ref.watch(physicsAiServiceProvider);
+
+    final nimSkills = NvidiaNimSkillRegistry.all;
+    final freeNimModels = catalog.hasData ? catalog.nvidiaNimFree : <LiveModel>[];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF130D26),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SwarmColors.agentPurple.withValues(alpha: 0.5), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: SwarmColors.agentPurple.withValues(alpha: 0.08),
+            blurRadius: 16,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.dashboard_customize_rounded, color: SwarmColors.agentPurple, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'NVIDIA NIM HEALTH & COST DASHBOARD',
+                style: SwarmTextStyles.title.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: SwarmColors.agentPurple,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: SwarmColors.agentPurple.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: SwarmColors.agentPurple.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  '${freeNimModels.length} FREE NIMs LIVE',
+                  style: const TextStyle(
+                    color: SwarmColors.agentPurple,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'JetBrains Mono',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Skill cards row
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: nimSkills.map((skill) {
+              final isFree = skill.costTier == NimSkillCostTier.free;
+              final liveModel = freeNimModels.where((m) => m.id == skill.defaultModelId).firstOrNull;
+              final isAvailable = liveModel != null;
+              final statusColor = isAvailable ? SwarmColors.success : SwarmColors.error;
+
+              return Container(
+                width: 280,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isAvailable
+                        ? SwarmColors.success.withValues(alpha: 0.5)
+                        : SwarmColors.border,
+                    width: isAvailable ? 1.5 : 1.0,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(
+                            isAvailable ? 'LIVE' : 'UNAVAILABLE',
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 7.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (isFree)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: SwarmColors.success.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: SwarmColors.success.withValues(alpha: 0.4)),
+                            ),
+                            child: const Text(
+                              'FREE',
+                              style: TextStyle(
+                                color: SwarmColors.success,
+                                fontSize: 7.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      skill.name,
+                      style: const TextStyle(
+                        color: SwarmColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      skill.defaultModelId,
+                      style: SwarmTextStyles.codeSmall.copyWith(
+                        color: SwarmColors.textMuted,
+                        fontSize: 8.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      skill.description,
+                      style: const TextStyle(
+                        color: SwarmColors.textSecondary,
+                        fontSize: 9.5,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Cost: ${skill.costTier.name.toUpperCase()}',
+                            style: TextStyle(
+                              color: isFree ? SwarmColors.success : SwarmColors.warning,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (isAvailable && liveModel != null)
+                          Text(
+                            liveModel.pricePer1MDisplay,
+                            style: const TextStyle(
+                              color: SwarmColors.success,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'JetBrains Mono',
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Quick test buttons row
+          Row(
+            children: [
+              Expanded(
+                child: _buildNimTestButton(
+                  'Test STT',
+                  Icons.mic_rounded,
+                  SwarmColors.agentCyan,
+                  () async {
+                    // Would need an audio file - placeholder
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('STT test requires audio file input')),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildNimTestButton(
+                  'Test TTS',
+                  Icons.record_voice_over_rounded,
+                  SwarmColors.agentPink,
+                  () async {
+                    final agent = getAgent('vital') ?? agents.first;
+                    try {
+                      final path = await voiceService.speakWithDefaultAgent(
+                        'NVIDIA Riva FastPitch test from SWARM OS dashboard.',
+                      );
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('TTS generated: $path')),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('TTS failed: $e')),
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildNimTestButton(
+                  'Test Embed',
+                  Icons.vector_square_rounded,
+                  SwarmColors.success,
+                  () async {
+                    final agent = getAgent('librarian') ?? agents.first;
+                    try {
+                      final vectors = await ragService.embedWithDefaultAgent([
+                        'SWARM OS is a Flutter desktop AI operating system.',
+                        'NVIDIA NIM provides free inference endpoints.',
+                      ]);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Embedded ${vectors.length} chunks, dim=${vectors.first.length}')),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Embed failed: $e')),
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildNimTestButton(
+                  'Test Image',
+                  Icons.image_rounded,
+                  SwarmColors.agentPurple,
+                  () async {
+                    final agent = getAgent('ui_tandem') ?? agents.first;
+                    try {
+                      final img = await imageService.generateWithDefaultAgent(
+                        'Cyberpunk SWARM OS desktop, neon cyan and magenta, glassmorphism UI',
+                      );
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Image: ${img.url.isNotEmpty ? "OK" : "No URL"}')),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Image failed: $e')),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNimTestButton(String label, IconData icon, Color color, VoidCallback onPressed) {
+    return SizedBox(
+      height: 40,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color.withValues(alpha: 0.15),
+          foregroundColor: color,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: BorderSide(color: color.withValues(alpha: 0.5)),
+          ),
+        ),
+        icon: Icon(icon, size: 14),
+        label: Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'JetBrains Mono',
+            fontSize: 9.5,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

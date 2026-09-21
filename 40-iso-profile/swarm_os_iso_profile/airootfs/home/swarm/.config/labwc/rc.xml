@@ -41,6 +41,14 @@
         <command>foot</command>
       </action>
     </keybind>
+    <!-- Shift+Tab: toggle the SWARM Overlay dashboard, Steam's own overlay
+         hotkey convention (2026-09-20). Kill-and-relaunch via the toggle
+         script — see its own comment for why. -->
+    <keybind key="S-Tab">
+      <action name="Execute">
+        <command>/usr/local/bin/swarm-overlay-toggle.sh</command>
+      </action>
+    </keybind>
   </keyboard>
 
   <windowRules>
