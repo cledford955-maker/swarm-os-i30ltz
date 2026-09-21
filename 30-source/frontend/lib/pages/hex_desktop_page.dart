@@ -258,43 +258,43 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
   void _showTileContextMenu(HexAgent agent, Offset position) {
     final isUserApp = _isUserApp(agent);
     final menu = <PopupMenuEntry<String>>[
-      PopupMenuItem(
+      const PopupMenuItem(
         value: 'open',
         height: 36,
         child: Row(children: [
-          const Icon(Icons.launch_rounded, size: 15, color: SwarmColors.accent),
-          const SizedBox(width: 10),
-          Text('Open', style: const TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+          Icon(Icons.launch_rounded, size: 15, color: SwarmColors.accent),
+          SizedBox(width: 10),
+          Text('Open', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
         ]),
       ),
       const PopupMenuDivider(),
-      PopupMenuItem(
+      const PopupMenuItem(
         value: 'appstore',
         height: 36,
         child: Row(children: [
-          const Icon(Icons.apps_rounded, size: 15, color: SwarmColors.accent),
-          const SizedBox(width: 10),
-          Text('App Store…', style: const TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+          Icon(Icons.apps_rounded, size: 15, color: SwarmColors.accent),
+          SizedBox(width: 10),
+          Text('App Store…', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
         ]),
       ),
       if (isUserApp) ...[
         const PopupMenuDivider(),
-        PopupMenuItem(
+        const PopupMenuItem(
           value: 'delete_icon',
           height: 36,
           child: Row(children: [
-            const Icon(Icons.delete_outline_rounded, size: 15, color: SwarmColors.statusIdle),
-            const SizedBox(width: 10),
-            Text('Delete Icon', style: const TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+            Icon(Icons.delete_outline_rounded, size: 15, color: SwarmColors.statusIdle),
+            SizedBox(width: 10),
+            Text('Delete Icon', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
           ]),
         ),
-        PopupMenuItem(
+        const PopupMenuItem(
           value: 'uninstall',
           height: 36,
           child: Row(children: [
-            const Icon(Icons.delete_sweep_rounded, size: 15, color: SwarmColors.statusCritical),
-            const SizedBox(width: 10),
-            Text('Uninstall App', style: const TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+            Icon(Icons.delete_sweep_rounded, size: 15, color: SwarmColors.statusCritical),
+            SizedBox(width: 10),
+            Text('Uninstall App', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
           ]),
         ),
       ],
@@ -340,10 +340,10 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         title: Text('Delete ${agent.name} icon?',
             style: const TextStyle(
                 color: SwarmColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
-        content: Text(
+        content: const Text(
           'Removes the icon from your desktop only. The app stays installed — '
           'you can re-add it from the App Store.',
-          style: const TextStyle(color: SwarmColors.textSecondary, fontSize: 13),
+          style: TextStyle(color: SwarmColors.textSecondary, fontSize: 13),
         ),
         actions: [
           TextButton(
@@ -406,11 +406,11 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     if (ok) {
       await UserAppsService.instance.removeByPackage(pkg);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           backgroundColor: SwarmColors.statusOnline,
-          content: Text('🗑️ ${agent.name} uninstalled — icon removed',
-              style: const TextStyle(color: Colors.black, fontSize: 12)),
-          duration: const Duration(seconds: 3),
+          content: Text('🗑️ Uninstalled — icon removed from desktop',
+              style: TextStyle(color: Colors.black, fontSize: 12)),
+          duration: Duration(seconds: 3),
         ));
       }
     } else {
@@ -418,7 +418,7 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         backgroundColor: SwarmColors.statusCritical,
         content: Text('⚠️ Uninstall did not complete',
             style: TextStyle(color: Colors.white, fontSize: 12)),
-        duration: const Duration(seconds: 4),
+        duration: Duration(seconds: 4),
       ));
     }
   }
@@ -620,15 +620,15 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         color: const Color(0xFFFFD700).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.55), width: 1.2),
-        boxShadow: [BoxShadow(
-          color: const Color(0xFFFFD700).withValues(alpha: 0.18),
+        boxShadow: const [BoxShadow(
+          color: Color(0xFFFFD700),
           blurRadius: 12,
         )],
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 13),
-        const SizedBox(width: 6),
-        const Text(
+      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 13),
+        SizedBox(width: 6),
+        Text(
           'ORIGIN',
           style: TextStyle(
             color: Color(0xFFFFD700),
@@ -651,8 +651,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       ),
       child: Text(
         name,
-        style: TextStyle(
-          color: const Color(0xFF00D4FF).withValues(alpha: 0.55),
+        style: const TextStyle(
+          color: Color(0xFF00D4FF),
           fontSize: 10,
           fontWeight: FontWeight.w700,
           letterSpacing: 2,

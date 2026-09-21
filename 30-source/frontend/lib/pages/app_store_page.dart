@@ -146,7 +146,7 @@ class _AppStorePageState extends State<AppStorePage> {
           backgroundColor: SwarmColors.statusOnline,
           content: Text('🗑️ Uninstalled — icon removed from desktop',
               style: TextStyle(color: Colors.black, fontSize: 12)),
-          duration: const Duration(seconds: 3),
+          duration: Duration(seconds: 3),
         ));
       }
     } else if (mounted) {
