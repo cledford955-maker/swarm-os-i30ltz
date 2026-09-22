@@ -3,11 +3,32 @@ import { GamingState } from "../gaming_state.slint";
 import { StatTile, GenreChip, SubTabButton, GameCardWidget } from "../components/cards.slint";
 
 export component GamingView inherits Rectangle {
-    background: SwarmTheme.bg;
+    background: SwarmTheme.gaming-bg;
+
+    // Ambient background art — dimmed so the stat tiles, game grid and text
+    // stay readable over a genuinely busy photo, not a flat color.
+    Image {
+        source: @image-url("../assets/gaming_bg.jpg");
+        image-fit: cover;
+        width: 100%;
+        height: 100%;
+        opacity: 0.24;
+    }
+    Rectangle {
+        // Extra scrim on top of the dimmed image for text contrast.
+        background: #000000a8;
+    }
 
     VerticalLayout {
         padding: 16px;
         spacing: 12px;
+
+        Text {
+            text: "🎮 THIS IS NOW Gaming";
+            color: SwarmTheme.gaming-accent;
+            font-size: 18px;
+            font-weight: 800;
+        }
 
         // ── Stats bar + Lucille button ──────────────────────────────────────
         HorizontalLayout {
@@ -25,7 +46,7 @@ export component GamingView inherits Rectangle {
                 width: 36px;
                 clicked => { GamingState.lucille-reset-requested(); }
                 Rectangle {
-                    background: SwarmTheme.card;
+                    background: SwarmTheme.gaming-card;
                     border-radius: SwarmTheme.radius;
                     Text {
                         text: "↺";
@@ -41,7 +62,7 @@ export component GamingView inherits Rectangle {
                 width: 150px;
                 clicked => { GamingState.lucille-eval-requested(); }
                 Rectangle {
-                    background: GamingState.lucille-loading ? SwarmTheme.card : SwarmTheme.accent;
+                    background: GamingState.lucille-loading ? SwarmTheme.gaming-card : SwarmTheme.gaming-accent;
                     border-radius: SwarmTheme.radius;
                     Text {
                         text: GamingState.lucille-loading ? "Thinking..." : "✨ Ask Lucille";
@@ -57,10 +78,10 @@ export component GamingView inherits Rectangle {
 
         // ── Lucille summary + action badges ─────────────────────────────────
         if GamingState.lucille-summary != "" : Rectangle {
-            background: SwarmTheme.card;
+            background: SwarmTheme.gaming-card;
             border-radius: SwarmTheme.radius;
             border-width: 1px;
-            border-color: SwarmTheme.accent;
+            border-color: SwarmTheme.gaming-accent;
 
             VerticalLayout {
                 padding: 12px;
@@ -74,11 +95,11 @@ export component GamingView inherits Rectangle {
                 HorizontalLayout {
                     spacing: 6px;
                     for badge[i] in GamingState.action-badges : Rectangle {
-                        background: #76b90020;
+                        background: #2979ff20;
                         border-radius: 10px;
                         Text {
                             text: badge;
-                            color: SwarmTheme.accent;
+                            color: SwarmTheme.gaming-accent;
                             font-size: 10px;
                         }
                     }
@@ -228,7 +249,7 @@ export component GamingView inherits Rectangle {
                     height: 32px;
                     clicked => { GamingState.close-deal-modal(); }
                     Rectangle {
-                        background: SwarmTheme.card;
+                        background: SwarmTheme.gaming-card;
                         border-radius: SwarmTheme.radius;
                         Text {
                             text: "Close";

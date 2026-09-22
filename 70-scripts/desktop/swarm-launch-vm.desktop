@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SWARM OS — Launch VM
+Comment=Open the full SWARM OS in a virtual machine
+Exec=/mnt/Lucy/70-scripts/launch_swarm_vm.sh
+Path=/mnt/Lucy
+Icon=computer
+Terminal=false
+Categories=Development;

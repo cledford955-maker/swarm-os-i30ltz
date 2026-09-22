@@ -70,7 +70,7 @@ echo -e "\n${CYAN}==> ISO profile${NC}"
 copy swarm_os_iso_profile "$DEST/40-iso-profile"
 
 echo -e "\n${CYAN}==> VM tooling${NC}"
-for f in run_vm.sh OVMF_VARS.fd swarm_ovmf_vars.fd swarm_vm_disk.qcow2; do
+for f in OVMF_VARS.fd swarm_ovmf_vars.fd swarm_vm_disk.qcow2; do
   [ -f "$SRC/$f" ] && { mkdir -p "$DEST/80-vm"; cp -a "$SRC/$f" "$DEST/80-vm/"; echo "  copied $f"; }
 done
 
@@ -79,24 +79,9 @@ for f in llcy_memory.md ZERO_MOCK_TESTING_GUIDE.md remaining_port_tasks.md SYNC-
   [ -f "$SRC/$f" ] && { cp -a "$SRC/$f" "$DEST/90-docs/"; echo "  copied $f"; }
 done
 
-# ── 4. ISOs: newest only, into a dated release dir ─────────────────────────
-echo -e "\n${CYAN}==> ISOs${NC}"
-NEWEST_ISO="$(find "$SRC" -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' 2>/dev/null \
-              | sort -nr | head -n1 | cut -d' ' -f2-)"
-if [ -n "$NEWEST_ISO" ]; then
-  VER="$(tr -d '[:space:]' < "$DEST/VERSION" 2>/dev/null || echo unknown)"
-  DATE="$(date -r "$NEWEST_ISO" +%Y-%m-%d)"
-  LABEL="swarm-os-v${VER}_${DATE}_restored"
-  mkdir -p "$DEST/10-releases/$LABEL"
-  echo "  copying $(basename "$NEWEST_ISO") ($(du -h "$NEWEST_ISO" | cut -f1)) ..."
-  cp -a "$NEWEST_ISO" "$DEST/10-releases/$LABEL/${LABEL}.iso"
-  ( cd "$DEST/10-releases/$LABEL" && sha256sum "${LABEL}.iso" > "${LABEL}.iso.sha256" )
-  ln -sfn "$LABEL/${LABEL}.iso" "$DEST/10-releases/swarm-os-latest.iso"
-  ln -sfn "../10-releases/$LABEL/${LABEL}.iso" "$DEST/00-CURRENT/swarm-os-CURRENT.iso"
-  echo -e "  ${GREEN}OK${NC} $LABEL"
-else
-  echo -e "${YELLOW}  no .iso found at $SRC${NC}"
-fi
+# Historical ISOs stay on the read-only reference drive. This restore script
+# never imports releases. Only Ventoy may hold active SWARM ISO artifacts.
+echo 'ISO restore skipped: use /mnt/ventoy/ISO/SWARM_OS for active releases.'
 
 echo -e "\n${GREEN}${BOLD}=== Restore complete ===${NC}"
 du -sh "$DEST"/[0-9]* 2>/dev/null

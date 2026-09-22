@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-iso_name="swarm-os-v6.2.65-46f99f3a"
+iso_name="swarm-os-v6.2.69-f2097bd6"
 iso_label="SWARM_OS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="SWARM OS <https://github.com/swarm>"
-iso_application="SWARM OS · Lucille v6.2.65"
+iso_application="SWARM OS · Lucille v6.2.69"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="swarm"
 buildmodes=('iso')
@@ -26,6 +26,10 @@ airootfs_image_type="squashfs"
 airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')
 bootstrap_tarball_compression=('zstd' '-c' '-T0' '--auto-threads=logical' '--long' '-19')
 file_permissions=(
+  ["/usr/lib/swarm/epp-tune.sh"]="0:0:755"
+  ["/etc/default/swarm-epp"]="0:0:644"
+  ["/etc/systemd/system/swarm-epp.service"]="0:0:644"
+  ["/etc/systemd/system/swarm-epp.timer"]="0:0:644"
   ["/etc/shadow"]="0:0:400"
   ["/etc/group"]="0:0:644"
   ["/root"]="0:0:750"
@@ -38,6 +42,12 @@ file_permissions=(
   ["/opt/swarm_os"]="1000:1000:755"
   ["/opt/swarm_os/swarm_flutter"]="1000:1000:755"
   ["/opt/swarm_os/LucyServer"]="1000:1000:755"
+  ["/opt/swarm_os/LucyServer/lucy-server"]="0:0:755"
+  ["/opt/swarm_os/GamingAgent"]="1000:1000:755"
+  ["/opt/swarm_os/GamingAgent/gaming-agent"]="0:0:755"
+  ["/opt/swarm_os/swarm-slint"]="1000:1000:755"
+  ["/opt/swarm_os/swarm-slint/swarm-slint"]="0:0:755"
+  ["/opt/swarm_os/i30ltz-recovery"]="0:0:755"
   ["/usr/local/bin/install_swarm_os.sh"]="0:0:755"
   ["/usr/local/bin/swarm-snapshot.sh"]="0:0:755"
   ["/usr/local/bin/swarm-memory"]="0:0:755"

@@ -1,0 +1,15 @@
+[Unit]
+Description=SWARM AC/battery CPU energy preference
+ConditionPathExistsGlob=/sys/devices/system/cpu/cpufreq/policy*/energy_performance_preference
+After=power-profiles-daemon.service tlp.service tuned.service auto-cpufreq.service cpupower.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/swarm-epp
+ExecStart=/usr/lib/swarm/epp-tune.sh
+TimeoutStartSec=15
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/sys/devices/system/cpu/cpufreq

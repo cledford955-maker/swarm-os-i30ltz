@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class OpenRouterManager(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("openrouter_config", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = com.example.data.config.securePreferences(context, "openrouter_config")
 
     private val _apiKey = MutableStateFlow(getApiKey())
     val apiKey: StateFlow<String> = _apiKey

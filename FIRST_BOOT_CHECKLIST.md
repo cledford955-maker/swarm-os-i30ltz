@@ -262,3 +262,7 @@ echo "Both servers OK"
 ---
 
 *Updated 2026-09-15. Source of truth: `/mnt/Lucy/SWARM_AI_FEATURES.md`*
+
+## ISO location and retention (2026-09-19)
+
+Use only `/mnt/ventoy/ISO/SWARM_OS/`. Build with `70-scripts/build_swarm_iso.sh`; keep 10 rolling builds plus explicitly marked stable builds. Passing this checklist does not automatically pin a release: mark it stable only on the user’s instruction. See `ISO_RELEASE_POLICY.md`.

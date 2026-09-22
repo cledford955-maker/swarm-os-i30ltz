@@ -108,6 +108,10 @@ alsa-utils
 bluez
 bluez-utils
 
+# MPRIS media control (Spotify, Chrome/YouTube tabs, any MPRIS-compliant
+# player) for GamingAgent's media-control API, 2026-09-20.
+playerctl
+
 # ===== Storage & Hardware =====
 nvme-cli
 smartmontools
@@ -203,3 +207,18 @@ gnupg
 # companion phones find LUCILLE on Wi-Fi when Tailscale is down.
 avahi
 nss-mdns
+
+# SWARM diagnostic collector (standard-library Python).
+python
+
+# swarm-overlay's embedded webview (wry/tao, Rust) links libwebkit2gtk-4.1 at
+# runtime — was missing from this list, so a fresh install had the overlay
+# staged and keybound (Shift+Tab) but failing to launch with a missing shared
+# library. Confirmed via ldd on the built binary, 2026-09-21.
+webkit2gtk-4.1
+
+# Lucille's OS-wide acoustic wake-word listener (lucille-wake-listener.service,
+# 70-scripts/lucille_wake_listener.py) — fully local speech recognition via
+# Vosk, no cloud calls just to detect "Hey Lucille"/"Hey Lucy". 2026-09-21.
+vosk-api
+python-vosk

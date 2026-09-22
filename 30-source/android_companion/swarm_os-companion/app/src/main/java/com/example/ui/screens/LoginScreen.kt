@@ -122,7 +122,7 @@ fun SwarmOsHeader(fontSizeSp: Int = 32) {
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    onTriggerBiometric: () -> Unit = { onLoginSuccess() }
+    onTriggerBiometric: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -158,7 +158,7 @@ fun LoginScreen(
                     DrI3oltzAvatar()
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    SwarmOsHeader(fontSizeSp = 32)
+                    Text("I30LTZ Companion", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
 
                     Spacer(modifier = Modifier.height(8.dp))
                     FormattedText(
@@ -203,18 +203,18 @@ fun LoginScreen(
                     }
                     Spacer(modifier = Modifier.height(14.dp))
                     FormattedText(
-                        text = "BIOMETRIC AUTH REQUIRED • DR. I30LTZ",
+                        text = "FINGERPRINT OR ANDROID SCREEN LOCK",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
                     FormattedText(
-                        text = "Local I30LTZ Model loaded. Free Cloud Model ready.",
+                        text = "OS installation • Repair • Data recovery",
                         fontSize = 10.sp
                     )
                     FormattedText(
-                        text = "RAG Vector Memory Initialized. DR. I30LTZ CORE AGENT online.",
+                        text = "Companion to I30LTZ Recovery OS",
                         fontSize = 10.sp
                     )
                 }

@@ -1,13 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../agent/agent_chat.dart';
 import '../models/agent.dart';
 import '../models/swarm.dart';
+import '../services/live_model_catalog_service.dart';
+import '../skills/nvidia_nim_skill.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../widgets/extensions_dialog.dart';
+import '../widgets/agent_avatar.dart';
+import '../providers/skill_router_providers.dart';
+
+/// Adapts a live-fetched OpenRouter model into a SwarmModel so it can flow
+/// through the existing model-card UI unchanged. Only ever built from data
+/// LiveModelCatalogService actually fetched — never a hand-typed guess.
+SwarmModel swarmModelFromLive(LiveModel m) {
+  final sale = m.discountPercent;
+  return SwarmModel(
+    id: m.id,
+    name: m.name,
+    role: 'Live-verified · ${m.contextDisplay} context',
+    provider: m.isNvidiaFree ? ProviderId.nvidia : ProviderId.openrouter,
+    tier: m.isFree ? ModelTier.freeOnline : ModelTier.paidOnline,
+    pricePer1M: m.blendedPriceDisplay,
+    originalPricePer1M: sale != null && sale < 100
+        ? m.pricePer1MDisplay
+        : null,
+    isOnSale: sale != null,
+    saleDiscount: sale != null ? '$sale% OFF' : null,
+    contextWindow: m.contextDisplay,
+    description: m.description.isNotEmpty ? m.description : 'Live model from OpenRouter — no static description available.',
+    keywords: const ['live'],
+  );
+}
 
 class ModelsPage extends ConsumerStatefulWidget {
   const ModelsPage({super.key});
@@ -20,6 +48,32 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
   String _searchQuery = '';
   String _selectedFilter = 'ALL';
   String _selectedAgentId = 'lucille';
+  String? _selectedLiveCategory;
+  List<LiveModel> _liveCategoryResults = [];
+  bool _loadingLiveCategory = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      p.Provider.of<LiveModelCatalogService>(context, listen: false).ensureLoaded();
+    });
+  }
+
+  Future<void> _selectLiveCategory(String category) async {
+    setState(() {
+      _selectedFilter = 'LIVE CATEGORY';
+      _selectedLiveCategory = category;
+      _loadingLiveCategory = true;
+    });
+    final catalog = p.Provider.of<LiveModelCatalogService>(context, listen: false);
+    final results = await catalog.fetchCategory(category);
+    if (!mounted) return;
+    setState(() {
+      _liveCategoryResults = results;
+      _loadingLiveCategory = false;
+    });
+  }
 
   Agent? get _selectedAgent =>
       agents.where((a) => a.id == _selectedAgentId).firstOrNull;
@@ -167,33 +221,86 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredModels = allModels.where((m) {
-      // Category filter
-      if (_selectedFilter == 'ON SALE' && !m.isOnSale) return false;
-      if (_selectedFilter == 'NVIDIA NIM' && m.provider != ProviderId.nvidia) return false;
-      if (_selectedFilter == 'OPENROUTER' && m.provider != ProviderId.openrouter) return false;
-      if (_selectedFilter == 'LOCAL' && m.provider != ProviderId.ollama) return false;
-      if (_selectedFilter == 'VIDEO' && !m.keywords.contains('video')) return false;
-      if (_selectedFilter == 'AUTOROUTER' && !m.keywords.contains('autorouter')) return false;
+    final liveCatalog = p.Provider.of<LiveModelCatalogService>(context);
 
-      // Text query
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
+    // A static OpenRouter-provider entry counts as "dead" once live data has
+    // loaded and that exact id isn't in it — before the first live fetch
+    // completes, nothing is excluded this way (liveCatalog.hasData is false),
+    // so the list is never empty on cold start.
+    bool isDeadStaticEntry(SwarmModel m) {
+      if (!liveCatalog.hasData) return false;
+      if (m.provider != ProviderId.openrouter && m.provider != ProviderId.nvidia) return false;
+      return !liveCatalog.exists(m.id);
+    }
+
+    // Live price enrichment: when the live catalog has loaded, every static
+    // card that matches a live id gets its real current price + sale state
+    // instead of the hand-typed (possibly stale) one. This is what makes the
+    // whole library show live prices, not just the live filters.
+    SwarmModel withLivePrice(SwarmModel m) {
+      if (!liveCatalog.hasData) return m;
+      final live = liveCatalog.byId(m.id);
+      if (live == null) return m;
+      final sale = live.discountPercent;
+      return SwarmModel(
+        id: m.id,
+        name: m.name,
+        role: m.role,
+        provider: m.provider,
+        tier: live.isFree ? ModelTier.freeOnline : m.tier,
+        pricePer1M: live.blendedPriceDisplay,
+        originalPricePer1M: sale != null && sale < 100 ? live.pricePer1MDisplay : null,
+        isOnSale: sale != null,
+        saleDiscount: sale != null ? '$sale% OFF' : null,
+        contextWindow: live.contextDisplay,
+        description: m.description,
+        keywords: m.keywords,
+      );
+    }
+
+    List<SwarmModel> filteredModels;
+    if (_selectedFilter == 'TOP MODELS') {
+      filteredModels = liveCatalog.topFlagshipModels(limit: 50).map(swarmModelFromLive).toList();
+    } else if (_selectedFilter == 'LIVE ON SALE') {
+      filteredModels = liveCatalog.onSaleModels.map(swarmModelFromLive).toList();
+    } else if (_selectedFilter == 'LIVE CODING') {
+      filteredModels = liveCatalog.topCodingModels(limit: 100).map(swarmModelFromLive).toList();
+    } else if (_selectedFilter == 'LIVE CATEGORY' && _selectedLiveCategory != null) {
+      filteredModels = _liveCategoryResults.map(swarmModelFromLive).toList();
+    } else if (_selectedFilter == 'NVIDIA NIM' && liveCatalog.hasData) {
+      filteredModels = liveCatalog.nvidiaNimFree.map(swarmModelFromLive).toList();
+    } else {
+      filteredModels = allModels.where((m) {
+        if (isDeadStaticEntry(m)) return false;
+        // Category filter
+        if (_selectedFilter == 'ON SALE' && !m.isOnSale) return false;
+        if (_selectedFilter == 'NVIDIA NIM' && m.provider != ProviderId.nvidia) return false;
+        if (_selectedFilter == 'OPENROUTER' && m.provider != ProviderId.openrouter) return false;
+        if (_selectedFilter == 'LOCAL' && m.provider != ProviderId.ollama) return false;
+        if (_selectedFilter == 'VIDEO' && !m.keywords.contains('video')) return false;
+        if (_selectedFilter == 'AUTOROUTER' && !m.keywords.contains('autorouter')) return false;
+        return true;
+      }).map(withLivePrice).toList();
+    }
+
+    if (_searchQuery.isNotEmpty && _selectedFilter != 'LIVE CODING' && _selectedFilter != 'LIVE CATEGORY') {
+      final query = _searchQuery.toLowerCase();
+      filteredModels = filteredModels.where((m) {
         final matchId = m.id.toLowerCase().contains(query);
         final matchName = m.name.toLowerCase().contains(query);
         final matchRole = m.role.toLowerCase().contains(query);
         final matchDesc = m.description.toLowerCase().contains(query);
         final matchKw = m.keywords.any((k) => k.toLowerCase().contains(query));
         return matchId || matchName || matchRole || matchDesc || matchKw;
-      }
-      return true;
-    }).toList();
+      }).toList();
+    }
 
-    final onSaleCount = allModels.where((m) => m.isOnSale).length;
-    final nvidiaCount = allModels.where((m) => m.provider == ProviderId.nvidia).length;
-    final openrouterCount = allModels.where((m) => m.provider == ProviderId.openrouter).length;
+    final onSaleCount = allModels.where((m) => m.isOnSale && !isDeadStaticEntry(m)).length;
+    final nvidiaCount = liveCatalog.hasData ? liveCatalog.nvidiaNimFree.length : allModels.where((m) => m.provider == ProviderId.nvidia).length;
+    final openrouterCount = allModels.where((m) => m.provider == ProviderId.openrouter && !isDeadStaticEntry(m)).length;
     final videoCount = allModels.where((m) => m.keywords.contains('video')).length;
     final autoRouterCount = allModels.where((m) => m.keywords.contains('autorouter')).length;
+    final deadCount = liveCatalog.hasData ? allModels.where(isDeadStaticEntry).length : 0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -364,11 +471,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
-                                      agent.icon,
-                                      size: 16,
-                                      color: isSelected ? agent.accent : SwarmColors.textMuted,
-                                    ),
+                                    AgentAvatar(agentId: agent.id, size: 18),
                                     const SizedBox(width: 8),
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -548,12 +651,44 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               runSpacing: 8,
               children: [
                 _buildFilterChip('ALL', 'ALL (${allModels.length})', SwarmColors.accent),
+                _buildFilterChip('TOP MODELS', 'TOP MODELS (${liveCatalog.hasData ? liveCatalog.topFlagshipModels(limit: 50).length : 0} 🏆)', SwarmColors.lucilleCore),
+                _buildFilterChip('LIVE ON SALE', 'LIVE ON SALE (${liveCatalog.hasData ? liveCatalog.onSaleModels.length : 0} 🔥)', SwarmColors.success),
+                _buildFilterChip('LIVE CODING', 'LIVE CODING (TOP ${liveCatalog.topCodingModels(limit: 100).length} 🔴)', SwarmColors.success),
                 _buildFilterChip('NVIDIA NIM', 'NVIDIA NIM ($nvidiaCount FREE)', SwarmColors.agentPurple),
                 _buildFilterChip('OPENROUTER', 'OPENROUTER ($openrouterCount)', SwarmColors.agentCyan),
                 _buildFilterChip('VIDEO', 'VIDEO ($videoCount 🎬)', SwarmColors.agentPink),
                 _buildFilterChip('AUTOROUTER', 'AUTOROUTER ($autoRouterCount ⚡)', SwarmColors.warning),
                 _buildFilterChip('ON SALE', 'ON SALE ($onSaleCount 🔥)', SwarmColors.success),
                 _buildFilterChip('LOCAL', 'LOCAL OFFLINE (OLLAMA)', SwarmColors.textMuted),
+                _buildLiveCategoryChip(),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Live catalog status — shows the ground truth this page is
+            // filtering against, and how many static entries it hid because
+            // they don't exist on OpenRouter right now.
+            Row(
+              children: [
+                Icon(
+                  liveCatalog.hasData ? Icons.wifi_tethering : (liveCatalog.loading ? Icons.sync : Icons.wifi_off),
+                  size: 13,
+                  color: liveCatalog.hasData ? SwarmColors.success : SwarmColors.textMuted,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  liveCatalog.hasData
+                      ? 'Live: ${liveCatalog.all.length} models from OpenRouter${liveCatalog.fetchedAt != null ? ' · fetched ${_timeAgo(liveCatalog.fetchedAt!)}' : ''}${deadCount > 0 ? ' · $deadCount static entries hidden (not on OpenRouter right now)' : ''}'
+                      : (liveCatalog.loading ? 'Fetching live OpenRouter catalog…' : 'Live catalog not loaded yet — showing static list only'),
+                  style: const TextStyle(color: SwarmColors.textMuted, fontSize: 11),
+                ),
+                if (liveCatalog.hasData) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => liveCatalog.refresh(),
+                    child: const Text('Refresh', style: TextStyle(color: SwarmColors.agentCyan, fontSize: 11, fontWeight: FontWeight.w600)),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -585,6 +720,10 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
             ),
             const SizedBox(height: 16),
 
+            // ─── NVIDIA NIM Health / Cost Dashboard ────────────────────────────
+            _buildNimDashboard(ref, liveCatalog),
+            const SizedBox(height: 16),
+
             // ─── Model Cards Grid ──────────────────────────────────────────────
             if (filteredModels.isEmpty)
               Container(
@@ -595,10 +734,15 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: SwarmColors.border),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'No models found matching your search and filter criteria.',
-                    style: TextStyle(color: SwarmColors.textMuted),
+                    (_selectedFilter == 'LIVE CODING' && liveCatalog.loading) ||
+                            (_selectedFilter == 'LIVE CATEGORY' && _loadingLiveCategory)
+                        ? 'Fetching live results from OpenRouter…'
+                        : (_selectedFilter == 'LIVE CODING' || _selectedFilter == 'NVIDIA NIM') && !liveCatalog.hasData
+                            ? 'Live catalog hasn\'t loaded yet — check your connection and try Refresh above.'
+                            : 'No models found matching your search and filter criteria.',
+                    style: const TextStyle(color: SwarmColors.textMuted),
                   ),
                 ),
               )
@@ -630,6 +774,45 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
         color: isSelected ? activeColor : SwarmColors.textSecondary,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
         fontSize: 11,
+      ),
+    );
+  }
+
+  String _timeAgo(DateTime t) {
+    final d = DateTime.now().difference(t);
+    if (d.inMinutes < 1) return 'just now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+    return '${d.inHours}h ago';
+  }
+
+  /// Live browse by one of OpenRouter's own real category values (confirmed
+  /// against the API, not guessed) — 'programming' covers coding; the rest
+  /// (roleplay, marketing, technology, science, translation, legal, finance,
+  /// health, trivia, academia) are the only other categories the API accepts.
+  Widget _buildLiveCategoryChip() {
+    final isSelected = _selectedFilter == 'LIVE CATEGORY';
+    return PopupMenuButton<String>(
+      onSelected: _selectLiveCategory,
+      itemBuilder: (ctx) => kOpenRouterCategories
+          .map((c) => PopupMenuItem(value: c, child: Text(c.toUpperCase())))
+          .toList(),
+      child: ChoiceChip(
+        label: Text(_selectedLiveCategory != null && isSelected
+            ? 'LIVE: ${_selectedLiveCategory!.toUpperCase()}${_loadingLiveCategory ? '…' : ' (${_liveCategoryResults.length})'}'
+            : 'LIVE CATEGORY ▾'),
+        selected: isSelected,
+        onSelected: (_) {},
+        selectedColor: SwarmColors.agentPink.withValues(alpha: 0.25),
+        backgroundColor: SwarmColors.bgElevated,
+        side: BorderSide(
+          color: isSelected ? SwarmColors.agentPink : SwarmColors.border,
+          width: isSelected ? 1.5 : 1.0,
+        ),
+        labelStyle: TextStyle(
+          color: isSelected ? SwarmColors.agentPink : SwarmColors.textSecondary,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          fontSize: 11,
+        ),
       ),
     );
   }
@@ -796,7 +979,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         value: a.id,
                         child: Row(
                           children: [
-                            Icon(a.icon, size: 14, color: a.accent),
+                            AgentAvatar(agentId: a.id, size: 16),
                             const SizedBox(width: 8),
                             Text('Assign to ${a.name}', style: const TextStyle(fontSize: 12, color: Colors.white)),
                           ],
@@ -1016,28 +1199,36 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Text(
-                    m.pricePer1M ?? 'FREE',
-                    style: TextStyle(
-                      color: m.pricePer1M == 'FREE' ? SwarmColors.success : SwarmColors.accentSky,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (m.originalPricePer1M != null) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      m.originalPricePer1M!,
-                      style: const TextStyle(
-                        color: SwarmColors.textMuted,
-                        decoration: TextDecoration.lineThrough,
-                        fontSize: 10,
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        m.pricePer1M ?? 'FREE',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: m.pricePer1M == 'FREE' ? SwarmColors.success : SwarmColors.accentSky,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
+                    if (m.originalPricePer1M != null) ...[
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          m.originalPricePer1M!,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: SwarmColors.textMuted,
+                            decoration: TextDecoration.lineThrough,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
               if (m.contextWindow != null)
                 Container(
@@ -1129,7 +1320,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         value: a.id,
                         child: Row(
                           children: [
-                            Icon(a.icon, size: 14, color: a.accent),
+                            AgentAvatar(agentId: a.id, size: 16),
                             const SizedBox(width: 8),
                             Text('Assign to ${a.name}', style: const TextStyle(fontSize: 12, color: Colors.white)),
                           ],
@@ -1151,6 +1342,317 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNimDashboard(WidgetRef ref, LiveModelCatalogService catalog) {
+    final voiceService = ref.read(nvidiaVoiceServiceProvider);
+    final ragService = ref.read(nvidiaRagServiceProvider);
+    final imageService = ref.read(nvidiaImageServiceProvider);
+
+    const nimSkills = NvidiaNimSkillRegistry.all;
+    final freeNimModels = catalog.hasData ? catalog.nvidiaNimFree : <LiveModel>[];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF130D26),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SwarmColors.agentPurple.withValues(alpha: 0.5), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: SwarmColors.agentPurple.withValues(alpha: 0.08),
+            blurRadius: 16,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.dashboard_customize_rounded, color: SwarmColors.agentPurple, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'NVIDIA NIM HEALTH & COST DASHBOARD',
+                style: SwarmTextStyles.title.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: SwarmColors.agentPurple,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: SwarmColors.agentPurple.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: SwarmColors.agentPurple.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  '${freeNimModels.length} FREE NIMs LIVE',
+                  style: const TextStyle(
+                    color: SwarmColors.agentPurple,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'JetBrains Mono',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Skill cards row
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: nimSkills.map((skill) {
+              final isFree = skill.costTier == NimSkillCostTier.free;
+              final liveModel = freeNimModels.where((m) => m.id == skill.defaultModelId).firstOrNull;
+              final isAvailable = liveModel != null;
+              final statusColor = isAvailable ? SwarmColors.success : SwarmColors.error;
+
+              return Container(
+                width: 280,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isAvailable
+                        ? SwarmColors.success.withValues(alpha: 0.5)
+                        : SwarmColors.border,
+                    width: isAvailable ? 1.5 : 1.0,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(
+                            isAvailable ? 'LIVE' : 'UNAVAILABLE',
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 7.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (isFree)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: SwarmColors.success.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: SwarmColors.success.withValues(alpha: 0.4)),
+                            ),
+                            child: const Text(
+                              'FREE',
+                              style: TextStyle(
+                                color: SwarmColors.success,
+                                fontSize: 7.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      skill.name,
+                      style: const TextStyle(
+                        color: SwarmColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      skill.defaultModelId,
+                      style: SwarmTextStyles.codeSmall.copyWith(
+                        color: SwarmColors.textMuted,
+                        fontSize: 8.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      skill.description,
+                      style: const TextStyle(
+                        color: SwarmColors.textSecondary,
+                        fontSize: 9.5,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Cost: ${skill.costTier.name.toUpperCase()}',
+                            style: TextStyle(
+                              color: isFree ? SwarmColors.success : SwarmColors.warning,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (isAvailable)
+                          Text(
+                            liveModel.pricePer1MDisplay,
+                            style: const TextStyle(
+                              color: SwarmColors.success,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'JetBrains Mono',
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Quick test buttons row
+          Row(
+            children: [
+              Expanded(
+                child: _buildNimTestButton(
+                  'Test STT',
+                  Icons.mic_rounded,
+                  SwarmColors.agentCyan,
+                  () async {
+                    // Would need an audio file - placeholder
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('STT test requires audio file input')),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildNimTestButton(
+                  'Test TTS',
+                  Icons.record_voice_over_rounded,
+                  SwarmColors.agentPink,
+                  () async {
+                    try {
+                      final path = await voiceService.speakWithDefaultAgent(
+                        'NVIDIA Riva FastPitch test from SWARM OS dashboard.',
+                      );
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('TTS generated: $path')),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('TTS failed: $e')),
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildNimTestButton(
+                  'Test Embed',
+                  Icons.data_array_rounded,
+                  SwarmColors.success,
+                  () async {
+                    try {
+                      final vectors = await ragService.embedWithDefaultAgent([
+                        'SWARM OS is a Flutter desktop AI operating system.',
+                        'NVIDIA NIM provides free inference endpoints.',
+                      ]);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Embedded ${vectors.length} chunks, dim=${vectors.first.length}')),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Embed failed: $e')),
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildNimTestButton(
+                  'Test Image',
+                  Icons.image_rounded,
+                  SwarmColors.agentPurple,
+                  () async {
+                    try {
+                      final img = await imageService.generateWithDefaultAgent(
+                        'Cyberpunk SWARM OS desktop, neon cyan and magenta, glassmorphism UI',
+                      );
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Image: ${img.url.isNotEmpty ? "OK" : "No URL"}')),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Image failed: $e')),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNimTestButton(String label, IconData icon, Color color, VoidCallback onPressed) {
+    return SizedBox(
+      height: 40,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color.withValues(alpha: 0.15),
+          foregroundColor: color,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: BorderSide(color: color.withValues(alpha: 0.5)),
+          ),
+        ),
+        icon: Icon(icon, size: 14),
+        label: Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'JetBrains Mono',
+            fontSize: 9.5,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

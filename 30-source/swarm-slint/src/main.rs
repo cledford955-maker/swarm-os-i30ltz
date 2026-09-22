@@ -1,5 +1,5 @@
 mod api;
-mod chat_controller;
+mod forge_controller;
 mod gaming_controller;
 mod monitor_controller;
 
@@ -29,9 +29,12 @@ async fn main() {
     let gaming = gaming_controller::GamingController::new();
     gaming.init(&app);
 
-    // ── Lucille chat (GamingAgent :8401, SSE) ────────────────────────────────
-    let chat = chat_controller::ChatController::new();
-    chat.init(&app);
+    // ── Forge — the real general/coding Lucille, LucyServer :5000 /lucy, SSE.
+    // Added 2026-09-19, replacing the old standalone "Chat" tab (removed —
+    // it was GamingAgent-backed, same as Gaming, so this panel had no
+    // non-gaming chat at all). ───────────────────────────────────────────────
+    let forge = forge_controller::ForgeController::new();
+    forge.init(&app);
 
     // ── System monitor (LucyServer :5000) ────────────────────────────────────
     let monitor = monitor_controller::MonitorController::new();

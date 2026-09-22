@@ -269,7 +269,6 @@ final allModels = <SwarmModel>[
   const SwarmModel(id: 'anthropic/claude-3-5-haiku-4.5', name: 'Claude 3.5 Haiku', role: 'Ultra-Fast Verification', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.80 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '200K', description: 'Lightning fast diagnostics and test matrix execution.', keywords: ['claude', 'haiku', 'qa']),
   const SwarmModel(id: 'anthropic/claude-3-opus', name: 'Claude 3.5 Opus', role: 'Deep Architectural Reasoning', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$15.00 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '200K', description: 'Top-tier complex analysis and nuanced systems logic.', keywords: ['claude', 'opus', 'architecture']),
   const SwarmModel(id: 'deepseek/deepseek-math-7b', name: 'DeepSeek Math 7B', role: 'Algorithmic Solver', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.08 / 1M', originalPricePer1M: r'$0.15 / 1M', isOnSale: true, saleDiscount: '45% OFF', contextWindow: '16K', description: 'Specialized mathematical reasoning and algorithmic proofs.', keywords: ['deepseek', 'math', 'sale']),
-  const SwarmModel(id: 'qwen2.5-coder:32b', name: 'Qwen 2.5 Coder 32B (Local)', role: 'Local Coder', provider: ProviderId.openrouter, tier: ModelTier.freeOnline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Local offline execution of Qwen 2.5 Coder via Ollama.', keywords: ['local', 'ollama', 'qwen']),
   const SwarmModel(id: 'qwen2.5:7b', name: 'Qwen 2.5 7B (Local)', role: 'Local Generalist', provider: ProviderId.openrouter, tier: ModelTier.freeOnline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Local offline execution of Qwen 2.5 via Ollama.', keywords: ['local', 'ollama', 'generalist']),
   const SwarmModel(id: 'llama3.2:3b', name: 'Llama 3.2 3B (Local)', role: 'Local Edge Logic', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '8K', description: 'Ultra-lightweight local offline model via Ollama.', keywords: ['local', 'ollama', 'llama3.2']),
 
@@ -336,34 +335,87 @@ final allModels = <SwarmModel>[
   const SwarmModel(id: 'microsoft/phi-4-reasoning', name: 'Phi-4 Reasoning', role: 'Dense Reasoning Mid', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.07 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Microsoft Phi-4 reasoning-focused model — chain-of-thought math and coding at extremely low cost.', keywords: ['microsoft', 'phi4', 'reasoning', 'cheap']),
   const SwarmModel(id: 'microsoft/phi-4-reasoning-plus', name: 'Phi-4 Reasoning Plus', role: 'Enhanced Dense Reasoner', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.14 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Upgraded Phi-4 with extra RL training for harder math proofs, competitive coding, and rigorous logic.', keywords: ['microsoft', 'phi4', 'plus', 'reasoning']),
 
-  // ─── Local Ollama Models ──────────────────────────────────────────────────
-  const SwarmModel(id: 'deepseek-r1:8b', name: 'DeepSeek R1 8B (Local)', role: 'Local Reasoning Engine', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Local DeepSeek R1 8B reasoning model via Ollama — offline chain-of-thought for private environments.', keywords: ['local', 'deepseek', 'r1', 'ollama', 'offline']),
-  const SwarmModel(id: 'deepseek-r1:14b', name: 'DeepSeek R1 14B (Local)', role: 'Local Mid Reasoner', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '64K', description: 'Local DeepSeek R1 14B via Ollama — mid-tier offline reasoning and coding for air-gapped systems.', keywords: ['local', 'deepseek', 'r1', '14b', 'ollama']),
-  const SwarmModel(id: 'gemma3:27b', name: 'Gemma 3 27B (Local)', role: 'Local Vision Coder', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '128K', description: 'Local Google Gemma 3 27B with vision and long context via Ollama.', keywords: ['local', 'gemma', 'vision', 'ollama']),
-  const SwarmModel(id: 'qwq:32b', name: 'QwQ 32B (Local)', role: 'Local Reasoning Powerhouse', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Local QwQ 32B reasoning via Ollama — deep chain-of-thought for private code analysis.', keywords: ['local', 'qwq', 'qwen', 'reasoning', 'ollama']),
-  const SwarmModel(id: 'llama4:scout', name: 'Llama 4 Scout (Local)', role: 'Local Multimodal MoE', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '10M', description: 'Local Llama 4 Scout multimodal MoE via Ollama — vision and 10M context offline.', keywords: ['local', 'llama4', 'scout', 'ollama', 'multimodal']),
-  const SwarmModel(id: 'phi4:14b', name: 'Phi-4 14B (Local)', role: 'Local STEM Reasoner', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Local Microsoft Phi-4 reasoning model via Ollama for offline math and code tasks.', keywords: ['local', 'phi4', 'microsoft', 'ollama']),
+  // ─── Local Ollama Models (≤7B limit enforced) ──────────────────────────────
+  // NOTE: Local models capped at 7B parameters for resource constraints.
+  // Larger models (8B+) removed: deepseek-r1:8b/14b, gemma3:27b, qwq:32b,
+  // llama4:scout (17Bx16E MoE), phi4:14b, qwen2.5-coder:32b.
+
+  const SwarmModel(id: 'qwen2.5:7b', name: 'Qwen 2.5 7B (Local)', role: 'Local Generalist', provider: ProviderId.openrouter, tier: ModelTier.freeOnline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Local offline execution of Qwen 2.5 via Ollama.', keywords: ['local', 'ollama', 'generalist']),
+  const SwarmModel(id: 'llama3.2:3b', name: 'Llama 3.2 3B (Local)', role: 'Local Edge Logic', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '8K', description: 'Ultra-lightweight local offline model via Ollama.', keywords: ['local', 'ollama', 'llama3.2']),
+
+  // ─── Additional Local Models (≤7B) ─────────────────────────────────────────
+  // Verified available on Ollama as of 2026-09-20. All ≤7B params.
+  const SwarmModel(id: 'qwen2.5:3b', name: 'Qwen 2.5 3B (Local)', role: 'Compact Local Coder', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Qwen 2.5 3B — fast, capable small model for coding and reasoning.', keywords: ['local', 'ollama', 'qwen', 'compact']),
+  const SwarmModel(id: 'qwen2.5:1.5b', name: 'Qwen 2.5 1.5B (Local)', role: 'Tiny Local Assistant', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Qwen 2.5 1.5B — ultra-fast tiny model for edge devices.', keywords: ['local', 'ollama', 'qwen', 'tiny']),
+  const SwarmModel(id: 'qwen2.5-coder:7b', name: 'Qwen 2.5 Coder 7B (Local)', role: 'Local Code Specialist', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Qwen 2.5 Coder 7B — specialized for code generation and editing.', keywords: ['local', 'ollama', 'qwen', 'coder']),
+  const SwarmModel(id: 'qwen2.5-coder:3b', name: 'Qwen 2.5 Coder 3B (Local)', role: 'Compact Code Model', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Qwen 2.5 Coder 3B — small but capable coding assistant.', keywords: ['local', 'ollama', 'qwen', 'coder', 'compact']),
+  const SwarmModel(id: 'qwen2.5-coder:1.5b', name: 'Qwen 2.5 Coder 1.5B (Local)', role: 'Tiny Code Model', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '32K', description: 'Qwen 2.5 Coder 1.5B — minimal footprint code completion.', keywords: ['local', 'ollama', 'qwen', 'coder', 'tiny']),
+  const SwarmModel(id: 'llama3.2:1b', name: 'Llama 3.2 1B (Local)', role: 'Micro Local Model', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '8K', description: 'Llama 3.2 1B — smallest Llama for ultra-constrained environments.', keywords: ['local', 'ollama', 'llama', 'micro']),
+  const SwarmModel(id: 'gemma2:2b', name: 'Gemma 2 2B (Local)', role: 'Google Small Model', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '8K', description: 'Google Gemma 2 2B — efficient small model with strong benchmarks.', keywords: ['local', 'ollama', 'gemma', 'google']),
+  const SwarmModel(id: 'gemma2:7b', name: 'Gemma 2 7B (Local)', role: 'Google Mid Model', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '8K', description: 'Google Gemma 2 7B — best-in-class 7B open model.', keywords: ['local', 'ollama', 'gemma', 'google']),
+  const SwarmModel(id: 'phi3:3.8b', name: 'Phi-3 Mini 3.8B (Local)', role: 'Microsoft Small Reasoner', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '128K', description: 'Microsoft Phi-3 Mini — strong reasoning in a small package.', keywords: ['local', 'ollama', 'phi3', 'microsoft']),
+  const SwarmModel(id: 'phi3.5:3.8b', name: 'Phi-3.5 Mini 3.8B (Local)', role: 'Updated Phi Mini', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '128K', description: 'Microsoft Phi-3.5 Mini — improved instruction following and multilingual.', keywords: ['local', 'ollama', 'phi3', 'microsoft']),
+  const SwarmModel(id: 'smollm2:1.7b', name: 'SmolLM2 1.7B (Local)', role: 'HuggingFace Tiny', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '8K', description: 'HuggingFace SmolLM2 1.7B — state-of-the-art tiny model.', keywords: ['local', 'ollama', 'smollm', 'huggingface']),
+  const SwarmModel(id: 'smollm2:360m', name: 'SmolLM2 360M (Local)', role: 'Micro SmolLM', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '8K', description: 'HuggingFace SmolLM2 360M — smallest usable instruct model.', keywords: ['local', 'ollama', 'smollm', 'micro']),
+  const SwarmModel(id: 'tinyllama:1.1b', name: 'TinyLlama 1.1B (Local)', role: 'Ultra-Tiny Model', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '2K', description: 'TinyLlama 1.1B — 1.1B params, 2K context, runs anywhere.', keywords: ['local', 'ollama', 'tinyllama', 'micro']),
+  const SwarmModel(id: 'stablelm2:1.6b', name: 'StableLM2 1.6B (Local)', role: 'Stability AI Small', provider: ProviderId.ollama, tier: ModelTier.offline, pricePer1M: 'FREE', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '4K', description: 'Stability AI StableLM2 1.6B — multilingual small model.', keywords: ['local', 'ollama', 'stablelm', 'stability']),
+
+  // ─── New default swarm members (2026-09-19) — verified against OpenRouter's
+  // live /api/v1/models + real pricing at write time, not estimated. Two notes:
+  // the requested "GLM 5.6" doesn't exist on OpenRouter (their GLM line tops
+  // out at 5.3 right now) so this substitutes the current real flagship; and
+  // OpenRouter's Zhipu/GLM provider slug is 'z-ai/', not the 'zhipu/' prefix
+  // the rest of this catalog uses for GLM entries below — those older entries
+  // were never re-verified and are likely stale, out of scope for this pass.
+  const SwarmModel(id: 'moonshotai/kimi-k2.6', name: 'Kimi K2.6', role: 'General Coding Agent', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.95 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '256K', description: 'MoonshotAI\'s current agentic coding model — long-context multi-file work and tool use.', keywords: ['kimi', 'moonshot', 'coding', 'default']),
+  const SwarmModel(id: 'z-ai/glm-5.3', name: 'GLM 5.3', role: 'General Coding Agent', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.91 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '1.3M', description: 'Zhipu/Z.ai\'s current flagship — substituted for the requested "GLM 5.6", which does not exist on OpenRouter; 5.3 is the real current top of that line.', keywords: ['glm', 'zhipu', 'z-ai', 'coding', 'default']),
+  const SwarmModel(id: 'nvidia/nemotron-3-ultra-550b-a55b', name: 'Nemotron 3 Ultra', role: 'System, Eval & Gaming Reasoner', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.60 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '256K', description: 'NVIDIA\'s current flagship Nemotron — the default for system-utility agents, Dr. Boltz, and gaming-tagged agents; separate from GamingAgent\'s own direct-NVIDIA-API Lucille eval pipeline, which is unaffected by this swarm.', keywords: ['nvidia', 'nemotron', 'system', 'eval', 'gaming', 'default']),
+
+  // ─── Cost-Efficient Top Tier (2026-09-21) — the "top swarm" members.
+  // All verified live on OpenRouter at write time with real per-token prices.
+  // These are the current-generation flagships that still price under $2/1M
+  // blended — the sweet spot the user asked for: top-tier quality without
+  // the $5-15/1M Opus/GPT-5-Pro pricing.
+  const SwarmModel(id: 'qwen/qwen3.6-plus', name: 'Qwen 3.6 Plus', role: 'Top-Tier General Coding Agent', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.33 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '256K', description: 'Alibaba\'s Qwen 3.6 Plus — flagship-tier reasoning and coding at a fraction of Western flagship pricing. The sweet spot of the Qwen 3.6 line.', keywords: ['qwen', '3.6', 'plus', 'coding', 'top', 'default']),
+  const SwarmModel(id: 'z-ai/glm-5.3-flash', name: 'GLM 5.3 Flash', role: 'High-Speed Top-Tier Coder', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.09 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '1M', description: 'Z.ai\'s GLM 5.3 Flash — near-flagship quality at 1/10th flagship price with a 1M context window. The cost-efficiency king of the GLM 5.3 line.', keywords: ['glm', 'flash', 'z-ai', 'coding', 'top', 'cheap', 'default']),
+  const SwarmModel(id: 'deepseek/deepseek-v4-pro', name: 'DeepSeek V4 Pro', role: 'Deep Reasoning & Heavy Coding', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.95 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '128K', description: 'DeepSeek\'s V4 Pro — o1-class reasoning and multi-file coding at open-weight pricing. The strongest DeepSeek for hard problems.', keywords: ['deepseek', 'v4', 'pro', 'reasoning', 'coding', 'top', 'default']),
+  const SwarmModel(id: 'deepseek/deepseek-v4-flash', name: 'DeepSeek V4 Flash', role: 'Ultra-Cheap High-Quality Coder', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.06 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '128K', description: 'DeepSeek V4 Flash — the cheapest model in the top tier. Near-V4-Pro quality for routine coding at pennies per million tokens.', keywords: ['deepseek', 'v4', 'flash', 'coding', 'top', 'cheap', 'default']),
+  const SwarmModel(id: 'z-ai/glm-5.3-flashx', name: 'GLM 5.3 FlashX', role: 'Turbo Throughput Engine', provider: ProviderId.openrouter, tier: ModelTier.paidOnline, pricePer1M: r'$0.37 / 1M', originalPricePer1M: null, isOnSale: false, saleDiscount: null, contextWindow: '1M', description: 'The throughput variant of GLM 5.3 Flash — maximum tokens-per-second for agentic pipelines that need speed over depth.', keywords: ['glm', 'flashx', 'z-ai', 'turbo', 'top']),
 
 ];
 
 /// Pre-configured System Swarms
 final swarms = <String, SwarmConfig>{
   // ─── NEW DEFAULT FLAGSHIP SWARM (For Everyone) ──────────────────────────
+  // 2026-09-21: rebuilt as the cost-efficient TOP swarm. Every member is a
+  // current-generation flagship that blends under ~$0.50/1M — top-tier
+  // quality without the $5-15/1M Opus/GPT-5-Pro tier. Anything pricier is
+  // a deliberate opt-in (heavy-cloud-council) rather than the default.
   'default-coding-swarm': SwarmConfig(
     id: 'default-coding-swarm',
-    name: 'Flagship SOTA Swarm (Default)',
-    role: 'Autonomous Multi-Agent Engineering Architecture',
+    name: 'Top Swarm (Cost-Efficient Flagships)',
+    role: 'Everyday Coding & Chat — Everyone Except System/Gaming/Eval Agents',
     isDefault: true,
-    estimatedPrice: r'~$1.85 / 1M (Blended Execution)',
-    description: 'Autonomous multi-agent orchestration combining Claude Opus 4.6, GPT-5.6 Sol, Kimi K3 Free, DeepSeek V4 Pro, and Gemini 3.7 Flash.',
+    estimatedPrice: r'~$0.45 / 1M (Blended Execution)',
+    description: 'The top swarm: Kimi K2.6, Qwen 3.6 Plus, GLM 5.3 Flash, and DeepSeek V4 Pro/Flash — current-generation flagships, all under \$1/1M. Highest models by default; pick heavy-cloud-council only when you deliberately want the \$5+/1M tier.',
     models: [
-      allModels.firstWhere((m) => m.id == 'anthropic/claude-opus-4.6'),
-      allModels.firstWhere((m) => m.id == 'openai/gpt-5.6-sol'),
-      allModels.firstWhere((m) => m.id == 'moonshotai/kimi-k3:free', orElse: () => allModels.firstWhere((m) => m.id == 'moonshotai/kimi-k3')),
+      allModels.firstWhere((m) => m.id == 'moonshotai/kimi-k2.6'),
+      allModels.firstWhere((m) => m.id == 'qwen/qwen3.6-plus'),
+      allModels.firstWhere((m) => m.id == 'z-ai/glm-5.3-flash'),
       allModels.firstWhere((m) => m.id == 'deepseek/deepseek-v4-pro'),
-      allModels.firstWhere((m) => m.id == 'google/gemini-3.7-flash'),
-      allModels.firstWhere((m) => m.id == 'zhipu/glm-5.2-autocomplete'),
-      allModels.firstWhere((m) => m.id == 'nvidia/nemotron-120b-ultra'),
+      allModels.firstWhere((m) => m.id == 'deepseek/deepseek-v4-flash'),
+    ],
+  ),
+
+  // ─── Nemotron-only swarm for gaming, system-utility, and eval agents ─────
+  'nemotron-swarm': SwarmConfig(
+    id: 'nemotron-swarm',
+    name: 'Nemotron Swarm',
+    role: 'System, Gaming & Eval Default',
+    estimatedPrice: r'~$0.60 / 1M',
+    description: 'NVIDIA Nemotron 3 Ultra only — default for system-utility agents (Archivist, Sonar, Weaver, Oracle, Warden, Scribe, Chronos, Voyager, Spectre, Pulse, Echo, Maestro, Scout, Titan), Dr. Boltz, and the gaming-tagged agents (Nexus, Librarian, Streamer). Distinct from GamingAgent-go\'s own direct-NVIDIA-API Lucille eval, which never goes through this OpenRouter-based swarm system at all.',
+    models: [
+      allModels.firstWhere((m) => m.id == 'nvidia/nemotron-3-ultra-550b-a55b'),
     ],
   ),
 
@@ -477,9 +529,8 @@ final swarms = <String, SwarmConfig>{
   'free-local-iron': SwarmConfig(
     id: 'free-local-iron',
     name: 'Offline Local Iron Swarm',
-    role: 'Air-Gapped Private Execution',
+    role: 'Air-Gapped Private Execution (≤7B)',
     models: [
-      allModels.firstWhere((m) => m.id == 'qwen2.5-coder:32b'),
       allModels.firstWhere((m) => m.id == 'qwen2.5:7b'),
       allModels.firstWhere((m) => m.id == 'llama3.2:3b'),
     ],

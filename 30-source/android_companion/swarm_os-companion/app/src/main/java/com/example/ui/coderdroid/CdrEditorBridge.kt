@@ -7,13 +7,14 @@ import android.webkit.JavascriptInterface
  * Monaco calls these via window.Android.*
  */
 class CdrEditorBridge(
-    private val onContentChanged: (tabId: String) -> Unit,
+    private val onContentChanged: (tabId: String, content: String) -> Unit,
     private val onCursorMoved: (line: Int, column: Int) -> Unit,
     private val onSaveRequested: (tabId: String, content: String) -> Unit,
     private val onReady: () -> Unit
 ) {
-    @JavascriptInterface fun onContentChanged(tabId: String) = onContentChanged.invoke(tabId)
-    @JavascriptInterface fun onCursorMoved(line: Int, column: Int) = onCursorMoved.invoke(line, column)
-    @JavascriptInterface fun onSaveRequested(tabId: String, content: String) = onSaveRequested.invoke(tabId, content)
-    @JavascriptInterface fun onReady() = onReady.invoke()
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    @JavascriptInterface fun onContentChanged(tabId: String, content: String) { main.post { onContentChanged.invoke(tabId, content) } }
+    @JavascriptInterface fun onCursorMoved(line: Int, column: Int) { main.post { onCursorMoved.invoke(line, column) } }
+    @JavascriptInterface fun onSaveRequested(tabId: String, content: String) { main.post { onSaveRequested.invoke(tabId, content) } }
+    @JavascriptInterface fun onReady() { main.post { onReady.invoke() } }
 }

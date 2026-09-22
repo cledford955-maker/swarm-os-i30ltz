@@ -78,4 +78,12 @@ class LucideIcons {
   static const IconData files            = Icons.file_copy_rounded;
   static const IconData boxes            = Icons.widgets_rounded;
   static const IconData layers           = Icons.layers_rounded;
+
+  // Additional icons for Apex Workstation
+  static const IconData gitBranch        = Icons.account_tree_rounded;
+  static const IconData signature        = Icons.edit_rounded;
+  static const IconData playCircle       = Icons.play_circle_rounded;
+  static const IconData puzzle           = Icons.extension_rounded;
+  static const IconData keyboard         = Icons.keyboard_rounded;
+  static const IconData palette          = Icons.palette_rounded;
 }

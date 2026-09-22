@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../models/agent.dart';
+import '../widgets/agent_avatar.dart';
 
 enum OrcTab { swarm, rag, nemclaw, trace, ov }
 
@@ -238,7 +239,7 @@ class _SwarmPanelState extends ConsumerState<_SwarmPanel> {
                 ),
                 child: Row(
                   children: [
-                    Icon(a.icon, size: 16, color: a.accent),
+                    AgentAvatar(agentId: a.id, size: 18),
                     const SizedBox(width: 12),
                     SizedBox(
                       width: 80,

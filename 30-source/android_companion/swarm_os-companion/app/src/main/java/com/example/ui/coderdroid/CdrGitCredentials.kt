@@ -33,6 +33,13 @@ class CdrGitCredentials(context: Context) {
         get() = prefs.getString(KEY_TOKEN, "") ?: ""
         set(value) = prefs.edit().putString(KEY_TOKEN, value.trim()).apply()
 
+    var authorName: String
+        get() = prefs.getString("author_name", "") ?: ""
+        set(value) = prefs.edit().putString("author_name", value.trim()).apply()
+    var authorEmail: String
+        get() = prefs.getString("author_email", "") ?: ""
+        set(value) = prefs.edit().putString("author_email", value.trim()).apply()
+
     val hasCredentials: Boolean
         get() = token.isNotBlank()
 

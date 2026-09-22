@@ -15,13 +15,17 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.ui.theme.CarbonBackground
 import com.example.ui.theme.TextMuted
 import java.io.File
+import org.json.JSONObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun CdrMonacoEditorView(
     tab: CdrEditorTab?,
-    onContentChanged: (tabId: String) -> Unit,
+    onContentChanged: (tabId: String, content: String) -> Unit,
     onSaveRequested: (tabId: String, content: String) -> Unit,
+    drafts: Map<String, String> = emptyMap(),
     modifier: Modifier = Modifier
 ) {
     if (tab == null) {
@@ -33,8 +37,16 @@ fun CdrMonacoEditorView(
     var isReady by remember { mutableStateOf(false) }
 
     LaunchedEffect(tab.id, isReady) {
-        if (isReady) webViewRef?.openFile(tab)
+        if (isReady) {
+            val content = drafts[tab.id] ?: withContext(Dispatchers.IO) {
+                runCatching { require(File(tab.filePath).length() <= 2 * 1024 * 1024) { "File exceeds 2 MiB editor limit" }; File(tab.filePath).readText() }.getOrElse { "Unable to read file: ${it.message}" }
+            }
+            val data = JSONObject().put("tabId", tab.id).put("path", tab.filePath).put("language", tab.languageId).put("content", content)
+            webViewRef?.evaluateJavascript("window.coderdroid.openFile($data);", null)
+        }
     }
+
+    DisposableEffect(Unit) { onDispose { webViewRef?.destroy(); webViewRef = null } }
 
     AndroidView(
         factory = { context ->
@@ -42,10 +54,16 @@ fun CdrMonacoEditorView(
                 settings.apply {
                     javaScriptEnabled = true
                     allowFileAccessFromFileURLs = true
-                    allowUniversalAccessFromFileURLs = true
+                    allowUniversalAccessFromFileURLs = false
                     domStorageEnabled = true
                 }
-                webViewClient = object : WebViewClient() {}
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?) = true
+                    override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? {
+                        val url = request?.url.toString()
+                        return if (url.startsWith("file:///android_asset/monaco/")) null else android.webkit.WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(byteArrayOf()))
+                    }
+                }
                 addJavascriptInterface(
                     CdrEditorBridge(
                         onContentChanged = onContentChanged,
@@ -61,24 +79,6 @@ fun CdrMonacoEditorView(
         },
         modifier = modifier
     )
-}
-
-private fun WebView.openFile(tab: CdrEditorTab) {
-    val file = File(tab.filePath)
-    if (!file.exists()) return
-    val content = file.readText()
-        .replace("\\", "\\\\")
-        .replace("`", "\\`")
-        .replace("$", "\\$")
-    val js = """
-        window.coderdroid.openFile({
-            tabId: `${tab.id}`,
-            path: `${tab.filePath}`,
-            language: `${tab.languageId}`,
-            content: `$content`
-        });
-    """.trimIndent()
-    post { evaluateJavascript(js, null) }
 }
 
 @Composable

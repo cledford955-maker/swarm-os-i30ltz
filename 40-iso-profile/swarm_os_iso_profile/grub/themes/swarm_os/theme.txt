@@ -1,0 +1,51 @@
+# Matching 96px icons; 108px rows. Designed for 1920x1080.
+desktop-image: "background.png"
+desktop-color: "#05090d"
+title-text: ""
+terminal-font: "DejaVu Sans Bold 24"
++ label {
+ left = 28%
+ top = 11%
+ width = 44%
+ align = "center"
+ text = "SWARM OS"
+ color = "#8befff"
+ font = "DejaVu Sans Bold 24"
+}
++ boot_menu {
+ left = 28%
+ top = 16%
+ width = 44%
+ height = 45%
+ item_font = "DejaVu Sans Bold 24"
+ selected_item_font = "DejaVu Sans Bold 24"
+ item_color = "#8befff"
+ selected_item_color = "#ffffff"
+ icon_width = 96
+ icon_height = 96
+ item_height = 108
+ item_padding = 4
+ item_spacing = 4
+ item_icon_space = 20
+ selected_item_pixmap_style = "select_*.png"
+}
++ label {
+ left = 18%
+ top = 92%
+ width = 64%
+ align = "center"
+ text = "Up / Down: choose     Enter: open / boot     Esc: back"
+ color = "#8befff"
+ font = "DejaVu Sans Bold 24"
+}
++ progress_bar {
+ id = "__timeout__"
+ left = 30%
+ top = 89%
+ width = 40%
+ height = 12
+ show_text = false
+ fg_color = "#8befff"
+ bg_color = "#071019"
+ border_color = "#8befff"
+}

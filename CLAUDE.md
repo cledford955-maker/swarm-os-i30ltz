@@ -1,5 +1,11 @@
 # SWARM OS — AI Onboarding Prompt
 
+## ISO releases and desktop tools — user policy (2026-09-19)
+
+**All active SWARM ISO files go ONLY to `/mnt/ventoy/ISO/SWARM_OS/`. Keep the newest 10 rolling builds plus explicitly user-labelled stable builds, until unmarked.** Never create local/desktop ISO copies, latest/fallback ISO duplicates, or a separate push-to-Ventoy workflow. Use `70-scripts/build_swarm_iso.sh`; dated build scripts are compatibility forwards only. Missing Ventoy must abort, never fall back locally. Stable is an explicit user decision, not inferred from a passing boot test. Read `ISO_RELEASE_POLICY.md` before changing build, retention, VM, or desktop launch scripts. VM launcher: `70-scripts/launch_swarm_vm.sh`; editor: `70-scripts/open_swarm_code.sh`.
+
+
+
 **You are working on SWARM OS, a custom Arch Linux live system built by i30ltz.**
 
 ## PROJECT IDENTITY — READ THIS FIRST
@@ -30,7 +36,7 @@ Two Wayland clients run under **labwc** compositor, started by `swarm-ui.service
 |---|---|---|---|
 | Flutter shell | Dart (Flutter) | `30-source/frontend/` | Full desktop: wallpaper, app drawer, floating windows, voice HUD |
 | Lucille panel | Rust + Slint | `30-source/swarm-slint/` | Companion window: gaming, chat, monitor tabs |
-| GamingAgent | Go | `30-source/GamingAgent-go/` | Port 8401 — Steam/GFN/Nemotron API |
+| GamingAgent | Go | `30-source/GamingAgent-go/` | Port 8401 — Steam/GFN/NVIDIA NIM API |
 | LucyServer | .NET 10 → Go (in progress) | `30-source/LucyServer/` + `LucyServer-go/` | Primary agent, ~100 endpoints |
 | lucille-core | C++20 | `30-source/lucille-core/` | Native AI engine — do not modify |
 
@@ -49,7 +55,7 @@ labwc config lives at:
   CLAUDE.md                                      ← this file
   SWARM_AI_FEATURES.md                           ← living feature tracker — KEEP IT UPDATED
   VERSION                                        ← current build version (auto-bumped by build script)
-  10-releases/                                   ← output ISOs
+  10-releases/                                   ← non-ISO artifacts only (ISOs on Ventoy)
   20-runtime/.env                                ← ALL API keys (never commit this file)
   30-source/
     flutter-sdk/                                 ← Flutter SDK (self-contained on LUCILLE, 1.6GB)
@@ -69,7 +75,7 @@ labwc config lives at:
       etc/systemd/system/                        ← service units
       home/swarm/.config/labwc/                 ← labwc compositor config
   70-scripts/
-    build_swarm_iso_6.2.19_2026-09-08.sh        ← THE build script (run as normal user)
+    build_swarm_iso.sh                           ← THE build script (run as normal user)
     setup-dev-deps.sh                            ← install pacman build tools on a new machine
   80-vm/                                         ← QEMU/OVMF VM for testing the ISO
   images/                                        ← wallpapers, icons, GRUB assets
@@ -133,7 +139,7 @@ All OSes, the companion phones and Claude share one append-only memory log at `/
 All services read these at runtime via `EnvironmentFile=/etc/swarm_os.env`:
 
 - `STEAM_API_KEY`, `STEAM_ID64` — Steam Web API
-- `NVIDIA_API_KEY` — NVIDIA NIM / Nemotron (`https://integrate.api.nvidia.com/v1`)
+- `NVIDIA_API_KEY` — NVIDIA NIM (`https://integrate.api.nvidia.com/v1`) — not currently used by GamingAgent's Lucille chat (see "Lucille's chat backend" below), but still a valid key for direct NIM calls elsewhere
 - `ANTHROPIC_API_KEY`, `CLAUDE_API_KEY` — Anthropic Claude
 - `OPENROUTER_API_KEY` — OpenRouter multi-model
 - `GROQ_API_KEY` — Groq fast inference
@@ -143,14 +149,21 @@ All services read these at runtime via `EnvironmentFile=/etc/swarm_os.env`:
 
 ---
 
-## Nemotron / Lucille
+## Lucille's chat backend
 
-Lucille is the SWARM OS AI. GamingAgent calls Nemotron for gaming evaluations:
+Lucille is the SWARM OS AI. GamingAgent calls a chat-completions API for gaming evaluations and chat — which
+provider and model is **not stable enough to name here**: it changed three times in one day (2026-09-20):
+NVIDIA NIM's `nvidia/llama-3.3-nemotron-super-49b-v1` (retired by NVIDIA, HTTP 410) → NIM's
+`nvidia/nemotron-3.5-lightning-30b-a3b` (fixed) → NIM's `moonshotai/kimi-k3` (user-requested swap, but NIM's
+hosting of it was severely slow — 105s for a 64-token reply, verified directly) → OpenRouter's
+`moonshotai/kimi-k2.5` (current, ~8.8s for an equivalent call). The three constants in
+`services/lucille_service.go` — `chatEndpoint`, `chatModel`, `chatAPIKeyEnv` — are named provider-agnostically
+on purpose, precisely so a future switch doesn't leave stale identifiers *and* a stale doc both pointing at
+the wrong thing at once. **Read those three constants for what's actually live. Do not trust this section,
+its header, or any other doc for the current model/provider/key — update this note if you change them, but
+verify from source regardless.**
 
-- **Endpoint:** `https://integrate.api.nvidia.com/v1/chat/completions`
-- **Model:** `nvidia/llama-3.3-nemotron-super-49b-v1`
-- **Key:** `NVIDIA_API_KEY` from environment
-- **GamingAgent route:** `GET /api/lucille/eval`
+- **GamingAgent routes:** `GET /api/lucille/eval`, `POST /api/lucille/chat`, `POST /api/lucille/chat/stream`
 
 ---
 

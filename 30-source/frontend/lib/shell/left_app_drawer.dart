@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/swarm_colors.dart';
 import '../services/system_launcher.dart';
 import '../models/swarm_apps.dart';
+import '../widgets/agent_avatar.dart';
 import 'companion_bridge_dialog.dart';
 
 // ── "THIS is NOW" palette ──────────────────────────────────────────
@@ -368,7 +369,11 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(app.icon, color: app.color, size: 26),
+                                  AppIconOrb(
+                                    icon: app.icon,
+                                    color: app.color,
+                                    size: 34,
+                                  ),
                                   const SizedBox(height: 6),
                                   Text(
                                     app.name,
@@ -445,7 +450,13 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                                 border: Border.all(
                                     color: app.color.withValues(alpha: 0.35)),
                               ),
-                              child: Icon(app.icon, color: app.color, size: 20),
+                              child: Center(
+                                child: AppIconOrb(
+                                  icon: app.icon,
+                                  color: app.color,
+                                  size: 30,
+                                ),
+                              ),
                             ),
                             title: Row(
                               children: [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/agent.dart';
 import 'hexagon_painter.dart';
+import 'agent_avatar.dart';
 
 class AgentHexCard extends StatefulWidget {
   final Agent agent;
@@ -95,7 +96,7 @@ class _AgentHexCardState extends State<AgentHexCard>
                                 : null,
                           ),
                         ),
-                        Icon(a.icon, color: a.active ? a.color : a.color.withValues(alpha: 0.3), size: s * 0.22),
+                        AgentAvatar(agentId: a.id, size: s * 0.30, dimmed: !a.active),
                         const SizedBox(height: 4),
                         Text(
                           a.name,

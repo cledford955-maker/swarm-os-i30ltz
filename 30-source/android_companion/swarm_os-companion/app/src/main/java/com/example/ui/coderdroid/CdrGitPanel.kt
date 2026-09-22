@@ -32,6 +32,10 @@ import com.example.ui.theme.*
 fun CdrGitPanel(
     gitState: CdrGitState,
     hasCredentials: Boolean,
+    username: String,
+    authorName: String,
+    authorEmail: String,
+    commitSequence: Int,
     modifier: Modifier = Modifier,
     onRefresh: () -> Unit,
     onStage: (String) -> Unit,
@@ -39,16 +43,22 @@ fun CdrGitPanel(
     onStageAll: () -> Unit,
     onCommit: (String) -> Unit,
     onPush: () -> Unit,
+    onSetOrigin: (String) -> Unit,
     onPull: () -> Unit,
-    onSaveCredentials: (username: String, token: String) -> Unit
+    onSaveCredentials: (String, String, String, String) -> Unit
 ) {
     var commitMessage by remember { mutableStateOf("") }
+    LaunchedEffect(commitSequence) { if (commitSequence > 0) commitMessage = "" }
+    var showOrigin by remember { mutableStateOf(false) }
+    var remoteUrl by remember { mutableStateOf("") }
+    if(showOrigin) AlertDialog(onDismissRequest = {showOrigin=false}, title={Text("GitHub repository")}, text={OutlinedTextField(remoteUrl,{remoteUrl=it},label={Text("https://github.com/owner/repo.git")})}, confirmButton={TextButton(onClick={onSetOrigin(remoteUrl);showOrigin=false}){Text("Set origin")}}, dismissButton={TextButton(onClick={showOrigin=false}){Text("Cancel")}})
     var showCredentialsDialog by remember { mutableStateOf(false) }
 
     if (showCredentialsDialog) {
         CdrGitCredentialsDialog(
+            savedUsername = username, savedName = authorName, savedEmail = authorEmail, hasCredentials = hasCredentials,
             onDismiss = { showCredentialsDialog = false },
-            onSave = { u, t -> onSaveCredentials(u, t); showCredentialsDialog = false }
+            onSave = { u, t, n, e -> onSaveCredentials(u, t, n, e); showCredentialsDialog = false }
         )
     }
 
@@ -113,6 +123,8 @@ fun CdrGitPanel(
             return@Column
         }
 
+        TextButton(onClick={showOrigin=true}, enabled=!gitState.isBusy){Text("Set GitHub repository (origin)")}
+        Text(if(hasCredentials) "GitHub sign-in saved on this phone" else "GitHub sign-in not saved — open key settings", color=TextMuted, modifier=Modifier.padding(horizontal=10.dp), fontSize=11.sp)
         // ── File lists ────────────────────────────────────────────────────────────
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (gitState.staged.isNotEmpty()) {
@@ -179,7 +191,7 @@ fun CdrGitPanel(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Button(
-                onClick = { onCommit(commitMessage); commitMessage = "" },
+                onClick = { onCommit(commitMessage) },
                 enabled = gitState.staged.isNotEmpty() && commitMessage.isNotBlank() && !gitState.isBusy,
                 colors = ButtonDefaults.buttonColors(containerColor = ElectricPurple),
                 modifier = Modifier.fillMaxWidth().height(34.dp),
@@ -256,10 +268,13 @@ private fun CdrGitIconButton(
 
 @Composable
 private fun CdrGitCredentialsDialog(
+    savedUsername: String, savedName: String, savedEmail: String, hasCredentials: Boolean,
     onDismiss: () -> Unit,
-    onSave: (username: String, token: String) -> Unit
+    onSave: (String, String, String, String) -> Unit
 ) {
-    var username by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf(savedUsername) }
+    var authorName by remember { mutableStateOf(savedName) }
+    var authorEmail by remember { mutableStateOf(savedEmail) }
     var token by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -269,10 +284,12 @@ private fun CdrGitCredentialsDialog(
         text = {
             Column {
                 Text(
-                    "Used only for push/pull on this device. Stored encrypted (Android Keystore). Needs a personal access token with 'repo' scope.",
+                    if (hasCredentials) "GitHub token saved securely. Leave it blank to keep it. Sign in again only if the token expires or is revoked." else "Save a GitHub token once for private clone, pull and push. Grant access only to the repositories you need. Commit name and email identify your changes.",
                     color = TextMuted,
                     fontSize = 11.sp
                 )
+                OutlinedTextField(value = authorName, onValueChange = { authorName = it }, label = { Text("Commit name") }, singleLine = true)
+                OutlinedTextField(value = authorEmail, onValueChange = { authorEmail = it }, label = { Text("Commit email") }, singleLine = true)
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = username,
@@ -293,7 +310,7 @@ private fun CdrGitCredentialsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(username, token) }, enabled = token.isNotBlank()) {
+            TextButton(onClick = { onSave(username, token, authorName.trim(), authorEmail.trim()) }, enabled = authorName.isNotBlank() && authorEmail.contains("@")) {
                 Text("Save", color = ElectricCyan)
             }
         },

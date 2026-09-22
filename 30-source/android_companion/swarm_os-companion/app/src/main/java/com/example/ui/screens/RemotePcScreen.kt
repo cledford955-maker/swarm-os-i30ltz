@@ -52,19 +52,39 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
 
     val terminalLog = remember {
         mutableStateListOf(
-            "root@swarm-pc:~# SWARM_OS CYBER TERMINAL v3.6 ONLINE",
-            "root@swarm-pc:~# Target Node: ${connection.host} (LucyServer · REST & WS)",
+            "I30LTZ Companion — remote terminal (connection not tested)",
+            "Target node: ${connection.host} (LucyServer · REST & WS)",
             "------------------------------------------------------------------------"
         )
     }
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
+    var connectionStatus by remember { mutableStateOf("Not tested") }
+    var checking by remember { mutableStateOf(false) }
+    fun checkConnection() {
+        if(checking) return
+        checking = true
+        coroutineScope.launch {
+            connectionStatus = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val client = okhttp3.OkHttpClient.Builder().connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS).readTimeout(10, java.util.concurrent.TimeUnit.SECONDS).build()
+                    val request = okhttp3.Request.Builder().url("${connection.httpBase()}/api/system/stats").header("X-Swarm-Auth",connection.authToken).build()
+                    client.newCall(request).execute().use { response ->
+                        if(response.isSuccessful) "Connected and authenticated: ${connection.host}:${connection.port}"
+                        else connection.explain(null,response.code)
+                    }
+                } catch(e: Exception) { connection.explain(e) }
+            }
+            checking = false
+        }
+    }
+
     fun executeTerminalCommand(rawInput: String) {
         val trimmed = rawInput.trim().removeSuffix("\n")
         if (trimmed.isEmpty()) return
 
-        terminalLog.add("root@${connection.host}:~# $trimmed")
+        terminalLog.add("${connection.host} $ $trimmed")
 
         coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
@@ -181,6 +201,14 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                 }
             }
 
+            Text(connectionStatus, color = TextPrimary, fontSize = 12.sp)
+            Row {
+                TextButton(onClick = { checkConnection() }, enabled = !checking) { Text(if(checking) "Testing…" else "Test connection") }
+                TextButton(onClick = {
+                    val intent = context.packageManager.getLaunchIntentForPackage("com.tailscale.ipn")
+                    if(intent != null) context.startActivity(intent) else connectionStatus = "Tailscale is not installed on this phone."
+                }) { Text("Open Tailscale") }
+            }
             // Dynamic Tailscale Node Switcher
             if (isIpConfigExpanded) {
                 Card(
@@ -214,6 +242,7 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                         Text("X-Swarm-Auth token:", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(4.dp))
                         OutlinedTextField(
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                             value = authTokenInput,
                             onValueChange = { authTokenInput = it },
                             singleLine = true,
@@ -223,16 +252,22 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = {
-                                connection.host = targetIp
+                                val host = targetIp.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
+                                if(!host.matches(Regex("[A-Za-z0-9.-]+")) || portInput.toIntOrNull() !in 1..65535) {
+                                    connectionStatus = "Use a hostname or IPv4 address without a port/path, and a port from 1 to 65535."
+                                    return@Button
+                                }
+                                connection.host = host
                                 connection.authToken = authTokenInput
                                 portInput.toIntOrNull()?.takeIf { it in 1..65535 }?.let { connection.port = it }
                                 isIpConfigExpanded = false
-                                terminalLog.add("⚡ Node switched to ${connection.host}:${connection.port}")
+                                terminalLog.add("Node saved: ${connection.host}:${connection.port}")
+                                checkConnection()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = NvidiaGreen),
                             modifier = Modifier.align(Alignment.End)
                         ) {
-                            Text("SAVE", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("SAVE & TEST", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -246,8 +281,8 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 QuickCommandTile("tailscale status", "TAILSCALE", NvidiaGreen) { executeTerminalCommand("tailscale status") }
-                QuickCommandTile("ping a17", "PING a17", LightningYellow) { executeTerminalCommand("ping a17") }
-                QuickCommandTile("ping a16", "PING a16", Color.Cyan) { executeTerminalCommand("ping a16") }
+                QuickCommandTile("ping A17", "PING A17", LightningYellow) { executeTerminalCommand("ping -c 3 -W 3 100.82.1.17") }
+                QuickCommandTile("ping A16", "PING A16", Color.Cyan) { executeTerminalCommand("ping -c 3 -W 3 100.82.1.16") }
                 QuickCommandTile("i30ltz audit", "AUDIT", Color(0xFFE040FB)) { executeTerminalCommand("i30ltz audit") }
             }
 

@@ -32,6 +32,7 @@ func main() {
 	steamSvc := services.NewSteamService()
 	gamesSvc := services.NewGamesService(gfnSvc, steamSvc, database)
 	lucilleSvc := services.NewLucilleService(gfnSvc, steamSvc, database)
+	mediaSvc := services.NewMediaService()
 
 	// Warm GFN catalog in background
 	go gfnSvc.WarmCache()
@@ -42,6 +43,7 @@ func main() {
 	gamesH := handlers.NewGamesHandler(gamesSvc)
 	favH := handlers.NewFavoritesHandler(database)
 	lucilleH := handlers.NewLucilleHandler(lucilleSvc, database)
+	mediaH := handlers.NewMediaHandler(mediaSvc)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
@@ -70,20 +72,28 @@ func main() {
 		r.Get("/games/intersection", gamesH.Intersection)
 		r.Get("/games/genres", gfnH.Genres)
 		r.Get("/games/prices/{appId}", gamesH.Prices)
+		// Now-playing is read-only status, same trust level as the catalog
+		// routes above; play/pause/skip/volume are mutating and sit in the
+		// protected group below next to /games/favorite.
+		r.Get("/media/status", mediaH.Status)
 
 		// Everything below either mutates persistent state, spends the
-		// owner's NVIDIA_API_KEY quota per call, or returns past chat
-		// content — same swarmAuthMiddleware pattern LucyServer-go already
-		// uses (loopback bypass, or X-Swarm-Auth/Authorization token match).
-		// Previously this whole service had zero auth: any device on the
-		// trusted tailnet (nftables.conf accepts all tailscale0 traffic)
-		// could flip favorites or burn the Nemotron key with no credential
-		// at all. Found while wiring Task #3 (harden baseline).
+		// owner's chat-API quota per call (see lucille_service.go's
+		// chatAPIKeyEnv for which key — this has changed providers more than
+		// once), or returns past chat content — same swarmAuthMiddleware
+		// pattern LucyServer-go already uses (loopback bypass, or
+		// X-Swarm-Auth/Authorization token match). Previously this whole
+		// service had zero auth: any device on the trusted tailnet
+		// (nftables.conf accepts all tailscale0 traffic) could flip favorites
+		// or burn that quota with no credential at all. Found while wiring
+		// Task #3 (harden baseline).
 		r.Group(func(r chi.Router) {
 			r.Use(originGate)
 			r.Use(swarmAuthMiddleware)
 			r.Post("/games/favorite", favH.Upsert)
-			// Nemotron calls: eval is expensive (full analysis), chat is per-turn.
+			r.Post("/media/control", mediaH.Control)
+			r.Post("/media/volume", mediaH.Volume)
+			// Chat-model calls: eval is expensive (full analysis), chat is per-turn.
 			// 5/min on eval prevents runaway quota burn; 20/min on chat covers
 			// fast interactive use. stream shares the chat limit.
 			r.With(rateLimiter(5, time.Minute)).Get("/lucille/eval", lucilleH.Eval)
@@ -144,7 +154,7 @@ func allowedOrigins() []string {
 //
 // A browser request to 127.0.0.1 is a loopback connection from this server's
 // point of view, so the bypass alone would let any web page the user is
-// visiting spend the owner's NVIDIA_API_KEY through /lucille/eval, read past
+// visiting spend the owner's chat-API quota through /lucille/eval, read past
 // conversations through /lucille/history, and write favorites. CORS does not
 // prevent that — it only decides whether the attacking page may read the
 // reply, and the quota is spent either way.

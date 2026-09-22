@@ -1,11 +1,15 @@
 package services
 
 import (
+	"bytes"
 	cryptoRand "crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -80,13 +84,13 @@ type ReleaseArtifact struct {
 }
 
 type DeveloperAnalytics struct {
-	TotalInstalls      int                `json:"total_installs"`
-	ActiveUsers        int                `json:"active_users"`
-	DailyDownloads     int                `json:"daily_downloads"`
-	CrashRate          float64            `json:"crash_rate"`
-	RevenueUSD         float64            `json:"revenue_usd"`
-	InstallsPerChannel map[string]int     `json:"installs_per_channel"`
-	TopExtensions      []string           `json:"top_extensions"`
+	TotalInstalls      int            `json:"total_installs"`
+	ActiveUsers        int            `json:"active_users"`
+	DailyDownloads     int            `json:"daily_downloads"`
+	CrashRate          float64        `json:"crash_rate"`
+	RevenueUSD         float64        `json:"revenue_usd"`
+	InstallsPerChannel map[string]int `json:"installs_per_channel"`
+	TopExtensions      []string       `json:"top_extensions"`
 }
 
 type AiCodingTask struct {
@@ -115,18 +119,18 @@ type SuggestedFix struct {
 }
 
 type CloudWorkspace struct {
-	WorkspaceID       string    `json:"workspace_id"`
-	Name              string    `json:"name"`
-	RemoteHost        string    `json:"remote_host"`
-	SSHPort           int       `json:"ssh_port"`
-	Username          string    `json:"username"`
-	RemotePath        string    `json:"remote_path"`
-	Status            string    `json:"status"`
-	LatencyMs         int       `json:"latency_ms"`
-	MemoryUsedMB      int       `json:"memory_used_mb"`
-	MemoryTotalMB     int       `json:"memory_total_mb"`
-	CPUUsagePercent   float64   `json:"cpu_usage_percent"`
-	LastSyncedAt      time.Time `json:"last_synced_at,omitempty"`
+	WorkspaceID     string    `json:"workspace_id"`
+	Name            string    `json:"name"`
+	RemoteHost      string    `json:"remote_host"`
+	SSHPort         int       `json:"ssh_port"`
+	Username        string    `json:"username"`
+	RemotePath      string    `json:"remote_path"`
+	Status          string    `json:"status"`
+	LatencyMs       int       `json:"latency_ms"`
+	MemoryUsedMB    int       `json:"memory_used_mb"`
+	MemoryTotalMB   int       `json:"memory_total_mb"`
+	CPUUsagePercent float64   `json:"cpu_usage_percent"`
+	LastSyncedAt    time.Time `json:"last_synced_at,omitempty"`
 }
 
 type CommunityTemplate struct {
@@ -183,11 +187,11 @@ var (
 )
 
 var coreSdkPackages = map[string]string{
-	"swarm_core":    ">=6.2.0",
-	"lucille_ipc":   ">=2.0.0",
-	"flutter_linux": ">=3.24.0",
-	"sqlite3":       ">=3.45.0",
-	"pipewire_audio":">=1.0.0",
+	"swarm_core":     ">=6.2.0",
+	"lucille_ipc":    ">=2.0.0",
+	"flutter_linux":  ">=3.24.0",
+	"sqlite3":        ">=3.45.0",
+	"pipewire_audio": ">=1.0.0",
 }
 
 func ExtLinkLocal(sourcePath string) (LocalExtensionLink, error) {
@@ -209,7 +213,10 @@ func ExtLinkLocal(sourcePath string) (LocalExtensionLink, error) {
 	extMu.Lock()
 	defer extMu.Unlock()
 	for i, e := range linkedExts {
-		if e.ExtensionID == id { linkedExts = append(linkedExts[:i], linkedExts[i+1:]...); break }
+		if e.ExtensionID == id {
+			linkedExts = append(linkedExts[:i], linkedExts[i+1:]...)
+			break
+		}
 	}
 	linkedExts = append(linkedExts, link)
 	return link, nil
@@ -261,7 +268,9 @@ var (
 
 func ReleasePublish(r AppRelease) AppRelease {
 	r.PublishedAt = time.Now().UTC()
-	if r.ID == "" { r.ID = newID() }
+	if r.ID == "" {
+		r.ID = newID()
+	}
 	relMu.Lock()
 	defer relMu.Unlock()
 	releases = append(releases, r)
@@ -277,7 +286,9 @@ func ReleaseGet(appID, channel string) []AppRelease {
 			out = append(out, r)
 		}
 	}
-	if out == nil { out = []AppRelease{} }
+	if out == nil {
+		out = []AppRelease{}
+	}
 	return out
 }
 
@@ -314,21 +325,29 @@ func GitListRepos() ([]GitRepository, error) {
 	root := gitRoot()
 	os.MkdirAll(root, 0o755)
 	entries, err := os.ReadDir(root)
-	if err != nil { return []GitRepository{}, nil }
+	if err != nil {
+		return []GitRepository{}, nil
+	}
 	var out []GitRepository
 	for _, e := range entries {
-		if !e.IsDir() { continue }
+		if !e.IsDir() {
+			continue
+		}
 		p := filepath.Join(root, e.Name())
 		fi, _ := e.Info()
 		modTime := time.Now().UTC()
-		if fi != nil { modTime = fi.ModTime().UTC() }
+		if fi != nil {
+			modTime = fi.ModTime().UTC()
+		}
 		out = append(out, GitRepository{
 			Name: e.Name(), Path: p,
-			CloneURL: "file://" + p,
+			CloneURL:     "file://" + p,
 			LastCommitAt: modTime, LastCommitMessage: "Initial commit",
 		})
 	}
-	if out == nil { out = []GitRepository{} }
+	if out == nil {
+		out = []GitRepository{}
+	}
 	return out, nil
 }
 
@@ -349,7 +368,9 @@ func GitCreateRepo(name string) (GitRepository, error) {
 }
 
 func CiTriggerPipeline(repoName, commitSha string) *CiPipeline {
-	if commitSha == "" { commitSha = "HEAD" }
+	if commitSha == "" {
+		commitSha = "HEAD"
+	}
 	p := &CiPipeline{
 		ID: newID(), RepoName: repoName, CommitSha: commitSha,
 		Status: "running", Logs: []string{}, StartedAt: time.Now().UTC(),
@@ -390,7 +411,9 @@ func CiGetPipeline(id string) *CiPipeline {
 	ciMu.Lock()
 	defer ciMu.Unlock()
 	for _, p := range pipelines {
-		if p.ID == id { return p }
+		if p.ID == id {
+			return p
+		}
 	}
 	return nil
 }
@@ -407,7 +430,9 @@ func ArtifactGet(id string) *ReleaseArtifact {
 	ciMu.Lock()
 	defer ciMu.Unlock()
 	for i := range artifacts {
-		if artifacts[i].ID == id { return &artifacts[i] }
+		if artifacts[i].ID == id {
+			return &artifacts[i]
+		}
 	}
 	return nil
 }
@@ -420,12 +445,16 @@ func ArtifactStore(name, version, contentType string, r io.Reader) (ReleaseArtif
 	target := filepath.Join(root, safe)
 
 	f, err := os.Create(target)
-	if err != nil { return ReleaseArtifact{}, err }
+	if err != nil {
+		return ReleaseArtifact{}, err
+	}
 	defer f.Close()
 
 	h := sha256.New()
 	size, err := io.Copy(io.MultiWriter(f, h), r)
-	if err != nil { return ReleaseArtifact{}, err }
+	if err != nil {
+		return ReleaseArtifact{}, err
+	}
 
 	art := ReleaseArtifact{
 		ID: id, Name: name, Version: version,
@@ -445,11 +474,15 @@ func OAuthLoginURL(provider string) string {
 	switch strings.ToLower(provider) {
 	case "github":
 		clientID := os.Getenv("OAUTH_GITHUB_CLIENT_ID")
-		if clientID == "" { clientID = "swarm_github_client_id" }
+		if clientID == "" {
+			clientID = "swarm_github_client_id"
+		}
 		return "https://github.com/login/oauth/authorize?client_id=" + url.QueryEscape(clientID) + "&scope=repo,user:email"
 	default: // google
 		clientID := os.Getenv("OAUTH_GOOGLE_CLIENT_ID")
-		if clientID == "" { clientID = "swarm_google_client_id" }
+		if clientID == "" {
+			clientID = "swarm_google_client_id"
+		}
 		return "https://accounts.google.com/o/oauth2/v2/auth?client_id=" + url.QueryEscape(clientID) + "&response_type=code&scope=openid%20profile%20email"
 	}
 }
@@ -463,37 +496,81 @@ func AnalyticsDashboard() DeveloperAnalytics {
 		TotalInstalls: 14280, ActiveUsers: 3840, DailyDownloads: 312,
 		CrashRate: 0.02, RevenueUSD: 1250.00,
 		InstallsPerChannel: map[string]int{"Stable": 11200, "Beta": 2450, "Alpha": 630},
-		TopExtensions: []string{"Kotlin LSP", "Flutter Live Preview", "Cyber Theme", "ADB Wireless Explorer"},
+		TopExtensions:      []string{"Kotlin LSP", "Flutter Live Preview", "Cyber Theme", "ADB Wireless Explorer"},
 	}
 }
 
 // ── AI Coding Agent ───────────────────────────────────────────────────────────
 
 var (
-	aiMu     sync.Mutex
-	aiTasks  []AiCodingTask
+	aiMu    sync.Mutex
+	aiTasks []AiCodingTask
 )
 
-func AiCoderDispatch(title, prompt, filePath, language, role string) AiCodingTask {
+func AiCoderDispatch(title, prompt, filePath, language, role string) (AiCodingTask, error) {
 	id := newID()
-	steps := []string{
-		fmt.Sprintf("[Step 1: %s] Analyzed AST & context for file %s", role, filePath),
-		fmt.Sprintf("[Step 2: %s] Identified optimization vectors based on query: %q", role, prompt),
-		fmt.Sprintf("[Step 3: %s] Synthesized type-safe implementation adhering to modern idiomatic standards", role),
-		"[Step 4: SecurityAuditor] Verified memory bounds, nullability contracts, and permission compliance",
+	apiKey := os.Getenv("OPENROUTER_API_KEY")
+	if apiKey == "" {
+		return AiCodingTask{ID: id, Title: title, Prompt: prompt, ActiveFilePath: filePath, Language: language, Role: role, Status: "failed", CreatedAt: time.Now().UTC()}, errors.New("OPENROUTER_API_KEY is not configured")
 	}
-	var code string
-	if strings.ToLower(language) == "dart" {
-		code = "// Optimized via SWARM AI Coding Agent (" + role + ")\nclass GeneratedSolution {\n  final String taskName;\n  const GeneratedSolution({required this.taskName});\n\n  Future<void> execute() async {}\n}"
-	} else if strings.ToLower(language) == "go" {
-		code = "// Optimized via SWARM AI Coding Agent (" + role + ")\nfunc GeneratedSolution(taskName string) error {\n\treturn nil\n}"
-	} else {
-		code = "// Optimized via SWARM AI Coding Agent (" + role + ")\nfunc generatedSolution() { /* high-performance implementation */ }"
+	model := os.Getenv("SWARM_CODER_MODEL")
+	if model == "" {
+		model = "openrouter/auto"
 	}
+	system := "You are Forge, an enterprise software engineer. Return only valid JSON with keys generated_code, execution_steps, risks, and tests. Never claim code was compiled, tested, security-reviewed, or applied unless the request explicitly provides evidence. Preserve existing APIs and call out assumptions."
+	user := fmt.Sprintf("Task: %s\nRole: %s\nLanguage: %s\nFile: %s\nRequest: %s", title, role, language, filePath, prompt)
+	body, _ := json.Marshal(map[string]any{
+		"model":           model,
+		"messages":        []map[string]string{{"role": "system", "content": system}, {"role": "user", "content": user}},
+		"temperature":     0.1,
+		"response_format": map[string]string{"type": "json_object"},
+	})
+	req, err := http.NewRequest(http.MethodPost, "https://openrouter.ai/api/v1/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return AiCodingTask{ID: id, Title: title, Prompt: prompt, Status: "failed", CreatedAt: time.Now().UTC()}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("HTTP-Referer", "https://lucy.local")
+	req.Header.Set("X-Title", "SWARM Forge")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return AiCodingTask{ID: id, Title: title, Prompt: prompt, Status: "failed", CreatedAt: time.Now().UTC()}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return AiCodingTask{ID: id, Title: title, Prompt: prompt, Status: "failed", CreatedAt: time.Now().UTC()}, fmt.Errorf("OpenRouter returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+	}
+	var completion struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&completion); err != nil || len(completion.Choices) == 0 {
+		return AiCodingTask{ID: id, Title: title, Prompt: prompt, Status: "failed", CreatedAt: time.Now().UTC()}, fmt.Errorf("invalid OpenRouter response: %w", err)
+	}
+	var result struct {
+		GeneratedCode  string   `json:"generated_code"`
+		ExecutionSteps []string `json:"execution_steps"`
+		Risks          []string `json:"risks"`
+		Tests          []string `json:"tests"`
+	}
+	content := strings.TrimSpace(completion.Choices[0].Message.Content)
+	if err := json.Unmarshal([]byte(content), &result); err != nil || result.GeneratedCode == "" {
+		return AiCodingTask{ID: id, Title: title, Prompt: prompt, Status: "failed", CreatedAt: time.Now().UTC()}, fmt.Errorf("Forge returned invalid structured output: %w", err)
+	}
+	steps := append(result.ExecutionSteps, result.Risks...)
+	steps = append(steps, result.Tests...)
+	code := result.GeneratedCode
 
 	lines := strings.SplitN(code, "\n", 5)
 	var diffLines []string
-	for _, l := range lines { diffLines = append(diffLines, "+"+l) }
+	for _, l := range lines {
+		diffLines = append(diffLines, "+"+l)
+	}
 	diff := fmt.Sprintf("--- %s\n+++ %s (AI Updated)\n@@ -1,3 +1,10 @@\n%s", filePath, filePath, strings.Join(diffLines, "\n"))
 
 	t := AiCodingTask{
@@ -504,9 +581,11 @@ func AiCoderDispatch(title, prompt, filePath, language, role string) AiCodingTas
 	}
 	aiMu.Lock()
 	aiTasks = append([]AiCodingTask{t}, aiTasks...)
-	if len(aiTasks) > 50 { aiTasks = aiTasks[:50] }
+	if len(aiTasks) > 50 {
+		aiTasks = aiTasks[:50]
+	}
 	aiMu.Unlock()
-	return t
+	return t, nil
 }
 
 func AiCoderSuggestFixes(filePath, fileContent, compilerOutput string) []SuggestedFix {
@@ -525,20 +604,22 @@ func AiCoderSuggestFixes(filePath, fileContent, compilerOutput string) []Suggest
 		fixes = append(fixes, SuggestedFix{
 			DiagnosticCode: "CS8618", Message: "Non-nullable property must contain a non-null value.",
 			FilePath: filePath, LineNumber: 12,
-			OriginalCode: "public string Name { get; set; }",
+			OriginalCode:    "public string Name { get; set; }",
 			ReplacementCode: "public string Name { get; set; } = string.Empty;",
-			Explanation: "Initialized non-nullable reference type with string.Empty to guarantee runtime safety.",
-			Confidence:  0.98,
+			Explanation:     "Initialized non-nullable reference type with string.Empty to guarantee runtime safety.",
+			Confidence:      0.98,
 		})
 	}
 	if len(fixes) == 0 {
 		firstLine := fileContent
-		if i := strings.Index(fileContent, "\n"); i >= 0 { firstLine = fileContent[:i] }
+		if i := strings.Index(fileContent, "\n"); i >= 0 {
+			firstLine = fileContent[:i]
+		}
 		fixes = append(fixes, SuggestedFix{
 			DiagnosticCode: "optimize_async", Message: "Method can be converted to async/await syntax.",
 			FilePath: filePath, LineNumber: 1, OriginalCode: firstLine,
 			ReplacementCode: "// AI Linter: Code validated against SWARM OS style guidelines",
-			Explanation: "Verified syntax tree and memory allocation patterns.", Confidence: 0.92,
+			Explanation:     "Verified syntax tree and memory allocation patterns.", Confidence: 0.92,
 		})
 	}
 	return fixes
@@ -623,11 +704,11 @@ func WorkspaceSync(id string) bool {
 // ── Marketplace ───────────────────────────────────────────────────────────────
 
 var (
-	mktMu      sync.Mutex
-	templates  []CommunityTemplate
-	reviews    []ExtensionReview
-	billing    []BillingRecord
-	mktOnce    sync.Once
+	mktMu     sync.Mutex
+	templates []CommunityTemplate
+	reviews   []ExtensionReview
+	billing   []BillingRecord
+	mktOnce   sync.Once
 )
 
 // initMarketplace starts the marketplace empty.
@@ -674,12 +755,16 @@ func MarketplaceGetReviews(extensionID string) []ExtensionReview {
 	defer mktMu.Unlock()
 	var out []ExtensionReview
 	for _, r := range reviews {
-		if r.ExtensionID == extensionID { out = append(out, r) }
+		if r.ExtensionID == extensionID {
+			out = append(out, r)
+		}
 	}
 	// An extension with no reviews has no reviews. This used to fall back to
 	// the first three reviews in the store regardless of which extension they
 	// were written for, attributing other extensions' praise to this one.
-	if out == nil { out = []ExtensionReview{} }
+	if out == nil {
+		out = []ExtensionReview{}
+	}
 	return out
 }
 
@@ -697,9 +782,9 @@ func MarketplacePurchase(itemID, itemName, buyerID string, priceUSD float64) Bil
 	fee := round2(priceUSD * 0.15)
 	rec := BillingRecord{
 		ItemID: itemID, ItemName: itemName, BuyerID: buyerID,
-		DeveloperID: "dev-" + newID()[:8],
+		DeveloperID:    "dev-" + newID()[:8],
 		GrossAmountUSD: priceUSD, PlatformFeeUSD: fee, DeveloperPayoutUSD: round2(priceUSD - fee),
-		LicenseKey: "SWARM-KEY-" + strings.ToUpper(newID()[:16]),
+		LicenseKey:    "SWARM-KEY-" + strings.ToUpper(newID()[:16]),
 		PaymentStatus: "Settled", Timestamp: time.Now().UTC(),
 	}
 	mktMu.Lock()
@@ -713,9 +798,14 @@ func MarketplaceGetAnalytics() MarketplaceAnalytics {
 	mktMu.Lock()
 	defer mktMu.Unlock()
 	var gross, dev float64
-	for _, b := range billing { gross += b.GrossAmountUSD; dev += b.DeveloperPayoutUSD }
+	for _, b := range billing {
+		gross += b.GrossAmountUSD
+		dev += b.DeveloperPayoutUSD
+	}
 	recent := billing
-	if len(recent) > 15 { recent = recent[:15] }
+	if len(recent) > 15 {
+		recent = recent[:15]
+	}
 	return MarketplaceAnalytics{
 		TotalGrossRevenue: round2(gross), TotalDeveloperPayouts: round2(dev),
 		TotalTransactions: len(billing), ActivePaidSubs: 142,

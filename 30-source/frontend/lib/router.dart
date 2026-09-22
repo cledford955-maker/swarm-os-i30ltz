@@ -15,12 +15,13 @@ import 'screens/cannabis_mode_screen.dart';
 import 'coder/coder_page.dart';
 import 'screens/memory_screen.dart';
 import 'screens/agents_screen.dart';
-import 'agent/forge_workstation.dart';
+import 'agent/apex_workstation.dart';
 import 'pages/vital_page.dart';
 import 'agent/ui_tandem_studio.dart';
 import 'pages/lucille_chat_page.dart';
 import 'pages/test_lucy_server_page.dart';
 import 'pages/apps_page.dart';
+import 'pages/app_store_page.dart';
 import 'pages/backend_page.dart';
 import 'pages/nvidia_page.dart';
 import 'pages/telemetry_page.dart';
@@ -67,13 +68,14 @@ final goRouter = GoRouter(
         GoRoute(path: '/hub', builder: (_, __) => const HubPage()),
         GoRoute(path: '/reference', builder: (_, __) => const CommandReferencePage()),
         GoRoute(path: '/agent/lucille', builder: (_, __) => const LucilleChatPage()),
-        GoRoute(path: '/agent/forge', builder: (_, __) => const ForgeWorkstation()),
+        GoRoute(path: '/agent/apex', builder: (_, __) => const ApexWorkstation()),
         GoRoute(path: '/agent/ui_tandem', builder: (_, __) => const UiTandemStudio()),
         GoRoute(path: '/agent/vital', builder: (_, __) => const VitalPage()),
-        GoRoute(path: '/agent/:id', builder: (_, state) => const ForgeWorkstation()),
+        GoRoute(path: '/agent/:id', builder: (_, state) => const ApexWorkstation()),
         GoRoute(path: '/apps', builder: (_, __) => const AppsPage()),
+        GoRoute(path: '/appstore', builder: (_, __) => const AppStorePage()),
         GoRoute(path: '/backend', builder: (_, __) => const BackendPage()),
-        GoRoute(path: '/forge', builder: (_, __) => const ForgeWorkstation()),
+        GoRoute(path: '/apex', builder: (_, __) => const ApexWorkstation()),
         GoRoute(path: '/coder', builder: (_, __) => const CoderPage()),
         GoRoute(path: '/ide',   builder: (_, __) => const CoderPage()),
         GoRoute(path: '/models', builder: (_, __) => const ModelsPage()),

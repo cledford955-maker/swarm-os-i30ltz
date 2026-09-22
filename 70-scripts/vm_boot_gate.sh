@@ -23,7 +23,7 @@
 set -euo pipefail
 
 LUCY="/mnt/Lucy"
-OUT_DIR="$LUCY/10-releases"
+OUT_DIR="/mnt/ventoy/ISO/SWARM_OS"
 LOG_DIR="$LUCY/logs"
 # 300s used to be enough, but a build with secrets sealed behind a real
 # passphrase changes the timing: lucy-server.service/gaming-agent.service
@@ -53,7 +53,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-[ -n "$ISO_PATH" ] || ISO_PATH="$OUT_DIR/swarm-os-latest.iso"
+[ -n "$ISO_PATH" ] || ISO_PATH="$(python "$LUCY/70-scripts/swarm_iso_manager.py" latest)"
 [ -f "$ISO_PATH" ] || { bad "ISO not found: $ISO_PATH"; exit 2; }
 
 command -v qemu-system-x86_64 >/dev/null 2>&1 || { bad "qemu-system-x86_64 not installed (pacman -S qemu-full)"; exit 2; }

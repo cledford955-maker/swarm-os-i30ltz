@@ -15,10 +15,35 @@ import (
 	"swarm-os/gaming-agent/models"
 )
 
+// chatEndpoint/chatModel/chatAPIKeyEnv have deliberately provider-agnostic
+// names — this has already changed provider AND model twice in one day
+// (2026-09-20): NVIDIA NIM's nvidia/llama-3.3-nemotron-super-49b-v1 (retired
+// by NVIDIA, HTTP 410) -> NIM's nvidia/nemotron-3.5-lightning-30b-a3b (fixed)
+// -> NIM's moonshotai/kimi-k3 (user-requested swap, but NIM's hosting of it
+// turned out to have severe latency: a bare direct call with no GamingAgent
+// involvement took 105s for a 64-token reply) -> OpenRouter's
+// moonshotai/kimi-k2.5 (this one — same model family, different host,
+// dramatically faster: 8.8s for an equivalent call, verified live before
+// switching). Naming this after "Nemotron" or "NIM" specifically, like the
+// two rename passes before this one had to, would just mean a third rename
+// next time either changes again — check these three constants for what's
+// actually live, not any comment or doc elsewhere.
 const (
-	nemotronEndpoint = "https://integrate.api.nvidia.com/v1/chat/completions"
-	nemotronModel    = "nvidia/llama-3.3-nemotron-super-49b-v1"
+	chatEndpoint  = "https://openrouter.ai/api/v1/chat/completions"
+	chatModel     = "moonshotai/kimi-k2.5"
+	chatAPIKeyEnv = "OPENROUTER_API_KEY"
 )
+
+// This and every other OpenRouter/NIM-hosted model tried for Lucille so far
+// has been a reasoning model: it streams "reasoning"/"reasoning_content"
+// deltas (naming varies by provider) before the real "content" delta. Both
+// callChat's streaming parser and the non-streaming Message.Content read
+// below only look at the content field, so the chain-of-thought is filtered
+// out automatically regardless of what the provider calls its reasoning
+// field — verified this holds for kimi-k2.5 on OpenRouter specifically
+// before switching, not just assumed from the pattern holding before. It
+// does eat into max_tokens though, which is why the budgets below are 3072
+// rather than the original non-reasoning-model defaults.
 
 type LucilleService struct {
 	gfn    *GfnService
@@ -36,7 +61,7 @@ func NewLucilleService(gfn *GfnService, steam *SteamService, database *sql.DB) *
 	}
 }
 
-// Eval builds context from real Steam + GFN data and asks Nemotron for dashboard actions.
+// Eval builds context from real Steam + GFN data and asks the chat model for dashboard actions.
 func (s *LucilleService) Eval() (*models.LucilleEvalResult, error) {
 	steamGames, _ := s.steam.GetLibrary()
 	gfnGames, _ := s.gfn.GetCatalog()
@@ -54,31 +79,36 @@ func (s *LucilleService) Eval() (*models.LucilleEvalResult, error) {
 	}
 	sb.WriteString(fmt.Sprintf("\nTotal GFN catalog size: %d games\n", len(gfnGames)))
 
-	systemPrompt := `You are Lucille, the SWARM OS gaming AI. Analyze the user's Steam library and suggest dashboard actions.
-You MUST call these tools with JSON args:
-- set_genre_filter(genres: string[]) — genre chips to activate
-- pin_games(titles: string[]) — up to 4 game titles to pin
-- set_sort_order(by: "playtime"|"name"|"gfn") — default sort
-- favorite_games(titles: string[]) — up to 3 to auto-favourite
-Also provide:
-- summary: one paragraph about play patterns
-- system_suggestions: 2-3 SWARM OS improvement ideas based on what they play
-Respond ONLY as JSON matching LucilleEvalResult schema.`
+	systemPrompt := `You are Lucille, the SWARM OS gaming AI. Analyze the user's Steam library.
+Return ONLY one flat JSON object with exactly these fields (not tool calls or nested actions):
+{"genreFilters":["Action"],"pinGames":["Exact game title"],"sortBy":"playtime","favoriteGames":["Exact game title"],"summary":"One paragraph about play patterns","systemSuggestions":["First suggestion","Second suggestion"],"topGames":[{"name":"Exact game title","hours":1.5,"onGfn":true}]}
+Use actual titles and hours from the supplied library. Pin at most 4 titles, favorite at most 3.
+sortBy must be playtime, name, or gfn. Provide 2-3 systemSuggestions.
+Every array must be an array, never null; use [] if no applicable data.
+There are no tools to call. Do not use snake_case field names or wrap this object in another object.`
 
 	payload := map[string]any{
-		"model": nemotronModel,
+		"model": chatModel,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": sb.String()},
 		},
-		"max_tokens":  1024,
+		// 6144 not 1024/3072: reasoning models eat real budget on
+		// chain-of-thought before the JSON answer even starts, and kimi-k2.5
+		// specifically (2026-09-20) was observed producing a longer, more
+		// deeply-nested JSON shape than the schema asks for — got cut off
+		// mid-object at 3072, producing an "unexpected end of JSON input"
+		// parse error.
+		"max_tokens":  6144,
 		"temperature": 0.7,
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", nemotronEndpoint, bytes.NewReader(body))
-	req.Header.Set("Authorization", "Bearer "+os.Getenv("NVIDIA_API_KEY"))
+	req, _ := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+os.Getenv(chatAPIKeyEnv))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("HTTP-Referer", "https://github.com/i30ltz/swarm-os")
+	req.Header.Set("X-Title", "SWARM OS GamingAgent")
 
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -92,7 +122,7 @@ Respond ONLY as JSON matching LucilleEvalResult schema.`
 		} `json:"choices"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || len(raw.Choices) == 0 {
-		return &models.LucilleEvalResult{Error: "failed to parse Nemotron response"}, nil
+		return &models.LucilleEvalResult{Error: "failed to parse chat model response"}, nil
 	}
 
 	content := raw.Choices[0].Message.Content
@@ -110,7 +140,7 @@ Respond ONLY as JSON matching LucilleEvalResult schema.`
 	return &result, nil
 }
 
-// Chat sends a multi-turn message to Nemotron with Steam/GFN context injected.
+// Chat sends a multi-turn message to the chat model with Steam/GFN context injected.
 func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleChatResponse, error) {
 	sessionId := req.SessionId
 	if sessionId == "" {
@@ -120,7 +150,7 @@ func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleCha
 	messages := s.buildContextMessages()
 	messages = append(messages, req.Messages...)
 
-	reply, err := s.callNemotron(messages, false, nil)
+	reply, err := s.callChat(messages, false, nil)
 	if err != nil {
 		return &models.LucilleChatResponse{SessionId: sessionId, Error: err.Error()}, nil
 	}
@@ -132,7 +162,7 @@ func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleCha
 	return &models.LucilleChatResponse{Reply: reply, SessionId: sessionId}, nil
 }
 
-// ChatStream calls Nemotron with streaming=true and writes SSE chunks to w.
+// ChatStream calls the chat model with streaming=true and writes SSE chunks to w.
 func (s *LucilleService) ChatStream(req models.LucilleChatRequest, w http.ResponseWriter) {
 	sessionId := req.SessionId
 	if sessionId == "" {
@@ -152,7 +182,7 @@ func (s *LucilleService) ChatStream(req models.LucilleChatRequest, w http.Respon
 	messages = append(messages, req.Messages...)
 
 	var fullReply strings.Builder
-	_, _ = s.callNemotron(messages, true, func(token string) {
+	_, _ = s.callChat(messages, true, func(token string) {
 		fullReply.WriteString(token)
 		fmt.Fprintf(w, "data: %s\n\n", token)
 		if f, ok := w.(http.Flusher); ok {
@@ -186,27 +216,48 @@ func (s *LucilleService) buildContextMessages() []models.ChatMessage {
 	return []models.ChatMessage{
 		{Role: "system", Content: "You are Lucille, the SWARM OS AI. You know about the user's Steam library and NVIDIA GeForce NOW catalog. Be helpful, concise, and gaming-focused."},
 		{Role: "system", Content: sb.String()},
+		{Role: "system", Content: lucilleActionProtocol},
 	}
 }
 
-func (s *LucilleService) callNemotron(messages []models.ChatMessage, stream bool, onToken func(string)) (string, error) {
+// lucilleActionProtocol lets Lucille actually do things from the gaming
+// overlay's chat panel instead of only answering questions about them. The
+// overlay's dashboard.html parses a trailing "ACTION: verb [arg]" line out
+// of the reply text via regex and dispatches it locally (media control,
+// opening a browser widget, launching an app) — this system message is the
+// other half of that contract, so the exact verb spelling here must match
+// what dashboard.html's dispatchAction() recognizes.
+const lucilleActionProtocol = `If, and only if, the user is asking you to DO something (not just answer a question), end your reply with exactly one extra line in this exact format, after your normal reply text:
+ACTION: <verb> [arg]
+
+Valid verbs:
+  media_play, media_pause, media_play_pause, media_next, media_previous, media_stop — control whatever's currently playing (no arg)
+  open_browser <url or search text> — open a walkthrough/web page in a new window
+  open_app <chrome|opera-gx> — launch an installed browser app
+
+Only ever use these exact verbs. Never invent a new verb. If the user is just chatting or asking a question, do not include an ACTION line at all.`
+
+func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, onToken func(string)) (string, error) {
 	msgs := make([]map[string]string, len(messages))
 	for i, m := range messages {
 		msgs[i] = map[string]string{"role": m.Role, "content": m.Content}
 	}
 
 	payload := map[string]any{
-		"model":       nemotronModel,
-		"messages":    msgs,
-		"max_tokens":  2048,
+		"model":    chatModel,
+		"messages": msgs,
+		// Same reasoning-overhead reasoning as Eval's 3072 above.
+		"max_tokens":  3072,
 		"temperature": 0.7,
 		"stream":      stream,
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", nemotronEndpoint, bytes.NewReader(body))
-	req.Header.Set("Authorization", "Bearer "+os.Getenv("NVIDIA_API_KEY"))
+	req, _ := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+os.Getenv(chatAPIKeyEnv))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("HTTP-Referer", "https://github.com/i30ltz/swarm-os")
+	req.Header.Set("X-Title", "SWARM OS GamingAgent")
 
 	resp, err := s.client.Do(req)
 	if err != nil {

@@ -1,5 +1,11 @@
 # SWARM OS — AI Onboarding Prompt
 
+## ISO releases and desktop tools — user policy (2026-09-19)
+
+**All active SWARM ISO files go ONLY to `/mnt/ventoy/ISO/SWARM_OS/`. Keep the newest 10 rolling builds plus explicitly user-labelled stable builds, until unmarked.** Never create local/desktop ISO copies, latest/fallback ISO duplicates, or a separate push-to-Ventoy workflow. Use `70-scripts/build_swarm_iso.sh`; dated build scripts are compatibility forwards only. Missing Ventoy must abort, never fall back locally. Stable is an explicit user decision, not inferred from a passing boot test. Read `ISO_RELEASE_POLICY.md` before changing build, retention, VM, or desktop launch scripts. VM launcher: `70-scripts/launch_swarm_vm.sh`; editor: `70-scripts/open_swarm_code.sh`.
+
+
+
 **You are working on SWARM OS, a custom Arch Linux live system built by i30ltz.**
 
 ## PROJECT IDENTITY — READ THIS FIRST
@@ -49,7 +55,7 @@ labwc config lives at:
   AGENTS.md                                      ← this file
   SWARM_AI_FEATURES.md                           ← living feature tracker — KEEP IT UPDATED
   VERSION                                        ← current build version (auto-bumped by build script)
-  10-releases/                                   ← output ISOs
+  10-releases/                                   ← non-ISO artifacts only (ISOs on Ventoy)
   20-runtime/.env                                ← ALL API keys (never commit this file)
   30-source/
     flutter-sdk/                                 ← Flutter SDK (self-contained on LUCILLE, 1.6GB)
@@ -69,7 +75,7 @@ labwc config lives at:
       etc/systemd/system/                        ← service units
       home/swarm/.config/labwc/                 ← labwc compositor config
   70-scripts/
-    build_swarm_iso_6.2.19_2026-09-08.sh        ← THE build script (run as normal user)
+    build_swarm_iso.sh                           ← THE build script (run as normal user)
     setup-dev-deps.sh                            ← install pacman build tools on a new machine
   80-vm/                                         ← QEMU/OVMF VM for testing the ISO
   images/                                        ← wallpapers, icons, GRUB assets

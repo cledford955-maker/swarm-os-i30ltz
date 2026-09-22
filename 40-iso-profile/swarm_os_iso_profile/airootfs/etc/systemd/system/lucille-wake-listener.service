@@ -1,0 +1,17 @@
+[Unit]
+Description=Lucille OS-wide acoustic wake-word listener (Hey Lucille / Hey Lucy)
+After=sound.target swarm-ui.service
+Wants=sound.target
+
+[Service]
+Type=simple
+User=swarm
+Group=swarm
+SupplementaryGroups=audio
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+ExecStart=/usr/bin/python3 /usr/local/bin/lucille_wake_listener.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

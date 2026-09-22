@@ -1,17 +1,25 @@
 import { SwarmTheme } from "globals.slint";
 import { NavButton } from "components/nav_button.slint";
 import { GamingView } from "views/gaming.slint";
-import { ChatView } from "views/chat.slint";
+import { ForgeView } from "views/forge.slint";
 import { MonitorView } from "views/monitor.slint";
 
 // Re-export globals used by nested views so slint-build generates Rust bindings
 // for them (Slint only exposes to Rust what the ENTRY file itself exports —
 // a global merely used transitively by an imported view is not enough).
 export { GamingState } from "gaming_state.slint";
-export { ChatState } from "chat_state.slint";
+export { ForgeState } from "forge_state.slint";
 export { MonitorState } from "monitor_state.slint";
 
-// Tabs: 0=Gaming 1=Chat 2=Monitor 3=Settings
+// Tabs: 0=Forge (default — the real coding/general Lucille) 1=Gaming
+// 2=Monitor 3=Settings. Forge replaced the old "Chat" tab 2026-09-19: this
+// panel used to open on Gaming by default with no non-gaming chat at all —
+// both "Gaming" and the old Chat tab were GamingAgent-backed (Steam/GFN
+// context), so there was no real coding-focused Lucille here at all. Forge
+// talks to LucyServer's general /lucy instead. The old gaming-chat tab
+// (chat_controller.rs, views/chat.slint, chat_state.slint) was deleted
+// rather than left mounted-but-unreachable — recoverable from git history
+// if a standalone gaming-chat UI is ever wanted again.
 export component AppWindow inherits Window {
     title: "Lucille";
     background: SwarmTheme.bg;
@@ -102,12 +110,12 @@ export component AppWindow inherits Window {
                     padding-top: 8px;
 
                     NavButton {
-                        icon: "🎮"; label: "GAMING";
+                        icon: "🛠"; label: "FORGE";
                         active: active-tab == 0;
                         selected => { active-tab = 0; tab-selected(0); }
                     }
                     NavButton {
-                        icon: "💬"; label: "CHAT";
+                        icon: "🎮"; label: "GAMING";
                         active: active-tab == 1;
                         selected => { active-tab = 1; tab-selected(1); }
                     }
@@ -133,8 +141,8 @@ export component AppWindow inherits Window {
                 horizontal-stretch: 1;
                 background: SwarmTheme.bg;
 
-                if active-tab == 0 : GamingView {}
-                if active-tab == 1 : ChatView {}
+                if active-tab == 0 : ForgeView {}
+                if active-tab == 1 : GamingView {}
                 if active-tab == 2 : MonitorView {}
                 if active-tab == 3 : Rectangle {
                     Text {

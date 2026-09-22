@@ -15,6 +15,9 @@ lost+found/
 *.qcow2
 *.fd
 
+# --- downloaded model caches (fetched fresh by build_swarm_iso.sh) --
+20-runtime/vosk-model-cache/
+
 # --- ISO profile payload (configs kept, bundled apps excluded) ------
 40-iso-profile/*/airootfs/opt/
 40-iso-profile/*/airootfs/usr/lib/
@@ -78,3 +81,16 @@ appsettings.*.Development.json
 # quarantine holding area - never commit
 _to_delete/
 30-source/LucyServer-go/swarm-memory
+
+# Local release locks, migration logs, and VM state
+70-scripts/.iso-manager.lock
+70-scripts/.swarm-build.lock
+70-scripts/**/__pycache__/
+80-vm/desktop/
+grub_themes/backups/
+
+# Local diagnostic archives may contain identifying system details.
+10-releases/diagnostics/
+
+# Generated installer payload; rebuilt by the canonical ISO builder.
+40-iso-profile/*/airootfs/usr/local/share/swarm-os/airootfs.tar

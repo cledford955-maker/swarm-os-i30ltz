@@ -63,10 +63,18 @@ func main() {
 	fsH := handlers.NewFilesystemHandler()
 	chatH := handlers.NewChatHandler()
 	installH := handlers.NewInstallHandler()
+	androidH := handlers.NewAndroidHandler()
 
 	memAPI := openMemory()
 
 	r.Route("/api", func(api chi.Router) {
+		api.Get("/android/capabilities", androidH.Capabilities)
+		api.With(rateLimiter(5, time.Minute)).Post("/android/builds", androidH.Start)
+		api.Get("/android/builds/{id}", androidH.Status)
+		api.Get("/android/builds/{id}/apk", androidH.Download)
+		api.Get("/android/devices", androidH.Devices)
+		api.Post("/android/adb", androidH.ADB)
+
 		// Shared memory (2026-09-16) — log at /mnt/brains/swarm-memory, synced
 		// across the OSes, the companion phones and Claude's memory files.
 		api.Route("/memory", memoryRoutes(memAPI))

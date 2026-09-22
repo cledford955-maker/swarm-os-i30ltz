@@ -180,6 +180,10 @@ PROFILE_ROOT="$SCRIPT_DIR/swarm_os_iso_profile"
 if [ ! -d "$PROFILE_ROOT/airootfs" ]; then
   PROFILE_ROOT="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile"
 fi
+ROOTFS_ARCHIVE="/usr/local/share/swarm-os/airootfs.tar"
+if [ ! -f "$ROOTFS_ARCHIVE" ] && [ -d "$PROFILE_ROOT/airootfs" ]; then
+  ROOTFS_ARCHIVE=""
+fi
 PROFILE_PACMAN_CONF="/usr/local/share/swarm-os/pacman.conf"
 if [ ! -f "$PROFILE_PACMAN_CONF" ]; then
   PROFILE_PACMAN_CONF="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile/pacman.conf"
@@ -238,7 +242,7 @@ fi
 info "fstab written"
 
 banner "Copying custom airootfs files..."
-if [ -d "$PROFILE_ROOT/airootfs/" ]; then
+if [ -n "$ROOTFS_ARCHIVE" ] || [ -d "$PROFILE_ROOT/airootfs/" ]; then
     # Backup base system auth files before copying airootfs
     cp -a "$MOUNT_POINT/etc/passwd" "$MOUNT_POINT/etc/passwd.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/group" "$MOUNT_POINT/etc/group.sys" 2>/dev/null || true
@@ -251,7 +255,11 @@ if [ -d "$PROFILE_ROOT/airootfs/" ]; then
     cp -a "$MOUNT_POINT/etc/fstab" "$MOUNT_POINT/etc/fstab.sys" 2>/dev/null || true
     cp -a "$MOUNT_POINT/etc/crypttab" "$MOUNT_POINT/etc/crypttab.sys" 2>/dev/null || true
 
-    cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
+    if [ -n "$ROOTFS_ARCHIVE" ]; then
+      tar -xpf "$ROOTFS_ARCHIVE" -C "$MOUNT_POINT"
+    else
+      cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
+    fi
 
     # Restore pristine system auth files (so users and render groups exist)
     [ -f "$MOUNT_POINT/etc/passwd.sys" ] && mv "$MOUNT_POINT/etc/passwd.sys" "$MOUNT_POINT/etc/passwd"
@@ -368,6 +376,14 @@ fi
 sed -i 's/^#\?\s*%wheel ALL=(ALL:ALL)\s*ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 rm -f /etc/sudoers.d/01-wheel-nopasswd
 
+# Match PipeWire and wake IPC to the installed user's actual UID.
+SWARM_RUNTIME_UID=\$(id -u i30ltz)
+for runtime_service in swarm-ui.service lucille-wake-listener.service; do
+    if [ -f "/etc/systemd/system/\$runtime_service" ]; then
+        sed -i "s|/run/user/1000|/run/user/\$SWARM_RUNTIME_UID|g" "/etc/systemd/system/\$runtime_service"
+    fi
+done
+
 # Configure swarm-ui kiosk to auto-login as user i30ltz
 if [ -f /etc/systemd/system/swarm-ui.service ]; then
     sed -i 's/^User=.*/User=i30ltz/' /etc/systemd/system/swarm-ui.service
@@ -397,10 +413,11 @@ fi
 # (non-live) system. Same treatment as swarm-ui.service.
 # (google-workspace.service was missed in the original fix for this same
 # bug on the other two services — found+added 2026-09-13.)
-for svc in gaming-agent.service lucy-server.service google-workspace.service; do
-    if [ -f "/etc/systemd/system/$svc" ]; then
-        sed -i 's/^User=swarm$/User=i30ltz/' "/etc/systemd/system/$svc"
-        sed -i 's|swarm:swarm|i30ltz:i30ltz|g' "/etc/systemd/system/$svc"
+for svc in gaming-agent.service lucy-server.service google-workspace.service lucille-wake-listener.service; do
+    if [ -f "/etc/systemd/system/\$svc" ]; then
+        sed -i 's/^Group=swarm$/Group=i30ltz/' "/etc/systemd/system/\$svc"
+        sed -i 's/^User=swarm$/User=i30ltz/' "/etc/systemd/system/\$svc"
+        sed -i 's|swarm:swarm|i30ltz:i30ltz|g' "/etc/systemd/system/\$svc"
     fi
 done
 
@@ -435,6 +452,17 @@ menuentry "CachyOS (chainload)" --class cachyos --class gnu-linux --class os {
   search --no-floppy --fs-uuid --set=root A367-87E3
   chainloader /EFI/cachyos/grubx64.efi
 }
+    menuentry "EndeavourOS" --class endeavouros {
+        insmod btrfs
+        search --no-floppy --fs-uuid --set=other_os 0ac123f1-bbd1-4ea6-8fdd-930bd0d45e18
+        configfile (\$other_os)/@/boot/grub/grub.cfg
+    }
+    menuentry "Ventoy" --class ventoy {
+        insmod fat
+        insmod chain
+        search --no-floppy --fs-uuid --set=ventoy_efi E039-AD96
+        chainloader (\$ventoy_efi)/EFI/BOOT/BOOTX64.EFI
+    }
 menuentry "UEFI Firmware Settings" --class firmware {
     fwsetup
 }
@@ -446,6 +474,8 @@ menuentry "Shutdown" --class shutdown {
 }
 CUSTOMEOF
 chmod +x /etc/grub.d/40_custom
+
+echo 'GRUB_FONT="/boot/grub/themes/swarm_os/menu.pf2"' >> /etc/default/grub
 
 # Install snap-pac & grub-btrfs for automated rollback snapshots
 pacman -S --noconfirm --needed snap-pac grub-btrfs inotify-tools btrfs-progs || true
@@ -480,21 +510,21 @@ cat > /opt/swarm_os/swarm-ollama-pull.sh <<'PULLEOF'
 LOG=/var/log/swarm-ollama-pull.log
 STAMP=/var/lib/swarm-ollama-pulled
 
-[ -f "$STAMP" ] && exit 0  # already ran — skip
+[ -f "\$STAMP" ] && exit 0  # already ran — skip
 
-exec >> "$LOG" 2>&1
-echo "[$(date)] Starting Swarm OS Ollama first-boot pull..."
+exec >> "\$LOG" 2>&1
+echo "[\$(date)] Starting Swarm OS Ollama first-boot pull..."
 
 # Wait for Ollama to be ready (max 60s)
-for i in $(seq 1 12); do
+for i in \$(seq 1 12); do
   curl -sf http://localhost:11434/ > /dev/null && break
-  echo "[$(date)] Waiting for Ollama... ($i/12)"
+  echo "[\$(date)] Waiting for Ollama... (\$i/12)"
   sleep 5
 done
 
 pull() {
-  echo "[$(date)] Pulling $1..."
-  ollama pull "$1" && echo "[$(date)] ✓ $1 done" || echo "[$(date)] ✗ $1 failed (skip)"
+  echo "[\$(date)] Pulling \$1..."
+  ollama pull "\$1" && echo "[\$(date)] ✓ \$1 done" || echo "[\$(date)] ✗ \$1 failed (skip)"
 }
 
 # ── Models ≤7B — safe for integrated GPU + shared RAM ──────────────────────
@@ -511,8 +541,8 @@ pull qwen2.5-coder:7b     # 4.7GB  — Alibaba code specialist
 pull deepseek-r1:7b       # 4.7GB  — DeepSeek reasoning distill
 
 # Mark done so this service never runs again
-touch "$STAMP"
-echo "[$(date)] Swarm OS Ollama pull complete."
+touch "\$STAMP"
+echo "[\$(date)] Swarm OS Ollama pull complete."
 PULLEOF
 chmod +x /opt/swarm_os/swarm-ollama-pull.sh
 

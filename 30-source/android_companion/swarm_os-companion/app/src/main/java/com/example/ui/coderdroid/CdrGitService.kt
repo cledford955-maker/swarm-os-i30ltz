@@ -4,6 +4,8 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.GitAPIException
 import org.eclipse.jgit.lib.BranchTrackingStatus
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.transport.RemoteRefUpdate
+import java.net.URI
 import java.io.File
 
 /**
@@ -55,10 +57,14 @@ object CdrGitService {
         val cmd = git.add()
         paths.forEach { cmd.addFilepattern(it) }
         cmd.call()
+        val deleted = git.add().setUpdate(true)
+        paths.forEach { deleted.addFilepattern(it) }
+        deleted.call()
     }
 
     fun stageAll(root: File): Result<Unit> = runGit(root) { git ->
         git.add().addFilepattern(".").call()
+        git.add().setUpdate(true).addFilepattern(".").call()
     }
 
     fun unstage(root: File, paths: List<String>): Result<Unit> = runGit(root) { git ->
@@ -68,58 +74,79 @@ object CdrGitService {
     }
 
     fun commit(root: File, message: String, authorName: String, authorEmail: String): Result<Unit> = runGit(root) { git ->
-        git.commit()
-            .setMessage(message)
-            .setAuthor(authorName.ifBlank { "CoderDroid" }, authorEmail.ifBlank { "coderdroid@swarm-os.local" })
-            .call()
+        require(message.isNotBlank()) { "Enter a commit message." }
+        require(authorName.isNotBlank() && authorEmail.contains("@")) { "Set your commit name and email in Git settings." }
+        require(git.status().call().conflicting.isEmpty()) { "Resolve merge conflicts before committing." }
+        git.commit().setMessage(message.trim())
+            .setAuthor(authorName.trim(), authorEmail.trim())
+            .setCommitter(authorName.trim(), authorEmail.trim()).call()
     }
 
-    /**
-     * Clones [url] into [dest]. [dest] lives under the app's private storage
-     * (filesDir/projects/<name>) — no file manager or SAF picker can ever
-     * see into it, so if a user goes looking for "the folder" outside the
-     * app they will always find nothing there; that's expected, not a bug.
-     *
-     * If [dest] already holds a valid clone (e.g. this repo was already
-     * fetched, or the caller is retrying after opening it once), returns it
-     * as-is rather than failing. If [dest] exists but ISN'T a real repo, it's
-     * leftover debris from a previous clone that got interrupted (app
-     * killed, network dropped) before this function's own catch-block
-     * cleanup ran — found 2026-09-19: the old code treated that leftover
-     * debris the same as a real repo and refused forever with "already
-     * exists and isn't empty", with no way for the user to recover short of
-     * clearing app storage. Now it's wiped and retried automatically.
-     */
-    fun clone(dest: File, url: String, username: String, token: String): Result<File> =
-        try {
-            val hasContent = dest.exists() && dest.listFiles()?.isNotEmpty() == true
-            if (hasContent && isGitRepo(dest)) {
-                Result.success(dest)
-            } else {
-                if (hasContent) dest.deleteRecursively()
-                dest.parentFile?.mkdirs()
-                val cmd = Git.cloneRepository().setURI(url).setDirectory(dest)
-                if (token.isNotBlank()) {
-                    cmd.setCredentialsProvider(UsernamePasswordCredentialsProvider(username.ifBlank { token }, token))
-                }
-                cmd.call().close()
-                Result.success(dest)
-            }
-        } catch (e: Exception) {
-            dest.deleteRecursively()
-            Result.failure(e)
+    /** Existing user files are never erased on a failed clone. */
+    fun clone(dest: File, url: String, username: String, token: String): Result<File> = runCatching {
+        val uri = URI(url.trim())
+        require(uri.scheme == "https" && !uri.host.isNullOrBlank() && uri.userInfo == null) {
+            "Use an HTTPS repository URL without embedded credentials."
         }
+        if (isGitRepo(dest)) {
+            Git.open(dest).use { git ->
+                require(git.repository.config.getString("remote", "origin", "url")?.trimEnd('/') == url.trim().trimEnd('/')) {
+                    "That project folder belongs to another repository. Choose a different project name."
+                }
+            }
+            return@runCatching dest
+        }
+        require(!dest.exists()) { "A non-Git folder already exists at this path. Its files have been preserved." }
+        dest.parentFile?.mkdirs()
+        val temp = File(dest.parentFile, ".clone-" + java.util.UUID.randomUUID())
+        try {
+            val cmd = Git.cloneRepository().setURI(url.trim()).setDirectory(temp).setTimeout(120)
+            if (token.isNotBlank()) cmd.setCredentialsProvider(credentials(username, token, uri.host))
+            cmd.call().close()
+            check(temp.renameTo(dest)) { "Could not save the cloned project." }
+            dest
+        } finally { if (temp.exists()) temp.deleteRecursively() }
+    }
+
+    private fun credentials(username: String, token: String, host: String?): UsernamePasswordCredentialsProvider {
+        require(host.equals("github.com", ignoreCase = true)) { "Saved GitHub credentials are used only with github.com HTTPS remotes." }
+        return UsernamePasswordCredentialsProvider(username.ifBlank { "x-access-token" }, token)
+    }
+
+    private fun remoteCredentials(git: Git, username: String, token: String): UsernamePasswordCredentialsProvider {
+        val remote = git.repository.config.getString("remote", "origin", "url") ?: error("No origin remote configured.")
+        val uri = URI(remote)
+        require(uri.scheme == "https" && uri.userInfo == null) { "Use an HTTPS origin without embedded credentials." }
+        return credentials(username, token, uri.host)
+    }
 
     fun push(root: File, username: String, token: String): Result<Unit> = runGit(root) { git ->
-        git.push()
-            .setCredentialsProvider(UsernamePasswordCredentialsProvider(username.ifBlank { token }, token))
-            .call()
+        val results = git.push().setRemote("origin").setTimeout(120)
+            .setCredentialsProvider(remoteCredentials(git, username, token)).call().toList()
+        val updates = results.flatMap { it.remoteUpdates }
+        require(updates.isNotEmpty()) { "No remote branch was updated; check your branch and origin." }
+        val rejected = updates.filter { it.status != RemoteRefUpdate.Status.OK && it.status != RemoteRefUpdate.Status.UP_TO_DATE }
+        require(rejected.isEmpty()) { rejected.joinToString("; ") { "${it.remoteName}: ${it.status} ${it.message.orEmpty()}" } }
     }
 
     fun pull(root: File, username: String, token: String): Result<Unit> = runGit(root) { git ->
-        git.pull()
-            .setCredentialsProvider(UsernamePasswordCredentialsProvider(username.ifBlank { token }, token))
-            .call()
+        require(git.status().call().isClean) { "Commit or resolve local changes before pulling." }
+        val result = git.pull().setRemote("origin").setTimeout(120)
+            .setCredentialsProvider(remoteCredentials(git, username, token)).call()
+        require(result.isSuccessful) { "Pull needs attention: ${result.mergeResult ?: result.rebaseResult}. Resolve conflicts before pushing." }
+    }
+
+    fun setOrigin(root: File, url: String): Result<Unit> = runGit(root) { git ->
+        val uri = URI(url.trim())
+        require(uri.scheme == "https" && uri.host == "github.com" && uri.userInfo == null && uri.path.count { it == '/' } >= 2) { "Use an HTTPS GitHub repository URL without credentials." }
+        git.repository.config.apply {
+            setString("remote", "origin", "url", url.trim())
+            setString("remote", "origin", "fetch", "+refs/heads/*:refs/remotes/origin/*")
+            val branch = git.repository.branch
+            setString("branch", branch, "remote", "origin")
+            setString("branch", branch, "merge", "refs/heads/$branch")
+            save()
+        }
     }
 
     private fun runGit(root: File, block: (Git) -> Unit): Result<Unit> =

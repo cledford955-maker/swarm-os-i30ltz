@@ -15,8 +15,12 @@ import 'package:go_router/go_router.dart';
 
 // ─── Chat State ─────────────────────────────────────────────────────────────
 
+// Was a hardcoded 'default-coding-swarm' for every agent regardless of id —
+// agent.defaultSwarmId existed on the Agent model but nothing ever read it,
+// so per-agent defaults (antigravity-swarm, therapist-swarm, nemotron-swarm
+// for system/gaming/eval agents, ...) were dead metadata. Now reads it.
 final agentModelProvider = StateProvider.family<String, String>(
-    (ref, agentId) => 'default-coding-swarm');
+    (ref, agentId) => getAgent(agentId)?.defaultSwarmId ?? 'default-coding-swarm');
 
 class ChatMsg {
   final String id;

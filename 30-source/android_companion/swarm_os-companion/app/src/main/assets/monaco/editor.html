@@ -9,18 +9,7 @@
   html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1e1e; }
   #editor-container { width: 100%; height: 100%; }
 </style>
-<!--
-  NOTE FOR BUILD:
-  Download the Monaco Editor standalone release and place the files here:
-    assets/monaco/vs/loader.js
-    assets/monaco/vs/editor/editor.main.js
-    assets/monaco/vs/editor/editor.main.css
-    assets/monaco/vs/base/... (all Monaco dist files)
 
-  Download from: https://www.npmjs.com/package/monaco-editor
-  Run: npm install monaco-editor
-  Copy: node_modules/monaco-editor/min/vs → assets/monaco/vs
--->
 <link rel="stylesheet" href="vs/editor/editor.main.css"/>
 </head>
 <body>
@@ -41,7 +30,7 @@ require(['vs/editor/editor.main'], function() {
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
     fontLigatures: true,
     lineNumbers: 'on',
-    minimap: { enabled: true, maxColumn: 80 },
+    minimap: { enabled: false, maxColumn: 80 },
     scrollBeyondLastLine: false,
     wordWrap: 'off',
     tabSize: 4,
@@ -67,7 +56,7 @@ require(['vs/editor/editor.main'], function() {
   // ── Content change → notify Android ────────────────────────────────────────
   editor.onDidChangeModelContent(() => {
     if (!isLoading && currentTabId) {
-      Android.onContentChanged(currentTabId);
+      Android.onContentChanged(currentTabId, editor.getValue());
     }
   });
 

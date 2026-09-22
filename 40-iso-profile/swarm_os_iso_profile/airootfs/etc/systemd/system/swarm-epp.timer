@@ -1,0 +1,11 @@
+[Unit]
+Description=Recheck SWARM CPU energy preference on power-source changes
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=20s
+AccuracySec=2s
+Unit=swarm-epp.service
+
+[Install]
+WantedBy=timers.target

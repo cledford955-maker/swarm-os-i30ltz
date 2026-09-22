@@ -1,0 +1,331 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SWARM Overlay</title>
+<style>
+  :root {
+    --bg: #05060a;
+    --panel: #0d0f16;
+    --panel-border: #1c2230;
+    --accent: #00e5ff;
+    --accent-dim: #00e5ff55;
+    --text: #e8f4f8;
+    --text-muted: #7d8a9a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    /* Not fully opaque even at rest — the window itself is created
+       transparent (wry with_transparent), so full opacity here would
+       defeat that. A frosted dark panel reads fine over most games. */
+    background: rgba(5, 6, 10, 0.92);
+    color: var(--text);
+    font-family: -apple-system, "Inter", "Segoe UI", sans-serif;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: opacity 120ms ease, background 120ms ease;
+  }
+  /* Toggled by main.rs while Super is held (see PEEK_ON_JS/PEEK_OFF_JS) —
+     fades the whole HUD so the game underneath is actually visible. */
+  body.swarm-overlay-peek {
+    background: transparent;
+    opacity: 0.12;
+  }
+  h1 {
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 4px 0;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .panel h2 {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 10px 0;
+  }
+
+  /* Now Playing */
+  #media-empty { color: var(--text-muted); font-size: 13px; }
+  #media-body { display: none; gap: 10px; flex-direction: column; }
+  .media-track { display: flex; gap: 10px; align-items: center; }
+  .media-art {
+    width: 48px; height: 48px; border-radius: 6px; background: #1c2230;
+    background-size: cover; background-position: center; flex-shrink: 0;
+  }
+  .media-title { font-size: 14px; font-weight: 600; }
+  .media-artist { font-size: 12px; color: var(--text-muted); }
+  .media-controls { display: flex; gap: 8px; align-items: center; }
+  .media-controls button {
+    background: #14181f; border: 1px solid var(--panel-border); color: var(--text);
+    border-radius: 6px; width: 34px; height: 34px; cursor: pointer; font-size: 14px;
+  }
+  .media-controls button:hover { border-color: var(--accent-dim); color: var(--accent); }
+  .media-controls input[type=range] { flex: 1; accent-color: var(--accent); }
+
+  /* Shared by the browser-open and chat forms — text input + action button */
+  #browser-form, #chat-form { display: flex; gap: 8px; }
+  #browser-input, #chat-input {
+    flex: 1; background: #14181f; border: 1px solid var(--panel-border); color: var(--text);
+    border-radius: 6px; padding: 8px 10px; font-size: 13px;
+  }
+  #browser-form button, #chat-form button {
+    background: var(--accent); color: #05060a; border: none; border-radius: 6px;
+    padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+
+  /* App-launch buttons — normal width, unlike the fixed-size media icons above */
+  .app-buttons { display: flex; gap: 8px; }
+  .app-buttons button {
+    background: #14181f; border: 1px solid var(--panel-border); color: var(--text);
+    border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+  .app-buttons button:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+  /* Lucille chat */
+  #chat-log { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 10px; }
+  .chat-msg { font-size: 13px; padding: 6px 10px; border-radius: 8px; max-width: 85%; }
+  .chat-msg.user { background: #14181f; align-self: flex-end; }
+  .chat-msg.assistant { background: #0a1a1e; border: 1px solid var(--accent-dim); align-self: flex-start; }
+  .chat-msg.action { background: transparent; border: 1px dashed var(--accent-dim); color: var(--text-muted); font-size: 11px; align-self: flex-start; }
+  .chat-msg.assistant.thinking { color: var(--text-muted); font-style: italic; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  #chat-input:disabled, #chat-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+</head>
+<body>
+  <h1>SWARM Overlay</h1>
+
+  <div class="panel">
+    <h2>Now Playing</h2>
+    <div id="media-empty">Nothing playing.</div>
+    <div id="media-body">
+      <div class="media-track">
+        <div class="media-art" id="media-art"></div>
+        <div>
+          <div class="media-title" id="media-title"></div>
+          <div class="media-artist" id="media-artist"></div>
+        </div>
+      </div>
+      <div class="media-controls">
+        <button id="btn-prev" title="Previous">&#9198;</button>
+        <button id="btn-playpause" title="Play/Pause">&#9199;</button>
+        <button id="btn-next" title="Next">&#9197;</button>
+        <input type="range" id="vol" min="0" max="1" step="0.01">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Lucille</h2>
+    <div id="chat-log"></div>
+    <form id="chat-form">
+      <input id="chat-input" type="text" placeholder="Ask Lucille..." autocomplete="off">
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>Walkthrough / Web</h2>
+    <form id="browser-form">
+      <input id="browser-input" type="text" placeholder="Search or paste a URL..." autocomplete="off">
+      <button type="submit">Open</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>Apps</h2>
+    <div class="app-buttons">
+      <button type="button" id="btn-chrome">Chrome</button>
+      <button type="button" id="btn-opera-gx">Opera GX</button>
+    </div>
+  </div>
+
+<script>
+const API = "http://127.0.0.1:8401";
+
+async function refreshMedia() {
+  try {
+    const res = await fetch(`${API}/api/media/status`);
+    const s = await res.json();
+    const empty = document.getElementById('media-empty');
+    const body = document.getElementById('media-body');
+    if (!s.available) {
+      empty.style.display = 'block';
+      body.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    body.style.display = 'flex';
+    document.getElementById('media-title').textContent = s.title || '(untitled)';
+    document.getElementById('media-artist').textContent = s.artist || '';
+    document.getElementById('media-art').style.backgroundImage = s.artUrl ? `url('${s.artUrl}')` : 'none';
+    document.getElementById('btn-playpause').textContent = s.status === 'Playing' ? '⏸' : '▶';
+    if (s.volumeKnown) document.getElementById('vol').value = s.volume;
+  } catch (e) {
+    document.getElementById('media-empty').textContent = 'GamingAgent unreachable.';
+    document.getElementById('media-empty').style.display = 'block';
+    document.getElementById('media-body').style.display = 'none';
+  }
+}
+
+async function mediaControl(action) {
+  try {
+    await fetch(`${API}/api/media/control`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    });
+  } catch (_) {}
+  refreshMedia();
+}
+
+document.getElementById('btn-prev').onclick = () => mediaControl('previous');
+document.getElementById('btn-next').onclick = () => mediaControl('next');
+document.getElementById('btn-playpause').onclick = () => mediaControl('play-pause');
+document.getElementById('vol').oninput = async (e) => {
+  try {
+    await fetch(`${API}/api/media/volume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ volume: parseFloat(e.target.value) }),
+    });
+  } catch (_) {}
+};
+
+refreshMedia();
+setInterval(refreshMedia, 4000);
+
+// Walkthrough / Web — window.ipc is injected by wry (dashboard mode only,
+// see main.rs's with_ipc_handler). Not present when this page is opened in
+// an ordinary browser (e.g. during dev/testing) — sendIpc() no-ops with a
+// console log instead of throwing, so the rest of the page still works.
+// "swarmos" or "docs.foo" reads as a search term unless it already looks
+// like a URL.
+function sendIpc(message) {
+  if (window.ipc && typeof window.ipc.postMessage === 'function') {
+    window.ipc.postMessage(message);
+  } else {
+    console.log('[swarm-overlay] (no wry IPC bridge, dev mode) would send:', message);
+  }
+}
+function looksLikeUrl(s) {
+  return /^https?:\/\//i.test(s) || (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(s) && !s.includes(' '));
+}
+function openBrowser(query) {
+  const url = looksLikeUrl(query)
+    ? (/^https?:\/\//i.test(query) ? query : `https://${query}`)
+    : `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  sendIpc(`open_browser:${url}`);
+}
+
+document.getElementById('browser-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const input = document.getElementById('browser-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  openBrowser(text);
+});
+
+document.getElementById('btn-chrome').onclick = () => sendIpc('open_app:chrome');
+document.getElementById('btn-opera-gx').onclick = () => sendIpc('open_app:opera-gx');
+
+// Lucille chat — plain non-streaming /api/lucille/chat, one turn per submit.
+// Lucille's system prompt (see LucyServer... err, GamingAgent-go's
+// lucille_service.go buildContextMessages) can end a reply with a trailing
+// "ACTION: <verb> [arg]" line when the user asked her to actually do
+// something rather than just answer — parsed out here and dispatched
+// locally rather than shown as chat text.
+let sessionId = '';
+function appendChatMsg(role, text) {
+  const log = document.getElementById('chat-log');
+  const el = document.createElement('div');
+  el.className = `chat-msg ${role}`;
+  el.textContent = text;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+const MEDIA_ACTIONS = new Set(['media_play', 'media_pause', 'media_play_pause', 'media_next', 'media_previous', 'media_stop']);
+
+function dispatchAction(verb, arg) {
+  if (MEDIA_ACTIONS.has(verb)) {
+    const action = verb.replace('media_', '').replace('_', '-');
+    mediaControl(action);
+    appendChatMsg('action', `→ ${action}`);
+  } else if (verb === 'open_browser' && arg) {
+    openBrowser(arg);
+    appendChatMsg('action', `→ opening ${arg}`);
+  } else if (verb === 'open_app' && arg) {
+    sendIpc(`open_app:${arg}`);
+    appendChatMsg('action', `→ launching ${arg}`);
+  }
+}
+
+function extractAction(replyText) {
+  const m = replyText.match(/\n?ACTION:\s*(\S+)(?:\s+(.+))?\s*$/);
+  if (!m) return { text: replyText, verb: null, arg: null };
+  return { text: replyText.slice(0, m.index).trim(), verb: m[1], arg: m[2] };
+}
+
+// Nemotron is a reasoning model with real chain-of-thought before it
+// answers — occasionally, under NVIDIA-side load, this has been observed to
+// take up to (and even exceed) GamingAgent's own 120s upstream timeout with
+// zero bytes back in the meantime. A silent, frozen chat panel for up to two
+// minutes reads as broken even when it isn't, so show a "thinking" bubble
+// immediately and disable the form until a reply (or error) lands.
+function setChatBusy(busy) {
+  document.getElementById('chat-input').disabled = busy;
+  document.querySelector('#chat-form button').disabled = busy;
+}
+
+document.getElementById('chat-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendChatMsg('user', text);
+  setChatBusy(true);
+  const thinkingEl = appendChatMsg('assistant thinking', 'Lucille is thinking…');
+  try {
+    const res = await fetch(`${API}/api/lucille/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        messages: [{ role: 'user', content: text }],
+      }),
+    });
+    const data = await res.json();
+    thinkingEl.remove();
+    sessionId = data.sessionId || sessionId;
+    if (data.error) {
+      appendChatMsg('assistant', `(error: ${data.error})`);
+      return;
+    }
+    const { text: shown, verb, arg } = extractAction(data.reply || '');
+    if (shown) appendChatMsg('assistant', shown);
+    if (verb) dispatchAction(verb, arg);
+  } catch (err) {
+    thinkingEl.remove();
+    appendChatMsg('assistant', '(GamingAgent unreachable)');
+  } finally {
+    setChatBusy(false);
+  }
+});
+</script>
+</body>
+</html>

@@ -21,15 +21,14 @@ type SteamResponse struct {
 // ── GFN ──────────────────────────────────────────────────────────────────────
 
 type GfnGame struct {
-	Id          string   `json:"id"`
-	Title       string   `json:"title"`
-	SteamUrl    string   `json:"steamUrl"`
-	SteamAppId  int      `json:"steamAppId"`
-	Status      string   `json:"status"`
-	Genres      []string `json:"genres"`
-	Description string   `json:"description"`
-	Publisher   string   `json:"publisher"`
-	ReleaseYear int      `json:"releaseYear"`
+	Id         int64    `json:"id"`
+	Title      string   `json:"title"`
+	SteamUrl   string   `json:"steamUrl"`
+	SteamAppId int      `json:"-"`
+	Status     string   `json:"status"`
+	Genres     []string `json:"genres"`
+	Publisher  string   `json:"publisher"`
+	Store      string   `json:"store"`
 }
 
 // ── Enriched game (intersection result) ──────────────────────────────────────
@@ -126,4 +125,35 @@ type ChatHistoryEntry struct {
 	Role      string `json:"role"`
 	Content   string `json:"content"`
 	CreatedAt string `json:"createdAt"`
+}
+
+// ── Media control (MPRIS via playerctl) ────────────────────────────────────────
+
+type MediaStatus struct {
+	Available   bool     `json:"available"`
+	Player      string   `json:"player,omitempty"`
+	PlayerLabel string   `json:"playerLabel,omitempty"`
+	Status      string   `json:"status,omitempty"` // "Playing" | "Paused" | "Stopped"
+	Title       string   `json:"title,omitempty"`
+	Artist      string   `json:"artist,omitempty"`
+	Album       string   `json:"album,omitempty"`
+	ArtUrl      string   `json:"artUrl,omitempty"`
+	Position    string   `json:"position,omitempty"` // formatted h:mm:ss
+	Duration    string   `json:"duration,omitempty"` // formatted h:mm:ss
+	Volume      float64  `json:"volume"`
+	VolumeKnown bool     `json:"volumeKnown"`
+	Players     []string `json:"players,omitempty"` // all active MPRIS player instances
+}
+
+type MediaControlRequest struct {
+	// One of: play, pause, play-pause, next, previous, stop
+	Action string `json:"action"`
+	// Optional: target a specific player instance from MediaStatus.Players.
+	// Empty targets playerctl's default (most-recently-active) player.
+	Player string `json:"player,omitempty"`
+}
+
+type MediaVolumeRequest struct {
+	Volume float64 `json:"volume"` // 0.0-1.0
+	Player string  `json:"player,omitempty"`
 }

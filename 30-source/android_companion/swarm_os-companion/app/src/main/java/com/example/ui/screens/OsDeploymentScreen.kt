@@ -1,260 +1,96 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import android.net.Uri
+import android.provider.DocumentsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun OsDeploymentScreen(
-    isoDownloadProgress: Float,
-    isUsbMounted: Boolean,
-    grubCommandProposal: String,
-    isOfflineAi: Boolean,
-    onDownloadIso: (String) -> Unit,
-    onToggleUsbMount: () -> Unit,
-    onAskGrubHelp: (String) -> Unit,
-    onSendHidCommand: (String) -> Unit,
-    onSendHidEnter: () -> Unit,
-    onToggleAiMode: () -> Unit
+    isoDownloadProgress: Float, isUsbMounted: Boolean, grubCommandProposal: String, isOfflineAi: Boolean,
+    onDownloadIso: (String) -> Unit, onToggleUsbMount: () -> Unit, onAskGrubHelp: (String) -> Unit,
+    onSendHidCommand: (String) -> Unit, onSendHidEnter: () -> Unit, onToggleAiMode: () -> Unit
 ) {
-    var grubIssue by remember { mutableStateOf("") }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            Text(
-                text = "OS Deployment & Live USB",
-                color = TextPrimary,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Download ISOs and boot via USB Mass Storage Emulation.",
-                color = TextSecondary,
-                fontSize = 12.sp
-            )
-        }
-
-        // Live USB Controls
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CarbonSurface),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, CarbonBorder, RoundedCornerShape(16.dp))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Select ISO to Download", color = NvidiaGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    IsoRow("SWARM_OS_v1.iso", "64-bit • 2.1 GB", onDownloadIso)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    IsoRow("Ubuntu_24.04.iso", "64-bit • 3.5 GB", onDownloadIso)
-
-                    if (isoDownloadProgress > 0f && isoDownloadProgress < 1f) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Downloading...", color = TextSecondary, fontSize = 12.sp)
-                        LinearProgressIndicator(
-                            progress = { isoDownloadProgress },
-                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                            color = NvidiaGreen,
-                            trackColor = CarbonSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Divider(color = CarbonBorder)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("USB Mass Storage Emulation", color = TextPrimary, fontWeight = FontWeight.Bold)
-                            Text(if (isUsbMounted) "Phone acting as bootable flash drive" else "Disconnected", color = if (isUsbMounted) NvidiaGreen else TextSecondary, fontSize = 12.sp)
-                        }
-                        Switch(
-                            checked = isUsbMounted,
-                            onCheckedChange = { onToggleUsbMount() },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.Black,
-                                checkedTrackColor = NvidiaGreen,
-                                uncheckedThumbColor = TextMuted,
-                                uncheckedTrackColor = CarbonSurfaceVariant
-                            )
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            Text(
-                text = "DR. I30LTZ GRUB Recovery & HID Keyboard",
-                color = TextPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Phone acts as USB Keyboard. Review AI command before injecting.",
-                color = TextSecondary,
-                fontSize = 12.sp
-            )
-        }
-
-        // AI Mode Toggle
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CarbonSurfaceVariant)
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CloudOff, contentDescription = "Offline Mode", tint = if (isOfflineAi) NvidiaGreen else TextMuted, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("DR. I30LTZ Offline Nano-Model", color = TextPrimary, fontSize = 14.sp)
-                }
-                Switch(
-                    checked = isOfflineAi,
-                    onCheckedChange = { onToggleAiMode() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.Black,
-                        checkedTrackColor = NvidiaGreen,
-                        uncheckedThumbColor = TextMuted,
-                        uncheckedTrackColor = CarbonSurface
-                    )
-                )
-            }
-        }
-
-        // GRUB Keyboard
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CarbonSurface),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, CarbonBorder, RoundedCornerShape(16.dp))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = grubIssue,
-                        onValueChange = { grubIssue = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("e.g., Bootmgr missing, how to chainload Windows?", color = TextMuted) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NvidiaGreen,
-                            unfocusedBorderColor = CarbonBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            cursorColor = NvidiaGreen
-                        ),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = { onAskGrubHelp(grubIssue) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = CarbonSurfaceVariant, contentColor = NvidiaGreen),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(Icons.Default.Psychology, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Ask DR. I30LTZ for GRUB Command")
-                    }
-
-                    if (grubCommandProposal.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("AI Recommended Command:", color = TextSecondary, fontSize = 12.sp)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.Black)
-                                .border(1.dp, CarbonBorder, RoundedCornerShape(8.dp))
-                                .padding(12.dp)
-                        ) {
-                            Text(grubCommandProposal, color = NvidiaGreen, fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                onClick = { onSendHidCommand(grubCommandProposal) },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = NvidiaGreen, contentColor = Color.Black),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(Icons.Default.Keyboard, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Type via USB")
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var issue by remember { mutableStateOf("") }
+    var selected by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var report by remember { mutableStateOf("Choose accessible files, then a separate destination such as a USB OTG drive. Originals are never deleted.") }
+    var busy by remember { mutableStateOf(false) }
+    val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { selected = it }
+    val destination = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        if(tree != null && selected.isNotEmpty()) {
+            busy = true
+            val sources = selected.toList()
+            scope.launch {
+                report = withContext(Dispatchers.IO) {
+                    var completed = 0; var bytes = 0L
+                    val errors = mutableListOf<String>()
+                    val resolver = context.contentResolver
+                    val parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+                    for(source in sources) {
+                        var target: Uri? = null
+                        var name = "recovered-file"
+                        try {
+                            resolver.query(source, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if(c.moveToFirst()) name = c.getString(0) }
+                            // Unique destination avoids overwriting an existing backup or source.
+                            val backupName = "${java.util.UUID.randomUUID().toString().take(8)}-$name"
+                            target = checkNotNull(DocumentsContract.createDocument(resolver, parent, resolver.getType(source) ?: "application/octet-stream", backupName)) { "Destination refused file creation" }
+                            val expected = java.security.MessageDigest.getInstance("SHA-256")
+                            var copied = 0L
+                            checkNotNull(resolver.openInputStream(source)).use { input ->
+                                checkNotNull(resolver.openOutputStream(target, "w")).use { output ->
+                                    val buffer = ByteArray(65536)
+                                    while(true) { val n = input.read(buffer); if(n < 0) break; output.write(buffer,0,n); expected.update(buffer,0,n); copied += n }
+                                }
                             }
-
-                            Button(
-                                onClick = { onSendHidEnter() },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = ElectricRed, contentColor = Color.White),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(Icons.Default.KeyboardReturn, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Send ENTER")
-                            }
+                            val actual = java.security.MessageDigest.getInstance("SHA-256")
+                            checkNotNull(resolver.openInputStream(target)).use { input -> val buffer=ByteArray(65536); while(true) { val n=input.read(buffer);if(n<0)break;actual.update(buffer,0,n) } }
+                            check(expected.digest().contentEquals(actual.digest())) { "Destination verification failed" }
+                            completed++; bytes += copied
+                        } catch(e: Exception) {
+                            target?.let { runCatching { DocumentsContract.deleteDocument(resolver,it) } }
+                            errors.add("$name: ${e.message}")
                         }
                     }
+                    "Copied and SHA-256 verified $completed/${sources.size} files ($bytes bytes). Originals preserved." + if(errors.isEmpty()) "" else "\nFailed:\n" + errors.joinToString("\n")
                 }
+                busy = false
             }
         }
     }
-}
-
-@Composable
-fun IsoRow(name: String, details: String, onDownload: (String) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(CarbonSurfaceVariant.copy(alpha = 0.5f))
-            .border(1.dp, CarbonBorder, RoundedCornerShape(8.dp))
-            .clickable { onDownload(name) }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Default.Save, contentDescription = null, tint = NvidiaGreen, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(details, color = TextSecondary, fontSize = 12.sp)
+    Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        Text("I30LTZ Recovery OS tools", style=MaterialTheme.typography.headlineSmall)
+        Text("Install and repair the PC through Remote PC / Terminal while I30LTZ Recovery OS is running. Check the target disk and keep backups before using installer or repair commands.")
+        Text("SWARM release ISOs live only at /mnt/ventoy/ISO/SWARM_OS/ on the paired computer: ten rolling builds, plus releases you explicitly mark Stable. Use that computer's Manage SWARM ISOs desktop shortcut. This phone does not download duplicate releases.")
+        HorizontalDivider()
+        Text("Rescue accessible files", style=MaterialTheme.typography.titleMedium)
+        Text("Copy readable files from phone storage or a connected USB drive to a separate backup. This does not recover deleted sectors or bypass Android encryption. Deleted-file and damaged-disk recovery runs in I30LTZ Recovery OS on the PC.")
+        Button(onClick={files.launch(arrayOf("*/*"))},enabled=!busy) { Text("Choose files (${selected.size})") }
+        Button(onClick={destination.launch(null)},enabled=selected.isNotEmpty() && !busy) { Text("Choose backup destination & copy") }
+        if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        SelectionContainer { Text(report) }
+        HorizontalDivider()
+        Text("GRUB help", style=MaterialTheme.typography.titleMedium)
+        Text("Describe the actual error, boot mode and disks. AI suggestions require review and are never executed automatically. USB keyboard injection and phone-as-boot-drive emulation are unavailable in this app.")
+        OutlinedTextField(issue,{issue=it},label={Text("Boot error and system details")},modifier=Modifier.fillMaxWidth())
+        Button(onClick={onAskGrubHelp(issue)},enabled=issue.isNotBlank()){Text("Ask I30LTZ")}
+        if(grubCommandProposal.isNotBlank()) {
+            SelectionContainer { Text(grubCommandProposal) }
+            OutlinedButton(onClick={onSendHidCommand(grubCommandProposal)}){Text("Copy suggested command")}
         }
-        Icon(Icons.Default.Download, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(20.dp))
+        Text("Offline AI is not installed. Saved reference material remains available under Cheat Sheet.")
     }
 }

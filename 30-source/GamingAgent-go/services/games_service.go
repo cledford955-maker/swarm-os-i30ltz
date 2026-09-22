@@ -90,9 +90,8 @@ func (s *GamesService) GetIntersection() ([]models.EnrichedGame, error) {
 			Genres:          []string{},
 		}
 		if gfn != nil {
-			eg.GfnId = gfn.Id
-			eg.GfnUrl = fmt.Sprintf("https://play.geforcenow.com/games?game-id=%s", gfn.Id)
-			eg.Description = gfn.Description
+			eg.GfnId = fmt.Sprintf("%d", gfn.Id)
+			eg.GfnUrl = fmt.Sprintf("https://play.geforcenow.com/games?game-id=%d", gfn.Id)
 			eg.Publisher = gfn.Publisher
 			if gfn.Genres != nil {
 				eg.Genres = gfn.Genres
@@ -121,9 +120,24 @@ func (s *GamesService) GetGenres() ([]string, error) {
 	return genres, nil
 }
 
+// cheapSharkUA satisfies CheapShark's User-Agent requirement (added on their
+// end 2026; a bare Go-http-client UA now gets a 400 "Missing or generic
+// User-Agent header detected" instead of real results, which GetPrices was
+// previously swallowing as a misleading "no results for appId" error).
+const cheapSharkUA = "SwarmOS-GamingAgent/1.0 (+https://github.com/i30ltz)"
+
+func (s *GamesService) cheapSharkGet(url string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", cheapSharkUA)
+	return s.cs.Do(req)
+}
+
 func (s *GamesService) GetPrices(appId string) (*models.CheapSharkGameDetail, error) {
 	url := fmt.Sprintf("https://www.cheapshark.com/api/1.0/games?steamAppID=%s&limit=1", appId)
-	resp, err := s.cs.Get(url)
+	resp, err := s.cheapSharkGet(url)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +150,7 @@ func (s *GamesService) GetPrices(appId string) (*models.CheapSharkGameDetail, er
 		return nil, fmt.Errorf("cheapshark: no results for appId %s", appId)
 	}
 
-	detail, err := s.cs.Get(fmt.Sprintf("https://www.cheapshark.com/api/1.0/games?id=%s", games[0].GameID))
+	detail, err := s.cheapSharkGet(fmt.Sprintf("https://www.cheapshark.com/api/1.0/games?id=%s", games[0].GameID))
 	if err != nil {
 		return nil, err
 	}
