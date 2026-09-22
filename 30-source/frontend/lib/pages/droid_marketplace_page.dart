@@ -348,6 +348,10 @@ class _DroidMarketplacePageState extends State<DroidMarketplacePage> {
   Future<void> _install(DroidTool tool) async {
     final pkg = tool.installPackage;
     if (pkg == null || _busy.containsKey(tool.id)) return;
+    if (!await AppInstallerService.instance.ensureSudoAuthenticated(context)) {
+      return; // user cancelled the sudo prompt or gave up
+    }
+    if (!mounted) return;
     setState(() => _busy[tool.id] = 'Opening install terminal…');
     final ok = await AppInstallerService.instance.installAndRegister(
       pkg,

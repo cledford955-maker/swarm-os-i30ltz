@@ -2,6 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import '../theme/swarm_colors.dart';
+import '../theme/swarm_text_styles.dart';
 
 /// A package search result row from `yay -Ss` / `pacman -Ss`.
 @immutable
@@ -40,6 +44,117 @@ class AppInstallerService {
 
   /// Terminal emulators tried in order for the interactive install window.
   static const _terminals = ['alacritty', 'foot', 'xterm', 'konsole', 'tilix'];
+
+  /// Sudo password collected from the in-app dialog. Kept in memory only —
+  /// never written to disk — and re-validated with `sudo -S -v` on every
+  /// install, since the sudo timestamp expires (~15 min default).
+  static String? _sudoPass;
+
+  // ── Sudo pre-authentication ───────────────────────────────────────────────
+
+  /// Ensures root is pre-authorized before a terminal install opens, so the
+  /// user never has to type their password inside the spawned terminal
+  /// (which previously stalled the install flow).
+  ///
+  /// Shows a masked password dialog, validates it with `sudo -S -v`, and
+  /// caches it in memory for subsequent installs. Returns false if the user
+  /// cancelled or the password was rejected.
+  Future<bool> ensureSudoAuthenticated(BuildContext context) async {
+    final cached = _sudoPass;
+    if (cached != null && await validateSudoPassword(cached)) return true;
+    final pass = await _promptSudoPassword(context);
+    if (pass == null) return false;
+    _sudoPass = pass;
+    return true;
+  }
+
+  /// Validates a sudo password non-interactively (`sudo -S -v` reads it
+  /// from stdin). Exit 0 means the password is correct.
+  static Future<bool> validateSudoPassword(String password) async {
+    try {
+      final proc = await Process.start('sudo', ['-S', '-p', '', '-v']);
+      // Drain stderr/stdout so a chatty sudo never blocks on a full pipe.
+      unawaited(proc.stdout.drain<void>());
+      unawaited(proc.stderr.drain<void>());
+      proc.stdin.writeln(password);
+      await proc.stdin.close();
+      return await proc.exitCode == 0;
+    } catch (e) {
+      debugPrint('[AppInstaller] sudo validation failed: $e');
+      return false;
+    }
+  }
+
+  /// Masked in-app password prompt with up to 3 attempts. Returns the
+  /// validated password, or null on cancel / give-up.
+  Future<String?> _promptSudoPassword(
+    BuildContext context, {
+    String? errorText,
+    int attempt = 1,
+  }) async {
+    if (attempt > 3) return null;
+    final ctrl = TextEditingController();
+    final pass = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SwarmColors.bgElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: SwarmColors.border),
+        ),
+        title: Text('Sudo Password Required',
+            style: SwarmTextStyles.h3.copyWith(color: SwarmColors.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              errorText ??
+                  'Enter your password to authorize package installs. '
+                      'It stays in memory for this session and is never saved to disk.',
+              style: SwarmTextStyles.bodySmall
+                  .copyWith(color: errorText != null ? SwarmColors.statusCritical : SwarmColors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              obscureText: true,
+              autofocus: true,
+              onSubmitted: (v) => Navigator.pop(ctx, v),
+              decoration: InputDecoration(
+                hintText: 'Password',
+                hintStyle: const TextStyle(color: SwarmColors.textMuted, fontSize: 13),
+                prefixIcon: const Icon(Icons.lock_rounded, color: SwarmColors.textMuted, size: 18),
+                filled: true,
+                fillColor: SwarmColors.bgBase,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: SwarmColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: const Text('Authenticate', style: TextStyle(color: SwarmColors.accent)),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (pass == null || pass.isEmpty) return null;
+    if (await validateSudoPassword(pass)) return pass;
+    // Wrong password — retry with an error message.
+    return _promptSudoPassword(
+      context,
+      errorText: 'Incorrect password (${attempt}/3) — try again:',
+      attempt: attempt + 1,
+    );
+  }
 
   // ── Search ────────────────────────────────────────────────────────────────
 
@@ -121,10 +236,24 @@ class AppInstallerService {
     final marker = '$_markerDir/${DateTime.now().microsecondsSinceEpoch}_${command.hashCode}.done';
     await Directory(_markerDir).create(recursive: true);
 
+    // When a sudo password was pre-authorized in-app, validate it up front in
+    // this shell (same tty, so the timestamp carries to the install command's
+    // own sudo call) — the terminal then never prompts for a password. If the
+    // prefix fails or no password is cached, sudo falls back to prompting
+    // inside the terminal as before. The password travels via the process
+    // environment (readable only by the same user via /proc), never the
+    // command line, and is unset immediately after use.
+    final pass = _sudoPass;
+    final sudoPrefix = pass != null
+        ? r'printf "%s\n" "$SWARM_SUDO_PASS" | sudo -S -v 2>/dev/null && unset SWARM_SUDO_PASS; '
+        : '';
+
     // The marker is written after the command finishes (success or not);
     // the exit code is captured too so the caller can tell them apart.
     final wrapped =
-        '$command; echo \$? > "$marker" 2>/dev/null; echo "Done — you can close this window"; read -r';
+        '$sudoPrefix($command); echo \$? > "$marker" 2>/dev/null; echo "Done — you can close this window"; read -r';
+
+    final env = <String, String>{'TERM': 'xterm-256color', if (pass != null) 'SWARM_SUDO_PASS': pass};
 
     for (final term in _terminals) {
       if (!await _has(term)) continue;
@@ -132,6 +261,7 @@ class AppInstallerService {
         await Process.start(
           term,
           ['-e', 'bash', '-c', wrapped],
+          environment: env,
           mode: ProcessStartMode.detached,
         );
         return marker;

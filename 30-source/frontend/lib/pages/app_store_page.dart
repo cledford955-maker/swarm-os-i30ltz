@@ -68,6 +68,8 @@ class _AppStorePageState extends State<AppStorePage> {
 
   Future<void> _install(PackageResult pkg) async {
     if (_busy.containsKey(pkg.name)) return;
+    if (!await _installer.ensureSudoAuthenticated(context)) return; // cancelled / wrong password
+    if (!mounted) return;
     setState(() => _busy[pkg.name] = 'Starting…');
     final ok = await _installer.installAndRegister(
       pkg.name,
@@ -131,6 +133,8 @@ class _AppStorePageState extends State<AppStorePage> {
     );
     if (confirmed != true) return;
 
+    if (!await _installer.ensureSudoAuthenticated(context)) return; // cancelled / wrong password
+    if (!mounted) return;
     setState(() => _busy[app.packageName] = 'Starting…');
     final ok = await _installer.uninstallAndCleanup(
       app.packageName,
