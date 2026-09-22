@@ -261,7 +261,7 @@ class _AppsPageState extends ConsumerState<AppsPage> {
       _runningApps.add(app.id);
     });
 
-    final success = await SystemLauncher.launch(context, app.command, displayName: app.name);
+    await SystemLauncher.launch(context, app.command, displayName: app.name);
     
     if (mounted) {
       Future.delayed(const Duration(seconds: 4), () {
