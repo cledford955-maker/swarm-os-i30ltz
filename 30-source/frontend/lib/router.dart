@@ -22,6 +22,7 @@ import 'pages/lucille_chat_page.dart';
 import 'pages/test_lucy_server_page.dart';
 import 'pages/apps_page.dart';
 import 'pages/app_store_page.dart';
+import 'pages/droid_marketplace_page.dart';
 import 'pages/backend_page.dart';
 import 'pages/nvidia_page.dart';
 import 'pages/telemetry_page.dart';
@@ -74,6 +75,7 @@ final goRouter = GoRouter(
         GoRoute(path: '/agent/:id', builder: (_, state) => const ApexWorkstation()),
         GoRoute(path: '/apps', builder: (_, __) => const AppsPage()),
         GoRoute(path: '/appstore', builder: (_, __) => const AppStorePage()),
+        GoRoute(path: '/droid-tools', builder: (_, __) => const DroidMarketplacePage()),
         GoRoute(path: '/backend', builder: (_, __) => const BackendPage()),
         GoRoute(path: '/apex', builder: (_, __) => const ApexWorkstation()),
         GoRoute(path: '/coder', builder: (_, __) => const CoderPage()),

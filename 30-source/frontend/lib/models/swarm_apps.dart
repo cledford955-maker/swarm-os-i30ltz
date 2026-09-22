@@ -175,6 +175,11 @@ class SwarmAppRegistry {
       routePath: '/backend'),
 
     // ───────────── DROID ─────────────
+    SwarmApp(id: 'droid_market', name: 'Droid Market',
+      icon: Icons.store, color: Color(0xFF3DDC84),
+      categories: {SwarmAppCategory.droid},
+      description: 'Android Studio, SDK, emulators, adb, APK tools — all languages',
+      routePath: '/droid-tools', isFavorite: true),
     SwarmApp(id: 'droid_companion', name: 'Droid Companion',
       icon: Icons.phone_android, color: Color(0xFF4ADE80),
       categories: {SwarmAppCategory.droid},
