@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GamingAgent")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c0592d9fde47938da022acbe199899e6a6c6707c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+001a9eb658eeb78992f66e45d2baf1a4a5233fb3")]
 [assembly: System.Reflection.AssemblyProductAttribute("GamingAgent")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GamingAgent")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
