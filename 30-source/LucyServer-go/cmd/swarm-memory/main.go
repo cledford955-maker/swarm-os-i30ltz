@@ -27,10 +27,11 @@ Usage:
   swarm-memory list [-kind K] [-q TEXT] [-limit N]
   swarm-memory current [-kind K]
   swarm-memory import-docs [-brains /mnt/brains]
+  swarm-memory chatgpt [-dir /mnt/brains/chatgpt-import]
   swarm-memory claude [-dir ~/.claude/projects/-mnt-Lucy/memory]
   swarm-memory sync [-peer URL ...]          peers default to peers.json
   swarm-memory render                        regenerate PROJECT_MEMORY.md
-  swarm-memory tick                          import-docs + claude + sync + render
+  swarm-memory tick                          import-docs + claude + chatgpt + sync + render
   swarm-memory mirror DEST                   copy the memory into a git checkout
   swarm-memory status
 
@@ -129,6 +130,15 @@ func main() {
 			os.Exit(1)
 		}
 
+	case "chatgpt":
+		fsx := flag.NewFlagSet("chatgpt", flag.ExitOnError)
+		dir := fsx.String("dir", memory.DefaultChatGPTDir(store), "ChatGPT export directory")
+		check(fsx.Parse(args))
+		n, err := memory.ImportChatGPT(store, device, *dir)
+		check(err)
+		check(memory.RenderProjectMemory(store))
+		fmt.Printf("ChatGPT: %d changed snapshots imported (exports, not live cloud sync)\n", n)
+
 	case "render":
 		check(memory.RenderProjectMemory(store))
 		fmt.Println("Wrote", filepath.Join(store.Dir(), "PROJECT_MEMORY.md"))
@@ -148,6 +158,12 @@ func main() {
 			} else if len(res.Imported)+len(res.Exported)+len(res.Deleted) > 0 {
 				fmt.Printf("Claude memory: %d imported, %d written locally, %d deleted\n", len(res.Imported), len(res.Exported), len(res.Deleted))
 			}
+		}
+		if n, err := memory.ImportChatGPT(store, device, memory.DefaultChatGPTDir(store)); err != nil {
+			warn("chatgpt: %v", err)
+			failed = true
+		} else if n > 0 {
+			fmt.Printf("ChatGPT: %d changed snapshots imported\n", n)
 		}
 		if !runSync(store, device, nil) {
 			failed = true // unreachable peers are normal offline; still render

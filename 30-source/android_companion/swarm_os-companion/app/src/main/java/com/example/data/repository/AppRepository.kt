@@ -55,6 +55,8 @@ class AppRepository(
         val devices = dao.getAllDevices().first()
         // Migrate only the two exact old seeded rows, preserving user-added devices.
         for (device in devices) {
+            dao.updateDevice(device.copy(isConnected = false, cpuLoadPercent = -1, ramLoadPercent = -1,
+                storageAvailableGb = -1, syncStatus = "Awaiting fresh measurement"))
             val replacement = when {
                 device.deviceName == "a17 (Tailscale Workstation)" && device.ipAddress == "100.105.12.17" -> "CachyOS" to swarmConnection.host
                 device.deviceName == "a16 (Tailscale Server)" && device.ipAddress == "100.105.12.16" -> "SWARM OS" to "100.82.1.20"
@@ -71,45 +73,44 @@ class AppRepository(
 
     /// Polls a device's real stats from LucyServer's /api/system/stats and
     /// writes them to the row. Returns true if the device answered.
-    suspend fun refreshDeviceTelemetry(device: DeviceSyncEntity): Boolean {
-        return try {
-            val request = okhttp3.Request.Builder()
-                .url("http://${device.ipAddress}:${swarmConnection.port}/api/system/stats")
-                .addHeader("X-Swarm-Auth", swarmConnection.authToken)
-                .get()
-                .build()
-            val client = okhttp3.OkHttpClient()
-            val startedAt = System.currentTimeMillis()
-            val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                client.newCall(request).execute()
+    suspend fun refreshDeviceTelemetry(device: DeviceSyncEntity): Boolean =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val request = okhttp3.Request.Builder()
+                    .url("http://${device.ipAddress}:${swarmConnection.port}/api/system/stats")
+                    .header("X-Swarm-Auth", swarmConnection.authToken).build()
+                val started = System.nanoTime()
+                telemetryClient.newCall(request).execute().use { response ->
+                    check(response.isSuccessful) { "HTTP ${response.code}" }
+                    val stats = RemoteTelemetry.parse(org.json.JSONObject(response.body?.string().orEmpty()))
+                    database.deviceSyncDao().updateDevice(device.copy(
+                        isConnected = true, lastSyncTime = System.currentTimeMillis(),
+                        syncStatus = "Telemetry received", cpuLoadPercent = stats.cpu,
+                        ramLoadPercent = stats.ram, storageAvailableGb = stats.storage,
+                        pingMs = ((System.nanoTime() - started) / 1_000_000).toInt()))
+                }
+                true
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                database.deviceSyncDao().updateDevice(device.copy(isConnected = false,
+                    cpuLoadPercent = -1, ramLoadPercent = -1, storageAvailableGb = -1,
+                    syncStatus = "Unavailable (${e.message})"))
+                false
             }
-            val rttMs = (System.currentTimeMillis() - startedAt).toInt()
-            if (!response.isSuccessful) {
-                database.deviceSyncDao().insertDevice(
-                    device.copy(isConnected = false, syncStatus = "Unreachable (HTTP ${response.code})")
-                )
-                return false
-            }
-            val body = response.body?.string().orEmpty()
-            val json = org.json.JSONObject(body)
-            database.deviceSyncDao().insertDevice(
-                device.copy(
-                    isConnected = true,
-                    lastSyncTime = System.currentTimeMillis(),
-                    syncStatus = "Connected & Secure",
-                    cpuLoadPercent = json.optDouble("cpuPercent", 0.0).toInt(),
-                    ramLoadPercent = json.optDouble("ramPercent", 0.0).toInt(),
-                    storageAvailableGb = json.optDouble("storageFreeGb", 0.0).toInt(),
-                    pingMs = rttMs
-                )
-            )
-            true
-        } catch (e: Exception) {
-            database.deviceSyncDao().insertDevice(
-                device.copy(isConnected = false, syncStatus = "Unreachable (${e.message})")
-            )
-            false
         }
+
+    private val telemetryClient = okhttp3.OkHttpClient.Builder()
+        .callTimeout(12, java.util.concurrent.TimeUnit.SECONDS).build()
+
+    suspend fun refreshConfiguredNode() {
+        val dao = database.deviceSyncDao()
+        val rows = dao.getAllDevices().first()
+        val selected = rows.firstOrNull { it.ipAddress == swarmConnection.host }
+            ?: DeviceSyncEntity(deviceName = swarmConnection.host, deviceType = "PC", connectionType = "Configured computer",
+                ipAddress = swarmConnection.host, isConnected = false, lastSyncTime = 0, syncStatus = "Not tested").let {
+                    it.copy(id = dao.insertDevice(it))
+                }
+        refreshDeviceTelemetry(selected)
     }
 
     suspend fun addOrUpdateDevice(device: DeviceSyncEntity) {
@@ -141,7 +142,8 @@ class AppRepository(
             ramFreedMb = 0,
             junkCleanedMb = 0,
             summaryMessage = "${refreshed.deviceName}: CPU ${refreshed.cpuLoadPercent}%, " +
-                "RAM ${refreshed.ramLoadPercent}%, ${refreshed.storageAvailableGb}GB free, " +
+                "RAM ${refreshed.ramLoadPercent}%, " +
+                (if (refreshed.storageAvailableGb < 0) "storage unavailable, " else "${refreshed.storageAvailableGb}GB free, ") +
                 "${refreshed.pingMs}ms round trip."
         )
         database.systemScanDao().insertScan(scan)
@@ -149,9 +151,27 @@ class AppRepository(
         return scan
     }
 
-    suspend fun syncAllTasksWithPc() {
-        database.taskDao().markCompletedSyncedWithPc()
-        ttsVoiceManager.speak("DR. I30LTZ synchronized all completed tasks with your PC bridge!")
+    suspend fun syncAllTasksWithPc(): Int = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val tasks = database.taskDao().getAllTasks().first().filter { it.isCompleted && !it.syncedWithPc }
+        val engine = com.example.data.memory.MemorySyncEngine
+        for (task in tasks) {
+            val payload = org.json.JSONObject().put("device", engine.deviceId).put("kind", "task")
+                .put("key", "${engine.deviceId}:task:${task.id}")
+                .put("content", org.json.JSONObject().put("title", task.title).put("description", task.description)
+                    .put("completed", true).put("completedTaskId", task.id).toString())
+            val request = okhttp3.Request.Builder().url("${swarmConnection.httpBase()}/api/memory/entries")
+                .header("X-Swarm-Auth", swarmConnection.authToken)
+                .post(payload.toString().toRequestBody("application/json".toMediaType())).build()
+            telemetryClient.newCall(request).execute().use { response ->
+                check(response.isSuccessful) { "Shared-memory task sync returned HTTP ${response.code}; unsent tasks remain pending" }
+                val entry = com.example.data.memory.MemoryEntryEntity.fromJson(org.json.JSONObject(response.body?.string().orEmpty()))
+                check(entry != null && entry.key == payload.getString("key") && entry.content == payload.getString("content")) { "Server did not acknowledge this task" }
+                database.memoryDao().insertAll(listOf(entry))
+                database.taskDao().updateTask(task.copy(syncedWithPc = true))
+            }
+        }
+        engine.requestSync()
+        tasks.size
     }
 
     // System Scans

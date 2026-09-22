@@ -130,13 +130,13 @@ fun TaskSyncScreen(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        text = connectedDevice?.deviceName ?: "DR-i3OLTZ-PC-RIG",
+                                        text = connectedDevice?.deviceName ?: "No connected computer",
                                         color = TextPrimary,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp
                                     )
                                     Text(
-                                        text = "${connectedDevice?.connectionType ?: "USB / Wi-Fi"} • ${connectedDevice?.syncStatus ?: "Active"}",
+                                        text = "${connectedDevice?.connectionType ?: "USB / Wi-Fi"} • ${connectedDevice?.syncStatus ?: "Not connected"}",
                                         color = NeonGreen,
                                         fontSize = 11.sp
                                     )

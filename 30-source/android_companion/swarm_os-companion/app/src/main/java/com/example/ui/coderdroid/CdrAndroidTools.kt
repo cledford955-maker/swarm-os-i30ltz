@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-data class AndroidToolsState(val busy: Boolean = false, val status: String = "Check your paired computer to begin.", val log: String = "", val id: String = "", val built: Boolean = false, val apk: File? = null)
+data class AndroidToolsState(val busy: Boolean = false, val status: String = "Check your paired computer to begin.", val log: String = "", val id: String = "", val built: Boolean = false, val apk: File? = null, val buildHost: String = "")
 
 class AndroidToolsViewModel(app: Application) : AndroidViewModel(app) {
     val state = MutableStateFlow(AndroidToolsState())
@@ -59,7 +59,7 @@ class AndroidToolsViewModel(app: Application) : AndroidViewModel(app) {
         state.update { it.copy(status = "${connection.host}: SDK ${result.optBoolean("sdkAvailable")}, Java ${result.optBoolean("javaAvailable")}, ADB ${result.optBoolean("adbAvailable")}") }
     }
     fun build(root: File) = work {
-        state.update { AndroidToolsState(busy = true, status = "Preparing saved project…") }
+        state.update { AndroidToolsState(busy = true, status = "Preparing saved project…", buildHost = connection.httpBase()) }
         val archive = File.createTempFile("project-", ".zip", getApplication<Application>().cacheDir)
         try {
             zipProject(root, archive)
@@ -69,6 +69,7 @@ class AndroidToolsViewModel(app: Application) : AndroidViewModel(app) {
             var completed = false
             while (!completed) {
                 delay(2000)
+                check(connection.httpBase() == state.value.buildHost) { "Build computer changed; return to the original node to retrieve this build." }
                 val job = json("builds/$id")
                 val status = job.getString("state")
                 completed = status != "running"
@@ -77,6 +78,7 @@ class AndroidToolsViewModel(app: Application) : AndroidViewModel(app) {
         } finally { archive.delete() }
     }
     fun download() = work {
+        check(connection.httpBase() == state.value.buildHost) { "Select the computer that built this APK." }
         val id = state.value.id
         require(id.isNotBlank() && state.value.built)
         val dir = File(getApplication<Application>().filesDir, "apks").apply { mkdirs() }
@@ -100,6 +102,7 @@ class AndroidToolsViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun devices() = work { state.update { it.copy(log = json("devices").getString("output"), status = "Devices attached or paired to ${connection.host}") } }
     fun adb(action: String, address: String, code: String, serial: String) = work {
+        if (action == "install") check(connection.httpBase() == state.value.buildHost) { "Select the computer that built this APK." }
         val body = JSONObject().put("action", action).put("address", address.trim()).put("code", code.trim()).put("serial", serial.trim()).put("buildId", state.value.id)
         val result = json("adb", body.toString().toRequestBody("application/json".toMediaType()))
         state.update { it.copy(status = if(result.optBoolean("success")) "ADB $action completed" else "ADB $action failed", log = result.optString("output")) }

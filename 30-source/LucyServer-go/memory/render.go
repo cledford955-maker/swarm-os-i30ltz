@@ -58,6 +58,8 @@ func RenderProjectMemory(s *Store) error {
 	section("Decisions", KindDecision, true)
 	section("Facts", KindFact, true)
 	section("Claude memory", KindClaudeMemory, true)
+	section("ChatGPT saved memory (imported snapshot)", "chatgpt_memory", true)
+	section("ChatGPT conversations (imported snapshots; full text in log)", "chatgpt_conversation", false)
 	section("Core documents (full text in the log; originals on /mnt/brains)", KindDoc, false)
 
 	var notes []Entry

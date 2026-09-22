@@ -93,6 +93,16 @@ class _AppsPageState extends ConsumerState<AppsPage> {
       isCore: true,
     ),
     AppItem(
+      id: 'chatgpt',
+      name: 'ChatGPT',
+      description: 'OpenAI ChatGPT — desktop app window with native-client fallback',
+      category: 'AI & Dev',
+      icon: Icons.forum_rounded,
+      command: SystemLauncher.chatGptCmd,
+      accentColor: Color(0xFF10A37F),
+      isCore: true,
+    ),
+    AppItem(
       id: 'lucille_core_daemon',
       name: 'Lucille Core Daemon',
       description: 'Native C++20 engine with epoll supervisor and vector memory',

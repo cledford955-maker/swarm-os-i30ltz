@@ -13,6 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,16 +49,14 @@ fun SystemMonitorScreen(
 
     val selectedDevice = if (selectedId == PHONE_ID) null else devices.find { it.id == selectedId }
 
-    val cpuPct = if (selectedId == PHONE_ID)
-        (stats.runningProcessCount * 3).coerceIn(20, 95)
-    else
-        selectedDevice?.cpuLoadPercent ?: 0
-
-    val ramPct = if (selectedId == PHONE_ID) stats.ramPercentage else selectedDevice?.ramLoadPercent ?: 0
-    val pingMs = selectedDevice?.pingMs
-    val processes: List<ProcessEntryAvatar> = remember(selectedId) {
-        processesForDevice(selectedDevice).filter { it.pkg !in killedProcs }
-    }.filter { it.pkg !in killedProcs }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val measured = selectedDevice?.takeIf { it.isConnected && System.currentTimeMillis() - it.lastSyncTime < 60_000 }
+    val cpuPct = measured?.cpuLoadPercent ?: -1
+    val ramPct = if (selectedId == PHONE_ID) stats.ramPercentage else measured?.ramLoadPercent ?: -1
+    val pingMs = measured?.pingMs
+    val processState = rememberDeviceProcesses(selectedDevice)
+    val processes = processState.entries
 
     LaunchedEffect(lastKilled) {
         if (lastKilled != null) {
@@ -160,21 +160,21 @@ fun SystemMonitorScreen(
                 icon = Icons.Default.Speed,
                 iconTint = NvidiaGreen,
                 title = "CPU LOAD",
-                badge = "$cpuPct% ACTIVE",
+                badge = if (cpuPct < 0) "UNAVAILABLE" else "$cpuPct% ACTIVE",
                 badgeColor = if (cpuPct > 80) ElectricRed else NvidiaGreen
             ) {
                 LinearProgressIndicator(
-                    progress = { cpuPct / 100f },
+                    progress = { cpuPct.coerceAtLeast(0) / 100f },
                     modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
                     color = NvidiaGreen,
                     trackColor = CarbonSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    InfoStat("Active", "$cpuPct%")
-                    InfoStat("Idle", "${100 - cpuPct}%")
+                    InfoStat("Active", if (cpuPct < 0) "Unavailable" else "$cpuPct%")
+                    InfoStat("Idle", if (cpuPct < 0) "Unavailable" else "${100 - cpuPct}%")
                     if (pingMs != null) InfoStat("Network Ping", "${pingMs}ms")
-                    InfoStat("Threads", if (selectedId == PHONE_ID) "${stats.runningProcessCount}" else "${processes.size}")
+                    InfoStat("Visible processes", if (selectedId == PHONE_ID) "${stats.runningProcessCount}" else "${processes.size}")
                 }
             }
         }
@@ -185,11 +185,11 @@ fun SystemMonitorScreen(
                 icon = Icons.Default.Memory,
                 iconTint = ElectricPurple,
                 title = "RAM & ZRAM SWAP",
-                badge = "$ramPct% USED",
+                badge = if (ramPct < 0) "UNAVAILABLE" else "$ramPct% USED",
                 badgeColor = if (ramPct > 80) ElectricRed else NeonGreen
             ) {
                 LinearProgressIndicator(
-                    progress = { ramPct / 100f },
+                    progress = { ramPct.coerceAtLeast(0) / 100f },
                     modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
                     color = ElectricPurple,
                     trackColor = CarbonSurfaceVariant
@@ -204,9 +204,9 @@ fun SystemMonitorScreen(
                     }
                 } else {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        InfoStat("Load", "$ramPct%")
-                        InfoStat("Free", "${100 - ramPct}%")
-                        InfoStat("Status", if (ramPct < 60) "Optimal" else "High Load")
+                        InfoStat("Load", if (ramPct < 0) "Unavailable" else "$ramPct%")
+                        InfoStat("Free", if (ramPct < 0) "Unavailable" else "${100 - ramPct}%")
+                        InfoStat("Status", if (ramPct < 0) "Unavailable" else if (ramPct < 60) "Measured" else "High Load")
                     }
                 }
             }
@@ -218,7 +218,7 @@ fun SystemMonitorScreen(
                 icon = Icons.Default.Storage,
                 iconTint = ElectricCyan,
                 title = "STORAGE DYNAMICS",
-                badge = if (selectedId == PHONE_ID) "${stats.storagePercentage}% USED" else "${selectedDevice?.storageAvailableGb} GB FREE",
+                badge = if (selectedId == PHONE_ID) "${stats.storagePercentage}% USED" else if ((measured?.storageAvailableGb ?: -1) < 0) "UNAVAILABLE" else "${measured?.storageAvailableGb} GB FREE",
                 badgeColor = ElectricCyan
             ) {
                 if (selectedId == PHONE_ID) {
@@ -235,7 +235,7 @@ fun SystemMonitorScreen(
                         InfoStat("Total", "${stats.totalStorageGb} GB")
                     }
                 } else {
-                    Text("${selectedDevice?.storageAvailableGb} GB available on ${selectedDevice?.deviceName}", color = TextSecondary, fontSize = 12.sp)
+                    Text(if ((measured?.storageAvailableGb ?: -1) < 0) "This node does not report storage measurements." else "${measured?.storageAvailableGb} GB available on ${selectedDevice?.deviceName}", color = TextSecondary, fontSize = 12.sp)
                 }
             }
         }
@@ -284,7 +284,7 @@ fun SystemMonitorScreen(
                 ) {
                     Icon(Icons.Default.BugReport, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("MALWARE SCAN", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("SECURITY AUDIT", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -305,7 +305,7 @@ fun SystemMonitorScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.Close, contentDescription = null, tint = ElectricRed, modifier = Modifier.size(16.dp))
-                        Text("TERMINATED: $lastKilled", color = ElectricRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("$lastKilled", color = ElectricRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -326,7 +326,7 @@ fun SystemMonitorScreen(
                     ) {
                         Column {
                             Text("ACTIVE PROCESS MANAGER", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text("${processes.size} active on ${if (selectedId == PHONE_ID) "This Phone" else selectedDevice?.deviceName ?: ""}", color = TextSecondary, fontSize = 11.sp)
+                            Text(processState.status, color = TextSecondary, fontSize = 11.sp)
                         }
                         Button(
                             onClick = { onSuperchargeClick() },
@@ -366,7 +366,7 @@ fun SystemMonitorScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("${proc.memMb} MB", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(if (proc.memMb < 0) "RAM unavailable" else "${proc.memMb} MB", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.width(8.dp))
                             if (!proc.isSystem) {
                                 Box(
@@ -375,8 +375,7 @@ fun SystemMonitorScreen(
                                         .background(ElectricRed.copy(alpha = 0.15f))
                                         .border(1.dp, ElectricRed.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
                                         .clickable {
-                                            killedProcs = killedProcs + proc.pkg
-                                            lastKilled = proc.label
+                                            scope.launch { lastKilled = terminateMeasuredProcess(context, selectedDevice, proc) }
                                         }
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
@@ -406,18 +405,20 @@ fun SystemMonitorScreen(
                     }
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val allCpus = devices.map { it.cpuLoadPercent } + listOf((stats.runningProcessCount * 3).coerceIn(20, 95))
-                    val allRams = devices.map { it.ramLoadPercent } + listOf(stats.ramPercentage)
-                    val totalStorage = devices.sumOf { it.storageAvailableGb.toLong() }
-                    val connectedCount = devices.count { it.isConnected } + 1
-                    val avgCpu = allCpus.average().toInt()
+                    val fresh = devices.filter { it.isConnected && System.currentTimeMillis() - it.lastSyncTime < 60_000 }
+                    val allCpus = fresh.map { it.cpuLoadPercent }.filter { it >= 0 }
+                    val allRams = fresh.map { it.ramLoadPercent }.filter { it >= 0 } + stats.ramPercentage
+                    val storage = fresh.map { it.storageAvailableGb }.filter { it >= 0 }
+                    val totalStorage = storage.sumOf { it.toLong() }
+                    val connectedCount = fresh.size + 1
+                    val avgCpu = if (allCpus.isEmpty()) -1 else allCpus.average().toInt()
                     val avgRam = allRams.average().toInt()
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         PoolStat("Devices Online", "$connectedCount / ${devices.size + 1}", NeonGreen)
-                        PoolStat("Avg CPU", "$avgCpu%", NvidiaGreen)
+                        PoolStat("Avg CPU", if (avgCpu < 0) "Unavailable" else "$avgCpu%", NvidiaGreen)
                         PoolStat("Avg RAM", "$avgRam%", ElectricPurple)
-                        PoolStat("Fleet Storage", "${totalStorage} GB", ElectricCyan)
+                        PoolStat("Fleet Storage", if (storage.isEmpty()) "Unavailable" else "${totalStorage} GB reported", ElectricCyan)
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -425,7 +426,7 @@ fun SystemMonitorScreen(
                     Text("CPU Load Across Fleet", color = TextMuted, fontSize = 10.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
-                        progress = { avgCpu / 100f },
+                        progress = { avgCpu.coerceAtLeast(0) / 100f },
                         modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
                         color = NvidiaGreen,
                         trackColor = CarbonSurfaceVariant

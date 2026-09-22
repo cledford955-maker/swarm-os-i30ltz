@@ -13,6 +13,7 @@ import com.example.data.service.TtsVoiceManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -51,6 +52,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             repository.seedDefaultTailscaleDevicesIfEmpty()
+            while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                repository.refreshConfiguredNode()
+                kotlinx.coroutines.delay(30_000)
+            }
         }
     }
 
@@ -131,58 +136,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isOfflineAi = MutableStateFlow(false)
     val isOfflineAi: StateFlow<Boolean> = _isOfflineAi
 
-    init {
-        // Seed default initial items if empty
-        viewModelScope.launch(Dispatchers.IO) {
-            tasks.firstOrNull()?.let { list ->
-                if (list.isEmpty()) {
-                    repository.addTask(
-                        TaskEntity(
-                            title = "Sync Phone Backup with PC Bridge",
-                            description = "Establish USB/Wi-Fi tunnel to transfer device log diagnostics.",
-                            category = "PC Sync",
-                            priority = "HIGH",
-                            dueDate = System.currentTimeMillis() + 86400000
-                        )
-                    )
-                    repository.addTask(
-                        TaskEntity(
-                            title = "Run Deep Antivirus Vulnerability Scan",
-                            description = "Audit app permissions and Wi-Fi security profile.",
-                            category = "Security",
-                            priority = "HIGH",
-                            dueDate = System.currentTimeMillis() + 172800000
-                        )
-                    )
-                    repository.addTask(
-                        TaskEntity(
-                            title = "Flush ZRAM Swap Memory Buffer",
-                            description = "Re-index RAM cache allocations for max frame rate.",
-                            category = "System",
-                            priority = "MEDIUM",
-                            dueDate = System.currentTimeMillis() + 360000000
-                        )
-                    )
-                }
-            }
-
-            devices.firstOrNull()?.let { list ->
-                if (list.isEmpty()) {
-                    repository.addOrUpdateDevice(
-                        DeviceSyncEntity(
-                            deviceName = "DESKTOP-MAIN-PC",
-                            deviceType = "PC (Windows/Linux)",
-                            connectionType = "USB Bridge / Wi-Fi Tunnel",
-                            ipAddress = "192.168.1.105",
-                            isConnected = true,
-                            lastSyncTime = System.currentTimeMillis(),
-                            syncStatus = "Connected & Active"
-                        )
-                    )
-                }
-            }
-        }
-    }
 
     fun selectTab(tab: NavigationTab) {
         _currentTab.value = tab
@@ -250,8 +203,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun syncAllWithPc() {
         viewModelScope.launch {
-            repository.syncAllTasksWithPc()
-            _avatarSpeech.value = "⚡ Completed tasks pushed to DESKTOP-MAIN-PC via encrypted bridge!"
+            try {
+                val count = repository.syncAllTasksWithPc()
+                _avatarSpeech.value = "$count completed tasks acknowledged by shared memory."
+            } catch (e: Exception) {
+                _avatarSpeech.value = "Task sync failed: ${e.message}"
+            }
         }
     }
 

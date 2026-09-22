@@ -16,6 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,14 +65,14 @@ fun DrI3oltzFullAvatarScreen(
 
     val selectedDevice = if (selectedId == PHONE_ID_AVATAR) null else devices.find { it.id == selectedId }
 
-    val cpuPct = if (selectedId == PHONE_ID_AVATAR)
-        (stats.runningProcessCount * 3).coerceIn(20, 95)
-    else selectedDevice?.cpuLoadPercent ?: 0
-    val ramPct = if (selectedId == PHONE_ID_AVATAR) stats.ramPercentage else selectedDevice?.ramLoadPercent ?: 0
-
-    val avatarProcesses = remember(selectedId) {
-        processesForDevice(selectedDevice).filter { it.pkg !in killedProcs }
-    }.filter { it.pkg !in killedProcs }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val measured = selectedDevice?.takeIf { it.isConnected && System.currentTimeMillis() - it.lastSyncTime < 60_000 }
+    val cpuPct = measured?.cpuLoadPercent ?: -1
+    val ramPct = if (selectedId == PHONE_ID_AVATAR) stats.ramPercentage else measured?.ramLoadPercent ?: -1
+    val pingMs = measured?.pingMs
+    val processState = rememberDeviceProcesses(selectedDevice)
+    val avatarProcesses = processState.entries
 
     LaunchedEffect(lastKilled) {
         if (lastKilled != null) {
@@ -234,8 +236,8 @@ fun DrI3oltzFullAvatarScreen(
             // ── Telemetry Mini-Grid ───────────────────────────────────────────────────
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    MiniTelemetryTile("CPU", "$cpuPct%", NvidiaGreen, cpuPct / 100f, modifier = Modifier.weight(1f))
-                    MiniTelemetryTile("RAM", "$ramPct%", ElectricPurple, ramPct / 100f, modifier = Modifier.weight(1f))
+                    MiniTelemetryTile("CPU", if (cpuPct < 0) "Unavailable" else "$cpuPct%", NvidiaGreen, cpuPct.coerceAtLeast(0) / 100f, modifier = Modifier.weight(1f))
+                    MiniTelemetryTile("RAM", if (ramPct < 0) "Unavailable" else "$ramPct%", ElectricPurple, ramPct.coerceAtLeast(0) / 100f, modifier = Modifier.weight(1f))
                     if (selectedId == PHONE_ID_AVATAR) {
                         MiniTelemetryTile("BATT", "${stats.batteryLevel}%",
                             if (stats.batteryLevel > 20) NeonGreen else ElectricRed,
@@ -268,7 +270,7 @@ fun DrI3oltzFullAvatarScreen(
                     ) {
                         Icon(Icons.Default.BugReport, contentDescription = null, modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("MALWARE", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text("AUDIT", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -287,7 +289,7 @@ fun DrI3oltzFullAvatarScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(Icons.Default.Close, contentDescription = null, tint = ElectricRed, modifier = Modifier.size(14.dp))
-                            Text("TERMINATED: $lastKilled", color = ElectricRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("$lastKilled", color = ElectricRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -302,7 +304,7 @@ fun DrI3oltzFullAvatarScreen(
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text("PROCESS MONITOR", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("${avatarProcesses.size} active • tap KILL to terminate", color = TextSecondary, fontSize = 10.sp)
+                        Text(processState.status, color = TextSecondary, fontSize = 10.sp)
                         Spacer(modifier = Modifier.height(10.dp))
                         avatarProcesses.forEach { proc ->
                             Row(
@@ -313,7 +315,7 @@ fun DrI3oltzFullAvatarScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(proc.label, color = if (proc.isSystem) TextSecondary else TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                                 }
-                                Text("${proc.memMb} MB", color = TextMuted, fontSize = 10.sp)
+                                Text(if (proc.memMb < 0) "RAM unavailable" else "${proc.memMb} MB", color = TextMuted, fontSize = 10.sp)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 if (!proc.isSystem) {
                                     Box(
@@ -321,7 +323,7 @@ fun DrI3oltzFullAvatarScreen(
                                             .clip(RoundedCornerShape(5.dp))
                                             .background(ElectricRed.copy(alpha = 0.15f))
                                             .border(1.dp, ElectricRed.copy(alpha = 0.5f), RoundedCornerShape(5.dp))
-                                            .clickable { killedProcs = killedProcs + proc.pkg; lastKilled = proc.label }
+                                            .clickable { scope.launch { lastKilled = terminateMeasuredProcess(context, selectedDevice, proc) } }
                                             .padding(horizontal = 7.dp, vertical = 3.dp)
                                     ) {
                                         Text("KILL", color = ElectricRed, fontSize = 8.sp, fontWeight = FontWeight.Bold)
@@ -540,34 +542,6 @@ private fun MiniTelemetryTile(label: String, value: String, color: Color, progre
 }
 
 // Shared process list function (also used by SystemMonitorScreen)
-internal fun processesForDevice(device: DeviceSyncEntity?): List<ProcessEntryAvatar> = when {
-    device == null -> listOf(
-        ProcessEntryAvatar("com.android.systemui",   "System UI",          156, true),
-        ProcessEntryAvatar("com.google.android.gms", "Google Services",    210, true),
-        ProcessEntryAvatar("com.android.phone",      "Phone Service",       88, true),
-        ProcessEntryAvatar("com.example.swarm",      "SWARM Companion",     92, false),
-        ProcessEntryAvatar("com.android.chrome",     "Chromium",           280, false),
-        ProcessEntryAvatar("com.android.bluetooth",  "Bluetooth Stack",     45, true),
-        ProcessEntryAvatar("com.android.wifi",       "Wi-Fi Service",       38, true),
-        ProcessEntryAvatar("com.google.maps",        "Maps",               118, false),
-    )
-    device.deviceType.contains("PC") || device.deviceType.contains("Windows") || device.deviceType.contains("Linux") -> listOf(
-        ProcessEntryAvatar("System",       "System Kernel",     180, true),
-        ProcessEntryAvatar("explorer.exe", "Windows Shell",      95, true),
-        ProcessEntryAvatar("svchost.exe",  "Host Services",     340, true),
-        ProcessEntryAvatar("chrome.exe",   "Chrome Browser",    890, false),
-        ProcessEntryAvatar("code.exe",     "VS Code",           420, false),
-        ProcessEntryAvatar("tailscaled",   "Tailscale Daemon",   45, true),
-    )
-    else -> listOf(
-        ProcessEntryAvatar("tailscaled",  "Tailscale Daemon",   45, true),
-        ProcessEntryAvatar("systemd",     "Init System",         12, true),
-        ProcessEntryAvatar("sshd",        "SSH Daemon",           8, true),
-        ProcessEntryAvatar("node",        "Node.js Runtime",    180, false),
-        ProcessEntryAvatar("postgres",    "PostgreSQL",          240, false),
-        ProcessEntryAvatar("python3",     "Python Runtime",      95, false),
-    )
-}
 
 internal data class ProcessEntryAvatar(val pkg: String, val label: String, val memMb: Int, val isSystem: Boolean)
 

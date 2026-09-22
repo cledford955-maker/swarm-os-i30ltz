@@ -225,14 +225,14 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("TAILSCALE VPN:", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("COMPUTER:", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("ACTIVE (100.105.12.33)", color = NvidiaGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("Check connection in Remote PC", color = NvidiaGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("SSE TUNNEL:", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("MEMORY SYNC:", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("CONNECTED TO 13E457-THUNDERI30LT", color = NvidiaGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(com.example.data.memory.MemorySyncEngine.status.collectAsState().value, color = NvidiaGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(modifier = Modifier.weight(1f))

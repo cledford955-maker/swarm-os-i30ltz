@@ -134,6 +134,10 @@ class SwarmAppRegistry {
       color: Color(0xFF76B900), categories: {SwarmAppCategory.origin, SwarmAppCategory.system},
       description: 'Search Arch repos & AUR — install apps, get a desktop icon',
       routePath: '/appstore', isFavorite: true),
+    SwarmApp(id: 'chatgpt', name: 'ChatGPT', icon: Icons.forum,
+      color: Color(0xFF10A37F), categories: {SwarmAppCategory.origin, SwarmAppCategory.system},
+      description: 'OpenAI ChatGPT — desktop app window',
+      execCommand: SystemLauncher.chatGptCmd, isFavorite: true),
 
     // ───────────── GAMING & MEDIA ─────────────
     SwarmApp(id: 'gaming', name: 'Gamer', icon: Icons.sports_esports,

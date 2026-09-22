@@ -140,8 +140,21 @@ class SystemLauncher {
       '$_fj chromium --app=https://claude.ai/code/artifact/5c970c82-aed8-4cb2-83c0-ed3c459fc7d9'
       ' || chromium https://claude.ai/code/artifact/5c970c82-aed8-4cb2-83c0-ed3c459fc7d9';
 
+  // ChatGPT: no official Linux desktop app exists, so launch any native
+  // wrapper first, then fall back to a Chromium --app window (chromeless,
+  // looks like a desktop app) and finally a plain browser window.
+  static const String chatGptCmd =
+      'chatgpt-desktop || chatgpt-desktop-git || '
+      '$_fj chromium --app=https://chatgpt.com || '
+      '$_fj google-chrome-stable --app=https://chatgpt.com || '
+      '$_fj firefox --new-window https://chatgpt.com || xdg-open https://chatgpt.com';
+
   static Future<bool> launchAntigravity(BuildContext? context) {
     return launch(context, antigravityIdeCmd, displayName: 'Antigravity IDE');
+  }
+
+  static Future<bool> launchChatGpt(BuildContext? context) {
+    return launch(context, chatGptCmd, displayName: 'ChatGPT');
   }
 
   static Future<bool> launchClaudeDesktop(BuildContext? context) {

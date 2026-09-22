@@ -125,7 +125,9 @@ interface MemoryDao {
     fun count(): Flow<Int>
 
     @Query(
-        "SELECT * FROM memory_entries WHERE (:kind = '' OR kind = :kind) " +
+        "SELECT * FROM memory_entries AS e WHERE deleted = 0 AND " +
+            "(entry_key = '' OR NOT EXISTS (SELECT 1 FROM memory_entries AS newer WHERE newer.kind = e.kind " +
+            "AND newer.entry_key = e.entry_key AND (newer.ts > e.ts OR (newer.ts = e.ts AND newer.id > e.id)))) AND (:kind = '' OR kind = :kind) " +
             "AND (:query = '' OR content LIKE '%' || :query || '%' OR entry_key LIKE '%' || :query || '%') " +
             "ORDER BY ts DESC LIMIT :limit"
     )

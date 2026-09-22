@@ -31,7 +31,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private val kindFilters = listOf("" to "All", "note" to "Notes", "fact" to "Facts", "decision" to "Decisions", "claude_memory" to "Claude", "doc" to "Core docs")
+private val kindFilters = listOf("" to "All", "note" to "Notes", "fact" to "Facts", "decision" to "Decisions", "claude_memory" to "Claude", "chatgpt_memory" to "ChatGPT memories", "chatgpt_conversation" to "ChatGPT chats", "doc" to "Core docs")
 private val writableKinds = listOf("note" to "Note", "fact" to "Fact", "decision" to "Decision")
 
 private fun kindColor(kind: String): Color = when (kind) {
@@ -55,6 +55,7 @@ fun MemoryScreen() {
     val scope = rememberCoroutineScope()
 
     DisposableEffect(Unit) {
+        engine.requestSync()
         engine.startLive()
         onDispose { engine.stopLive() }
     }
@@ -254,6 +255,10 @@ private fun EntryRow(e: MemoryEntryEntity) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 4.dp)
         )
+        if (e.kind.startsWith("chatgpt_")) {
+            val metadata = runCatching { org.json.JSONObject(e.metaJson) }.getOrNull()
+            Text("ChatGPT export snapshot · source date ${metadata?.optString("source_modified").orEmpty().ifBlank { "unknown" }} · not live cloud sync", color = TextMuted, fontSize = 10.sp)
+        }
         Text(e.device, color = TextMuted, fontSize = 10.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 4.dp))
     }
 }

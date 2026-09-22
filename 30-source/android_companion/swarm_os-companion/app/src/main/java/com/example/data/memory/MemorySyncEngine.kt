@@ -27,6 +27,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -98,6 +99,8 @@ object MemorySyncEngine {
 
     private var heartbeatJob: Job? = null
     private var streamJob: Job? = null
+    @Volatile private var streamCall: Call? = null
+    private var liveRequested = false
 
     val deviceId: String
         get() = prefs().getString("device_id", null) ?: run {
@@ -141,7 +144,7 @@ object MemorySyncEngine {
      */
     fun startMeshIfSecure() {
         if (!started) return
-        val secure = connection.authToken != SwarmConnection.DEFAULT_TOKEN
+        val secure = connection.authToken.isNotBlank() && connection.authToken != SwarmConnection.DEFAULT_TOKEN
         if (secure && !server.isRunning) {
             server.start()
             discovery.start()
@@ -201,7 +204,7 @@ object MemorySyncEngine {
         if (!syncMutex.tryLock()) return // one pass at a time; a pass already covers this request
         try {
             _syncing.value = true
-            val targets = linkedMapOf("13E457-THUNDERI30LT (Tailscale)" to pcUrl())
+            val targets = linkedMapOf("Configured computer (${connection.host})" to pcUrl())
             discovery.peers.value.forEach { (name, url) -> if (url !in targets.values) targets[name] = url }
             val results = targets.map { (name, url) -> syncWithPeer(name, url) }
             _peers.value = results
@@ -227,10 +230,15 @@ object MemorySyncEngine {
             while (true) {
                 val url = "$base${MemorySyncServer.SYNC_PATH}?cursor=${URLEncoder.encode(cursor, "UTF-8")}"
                 val body = call(Request.Builder().url(url).get())
-                val arr = body.optJSONArray("entries") ?: JSONArray()
-                val entries = (0 until arr.length()).mapNotNull { MemoryEntryEntity.fromJson(arr.getJSONObject(it)) }
+                val arr = body.getJSONArray("entries")
+                require(body.getString("device").isNotBlank()) { "Missing peer identity" }
+                val nextCursor = body.getString("cursor")
+                require(!body.optBoolean("more", false) || nextCursor != cursor) { "Memory peer did not advance its cursor" }
+                val entries = (0 until arr.length()).map {
+                    requireNotNull(MemoryEntryEntity.fromJson(arr.getJSONObject(it))) { "Invalid memory entry; cursor retained" }
+                }
                 pulled += dao.insertAll(entries).count { it != -1L }
-                cursor = body.optString("cursor", cursor)
+                cursor = nextCursor
                 prefs().edit().putString("pull:$base", cursor).apply()
                 if (!body.optBoolean("more", false)) break
             }
@@ -241,7 +249,8 @@ object MemorySyncEngine {
                 val batch = dao.since(after, 200)
                 if (batch.isEmpty()) break
                 val payload = JSONObject().put("entries", JSONArray().apply { batch.forEach { put(it.toJson()) } })
-                call(Request.Builder().url("$base${MemorySyncServer.SYNC_PATH}").post(payload.toString().toRequestBody(json)))
+                val acknowledgment = call(Request.Builder().url("$base${MemorySyncServer.SYNC_PATH}").post(payload.toString().toRequestBody(json)))
+                require(acknowledgment.getInt("accepted") in 0..batch.size) { "Invalid memory acknowledgment; cursor retained" }
                 pushed += batch.size
                 after = batch.last().seq
                 prefs().edit().putLong("push:$base", after).apply()
@@ -255,9 +264,11 @@ object MemorySyncEngine {
     private fun call(builder: Request.Builder, client: OkHttpClient = http): JSONObject {
         client.newCall(builder.header("X-Swarm-Auth", connection.authToken).build()).execute().use { resp ->
             val text = resp.body?.string().orEmpty()
-            val obj = runCatching { JSONObject(text) }.getOrElse { JSONObject() }
-            if (!resp.isSuccessful) throw HttpError(resp.code, obj.optString("error", "HTTP ${resp.code}"), obj)
-            return obj
+            if (!resp.isSuccessful) {
+                val obj = runCatching { JSONObject(text) }.getOrDefault(JSONObject())
+                throw HttpError(resp.code, obj.optString("error", "HTTP ${resp.code}"), obj)
+            }
+            return JSONObject(text)
         }
     }
 
@@ -269,6 +280,7 @@ object MemorySyncEngine {
 
     suspend fun refreshLease() = withContext(Dispatchers.IO) {
         runCatching { _lease.value = leaseFrom(call(Request.Builder().url("${pcUrl()}/api/memory/lease").get())) }
+            .onFailure { _lease.value = LeaseState() }
     }
 
     /** Make this phone main. [force] is the explicit "take over" from another device. */
@@ -316,13 +328,16 @@ object MemorySyncEngine {
     // ── Live stream (while the Memory screen is open) ─────────────────────────
 
     fun startLive() {
+        liveRequested = true
         if (!started || streamJob?.isActive == true) return
         streamJob = scope.launch {
             while (isActive) {
                 try {
                     val req = Request.Builder().url("http://${connection.host}:${connection.port}/api/memory/stream")
                         .header("X-Swarm-Auth", connection.authToken).build()
-                    streamHttp.newCall(req).execute().use { resp ->
+                    val activeCall = streamHttp.newCall(req)
+                    streamCall = activeCall
+                    activeCall.execute().use { resp ->
                         if (!resp.isSuccessful) throw HttpError(resp.code, "stream HTTP ${resp.code}", JSONObject())
                         _live.value = true
                         val source = resp.body!!.source()
@@ -345,8 +360,27 @@ object MemorySyncEngine {
     }
 
     fun stopLive() {
+        liveRequested = false
+        streamCall?.cancel()
         streamJob?.cancel()
+        streamJob = null
         _live.value = false
+    }
+
+    fun connectionChanged() {
+        if (!started) return
+        val resume = liveRequested
+        stopLive()
+        heartbeatJob?.cancel()
+        _lease.value = LeaseState()
+        _status.value = "Node changed — refreshing shared memory"
+        _peers.value = emptyList()
+        startMeshIfSecure()
+        scope.launch {
+            syncMutex.withLock { /* wait for an old-node pass to finish */ }
+            syncAll()
+            if (resume) startLive()
+        }
     }
 
     private suspend fun handleEvent(event: String, data: String) {

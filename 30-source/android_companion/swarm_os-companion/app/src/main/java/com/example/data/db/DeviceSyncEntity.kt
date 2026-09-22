@@ -16,11 +16,11 @@ data class DeviceSyncEntity(
     // Telemetry defaults are 0 = "not measured yet", not plausible-looking
     // sample values. Showing 24%/42%/128GB/12ms by default made unpolled
     // devices indistinguishable from devices reporting real data.
-    val cpuLoadPercent: Int = 0,
-    val ramLoadPercent: Int = 0,
-    val storageAvailableGb: Int = 0,
-    val pingMs: Int = 0,
-    val threatScore: Int = 0,
+    val cpuLoadPercent: Int = -1,
+    val ramLoadPercent: Int = -1,
+    val storageAvailableGb: Int = -1,
+    val pingMs: Int = -1,
+    val threatScore: Int = -1,
     val isOptimizing: Boolean = false
 )
 

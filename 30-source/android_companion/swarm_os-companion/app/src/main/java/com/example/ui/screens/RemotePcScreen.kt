@@ -260,6 +260,7 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                                 connection.host = host
                                 connection.authToken = authTokenInput
                                 portInput.toIntOrNull()?.takeIf { it in 1..65535 }?.let { connection.port = it }
+                                com.example.data.memory.MemorySyncEngine.connectionChanged()
                                 isIpConfigExpanded = false
                                 terminalLog.add("Node saved: ${connection.host}:${connection.port}")
                                 checkConnection()
