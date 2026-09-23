@@ -31,6 +31,15 @@ Environment=XDG_CURRENT_DESKTOP=labwc
 # it via the logind backend (see SWARM_AI_FEATURES.md for the history of the
 # seatd-vs-logind fix this project already went through once).
 Environment=LIBSEAT_BACKEND=logind
+# Temporary diagnostic (2026-09-22): labwc has been dying silently within
+# 1-3s of PAM session open, on both real hardware and the QEMU dev VM,
+# repeatedly since at least 2026-09-15 (see /mnt/Lucy/logs/swarm-ui-*.log) —
+# no crash reason has ever reached the journal, just "Deactivated
+# successfully" with nothing in between. WLR_LOG_LEVEL is wlroots' own
+# verbosity knob (labwc is wlroots-based) — set independently of labwc's own
+# CLI flags so it works regardless of the installed labwc version. Remove
+# once the real cause is captured.
+Environment=WLR_LOG_LEVEL=debug
 # If Flutter's GTK3 embedder has trouble with GDK's native-Wayland backend,
 # uncomment this to force it through XWayland instead (xorg-xwayland package
 # provides the compat layer; libxkbcommon-x11 handles its keyboard input):
@@ -47,7 +56,15 @@ ExecStartPre=+/usr/bin/mkdir -p /mnt/Lucy/logs
 # labwc starts the compositor; its autostart script (~/.config/labwc/autostart)
 # launches the Flutter shell as a normal Wayland client inside it.
 ExecStart=/usr/bin/dbus-run-session -- /usr/bin/labwc
-ExecStopPost=+/usr/bin/bash -c 'journalctl -u swarm-ui.service -b --no-pager > /mnt/Lucy/logs/swarm-ui-$(date +%%Y%%m%%d-%%H%%M%%S).log 2>&1 || true'
+# The 1s sleep and systemctl-status snapshot exist because the plain
+# journalctl dump below was losing the crash reason entirely on a fast
+# exit (see the WLR_LOG_LEVEL comment above) — likely a journald flush race
+# on a sub-3-second-lived unit. `systemctl status` reads systemd's own
+# already-updated unit state directly, no journal round-trip needed, so it
+# can't lose the exit code/signal to that race. The extra grep widens the
+# net to kernel/seatd/wlroots lines outside this unit's own journal lines,
+# in case the real failure is a DRM/seat handoff denial labwc never logs.
+ExecStopPost=+/usr/bin/bash -c 'sleep 1; { echo "=== systemctl status ==="; systemctl status swarm-ui.service --no-pager -l; echo; echo "=== journalctl -u swarm-ui.service -b ==="; journalctl -u swarm-ui.service -b --no-pager; echo; echo "=== related drm/seat/wlroots/labwc lines, this boot ==="; journalctl -b --no-pager -g "drm|seat|wlroots|labwc" -n 200; } > /mnt/Lucy/logs/swarm-ui-$(date +%%Y%%m%%d-%%H%%M%%S).log 2>&1 || true'
 # TTYVTDisallocate (above) deallocates tty1 on stop, but that race isn't airtight
 # against a fast restart: labwc drives the VT directly via DRM/KMS, and if fbcon
 # hasn't finished re-initializing text mode before the next reader (getty, or a
