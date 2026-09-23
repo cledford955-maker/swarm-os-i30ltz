@@ -1,7 +1,7 @@
 name: swarm_flutter
 description: SWARM OS Native Linux Desktop Shell & Honeycomb Agent UI
 publish_to: 'none'
-version: 6.2.70+70
+version: 6.2.71+71
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
