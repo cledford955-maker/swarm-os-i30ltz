@@ -22,6 +22,7 @@ lost+found/
 40-iso-profile/*/airootfs/opt/
 40-iso-profile/*/airootfs/usr/lib/
 40-iso-profile/*/airootfs/var/cache/
+40-iso-profile/*/airootfs/usr/local/share/swarm-os/airootfs.tar
 
 # --- vendored SDKs / nested repos -----------------------------------
 30-source/flutter-sdk/
