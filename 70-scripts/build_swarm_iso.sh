@@ -53,6 +53,9 @@ ISO_MANAGER="$LUCY/70-scripts/swarm_iso_manager.py"
 python "$ISO_MANAGER" check
 exec 8>"$LUCY/70-scripts/.swarm-build.lock"
 flock -n 8 || { echo 'A SWARM ISO build is already running.' >&2; exit 1; }
+# Fail before version stamping or privileged work if tty ownership or runtime
+# executable modes would recreate the desktop boot regression.
+python3 "$LUCY/70-scripts/tests/test_desktop_boot_contract.py"
 sudo mkdir -p "$RELEASE_DIR/.incoming"
 OUT_DIR=$(sudo mktemp -d "$RELEASE_DIR/.incoming/build.XXXXXXXX")
 cleanup_build() {

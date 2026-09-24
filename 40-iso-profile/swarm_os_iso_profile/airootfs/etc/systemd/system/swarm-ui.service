@@ -1,6 +1,8 @@
 [Unit]
 Description=SWARM OS Desktop (labwc compositor + Flutter hex-grid shell)
 After=systemd-user-sessions.service NetworkManager.service seatd.service systemd-logind.service
+# Finish releasing the console and boot splash before claiming tty1.
+After=getty@tty1.service plymouth-quit.service plymouth-quit-wait.service
 Wants=NetworkManager.service seatd.service
 Conflicts=getty@tty1.service
 StartLimitBurst=3

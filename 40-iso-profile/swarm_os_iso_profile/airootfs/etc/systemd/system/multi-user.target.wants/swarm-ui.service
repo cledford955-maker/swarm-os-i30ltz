@@ -1,1 +1,1 @@
-../swarm-ui.service
+/etc/systemd/system/swarm-ui.service

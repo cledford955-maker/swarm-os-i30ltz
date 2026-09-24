@@ -141,8 +141,8 @@ apparmor
 # tailscale — REMOVED 2026-09-11: not in [core]/[extra] (this profile's
 # pacman.conf has no AUR/CachyOS repos), AUR-only on vanilla Arch. Adding it
 # broke pacstrap ("failed to install packages to new root") on the first real
-# build attempt after this session's changes. The nftables.conf iif
-# "tailscale0" rule stays a no-op until tailscale is installed some other way
+# build attempt after this session's changes. The nftables.conf iifname
+# "tailscale0" rules load before the interface exists and match once installed
 # — e.g. a first-boot script running tailscale's own install.sh, same pattern
 # as swarm-ollama-pull.sh in install_swarm_os.sh — not via packages.x86_64.
 # kept installed for manual/ad-hoc use; NOT enabled by default — nftables.conf

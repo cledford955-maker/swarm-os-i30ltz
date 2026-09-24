@@ -71,6 +71,10 @@
 
 ## 2. Open / Partial Work (re-evaluated)
 
+### Urgent boot blockers — 2026-09-24
+- [~] **Kiosk terminal collision and non-executable Flutter binary** — reproduced in an existing ISO VM and repaired in source/staging. ReserveVT moved from tty1 to tty6, getty/Plymouth handoff ordered, missing executable modes added to profiledef. Modified guest rendered Flutter splash and both backends returned HTTP 200. Fresh canonical ISO and physical boot pending; see `70-scripts/DESKTOP_BOOT_REPAIR.md`.
+- [ ] **Desktop session cleanup on launcher death** — fault injection left old labwc/Flutter processes in logind scopes. Automatic SIGHUP restart prototype removed to avoid duplicate sessions; needs a tested scope-lifecycle fix.
+
 ### 2.1 System Reliability
 - [~] **Verify systemd hardware watchdog on installed SWARM OS**
   - File already staged; needs a real boot test and `systemctl show | grep -i watchdog`
@@ -109,7 +113,7 @@
 - [ ] **Continuous mirror integrity verification (SHA-256 tree comparisons)**
 
 ### 2.6 System Tuning
-- [ ] **TCP MSS clamping on Tailscale via nftables**
+- [~] **TCP MSS clamping on Tailscale via nftables** — implemented 2026-09-24. IPv4/IPv6 downward-only MSS caps on tunnel ingress/egress cover SYN and SYN-ACK, local traffic and forwarding. Fixed existing interface-index matches that made the full firewall fail to load before `tailscale0` existed; added missing live-ISO firewall startup link (installer already enables it). Full rules load and 56 real-packet/checksum cases pass in an isolated network namespace. Fresh SWARM boot and physical tailnet transfer pending; Tailscale installation remains separate. See `70-scripts/TAILSCALE_MSS.md`.
 - [~] **EPP dynamic power script** (`/usr/lib/swarm/epp-tune.sh`) — implemented and wired to boot-enabled `swarm-epp.timer` (2026-09-21). AC/battery policy, advertised-value validation, readback, existing power-manager precedence, configuration and status mode complete. Nine fixture tests and systemd unit validation pass; CachyOS read-only status correctly yields to power-profiles-daemon. Fresh SWARM boot/hardware write verification pending. See `70-scripts/EPP_POWER_POLICY.md`.
 
 ### 2.7 Developer Grants
@@ -120,7 +124,7 @@
 
 ## 3. Suggested Build Order
 
-1. Verify watchdog on real boot + unblock Gamescope FSR (find/create `swarm-session`)
+1. Publish/boot the desktop repair; fix session cleanup on launcher death; verify watchdog on real hardware before Gamescope FSR work
 2. Wire Git-diff checkpoint journaling into `SwarmRouter::route_and_execute()`
 3. POSIX shared memory telemetry ring buffer
 4. Multi-client epoll IPC broker

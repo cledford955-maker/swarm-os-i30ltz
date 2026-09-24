@@ -9,6 +9,11 @@
   "settings": {
     "dart.flutterSdkPath": "/mnt/Lucy/30-source/flutter-sdk",
     "files.watcherExclude": {"**/target/**": true, "**/build/**": true, "**/airootfs/opt/**": true},
-    "search.exclude": {"**/target": true, "**/build": true, "**/airootfs/opt": true}
+    "search.exclude": {
+      "**/target": true,
+      "**/build": true,
+      "**/airootfs/opt": true
+    },
+    "android-studio-lite.sdkPath": "/home/i30ltz/Android/Sdk"
   }
 }

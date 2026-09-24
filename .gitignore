@@ -87,7 +87,12 @@ _to_delete/
 70-scripts/.swarm-build.lock
 70-scripts/**/__pycache__/
 80-vm/desktop/
+80-vm/boot-repair-*/
 grub_themes/backups/
+# Local boot-repair backups are not release inputs (some are root-readable).
+40-iso-profile/swarm_os_iso_profile/grub/*.bak
+40-iso-profile/swarm_os_iso_profile/grub/*.before-ui-fix
+70-scripts/.github-sync.lock
 
 # Local diagnostic archives may contain identifying system details.
 10-releases/diagnostics/
