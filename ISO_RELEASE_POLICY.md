@@ -1,31 +1,62 @@
-# SWARM ISO release policy — 2026-09-19
+# ISO storage policy — 2026-09-24
 
-User decision: every active SWARM OS ISO belongs ONLY in `/mnt/ventoy/ISO/SWARM_OS/`.
+User decision: keep **ten current operating-system ISO files total**, on Ventoy.
+This applies to all operating systems, not just SWARM. It supersedes the older
+"ten rolling builds plus stable exceptions" policy.
 
-- Keep the newest **10 rolling builds**, plus any builds explicitly marked **stable**. Stable releases stay until the user unmarks them; no automatic expiry.
-- A successful boot gate is not a stable designation. Never infer stable from a filename such as latest/fallback, from build success, or from a previous assistant's claim.
-- Mark stable with `70-scripts/manage_swarm_releases.sh stable ISO_FILENAME --note "reason"`. A `<filename>.iso.stable` sidecar protects it. An explicit `-stable` filename is also protected.
-- Unmark with `70-scripts/manage_swarm_releases.sh unmark-stable ISO_FILENAME`. Renaming is required to remove a stable designation embedded in a filename.
-- The only build implementation is `70-scripts/build_swarm_iso.sh`. Run as a normal user. Historical dated entry points only forward here.
-- Verify the mounted Ventoy filesystem UUID **4E21-0000** before writing or pruning. If it is absent, abort before version stamping. Never fall back to the project disk, desktop, a drive root, or a similarly named directory.
-- Build ISO output directly under Ventoy `.incoming/`; publish the completed file in the same filesystem. Build intermediates, logs, and VM virtual disks may remain in `/mnt/Lucy/`; ISO copies may not.
-- `latest.txt` stores one release filename because Ventoy is exFAT. Never make multi-GB latest/fallback copies. A failed boot gate does not become latest.
-- Never put ISO files or ISO symlinks on the desktop. Desktop launchers open the canonical build, release manager, code workspace, or VM scripts.
-- Do not recreate the obsolete push-to-Ventoy workflow: the build already outputs there.
-- `migrate_swarm_isos.sh` verifies SHA-256 before removing a local source. Legacy latest/fallback copies are removed only when identical to a versioned ISO. It never labels a migrated image stable.
-- Read-only mirrors and historical archives are not active release stores. Do not modify them as part of this policy.
+- Keep the ten newest distinct completed images by modification time. Stable
+  labels do not exempt an image from the total. Weekly Boltz archives are the
+  explicit exception outside this active set.
+- SWARM releases live at `/mnt/ventoy/ISO/SWARM_OS/`. Other future OS installers
+  may live elsewhere on Ventoy but count toward the same total of ten.
+- Once per ISO calendar week, archive the newest SWARM image with a recorded
+  `boot_gate=pass` to `/mnt/boltz/ISO/SWARM_OS/weekly/YYYY-Www/`. Verify source and
+  destination SHA-256 checksums. Do not archive failed/untested builds, and do not
+  duplicate an unchanged build across weeks. Keep historical weekly archives.
+- Boltz must be the mounted ext4 filesystem UUID
+  `689e6547-b439-4e7f-93c9-a6dcfabed46b`. Never write into the empty mountpoint or
+  redirect an archive onto the project/system disk when Boltz is unavailable.
+- Ventoy must be mounted at `/mnt/ventoy` with UUID `4E21-0000`. Missing or wrong
+  media aborts release operations before version stamping.
+- Use only `70-scripts/build_swarm_iso.sh` as the normal user. It creates one
+  in-progress ISO directly in Ventoy `.incoming/`, publishes it on the same
+  filesystem, and enforces the ten-image total. The temporary in-progress image
+  is removed on normal failure; the next locked build clears interrupted output.
+- No project-disk/desktop ISO copies, duplicate latest/fallback images, or separate
+  push-to-Ventoy workflow. `latest.txt` is a filename pointer, never a full copy.
+- A successful publication with a boot pass also attempts the weekly archive.
+  If Boltz is unavailable, report the pending archive; do not invent a fallback.
+- Do not modify read-only source mirrors. Never delete non-ISO source/build files
+  as part of retention.
 
-## Desktop launchers
+## Current cleanup
 
-`SWARM OS — Launch VM` opens an isolated QEMU window using the latest usable Ventoy ISO. It uses a separate 32GB sparse virtual disk under `80-vm/desktop`, 4GB RAM and four vCPUs by default. No physical host disks are exposed. Close the VM window to stop it; the next launch boots the ISO again. Guest live-session edits are temporary unless installed on the virtual disk.
+`70-scripts/iso_cleanup_20260924.json` records the reviewed 49-file inventory:
+ten retained images and 39 deletion targets. It records exact paths, sizes,
+inodes, device IDs and modification times, and checksums for verified duplicates.
+Any changed file or missing retained source makes the cleanup refuse to proceed.
+The four writable surplus files have been removed (13,559,398,400 bytes).
+The remaining 35 deletions and three retained-image relocations require root.
 
-`SWARM OS — Code` opens `SWARM_OS.code-workspace` in VS Code Insiders (or VS Code).
+Complete the prepared cleanup and mount/archive-directory setup:
 
-`SWARM OS — Build ISO` runs the canonical builder. `SWARM OS — Manage ISOs` lists builds, marks/unmarks stable, and prunes.
+```sh
+sudo /mnt/Lucy/70-scripts/apply_iso_storage_policy.sh
+```
 
-Code edits on CachyOS affect `/mnt/Lucy/30-source`; rebuild to see them in the VM ISO. The VM is not the installed physical SWARM partition.
+This command validates Ventoy, preserves the ten reviewed images there, removes
+only the listed surplus ISOs, mounts the identified Boltz filesystem if needed,
+and prepares the weekly archive directory for the project owner. No current ISO
+has recorded boot-pass metadata, so no image is currently eligible for archiving.
 
-## Verification
+## Inspection and maintenance
 
-Retention/migration tests: `python -m unittest discover -s 70-scripts/tests -p test_iso_retention.py`.
-Read-only preview: `python 70-scripts/swarm_iso_manager.py migrate --dry-run` or `prune --dry-run`.
+```sh
+python3 /mnt/Lucy/70-scripts/swarm_iso_manager.py prune --dry-run
+python3 /mnt/Lucy/70-scripts/swarm_iso_manager.py archive-weekly
+python3 -m unittest discover -s /mnt/Lucy/70-scripts/tests -p 'test_iso_*.py'
+```
+
+The existing VM launcher still reads Ventoy's canonical release store. The desktop
+build launcher uses the canonical builder. New code requires rebuilding before
+it appears in an ISO; a modified guest session is not proof of a new release.

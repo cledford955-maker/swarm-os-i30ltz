@@ -1,8 +1,8 @@
 # SWARM OS — AI Onboarding Prompt
 
-## ISO releases and desktop tools — user policy (2026-09-19)
+## ISO releases and desktop tools — user policy (2026-09-24)
 
-**All active SWARM ISO files go ONLY to `/mnt/ventoy/ISO/SWARM_OS/`. Keep the newest 10 rolling builds plus explicitly user-labelled stable builds, until unmarked.** Never create local/desktop ISO copies, latest/fallback ISO duplicates, or a separate push-to-Ventoy workflow. Use `70-scripts/build_swarm_iso.sh`; dated build scripts are compatibility forwards only. Missing Ventoy must abort, never fall back locally. Stable is an explicit user decision, not inferred from a passing boot test. Read `ISO_RELEASE_POLICY.md` before changing build, retention, VM, or desktop launch scripts. VM launcher: `70-scripts/launch_swarm_vm.sh`; editor: `70-scripts/open_swarm_code.sh`.
+**Keep ten current operating-system ISOs total on Ventoy, across all OSes. No stable-label exceptions. Archive at most one new boot-verified SWARM build per calendar week under `/mnt/boltz/ISO/SWARM_OS/weekly/`; these historical archives are the exception to the active ten.** Use `70-scripts/build_swarm_iso.sh` as the normal user; it builds directly into Ventoy, prunes the total to ten, and never falls back to local copies. Verify both mount UUIDs before writes. Archive only recorded boot passes with verified SHA-256; never copy an unchanged build again or write into an unmounted Boltz directory. Read `ISO_RELEASE_POLICY.md` before changing build, retention, VM or launch scripts. The old ten-plus-stable rule is superseded. VM launcher: `70-scripts/launch_swarm_vm.sh`; editor: `70-scripts/open_swarm_code.sh`.
 
 
 
