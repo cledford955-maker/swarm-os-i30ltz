@@ -543,6 +543,59 @@ canvas#crawl{position:fixed;inset:0;z-index:50;pointer-events:none}
 @keyframes scanh{0%{transform:translateX(-100%)}100%{transform:translateX(100vw)}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes arot{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+/* ════════════════ POWER BUTTON ════════════════ */
+.pwr-wrap{position:relative}
+.pwr-btn{cursor:pointer;font-size:15px;color:rgba(255,80,60,.7);padding:3px 8px;border-radius:5px;transition:color .2s,background .2s;line-height:1}
+.pwr-btn:hover{color:#ff3322;background:rgba(255,50,30,.15)}
+.pwr-menu{position:fixed;top:38px;right:10px;background:rgba(0,3,14,.97);backdrop-filter:blur(22px);border:1px solid rgba(255,70,40,.3);border-radius:10px;padding:5px 0;z-index:600;display:none;min-width:158px;box-shadow:0 8px 40px rgba(0,0,0,.7)}
+.pwr-menu.open{display:block}
+.pwr-item{font-family:var(--hud);font-size:9px;letter-spacing:2px;color:rgba(255,200,180,.8);padding:9px 16px;cursor:pointer;transition:background .15s,color .15s;display:flex;align-items:center;gap:8px}
+.pwr-item:hover{background:rgba(255,60,30,.15);color:#ff5533}
+
+/* ════════════════ LEFT APP DRAWER ════════════════ */
+#ldraw-tab{position:fixed;left:80px;top:50%;transform:translateY(-50%);z-index:155;writing-mode:vertical-lr;text-orientation:mixed;background:rgba(0,8,24,.88);backdrop-filter:blur(12px);border:1px solid rgba(0,212,255,.22);border-left:none;border-radius:0 8px 8px 0;padding:13px 5px;cursor:pointer;font-family:var(--hud);font-size:7px;letter-spacing:3px;color:var(--cy);transition:background .2s,box-shadow .2s}
+#ldraw-tab:hover{background:rgba(0,212,255,.1);box-shadow:3px 0 18px rgba(0,212,255,.25)}
+#left-drawer{position:fixed;left:-310px;top:42px;bottom:48px;width:276px;z-index:145;background:rgba(0,5,18,.95);backdrop-filter:blur(24px);border-right:1px solid rgba(0,212,255,.18);border-bottom:1px solid rgba(0,212,255,.12);border-radius:0 0 12px 0;transition:left .27s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:14px 10px}
+#left-drawer.open{left:80px}
+.ldr-title{font-family:var(--hud);font-size:8px;letter-spacing:4px;color:var(--cy);text-align:center;margin-bottom:12px;text-shadow:0 0 12px var(--cy);padding-bottom:8px;border-bottom:1px solid rgba(0,212,255,.15)}
+.ldr-cat{font-family:var(--hud);font-size:7px;letter-spacing:3px;color:rgba(0,212,255,.35);margin:10px 0 5px}
+.ldr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:4px}
+.ldr-app{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px 6px;border-radius:8px;cursor:pointer;transition:background .15s;border:1px solid rgba(0,212,255,.08)}
+.ldr-app:hover{background:rgba(0,212,255,.09);border-color:rgba(0,212,255,.25)}
+.ldr-ai{font-size:19px;line-height:1}
+.ldr-al{font-family:var(--hud);font-size:6px;letter-spacing:1px;color:rgba(0,212,255,.7);text-align:center}
+
+/* ════════════════ RIGHT UTILITY DRAWER ════════════════ */
+#rdraw-tab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:155;writing-mode:vertical-rl;text-orientation:mixed;background:rgba(4,0,18,.88);backdrop-filter:blur(12px);border:1px solid rgba(136,0,255,.22);border-right:none;border-radius:8px 0 0 8px;padding:13px 5px;cursor:pointer;font-family:var(--hud);font-size:7px;letter-spacing:3px;color:var(--purple);transition:background .2s,box-shadow .2s}
+#rdraw-tab:hover{background:rgba(136,0,255,.1);box-shadow:-3px 0 18px rgba(136,0,255,.25)}
+#right-drawer{position:fixed;right:-310px;top:42px;bottom:48px;width:276px;z-index:145;background:rgba(4,0,18,.95);backdrop-filter:blur(24px);border-left:1px solid rgba(136,0,255,.18);border-bottom:1px solid rgba(136,0,255,.12);border-radius:0 0 0 12px;transition:right .27s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:14px 10px}
+#right-drawer.open{right:0}
+.rdr-title{font-family:var(--hud);font-size:8px;letter-spacing:4px;color:var(--purple);text-align:center;margin-bottom:12px;text-shadow:0 0 12px var(--purple);padding-bottom:8px;border-bottom:1px solid rgba(136,0,255,.15)}
+.rdr-cat{font-family:var(--hud);font-size:7px;letter-spacing:3px;color:rgba(136,0,255,.35);margin:10px 0 5px}
+.rdr-row{display:flex;flex-direction:column;gap:5px}
+.rdr-btn{font-family:var(--hud);font-size:8px;letter-spacing:2px;color:rgba(136,0,255,.8);padding:8px 12px;border-radius:7px;cursor:pointer;background:rgba(136,0,255,.07);border:1px solid rgba(136,0,255,.15);display:flex;align-items:center;gap:8px;transition:background .15s,border-color .15s}
+.rdr-btn:hover{background:rgba(136,0,255,.16);border-color:rgba(136,0,255,.35)}
+.rdr-stat{font-family:var(--hud);font-size:7px;color:rgba(136,0,255,.5);margin-top:3px}
+
+/* ════════════════ ENHANCED OSD ════════════════ */
+#osd{cursor:default}
+.osd-airow{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.osd-model{font-family:var(--hud);font-size:7px;letter-spacing:1.5px;color:rgba(204,136,255,.75)}
+.osd-cost{font-family:var(--hud);font-size:7px;letter-spacing:1px;color:rgba(255,204,0,.6)}
+.osd-lat{font-family:var(--hud);font-size:7px;letter-spacing:1px;color:rgba(0,255,68,.65)}
+.osd-or{font-family:var(--hud);font-size:7px;letter-spacing:1px;color:rgba(255,140,0,.65)}
+.osd-mode-btn{font-family:var(--hud);font-size:7px;color:rgba(0,212,255,.4);cursor:pointer;padding:0 5px;border:none;background:none;pointer-events:all;line-height:1}
+.osd-mode-btn:hover{color:var(--cy)}
+.osd-drag-handle{cursor:move;user-select:none;padding:0 6px;color:rgba(0,212,255,.25);font-size:10px}
+.osd-drag-handle:hover{color:rgba(0,212,255,.5)}
+/* OSD size modes */
+#osd.osd-compact{padding:3px 10px;gap:4px;font-size:8px}
+#osd.osd-compact .osd-bars,.osd-compact .osd-airow,.osd-compact .osd-ticker-wrap{display:none!important}
+#osd.osd-expanded{max-width:760px;padding:8px 22px;gap:10px;font-size:11px;opacity:.85}
+#osd.osd-expanded .osd-bars{gap:6px}
+/* Section bottom clearance — keeps content above OSD */
+.sec{padding-bottom:52px!important}
 </style>
 </head>
 <body>
@@ -564,8 +617,15 @@ canvas#crawl{position:fixed;inset:0;z-index:50;pointer-events:none}
 <header class="hud">
   <div class="hud-brand"><b>AI NATIVE</b> <span style="color:#cc88ff;letter-spacing:1px">"LUCILLE"</span> OS SUITE <span class="hud-ver">v2.1.0 · 2026-09-24</span></div>
   <div class="sp"></div>
-  <div class="hud-dots">
-    <div class="dot g"></div><div class="dot y"></div><div class="dot b"></div>
+  <div class="pwr-wrap">
+    <div class="pwr-btn" id="pwrBtn" onclick="togglePwr()">⏻</div>
+    <div class="pwr-menu" id="pwrMenu">
+      <div class="pwr-item" onclick="pwrAct('lock')">🔒 &nbsp;LOCK SCREEN</div>
+      <div class="pwr-item" onclick="pwrAct('sleep')">💤 &nbsp;SLEEP</div>
+      <div class="pwr-item" onclick="pwrAct('restart')">🔄 &nbsp;RESTART</div>
+      <div class="pwr-item" onclick="pwrAct('shutdown')">⏻ &nbsp;SHUTDOWN</div>
+      <div class="pwr-item" onclick="pwrAct('settings');go('system')">⚙️ &nbsp;SETTINGS</div>
+    </div>
   </div>
   <div class="hud-clock" id="clk">00:00:00</div>
 </header>
@@ -604,15 +664,18 @@ canvas#crawl{position:fixed;inset:0;z-index:50;pointer-events:none}
   <div class="dsk-world" id="dskWorld">
     <div class="dsk-canvas" id="dskCanvas">
 
-      <!-- ══════════ LEFT COLUMN — PAGE 1 ══════════ -->
+      <!-- ══════════ CHECKERED ICON LAYOUT — PAGE 1 ══════════ -->
+      <!-- Row 1: LEFT only -->
       <div class="dsk-ico" style="left:1%;top:3%" ondblclick="go('system')">
         <div class="mon-ico"></div>
-        <div class="l">SWARM OS<br>Launch VM</div>
+        <div class="l">Launch VM</div>
       </div>
-      <div class="dsk-ico" style="left:1%;top:9%">
-        <div class="fld-ico"></div>
-        <div class="l">old-isos</div>
+      <!-- Row 2: RIGHT only -->
+      <div class="dsk-ico" style="right:1%;top:9%" ondblclick="go('gaming')">
+        <span class="i" style="filter:drop-shadow(0 0 8px #4488ff)">💨</span>
+        <div class="l">Steam</div>
       </div>
+      <!-- Row 3: LEFT only -->
       <div class="dsk-ico" style="left:1%;top:15%">
         <div class="eq-ico" style="width:38px;height:36px">
           <div class="eq-bar" style="height:60%"></div>
@@ -623,40 +686,17 @@ canvas#crawl{position:fixed;inset:0;z-index:50;pointer-events:none}
         </div>
         <div class="l">JamesDSP</div>
       </div>
-      <div class="dsk-ico" style="left:1%;top:21%" ondblclick="go('system')">
-        <div class="usb-ico">▲</div>
-        <div class="l">Manage<br>ISOs</div>
-      </div>
-      <div class="dsk-ico" style="left:1%;top:27%" ondblclick="go('lucille')">
-        <div class="lcy-app-ico">L</div>
-        <div class="l">Lucille</div>
-      </div>
-      <div class="dsk-ico" style="left:1%;top:33%">
-        <span class="i">📁</span>
-        <div class="l">Files</div>
-      </div>
-
-      <!-- ══════════ RIGHT COLUMN — PAGE 1 ══════════ -->
-      <div class="dsk-ico" style="right:1%;top:3%" ondblclick="go('gaming')">
-        <span class="i" style="filter:drop-shadow(0 0 8px #4488ff)">💨</span>
-        <div class="l">Steam</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:9%" ondblclick="go('apex')">
+      <!-- Row 4: RIGHT only -->
+      <div class="dsk-ico" style="right:1%;top:21%" ondblclick="go('apex')">
         <span class="i" style="color:#007acc">🔵</span>
-        <div class="l">VS Code<br>Insiders</div>
+        <div class="l">VS Code</div>
       </div>
-      <div class="dsk-ico" style="right:1%;top:15%">
-        <span class="i">📝</span>
-        <div class="l">GPT Notes</div>
+      <!-- Row 5: LEFT only -->
+      <div class="dsk-ico" style="left:1%;top:27%" ondblclick="go('system')">
+        <div class="usb-ico">▲</div>
+        <div class="l">Manage ISOs</div>
       </div>
-      <div class="dsk-ico" style="right:1%;top:21%">
-        <div class="fld-ico"></div>
-        <div class="l">chatgpt<br>amd64</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:27%" ondblclick="go('apex')">
-        <span class="i">🔨</span>
-        <div class="l">SWARM<br>Code</div>
-      </div>
+      <!-- Row 6: RIGHT only -->
       <div class="dsk-ico" style="right:1%;top:33%" ondblclick="go('system')">
         <span class="i">📸</span>
         <div class="l">Snapshot</div>
@@ -679,56 +719,66 @@ canvas#crawl{position:fixed;inset:0;z-index:50;pointer-events:none}
       <!-- ═══ PAGE 2 (y > 33%) ═══ -->
       <div class="dsk-p2-title" style="left:30%;top:34%">── PAGE 2 · AI AGENTS ──</div>
 
-      <!-- LEFT COLUMN — PAGE 2 -->
-      <div class="dsk-ico" style="left:1%;top:37%" ondblclick="go('droid')">
-        <span class="i">🤖</span>
-        <div class="l">DROID<br>Coder</div>
+      <!-- CHECKERED — PAGE 2 (agent avatars as icons) -->
+      <!-- Row 1 LEFT: LUCILLE mini avatar -->
+      <div class="dsk-ico" style="left:1%;top:37%" ondblclick="go('lucille')">
+        <svg width="38" height="38" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 8px rgba(0,212,255,.7))">
+          <circle cx="50" cy="50" r="42" fill="#000d1a" stroke="#00d4ff" stroke-width="2.5"/>
+          <circle cx="50" cy="50" r="28" fill="none" stroke="rgba(0,212,255,.3)" stroke-width="1.5"/>
+          <circle cx="50" cy="50" r="12" fill="rgba(0,212,255,.15)" stroke="#00d4ff" stroke-width="1.5"/>
+          <text x="50" y="55" text-anchor="middle" font-size="14" fill="#00d4ff" font-family="sans-serif">🌸</text>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(0,212,255,.5)" stroke-width="1.5" stroke-dasharray="8 4">
+            <animateTransform attributeName="transform" type="rotate" values="0 50 50;360 50 50" dur="6s" repeatCount="indefinite"/>
+          </circle>
+        </svg>
+        <div class="l">LUCILLE</div>
       </div>
-      <div class="dsk-ico" style="left:1%;top:43%" ondblclick="go('vita')">
-        <span class="i" style="color:#ff4488">♥</span>
+      <!-- Row 2 RIGHT: DROID mini avatar -->
+      <div class="dsk-ico" style="right:1%;top:43%" ondblclick="go('droid')">
+        <svg width="38" height="38" viewBox="0 0 100 120" style="filter:drop-shadow(0 0 8px rgba(0,255,68,.6))">
+          <line x1="50" y1="5" x2="50" y2="22" stroke="#00ff44" stroke-width="2"/>
+          <circle cx="50" cy="4" r="5" fill="#00ff44"><animate attributeName="r" values="4;6;4" dur="1.5s" repeatCount="indefinite"/></circle>
+          <rect x="22" y="22" width="56" height="44" rx="12" fill="#0a2010" stroke="#00ff44" stroke-width="1.5"/>
+          <circle cx="38" cy="40" r="8" fill="#001a06" stroke="#00ff44" stroke-width="1"/>
+          <circle cx="38" cy="40" r="5" fill="#00ff44"><animate attributeName="r" values="5;5;1;5" dur="3s" repeatCount="indefinite"/></circle>
+          <circle cx="62" cy="40" r="8" fill="#001a06" stroke="#00ff44" stroke-width="1"/>
+          <circle cx="62" cy="40" r="5" fill="#00ff44"><animate attributeName="r" values="5;5;1;5" dur="3s" begin=".15s" repeatCount="indefinite"/></circle>
+          <rect x="34" y="55" width="32" height="4" rx="2" fill="#001a06" stroke="#00ff44" stroke-width="1"/>
+          <rect x="36" y="56.5" width="6" height="2" rx="1" fill="#00ff44"><animate attributeName="width" values="6;22;6" dur="1.2s" repeatCount="indefinite"/></rect>
+        </svg>
+        <div class="l">DROID</div>
+      </div>
+      <!-- Row 3 LEFT: APEX mini avatar -->
+      <div class="dsk-ico" style="left:1%;top:49%" ondblclick="go('apex')">
+        <svg width="38" height="38" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 8px rgba(136,0,255,.7))">
+          <polygon points="50,5 95,78 5,78" fill="#0a0015" stroke="#8800ff" stroke-width="2.5"/>
+          <polygon points="50,20 80,72 20,72" fill="none" stroke="rgba(136,0,255,.4)" stroke-width="1"/>
+          <polygon points="50,35 65,66 35,66" fill="rgba(136,0,255,.15)" stroke="#8800ff" stroke-width="1.5"/>
+          <circle cx="50" cy="55" r="4" fill="#8800ff"><animate attributeName="opacity" values="1;.2;1" dur="1.8s" repeatCount="indefinite"/></circle>
+        </svg>
+        <div class="l">APEX IDE</div>
+      </div>
+      <!-- Row 4 RIGHT: VITA mini avatar -->
+      <div class="dsk-ico" style="right:1%;top:55%" ondblclick="go('vita')">
+        <svg width="38" height="38" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 8px rgba(255,68,136,.7))">
+          <circle cx="50" cy="50" r="42" fill="#1a0010" stroke="#ff4488" stroke-width="2.5"/>
+          <circle cx="50" cy="50" r="26" fill="none" stroke="rgba(255,68,136,.3)" stroke-width="1.5"/>
+          <text x="50" y="55" text-anchor="middle" font-size="22" fill="#ff4488">♥</text>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,68,136,.35)" stroke-width="1" stroke-dasharray="5 5">
+            <animateTransform attributeName="transform" type="rotate" values="0 50 50;360 50 50" dur="8s" repeatCount="indefinite"/>
+          </circle>
+        </svg>
         <div class="l">VITA AI</div>
       </div>
-      <div class="dsk-ico" style="left:1%;top:49%">
+      <!-- Row 5 LEFT -->
+      <div class="dsk-ico" style="left:1%;top:61%">
         <span class="i">🎸</span>
         <div class="l">Guitar Pro</div>
       </div>
-      <div class="dsk-ico" style="left:1%;top:55%">
-        <span class="i">🎵</span>
-        <div class="l">Spotify</div>
-      </div>
-      <div class="dsk-ico" style="left:1%;top:61%">
-        <span class="i">📲</span>
-        <div class="l">Sync APK</div>
-      </div>
-      <div class="dsk-ico" style="left:1%;top:67%">
-        <span class="i">🗂️</span>
-        <div class="l">i30ltz<br>Recovery</div>
-      </div>
-
-      <!-- RIGHT COLUMN — PAGE 2 -->
-      <div class="dsk-ico" style="right:1%;top:37%" ondblclick="go('apex')">
-        <span class="i" style="color:#8800ff">⬟</span>
-        <div class="l">APEX IDE</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:43%">
-        <span class="i" style="color:#76b900;filter:drop-shadow(0 0 8px #76b900)">⬡</span>
-        <div class="l">GeForce<br>NOW</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:49%">
-        <span class="i">📊</span>
-        <div class="l">Stack<br>Vitals</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:55%" ondblclick="go('system')">
-        <span class="i">🔒</span>
-        <div class="l">SWARM<br>Security</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:61%">
-        <div class="cd-ico"></div>
-        <div class="l">Build ISO</div>
-      </div>
+      <!-- Row 6 RIGHT -->
       <div class="dsk-ico" style="right:1%;top:67%">
-        <span class="i">🎮</span>
-        <div class="l">Game<br>Center</div>
+        <span class="i" style="color:#76b900;filter:drop-shadow(0 0 8px #76b900)">⬡</span>
+        <div class="l">GeForce NOW</div>
       </div>
 
       <!-- CENTER PAGE 2 — System widget -->
@@ -749,49 +799,17 @@ canvas#crawl{position:fixed;inset:0;z-index:50;pointer-events:none}
       <!-- ═══ PAGE 3 (y > 66%) ═══ -->
       <div class="dsk-p2-title" style="left:30%;top:67.5%">── PAGE 3 · SWARM TOOLS ──</div>
 
-      <!-- LEFT COLUMN — PAGE 3 -->
-      <div class="dsk-ico" style="left:1%;top:70%">
-        <span class="i">🌐</span>
-        <div class="l">Browser</div>
-      </div>
-      <div class="dsk-ico" style="left:1%;top:76%">
-        <span class="i">🖨️</span>
-        <div class="l">Print</div>
-      </div>
-      <div class="dsk-ico" style="left:1%;top:82%">
-        <span class="i">📦</span>
-        <div class="l">Archive</div>
-      </div>
-      <div class="dsk-ico" style="left:1%;top:88%">
-        <span class="i">🗑️</span>
-        <div class="l">Trash</div>
-      </div>
-      <div class="dsk-ico" style="left:1%;top:94%">
-        <span class="i">🔍</span>
-        <div class="l">Search</div>
-      </div>
-
-      <!-- RIGHT COLUMN — PAGE 3 -->
-      <div class="dsk-ico" style="right:1%;top:70%">
-        <span class="i">📡</span>
-        <div class="l">Network</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:76%">
-        <span class="i">🛡️</span>
-        <div class="l">Firewall</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:82%">
-        <span class="i">🗃️</span>
-        <div class="l">Backup</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:88%">
-        <span class="i">🧪</span>
-        <div class="l">SWARM<br>Lab</div>
-      </div>
-      <div class="dsk-ico" style="right:1%;top:94%">
-        <span class="i">🚀</span>
-        <div class="l">Deploy</div>
-      </div>
+      <!-- CHECKERED — PAGE 3 -->
+      <div class="dsk-ico" style="left:1%;top:70%"><span class="i">🌐</span><div class="l">Browser</div></div>
+      <div class="dsk-ico" style="right:1%;top:76%"><span class="i">🛡️</span><div class="l">Firewall</div></div>
+      <div class="dsk-ico" style="left:1%;top:82%"><span class="i">🗃️</span><div class="l">Backup</div></div>
+      <div class="dsk-ico" style="right:1%;top:88%"><span class="i">🧪</span><div class="l">SWARM Lab</div></div>
+      <div class="dsk-ico" style="left:1%;top:94%"><span class="i">🔍</span><div class="l">Search</div></div>
+      <div class="dsk-ico" style="right:1%;top:70%"><span class="i">📡</span><div class="l">Network</div></div>
+      <div class="dsk-ico" style="left:1%;top:76%"><span class="i">🗑️</span><div class="l">Trash</div></div>
+      <div class="dsk-ico" style="right:1%;top:82%"><span class="i">📦</span><div class="l">Archive</div></div>
+      <div class="dsk-ico" style="left:1%;top:88%"><span class="i">🖨️</span><div class="l">Print</div></div>
+      <div class="dsk-ico" style="right:1%;top:94%"><span class="i">🚀</span><div class="l">Deploy</div></div>
 
       <!-- CENTER PAGE 3 — Network widget -->
       <div class="dsk-sys-widget" style="left:28%;top:72%">
@@ -1057,11 +1075,22 @@ agent.<span class="fn">load_context</span>(<span class="st">"swarm_project"</spa
 
 </main>
 
-<!-- ══════════════════ OSD ══════════════════ -->
+<!-- ══════════════════ ENHANCED OSD ══════════════════ -->
 <div id="osd">
+  <div class="osd-drag-handle" id="osdHandle" title="Drag to move">⠿</div>
   <div class="osd-clock" id="osdClock">--:--:--</div>
   <div class="osd-sep"></div>
   <div class="osd-sec" id="osdSec">HOME</div>
+  <div class="osd-sep"></div>
+  <div class="osd-airow">
+    <span class="osd-model" id="osdModel">claude-sonnet-4-6</span>
+    <div class="osd-sep"></div>
+    <span class="osd-cost" id="osdCost">$0.0000</span>
+    <div class="osd-sep"></div>
+    <span class="osd-lat" id="osdLat">0ms</span>
+    <div class="osd-sep"></div>
+    <span class="osd-or" id="osdOR">OR:$0.00</span>
+  </div>
   <div class="osd-sep"></div>
   <div class="osd-bars">
     <span class="osd-bl">CPU</span>
@@ -1073,70 +1102,83 @@ agent.<span class="fn">load_context</span>(<span class="st">"swarm_project"</spa
   <div class="osd-ticker-wrap">
     <span class="osd-ticker">✦ AI NATIVE "LUCILLE" OS SUITE v2.1.0 · SWARM_OS WITH LUCILLE GAMING ASSISTANT APP · LUCILLE LLcy CORE ONLINE · APEX IDE READY · DROID STANDING BY · VITA ACTIVE · I30LTZ RECOVERY OS WITH DR. I30LTZ MAD IT COMPANION · SECURITY NOMINAL · KERNEL 7.2.6-1-cachyos · CachyOS x86_64 · ThinkPad X13 Gen 1 · GPU Intel UHD 1.15GHz · NET 192.168.1.204/24 · broken@swarm ✦</span>
   </div>
+  <div class="osd-sep"></div>
+  <button class="osd-mode-btn" onclick="cycleOsdSize()" title="Cycle OSD size">⇅</button>
 </div>
 
-<!-- ══════════════════ APP DRAWER BUTTON ══════════════════ -->
-<div id="adr-btn" onclick="openDrawer()">
-  <div class="ab-dot"></div>
-  ⬡ APPS
-  <div class="ab-dot"></div>
+<!-- ══════════════════ LEFT APP DRAWER ══════════════════ -->
+<div id="ldraw-tab" onclick="toggleLeftDrawer()">▶ APPS</div>
+<div id="left-drawer">
+  <div class="ldr-title">⬡ AI NATIVE "LUCILLE" OS SUITE · APP MATRIX</div>
+
+  <div class="ldr-cat">── AI AGENTS ──</div>
+  <div class="ldr-grid">
+    <div class="ldr-app" onclick="closeAllDrawers();go('lucille')"><div class="ldr-ai">💫</div><div class="ldr-al">LUCILLE</div></div>
+    <div class="ldr-app" onclick="closeAllDrawers();go('droid')"><div class="ldr-ai">🤖</div><div class="ldr-al">DROID</div></div>
+    <div class="ldr-app" onclick="closeAllDrawers();go('apex')"><div class="ldr-ai" style="color:#8800ff">⬟</div><div class="ldr-al">APEX</div></div>
+    <div class="ldr-app" onclick="closeAllDrawers();go('vita')"><div class="ldr-ai" style="color:#ff4488">♥</div><div class="ldr-al">VITA</div></div>
+  </div>
+
+  <div class="ldr-cat">── GAMING ──</div>
+  <div class="ldr-grid">
+    <div class="ldr-app" onclick="closeAllDrawers();go('gaming')"><div class="ldr-ai">💨</div><div class="ldr-al">Steam</div></div>
+    <div class="ldr-app"><div class="ldr-ai" style="color:#76b900">⬡</div><div class="ldr-al">GeForce</div></div>
+    <div class="ldr-app"><div class="ldr-ai">🎮</div><div class="ldr-al">Game Hub</div></div>
+    <div class="ldr-app"><div class="ldr-ai">🎸</div><div class="ldr-al">Guitar Pro</div></div>
+    <div class="ldr-app"><div class="ldr-ai">🎵</div><div class="ldr-al">Spotify</div></div>
+    <div class="ldr-app"><div class="ldr-ai">📊</div><div class="ldr-al">Vitals</div></div>
+  </div>
+
+  <div class="ldr-cat">── DEVELOPMENT ──</div>
+  <div class="ldr-grid">
+    <div class="ldr-app" onclick="closeAllDrawers();go('apex')"><div class="ldr-ai" style="color:#007acc">🔵</div><div class="ldr-al">VS Code</div></div>
+    <div class="ldr-app"><div class="ldr-ai">🔨</div><div class="ldr-al">SWARM Code</div></div>
+    <div class="ldr-app"><div class="ldr-ai">📝</div><div class="ldr-al">GPT Notes</div></div>
+    <div class="ldr-app"><div class="ldr-ai">📲</div><div class="ldr-al">Sync APK</div></div>
+    <div class="ldr-app"><div class="ldr-ai">🚀</div><div class="ldr-al">Deploy</div></div>
+    <div class="ldr-app"><div class="ldr-ai">🧪</div><div class="ldr-al">SWARM Lab</div></div>
+  </div>
+
+  <div class="ldr-cat">── MEDIA ──</div>
+  <div class="ldr-grid">
+    <div class="ldr-app"><div class="ldr-ai">🎚️</div><div class="ldr-al">JamesDSP</div></div>
+    <div class="ldr-app"><div class="ldr-ai">📁</div><div class="ldr-al">Files</div></div>
+    <div class="ldr-app"><div class="ldr-ai">🌐</div><div class="ldr-al">Browser</div></div>
+  </div>
 </div>
 
-<!-- ══════════════════ APP DRAWER ══════════════════ -->
-<div id="app-drawer">
-  <div class="ad-close" onclick="closeDrawer()">✕ CLOSE</div>
-  <div class="ad-htitle">⬡ AI NATIVE "LUCILLE" OS SUITE · APP MATRIX</div>
-  <div class="ad-hsub">SWARM_OS · WITH LUCILLE GAMING ASSISTANT APP &nbsp;│&nbsp; I30LTZ RECOVERY OS · WITH DR. I30LTZ MAD IT COMPANION</div>
-
-  <div class="ad-cat">── AI AGENTS ──</div>
-  <div class="ad-grid">
-    <div class="ad-app" ondblclick="closeDrawer();go('lucille')"><div class="ai">💫</div><div class="al">LUCILLE LLcy</div></div>
-    <div class="ad-app" ondblclick="closeDrawer();go('droid')"><div class="ai">🤖</div><div class="al">DROID Coder</div></div>
-    <div class="ad-app" ondblclick="closeDrawer();go('apex')"><div class="ai" style="color:#8800ff">⬟</div><div class="al">APEX IDE</div></div>
-    <div class="ad-app" ondblclick="closeDrawer();go('vita')"><div class="ai" style="color:#ff4488">♥</div><div class="al">VITA AI</div></div>
+<!-- ══════════════════ RIGHT UTILITY DRAWER ══════════════════ -->
+<div id="rdraw-tab" onclick="toggleRightDrawer()">TOOLS ◀</div>
+<div id="right-drawer">
+  <div class="rdr-title">⚙ SWARM UTILITY HUB</div>
+  <div class="rdr-cat">── SYSTEM ──</div>
+  <div class="rdr-row">
+    <div class="rdr-btn" onclick="closeAllDrawers();go('system')">⚙️ &nbsp;I30LTZ RECOVERY OS</div>
+    <div class="rdr-btn" onclick="closeAllDrawers();go('system')">🖥️ &nbsp;Launch VM</div>
+    <div class="rdr-btn" onclick="closeAllDrawers();go('system')">💾 &nbsp;Manage ISOs</div>
+    <div class="rdr-btn" onclick="closeAllDrawers();go('system')">💿 &nbsp;Build ISO</div>
+    <div class="rdr-btn" onclick="closeAllDrawers();go('system')">📸 &nbsp;Snapshot</div>
   </div>
-
-  <div class="ad-cat">── GAMING ──</div>
-  <div class="ad-grid">
-    <div class="ad-app" ondblclick="closeDrawer();go('gaming')"><div class="ai">💨</div><div class="al">Steam</div></div>
-    <div class="ad-app"><div class="ai" style="color:#76b900">⬡</div><div class="al">GeForce NOW</div></div>
-    <div class="ad-app"><div class="ai">🎮</div><div class="al">Game Center</div></div>
-    <div class="ad-app"><div class="ai">🎸</div><div class="al">Guitar Pro</div></div>
-    <div class="ad-app"><div class="ai">🎵</div><div class="al">Spotify</div></div>
-    <div class="ad-app"><div class="ai">📊</div><div class="al">Stack Vitals</div></div>
+  <div class="rdr-cat">── SECURITY ──</div>
+  <div class="rdr-row">
+    <div class="rdr-btn" onclick="closeAllDrawers();go('system')">🔒 &nbsp;SWARM Security</div>
+    <div class="rdr-btn">🛡️ &nbsp;Firewall Rules</div>
+    <div class="rdr-btn">📡 &nbsp;Network Monitor</div>
+    <div class="rdr-btn">🗂️ &nbsp;i30ltz Recovery</div>
   </div>
-
-  <div class="ad-cat">── DEVELOPMENT ──</div>
-  <div class="ad-grid">
-    <div class="ad-app" ondblclick="closeDrawer();go('apex')"><div class="ai" style="color:#007acc">🔵</div><div class="al">VS Code Insiders</div></div>
-    <div class="ad-app" ondblclick="closeDrawer();go('apex')"><div class="ai">🔨</div><div class="al">SWARM Code</div></div>
-    <div class="ad-app"><div class="ai">📝</div><div class="al">GPT Notes</div></div>
-    <div class="ad-app"><div class="ai">📲</div><div class="al">Sync APK</div></div>
-    <div class="ad-app"><div class="ai">🚀</div><div class="al">Deploy</div></div>
-    <div class="ad-app"><div class="ai">🧪</div><div class="al">SWARM Lab</div></div>
+  <div class="rdr-cat">── STORAGE ──</div>
+  <div class="rdr-row">
+    <div class="rdr-btn">🗃️ &nbsp;Backup Manager</div>
+    <div class="rdr-btn">📦 &nbsp;Archive</div>
+    <div class="rdr-btn">🔍 &nbsp;Search Index</div>
+    <div class="rdr-btn">🗑️ &nbsp;Trash</div>
   </div>
-
-  <div class="ad-cat">── SYSTEM & TOOLS ──</div>
-  <div class="ad-grid">
-    <div class="ad-app" ondblclick="closeDrawer();go('system')"><div class="ai">⚙️</div><div class="al">System</div></div>
-    <div class="ad-app" ondblclick="closeDrawer();go('system')"><div class="ai">📸</div><div class="al">Snapshot</div></div>
-    <div class="ad-app" ondblclick="closeDrawer();go('system')"><div class="ai">🖥️</div><div class="al">Launch VM</div></div>
-    <div class="ad-app" ondblclick="closeDrawer();go('system')"><div class="ai">💾</div><div class="al">Manage ISOs</div></div>
-    <div class="ad-app"><div class="ai">💿</div><div class="al">Build ISO</div></div>
-    <div class="ad-app"><div class="ai">🔒</div><div class="al">Security</div></div>
-    <div class="ad-app"><div class="ai">📁</div><div class="al">Files</div></div>
-    <div class="ad-app"><div class="ai">🗂️</div><div class="al">i30ltz Recovery</div></div>
-    <div class="ad-app"><div class="ai">🛡️</div><div class="al">Firewall</div></div>
-    <div class="ad-app"><div class="ai">🗃️</div><div class="al">Backup</div></div>
-    <div class="ad-app"><div class="ai">📡</div><div class="al">Network</div></div>
-    <div class="ad-app"><div class="ai">🔍</div><div class="al">Search</div></div>
+  <div class="rdr-cat">── OSD CONTROLS ──</div>
+  <div class="rdr-row">
+    <div class="rdr-btn" onclick="cycleOsdSize()">⇅ &nbsp;Cycle OSD Size</div>
+    <div class="rdr-btn" onclick="resetOsdPos()">⌖ &nbsp;Reset OSD Position</div>
   </div>
-
-  <div class="ad-cat">── AUDIO ──</div>
-  <div class="ad-grid">
-    <div class="ad-app"><div class="ai">🎚️</div><div class="al">JamesDSP</div></div>
-    <div class="ad-app"><div class="ai">🎵</div><div class="al">Spotify</div></div>
-  </div>
+  <div class="rdr-stat" id="rdr-telemetry">TOKENS/S: — · REQ/S: — · LATENCY: —</div>
 </div>
 
 <script>
@@ -1365,23 +1407,104 @@ var fxc=document.getElementById('fx'),fxctx=fxc.getContext('2d'),pts=[];
 function rsz(){fxc.width=window.innerWidth;fxc.height=window.innerHeight}
 window.addEventListener('resize',function(){rsz();initFX();buildNest()});rsz();
 
-function Wasp(){
-  this.x=Math.random()*fxc.width;this.y=Math.random()*fxc.height;
-  this.ang=Math.random()*Math.PI*2;this.spd=.9+Math.random()*1.4;this.sz=3+Math.random()*4;
+// ── BugSwarm: realistic dark metallic hornets/wasps/flies/beetles ──
+function BugSwarm(){
+  this.type=Math.floor(Math.random()*4); // 0=wasp 1=hornet 2=fly 3=beetle
+  this.x=Math.random()*fxc.width; this.y=Math.random()*fxc.height;
+  this.ang=Math.random()*Math.PI*2; this.spd=.7+Math.random()*1.8;
+  this.sz=3+Math.random()*5; this.wp=Math.random()*Math.PI*2;
+  this.ws=.18+Math.random()*.22; // wing beat speed
+  this.turnRate=.06+Math.random()*.08;
 }
-Wasp.prototype.update=function(){
-  this.ang+=(Math.random()-.5)*.12;
-  this.x+=Math.cos(this.ang)*this.spd;this.y+=Math.sin(this.ang)*this.spd;
-  if(this.x<-20)this.x=fxc.width+10;if(this.x>fxc.width+20)this.x=-10;
-  if(this.y<-20)this.y=fxc.height+10;if(this.y>fxc.height+20)this.y=-10;
+BugSwarm.prototype.update=function(){
+  this.ang+=(Math.random()-.5)*this.turnRate;
+  this.x+=Math.cos(this.ang)*this.spd; this.y+=Math.sin(this.ang)*this.spd;
+  this.wp+=this.ws;
+  if(this.x<-25)this.x=fxc.width+10; if(this.x>fxc.width+25)this.x=-10;
+  if(this.y<-25)this.y=fxc.height+10; if(this.y>fxc.height+25)this.y=-10;
 };
-Wasp.prototype.draw=function(){
-  fxctx.save();fxctx.translate(this.x,this.y);fxctx.rotate(this.ang);
-  fxctx.strokeStyle='rgba(255,200,0,0.7)';fxctx.lineWidth=1.2;
-  fxctx.beginPath();fxctx.ellipse(0,0,this.sz,this.sz/2.5,0,0,Math.PI*2);fxctx.stroke();
-  fxctx.beginPath();fxctx.moveTo(-2,-1);fxctx.bezierCurveTo(-5,-7,5,-7,2,-1);fxctx.stroke();
-  fxctx.beginPath();fxctx.moveTo(-2,1);fxctx.bezierCurveTo(-5,7,5,7,2,1);fxctx.stroke();
-  fxctx.restore();
+BugSwarm.prototype.draw=function(){
+  var c=fxctx,s=this.sz,wp=this.wp,t=this.type;
+  c.save(); c.translate(this.x,this.y); c.rotate(this.ang);
+  var wingAlpha=0.28+Math.abs(Math.sin(wp))*0.28;
+  if(t===0||t===1){ // wasp / hornet
+    // wings
+    c.globalAlpha=wingAlpha;
+    c.fillStyle=t===0?'rgba(200,230,255,0.55)':'rgba(220,210,190,0.5)';
+    c.beginPath(); c.ellipse(-s*.4,-s*.12,s*.95,s*.32,-0.3,0,Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(s*.4,-s*.12,s*.95,s*.32,0.3,0,Math.PI*2); c.fill();
+    c.globalAlpha=1;
+    // body
+    c.beginPath(); c.ellipse(0,0,s*.32,s*.72,0,0,Math.PI*2);
+    c.fillStyle=t===0?'#ccaa00':'#bb5500'; c.fill();
+    c.strokeStyle='#111'; c.lineWidth=0.5; c.stroke();
+    // stripes
+    c.fillStyle='#0a0a0a';
+    for(var si=-1;si<=1;si++){
+      c.beginPath(); c.ellipse(0,si*s*.28,s*.28,s*.1,0,0,Math.PI*2); c.fill();
+    }
+    // head
+    c.beginPath(); c.arc(0,-s*.78,s*.28,0,Math.PI*2);
+    c.fillStyle=t===0?'#443300':'#3a2200'; c.fill();
+    // mandibles
+    c.strokeStyle='#666'; c.lineWidth=0.8;
+    c.beginPath(); c.moveTo(-s*.1,-s*.98); c.lineTo(-s*.22,-s*1.18); c.stroke();
+    c.beginPath(); c.moveTo(s*.1,-s*.98); c.lineTo(s*.22,-s*1.18); c.stroke();
+    // eyes — red glow
+    c.fillStyle='rgba(255,30,0,.9)';
+    c.beginPath(); c.arc(-s*.14,-s*.82,s*.1,0,Math.PI*2); c.fill();
+    c.beginPath(); c.arc(s*.14,-s*.82,s*.1,0,Math.PI*2); c.fill();
+    // stinger
+    c.strokeStyle='#888'; c.lineWidth=0.7;
+    c.beginPath(); c.moveTo(0,s*.72); c.lineTo(0,s*.92); c.stroke();
+  } else if(t===2){ // fly
+    // iridescent wings
+    c.globalAlpha=0.42+Math.abs(Math.sin(wp))*0.38;
+    c.fillStyle='rgba(140,200,255,0.65)';
+    c.beginPath(); c.ellipse(-s*.3,s*.08,s*.75,s*.28,-0.18,0,Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(s*.3,s*.08,s*.75,s*.28,0.18,0,Math.PI*2); c.fill();
+    c.globalAlpha=1;
+    // dark thorax+abdomen
+    c.beginPath(); c.ellipse(0,0,s*.28,s*.52,0,0,Math.PI*2);
+    c.fillStyle='#1c1c1c'; c.fill();
+    c.beginPath(); c.ellipse(0,-s*.3,s*.22,s*.22,0,0,Math.PI*2);
+    c.fillStyle='#111'; c.fill();
+    // compound eyes
+    c.fillStyle='rgba(0,180,100,.7)';
+    c.beginPath(); c.arc(-s*.18,-s*.42,s*.14,0,Math.PI*2); c.fill();
+    c.beginPath(); c.arc(s*.18,-s*.42,s*.14,0,Math.PI*2); c.fill();
+  } else { // beetle
+    // hard elytra shell
+    c.beginPath(); c.ellipse(0,0,s*.44,s*.68,0,0,Math.PI*2);
+    c.fillStyle='#0e0600'; c.fill();
+    c.strokeStyle='#3a1800'; c.lineWidth=0.7; c.stroke();
+    // shell highlight
+    c.fillStyle='rgba(80,40,10,0.5)';
+    c.beginPath(); c.ellipse(-s*.1,-s*.18,s*.18,s*.3,0,0,Math.PI*2); c.fill();
+    // center split line
+    c.strokeStyle='#220a00'; c.lineWidth=0.9;
+    c.beginPath(); c.moveTo(0,-s*.68); c.lineTo(0,s*.68); c.stroke();
+    // head
+    c.beginPath(); c.arc(0,-s*.72,s*.26,0,Math.PI*2);
+    c.fillStyle='#0e0600'; c.fill();
+    // horns
+    c.strokeStyle='#554422'; c.lineWidth=0.8;
+    c.beginPath(); c.moveTo(-s*.1,-s*.9); c.lineTo(-s*.3,-s*1.2); c.stroke();
+    c.beginPath(); c.moveTo(s*.1,-s*.9); c.lineTo(s*.3,-s*1.2); c.stroke();
+    // red eyes
+    c.fillStyle='rgba(220,20,0,.85)';
+    c.beginPath(); c.arc(-s*.14,-s*.76,s*.09,0,Math.PI*2); c.fill();
+    c.beginPath(); c.arc(s*.14,-s*.76,s*.09,0,Math.PI*2); c.fill();
+    // underwings peek
+    if(Math.sin(this.wp*.2)>.7){
+      c.globalAlpha=0.35;
+      c.fillStyle='rgba(100,60,20,.5)';
+      c.beginPath(); c.ellipse(-s*.35,0,s*.6,s*.28,0.2,0,Math.PI*2); c.fill();
+      c.beginPath(); c.ellipse(s*.35,0,s*.6,s*.28,-0.2,0,Math.PI*2); c.fill();
+      c.globalAlpha=1;
+    }
+  }
+  c.restore();
 };
 function HexShard(){this.reset(true)}
 HexShard.prototype.reset=function(i){this.x=Math.random()*fxc.width;this.y=i?Math.random()*fxc.height:-20;this.sz=8+Math.random()*16;this.vx=(Math.random()-.5)*1.5;this.vy=.5+Math.random()*1.5;this.a=.2+Math.random()*.4;this.rot=Math.random()*Math.PI;this.rv=(Math.random()-.5)*.05};
@@ -1410,7 +1533,7 @@ Packet.prototype.draw=function(){var x=this.ox+(this.tx-this.ox)*this.prog,y=thi
 
 function initFX(){
   pts=[];
-  if(cur==='home'){for(var i=0;i<60;i++)pts.push(new Wasp())}
+  if(cur==='home'){for(var i=0;i<80;i++)pts.push(new BugSwarm())}
   else if(cur==='gaming'){for(var i=0;i<60;i++)pts.push(new HexShard())}
   else if(cur==='lucille'){for(var i=0;i<50;i++)pts.push(new Orb())}
   else if(cur==='droid'){var cols=Math.floor(fxc.width/22);for(var i=0;i<cols;i++)pts.push(new MatrixDrop(i*22))}
@@ -1522,13 +1645,13 @@ function drawWasp(ctx,lp,moving,antennaTick){
     ctx.fillStyle='#667766';ctx.fill();
   }
 
-  /* ── ABDOMEN ── */
+  /* ── ABDOMEN — METALLIC STEEL/CHROME ── */
   var segs=[
-    {y:6, rx:9.5,ry:5,  col0:'#8a6600',col1:'#ffcc22',col2:'#7a5500'},
-    {y:15,rx:9,  ry:4.5,col0:'#111',   col1:'#3a3a2a',col2:'#080808'},
-    {y:23,rx:7.5,ry:4,  col0:'#8a6600',col1:'#ffbb00',col2:'#7a5500'},
-    {y:31,rx:5.5,ry:3.5,col0:'#111',   col1:'#2a2a1a',col2:'#080808'},
-    {y:38,rx:3.5,ry:3,  col0:'#7a5500',col1:'#dd9900',col2:'#6a4400'},
+    {y:6, rx:9.5,ry:5,  col0:'#3a4a4a',col1:'#88aaaa',col2:'#1a2a2a'},  // chrome
+    {y:15,rx:9,  ry:4.5,col0:'#080a0a',col1:'#222828',col2:'#040606'},  // dark steel
+    {y:23,rx:7.5,ry:4,  col0:'#2a3a3a',col1:'#6a9090',col2:'#142020'},  // steel
+    {y:31,rx:5.5,ry:3.5,col0:'#0d0d10',col1:'#1e2028',col2:'#060608'},  // dark
+    {y:38,rx:3.5,ry:3,  col0:'#1a2a2a',col1:'#445555',col2:'#0a1515'},  // chrome tip
   ];
   segs.forEach(function(s){
     var grad=cx.createRadialGradient(-s.rx*0.3,s.y-1,0.5,0,s.y,s.rx);
@@ -1539,9 +1662,9 @@ function drawWasp(ctx,lp,moving,antennaTick){
     ctx.fillStyle=grad;ctx.fill();
     // segment edge
     ctx.strokeStyle='rgba(0,0,0,0.6)';ctx.lineWidth=0.6;ctx.stroke();
-    // metallic highlight
+    // metallic highlight (chrome glint)
     ctx.beginPath();ctx.ellipse(-s.rx*0.25,s.y-s.ry*0.4,s.rx*0.45,s.ry*0.25,0,0,Math.PI*2);
-    ctx.fillStyle='rgba(255,240,160,0.18)';ctx.fill();
+    ctx.fillStyle='rgba(200,240,255,0.25)';ctx.fill();
   });
 
   /* ── WAIST (petiole) ── */
@@ -1648,64 +1771,68 @@ function drawWasp(ctx,lp,moving,antennaTick){
   ctx.restore();
 }
 
-// ── WASP STATE MACHINE ──
-var wasp={
-  x:200, y:200,
-  angle:0,          // direction of travel (radians)
-  drawAngle:0,      // smoothly interpolated visual angle
-  state:'walk',     // 'walk' | 'pause' | 'turn'
-  stateTimer:0,
-  stepTick:0,       // sub-tick counter for tick-tock
-  stepInterval:4,   // frames per tick-tock step
-  stepsLeft:0,      // steps remaining in walk burst
-  legPhase:0,
-  antennaTick:0,
-  antennaDir:1,
-  speed:7,          // px per step
-  turnTarget:0,
-  scale:1.0,
-  // shadow trail
-  trail:[],
-  trailMax:8
-};
+// ── MULTI-WASP STATE MACHINE — 5 INDEPENDENT METAL WASPS ──
+var NUM_WASPS=5;
+var wasps=[];
 
-function waspInit(){
-  wasp.x=150+Math.random()*(W-300);
-  wasp.y=120+Math.random()*(H-240);
-  wasp.angle=Math.random()*Math.PI*2;
-  wasp.drawAngle=wasp.angle;
-  wasp.stepsLeft=randomSteps();
-  wasp.state='walk';
+function randomSteps(){return 5+Math.floor(Math.random()*12);}
+function randomPause(){return 18+Math.floor(Math.random()*28);}
+
+function makeWasp(idx){
+  var scales=[1.35,0.95,1.18,1.05,1.5]; // varied sizes — bigger is scarier
+  var speeds=[8,6,9,7,5];
+  return {
+    x: 120+Math.random()*(W-240),
+    y: 100+Math.random()*(H-220),
+    angle: Math.random()*Math.PI*2,
+    drawAngle: 0,
+    state: 'walk',
+    stateTimer: 0,
+    stepTick: 0,
+    stepInterval: 3+Math.floor(Math.random()*3), // tick-tock speed varies
+    stepsLeft: randomSteps(),
+    legPhase: Math.random()*Math.PI*2,
+    antennaTick: 0,
+    antennaDir: Math.random()<.5?1:-1,
+    speed: speeds[idx%speeds.length],
+    turnTarget: 0,
+    scale: scales[idx%scales.length],
+    trail: [],
+    trailMax: 6
+  };
 }
 
-function randomSteps(){return 6+Math.floor(Math.random()*10);}
-function randomPause(){return 22+Math.floor(Math.random()*30);}
+function waspInit(){
+  wasps=[];
+  for(var i=0;i<NUM_WASPS;i++){
+    var w=makeWasp(i);
+    w.drawAngle=w.angle;
+    wasps.push(w);
+  }
+}
 
-function updateWasp(){
-  wasp.antennaTick+=0.06*wasp.antennaDir;
+function updateOneWasp(wasp){
+  wasp.antennaTick+=0.07*wasp.antennaDir;
   if(Math.abs(wasp.antennaTick)>1){wasp.antennaDir*=-1;}
 
   if(wasp.state==='walk'){
     wasp.stepTick++;
     if(wasp.stepTick>=wasp.stepInterval){
       wasp.stepTick=0;
-      // ONE tick: lurch forward
       wasp.x+=Math.cos(wasp.angle)*wasp.speed;
       wasp.y+=Math.sin(wasp.angle)*wasp.speed;
-      wasp.legPhase+=0.55;
+      wasp.legPhase+=0.6;
 
-      // save trail
       wasp.trail.push({x:wasp.x,y:wasp.y,a:wasp.drawAngle});
       if(wasp.trail.length>wasp.trailMax)wasp.trail.shift();
 
-      // micro random wobble on angle
-      wasp.angle+=(Math.random()-0.5)*0.12;
+      // micro-wobble: scarier erratic movement
+      wasp.angle+=(Math.random()-0.5)*0.16;
 
-      // wall bounce
-      var pad=70;
+      var pad=60;
       if(wasp.x<pad){wasp.x=pad;wasp.angle=Math.PI-wasp.angle;}
       if(wasp.x>W-pad){wasp.x=W-pad;wasp.angle=Math.PI-wasp.angle;}
-      if(wasp.y<60){wasp.y=60;wasp.angle=-wasp.angle;}
+      if(wasp.y<55){wasp.y=55;wasp.angle=-wasp.angle;}
       if(wasp.y>H-pad){wasp.y=H-pad;wasp.angle=-wasp.angle;}
 
       wasp.stepsLeft--;
@@ -1715,31 +1842,29 @@ function updateWasp(){
         wasp.stepsLeft=randomSteps();
       }
     }
-    // smooth visual angle towards travel angle
     var da=wasp.angle-wasp.drawAngle;
     while(da>Math.PI)da-=Math.PI*2;
     while(da<-Math.PI)da+=Math.PI*2;
-    wasp.drawAngle+=da*0.18;
+    wasp.drawAngle+=da*0.2;
 
   } else if(wasp.state==='pause'){
-    // TOCK — freeze for stateTimer frames, antennae twitch
     wasp.stateTimer--;
     if(wasp.stateTimer<=0){
-      // pick new direction: mostly forward-ish, sometimes sharp turn
-      var turnBias=(Math.random()<0.3)?Math.PI*(0.4+Math.random()*0.8):Math.PI*(0.08+Math.random()*0.25);
-      var turnDir=Math.random()<0.5?1:-1;
-      wasp.turnTarget=wasp.angle+turnDir*turnBias;
+      // aggressive sharp turns — scarier
+      var bias=(Math.random()<0.4)?Math.PI*(0.5+Math.random()):(Math.PI*(0.1+Math.random()*.3));
+      var dir=Math.random()<.5?1:-1;
+      wasp.turnTarget=wasp.angle+dir*bias;
       wasp.state='turn';
-      wasp.stateTimer=10+Math.floor(Math.random()*8);
+      wasp.stateTimer=8+Math.floor(Math.random()*7);
     }
 
   } else if(wasp.state==='turn'){
-    // quick mechanical snap-turn
     var dturn=wasp.turnTarget-wasp.angle;
     while(dturn>Math.PI)dturn-=Math.PI*2;
     while(dturn<-Math.PI)dturn+=Math.PI*2;
-    wasp.angle+=dturn*0.28;
-    wasp.drawAngle+=dturn*0.28;
+    // faster snap — more mechanical/robotic
+    wasp.angle+=dturn*0.35;
+    wasp.drawAngle+=dturn*0.35;
     wasp.stateTimer--;
     if(wasp.stateTimer<=0){
       wasp.angle=wasp.turnTarget;
@@ -1750,41 +1875,42 @@ function updateWasp(){
 }
 
 function renderCrawl(){
-  cc.width=W;// clear each frame
   cx.clearRect(0,0,W,H);
 
-  // faint shadow trail
-  wasp.trail.forEach(function(t,i){
-    var ta=(i/wasp.trailMax)*0.08;
+  wasps.forEach(function(wasp){
+    // faint acid-green shadow trails for each
+    wasp.trail.forEach(function(t,i){
+      var ta=(i/wasp.trailMax)*0.06;
+      cx.save();
+      cx.translate(t.x,t.y); cx.rotate(t.a+Math.PI/2);
+      cx.globalAlpha=ta;
+      cx.beginPath(); cx.ellipse(0,-5,12,28,0,0,Math.PI*2);
+      cx.fillStyle='rgba(0,180,80,1)'; cx.fill();
+      cx.restore();
+    });
+
+    // drop shadow
     cx.save();
-    cx.translate(t.x,t.y);
-    cx.rotate(t.a+Math.PI/2);
-    cx.globalAlpha=ta;
-    cx.beginPath();cx.ellipse(0,-5,14,30,0,0,Math.PI*2);
-    cx.fillStyle='rgba(0,60,0,1)';cx.fill();
+    cx.translate(wasp.x+4,wasp.y+5);
+    cx.rotate(wasp.drawAngle+Math.PI/2);
+    cx.globalAlpha=0.22;
+    cx.beginPath(); cx.ellipse(0,-5,16*wasp.scale,36*wasp.scale,0,0,Math.PI*2);
+    cx.fillStyle='#000'; cx.fill();
+    cx.restore();
+
+    // the wasp
+    cx.save();
+    cx.translate(wasp.x,wasp.y);
+    cx.rotate(wasp.drawAngle+Math.PI/2);
+    cx.scale(wasp.scale,wasp.scale);
+    drawWasp(cx,wasp.legPhase,wasp.state==='walk',wasp.antennaTick);
     cx.restore();
   });
-
-  // drop shadow under wasp
-  cx.save();
-  cx.translate(wasp.x+4,wasp.y+4);
-  cx.rotate(wasp.drawAngle+Math.PI/2);
-  cx.globalAlpha=0.18;
-  cx.beginPath();cx.ellipse(0,-5,18,38,0,0,Math.PI*2);
-  cx.fillStyle='#000';cx.fill();
-  cx.restore();
-
-  // wasp itself
-  cx.save();
-  cx.translate(wasp.x,wasp.y);
-  cx.rotate(wasp.drawAngle+Math.PI/2);
-  cx.scale(wasp.scale,wasp.scale);
-  drawWasp(cx,wasp.legPhase,wasp.state==='walk',wasp.antennaTick);
-  cx.restore();
 }
 
 function crawlLoop(){
-  updateWasp();
+  cc.width=W; // clear
+  wasps.forEach(updateOneWasp);
   renderCrawl();
   requestAnimationFrame(crawlLoop);
 }
@@ -1794,24 +1920,135 @@ crawlLoop();
 
 })();
 
-// ══════════════════ APP DRAWER ══════════════════
-function openDrawer(){document.getElementById('app-drawer').classList.add('open')}
-function closeDrawer(){document.getElementById('app-drawer').classList.remove('open')}
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDrawer()});
-// close drawer if clicking outside .ad-grid area
-document.getElementById('app-drawer').addEventListener('click',function(e){
-  if(e.target===this)closeDrawer();
+// ══════════════════ POWER MENU ══════════════════
+function togglePwr(){
+  var m=document.getElementById('pwrMenu');
+  m.style.display=m.style.display==='block'?'none':'block';
+}
+function pwrAct(action){
+  document.getElementById('pwrMenu').style.display='none';
+  var msgs={lock:'🔒 SCREEN LOCKED',sleep:'💤 SYSTEM SLEEP',restart:'🔄 RESTARTING…',shutdown:'⏻ SHUTTING DOWN…',settings:'⚙️ OPENING SETTINGS'};
+  if(msgs[action]){
+    var el=document.createElement('div');
+    el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.92);border:1px solid var(--cy);color:var(--cy);padding:18px 36px;font-family:Orbitron,sans-serif;font-size:1.1rem;z-index:9999;border-radius:4px;letter-spacing:2px';
+    el.textContent=msgs[action];
+    document.body.appendChild(el);
+    setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},2000);
+  }
+}
+document.addEventListener('click',function(e){
+  var pw=document.getElementById('pwrMenu');
+  if(pw && pw.style.display==='block' && !e.target.closest('.pwr-wrap'))pw.style.display='none';
 });
 
-// ══════════════════ OSD SIMULATION ══════════════════
+// ══════════════════ LEFT + RIGHT DRAWERS ══════════════════
+function toggleLeftDrawer(){
+  var ld=document.getElementById('left-drawer');
+  var rd=document.getElementById('right-drawer');
+  var open=ld.classList.contains('open');
+  if(!open){rd.classList.remove('open');}
+  ld.classList.toggle('open');
+}
+function toggleRightDrawer(){
+  var ld=document.getElementById('left-drawer');
+  var rd=document.getElementById('right-drawer');
+  var open=rd.classList.contains('open');
+  if(!open){ld.classList.remove('open');}
+  rd.classList.toggle('open');
+}
+function closeAllDrawers(){
+  document.getElementById('left-drawer').classList.remove('open');
+  document.getElementById('right-drawer').classList.remove('open');
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeAllDrawers();});
+
+// ══════════════════ OSD DRAG + RESIZE ══════════════════
 (function(){
-  var cpuVals=[28,35,42,38,55,44,62,38,29,48],ramVals=[78,79,82,80,81,79,83,80,78,81],i=0;
+  var osd=document.getElementById('osd');
+  var handle=document.getElementById('osdHandle');
+  if(!osd||!handle)return;
+  var dragging=false, ox=0, oy=0;
+  handle.addEventListener('mousedown',function(e){
+    dragging=true;
+    ox=e.clientX-osd.getBoundingClientRect().left;
+    oy=e.clientY-osd.getBoundingClientRect().top;
+    osd.style.transition='none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!dragging)return;
+    var nx=e.clientX-ox;
+    var ny=e.clientY-oy;
+    nx=Math.max(0,Math.min(nx,window.innerWidth-osd.offsetWidth));
+    ny=Math.max(0,Math.min(ny,window.innerHeight-osd.offsetHeight));
+    osd.style.left=nx+'px';
+    osd.style.bottom='auto';
+    osd.style.top=ny+'px';
+  });
+  document.addEventListener('mouseup',function(){dragging=false;osd.style.transition='';});
+})();
+
+// ══════════════════ OSD SIZE CYCLE ══════════════════
+var osdSizeIdx=1; // 0=compact 1=normal 2=expanded
+var osdSizes=['osd-compact','','osd-expanded'];
+function cycleOsdSize(){
+  var osd=document.getElementById('osd');
+  if(!osd)return;
+  osd.classList.remove('osd-compact','osd-expanded');
+  osdSizeIdx=(osdSizeIdx+1)%3;
+  if(osdSizes[osdSizeIdx])osd.classList.add(osdSizes[osdSizeIdx]);
+}
+function resetOsdPos(){
+  var osd=document.getElementById('osd');
+  if(!osd)return;
+  osd.style.left=''; osd.style.top=''; osd.style.bottom='';
+}
+
+// ══════════════════ OSD SIMULATION (AI METRICS + CPU/RAM) ══════════════════
+(function(){
+  var cpuVals=[28,35,42,38,55,44,62,38,29,48];
+  var ramVals=[78,79,82,80,81,79,83,80,78,81];
+  var latVals=[112,89,134,97,142,88,105,118,95,127];
+  var costBase=0.0;
+  var orBalance=3.47;
+  var i=0;
+
   setInterval(function(){
-    var cf=document.getElementById('osdCpu'),rf=document.getElementById('osdRam');
+    var cf=document.getElementById('osdCpu');
+    var rf=document.getElementById('osdRam');
+    var lf=document.getElementById('osdLat');
+    var cosf=document.getElementById('osdCost');
+    var orf=document.getElementById('osdOR');
+    var telf=document.getElementById('rdr-telemetry');
+
     if(cf)cf.style.width=cpuVals[i%cpuVals.length]+'%';
     if(rf)rf.style.width=ramVals[i%ramVals.length]+'%';
+
+    var lat=latVals[i%latVals.length];
+    if(lf)lf.textContent=lat+'ms';
+
+    // accumulate tiny cost each tick
+    costBase+=0.0001+(Math.random()*0.0003);
+    if(cosf)cosf.textContent='$'+costBase.toFixed(4);
+
+    // OR balance drifts down slightly
+    orBalance-=0.0002;
+    if(orBalance<0)orBalance=3.47;
+    if(orf)orf.textContent='OR:$'+orBalance.toFixed(2);
+
+    // update telemetry row in right drawer
+    var tps=(1+Math.random()*4).toFixed(1);
+    var rps=(0.5+Math.random()*2).toFixed(1);
+    if(telf)telf.textContent='TOKENS/S: '+tps+' · REQ/S: '+rps+' · LATENCY: '+lat+'ms';
+
     i++;
-  },4000);
+  },3500);
+
+  // clock update — faster interval
+  setInterval(function(){
+    var clk=document.getElementById('osdClock');
+    if(clk){var d=new Date();clk.textContent=d.toLocaleTimeString('en-US',{hour12:false});}
+  },1000);
 })();
 </script>
 </body>

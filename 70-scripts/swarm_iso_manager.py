@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Single Ventoy release store. Stable is always an explicit human decision."""
+"""Keep ten current ISOs on Ventoy; archive verified SWARM builds weekly on Boltz."""
 import argparse
 import contextlib
 import fcntl
@@ -12,12 +12,37 @@ import shutil
 import subprocess
 import sys
 import time
+import datetime
 
 STORE = Path('/mnt/ventoy/ISO/SWARM_OS')
 MOUNT = Path('/mnt/ventoy')
 PROJECT = Path('/mnt/Lucy')
 ISO_RE = re.compile(r'^swarm[-_]os[-_]v?\d.*\.iso$', re.I)
 KEEP = 10
+ARCHIVE_MOUNT = Path('/mnt/boltz')
+ARCHIVE = ARCHIVE_MOUNT / 'ISO/SWARM_OS/weekly'
+ARCHIVE_UUID = '689e6547-b439-4e7f-93c9-a6dcfabed46b'
+
+def require_archive():
+    mount = json.loads(subprocess.check_output(
+        ['findmnt', '--json', '--mountpoint', str(ARCHIVE_MOUNT), '-o', 'TARGET,UUID,FSTYPE'],
+        text=True))['filesystems'][0]
+    if mount['uuid'].lower() != ARCHIVE_UUID or mount['fstype'] != 'ext4':
+        raise RuntimeError('Expected Boltz filesystem is not mounted at /mnt/boltz.')
+    if ARCHIVE.resolve() != ARCHIVE:
+        raise RuntimeError('Weekly archive must not redirect through a symlink.')
+    return ARCHIVE
+
+def all_isos(root):
+    """All OS images, without following symlinks or counting active build output."""
+    result = []
+    for directory, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d != '.incoming' and not (Path(directory)/d).is_symlink()]
+        for name in files:
+            p = Path(directory)/name
+            if p.suffix.lower() == '.iso' and p.is_file() and not p.is_symlink():
+                result.append(p)
+    return sorted(result, key=lambda p: (p.stat().st_mtime_ns, str(p)), reverse=True)
 
 def require_store():
     mount = json.loads(subprocess.check_output(['findmnt','--json','--mountpoint',str(MOUNT),'-o','TARGET,UUID,FSTYPE'],text=True))['filesystems'][0]
@@ -66,19 +91,19 @@ def update_latest(store):
         (store/'latest.txt').unlink(missing_ok=True);return
     atomic_text(store/'latest.txt',candidate.name+'\n')
 
-def prune(store,dry_run=False):
-    rolling=[p for p in releases(store) if not stable(p)]
-    removed=rolling[KEEP:]
+def prune(store,dry_run=False,root=None):
+    # 2026-09-24: explicit user policy supersedes stable/other-OS exemptions.
+    removed=all_isos(root or store)[KEEP:]
     for p in removed:
         print(('Would remove ' if dry_run else 'Removing ')+p.name)
         if not dry_run:
             p.unlink()
-            for suffix in ['.json','.sha256']:
+            for suffix in ['.json','.sha256','.stable']:
                 p.with_name(p.name+suffix).unlink(missing_ok=True)
     if not dry_run: update_latest(store)
     return removed
 
-def publish(store,source,name,result):
+def publish(store,source,name,result,retention_root=None):
     if not ISO_RE.fullmatch(name) or Path(name).name != name: raise ValueError('Invalid versioned ISO name')
     source=source.resolve(strict=True)
     if not source.is_relative_to(store/'.incoming'): raise ValueError('Build output must be inside Ventoy .incoming')
@@ -89,8 +114,69 @@ def publish(store,source,name,result):
     atomic_text(target.with_name(name+'.sha256'),f'{checksum}  {name}\n')
     atomic_text(target.with_name(name+'.json'),json.dumps({'boot_gate':result,'published':time.strftime('%Y-%m-%dT%H:%M:%S%z')},indent=2)+'\n')
     if result != 'failed': atomic_text(store/'latest.txt',name+'\n')
-    prune(store)
+    prune(store,root=retention_root)
     print(target)
+
+def archive_weekly(store, archive, today=None):
+    """At most one checksum-verified, boot-passed image per ISO calendar week."""
+    today = today or datetime.date.today()
+    year, week, _ = today.isocalendar()
+    destination = archive / f'{year}-W{week:02d}'
+    if destination.resolve() != destination:
+        raise RuntimeError('Weekly directory must not redirect through a symlink.')
+    receipt = destination / 'archive.json'
+    if receipt.exists():
+        record = json.loads(receipt.read_text())
+        name = record['name']
+        if Path(name).name != name or not ISO_RE.fullmatch(name):
+            raise RuntimeError('Invalid weekly archive receipt.')
+        image = destination / name
+        if image.is_symlink() or not image.is_file() or digest(image) != record['sha256']:
+            raise RuntimeError('Existing weekly archive failed checksum verification.')
+        print('This week already has a verified archive: '+str(image))
+        return image
+    candidates = [p for p in releases(store) if status(p) == 'pass']
+    if not candidates:
+        print('No boot-verified SWARM ISO is available; no archive created.')
+        return None
+    source = candidates[0]
+    side = source.with_name(source.name+'.sha256')
+    if not side.is_file() or side.is_symlink():
+        raise RuntimeError('Boot-passed image has no regular checksum sidecar.')
+    expected = side.read_text().split()[0]
+    if not re.fullmatch(r'[0-9a-fA-F]{64}', expected) or digest(source) != expected.lower():
+        raise RuntimeError('Boot-passed source failed checksum verification.')
+    # Avoid filling the archive with copies of the same build in quiet weeks.
+    for old in archive.glob('*/archive.json'):
+        if old.is_symlink() or old.parent.resolve() != old.parent:
+            raise RuntimeError('Archive receipt must not redirect through a symlink.')
+        record = json.loads(old.read_text())
+        if record.get('sha256') == expected.lower():
+            name = record.get('name', '')
+            if Path(name).name != name:
+                raise RuntimeError('Invalid previous archive receipt.')
+            image = old.parent/name
+            if image.is_symlink() or not image.is_file() or digest(image) != expected.lower():
+                raise RuntimeError('Previous archive copy failed checksum verification.')
+            print('Newest verified build is already archived; no duplicate created.')
+            return image
+    destination.mkdir(parents=True, exist_ok=True)
+    target = destination/source.name
+    if target.exists():
+        raise RuntimeError('Unrecorded archive file exists; inspect it before retrying.')
+    temporary = target.with_name(target.name+'.partial')
+    # Exclusive creation prevents overwriting an interrupted copy.
+    with temporary.open('xb') as output, source.open('rb') as input_file:
+        shutil.copyfileobj(input_file, output, length=8*1024*1024)
+        output.flush(); os.fsync(output.fileno())
+    if digest(temporary) != expected.lower():
+        raise RuntimeError('Weekly archive copy failed checksum verification.')
+    temporary.replace(target)
+    atomic_text(target.with_name(target.name+'.sha256'), expected.lower()+'  '+target.name+'\n')
+    atomic_text(receipt, json.dumps({'name':target.name, 'sha256':expected.lower(),
+                                   'boot_gate':'pass', 'archived':today.isoformat()}, indent=2)+'\n')
+    print('Archived verified build: '+str(target))
+    return target
 
 def migrate(store,sources,dry_run=False):
     # Move only recognized SWARM releases; never touch other operating systems.
@@ -146,7 +232,7 @@ def migration_sources():
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     subs=parser.add_subparsers(dest='command',required=True)
-    for name in ['check','latest','list']: subs.add_parser(name)
+    for name in ['check','latest','list','archive-weekly']: subs.add_parser(name)
     for name in ['prune','migrate']:
         sub=subs.add_parser(name);sub.add_argument('--dry-run',action='store_true')
     for name in ['stable','unmark-stable']:
@@ -163,14 +249,22 @@ def main():
     lock=PROJECT/'70-scripts/.iso-manager.lock'
     with lock.open('a') as f:
         fcntl.flock(f,fcntl.LOCK_EX)
-        if args.command=='prune': prune(store,args.dry_run)
-        elif args.command=='migrate': migrate(store,migration_sources(),args.dry_run)
-        elif args.command=='publish': publish(store,args.source,args.name,args.result)
+        if args.command=='prune': prune(store,args.dry_run,root=MOUNT)
+        elif args.command=='archive-weekly': archive_weekly(store,require_archive())
+        elif args.command=='migrate':
+            migrate(store,migration_sources(),args.dry_run)
+            prune(store,args.dry_run,root=MOUNT)
+        elif args.command=='publish':
+            publish(store,args.source,args.name,args.result,retention_root=MOUNT)
+            if args.result == 'pass':
+                try: archive_weekly(store,require_archive())
+                except (OSError,ValueError,RuntimeError,subprocess.CalledProcessError,IndexError,KeyError) as exc:
+                    print('Weekly archive pending: '+str(exc),file=sys.stderr)
         else:
             p=store/Path(args.iso).name
             if not p.is_file() or p.is_symlink() or not ISO_RE.fullmatch(p.name): raise ValueError('Choose an existing versioned SWARM ISO')
             marker=p.with_name(p.name+'.stable')
-            if args.command=='stable': atomic_text(marker,args.note+'\n');print('Protected: '+p.name)
+            if args.command=='stable': atomic_text(marker,args.note+'\n');print('Labelled stable (still counts toward the ten-image limit): '+p.name)
             else:
                 if re.search(r'(^|[-_.])stable([-_.]|$)',p.stem,re.I): raise ValueError('Rename the ISO to remove its stable label first.')
                 marker.unlink(missing_ok=True);print('No longer pinned: '+p.name)

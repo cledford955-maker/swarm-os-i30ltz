@@ -57,6 +57,9 @@ flock -n 8 || { echo 'A SWARM ISO build is already running.' >&2; exit 1; }
 # executable modes would recreate the desktop boot regression.
 python3 "$LUCY/70-scripts/tests/test_desktop_boot_contract.py"
 sudo mkdir -p "$RELEASE_DIR/.incoming"
+# The build lock above proves no canonical build is active. Remove orphaned ISO
+# output from interrupted runs before creating this run's one temporary image.
+sudo find "$RELEASE_DIR/.incoming" -mindepth 2 -maxdepth 2 -type f -iname '*.iso' -delete
 OUT_DIR=$(sudo mktemp -d "$RELEASE_DIR/.incoming/build.XXXXXXXX")
 cleanup_build() {
  # Only this run's temporary output. No published release is touched here.
@@ -462,7 +465,7 @@ else
 fi
 # exFAT uses latest.txt, not symlinks or duplicate multi-GB latest/fallback ISOs.
 sudo python "$ISO_MANAGER" publish "$TARGET_ISO" "swarm-os-v${NEW_VER}-${COMMIT}.iso" --result "$RESULT"
-echo "ISO stored ONLY in $RELEASE_DIR; newest 10 rolling builds + explicitly stable builds retained."
+echo "ISO stored ONLY in $RELEASE_DIR; ten newest ISOs total retained across Ventoy."
 if [[ $RESULT == failed ]]; then
  echo 'Boot gate failed. The previous latest pointer was not promoted to this build.' >&2
  exit 1
