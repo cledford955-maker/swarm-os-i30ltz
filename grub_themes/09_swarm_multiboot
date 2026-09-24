@@ -39,8 +39,36 @@ menuentry 'Ventoy' --class ventoy --id swarm-ventoy {
  if [ "$grub_platform" = efi ]; then
   insmod fat
   insmod chain
-  search --no-floppy --fs-uuid --set=ventoy_efi E039-AD96
-  chainloader ($ventoy_efi)/EFI/BOOT/BOOTX64.EFI
+  # Try known UUID first; fall back to standard Ventoy EFI label
+  if search --no-floppy --fs-uuid --set=ventoy_efi E039-AD96; then
+   true
+  elif search --no-floppy --label --set=ventoy_efi VTOYEFI; then
+   true
+  else
+   echo ''
+   echo '  ERROR: Ventoy EFI partition not found.'
+   echo '  UUID E039-AD96 and label VTOYEFI both missing.'
+   echo '  Run from a booted OS:'
+   echo '    sudo blkid | grep -i ventoy'
+   echo '  Then update 09_swarm_multiboot UUID and reinstall themes.'
+   echo ''
+   sleep 10
+   exit
+  fi
+  # --force bypasses GRUB signature check; required on many UEFI boards
+  if [ -f ($ventoy_efi)/EFI/BOOT/BOOTX64.EFI ]; then
+   chainloader --force ($ventoy_efi)/EFI/BOOT/BOOTX64.EFI
+  elif [ -f ($ventoy_efi)/EFI/ventoy/grubx64.efi ]; then
+   chainloader --force ($ventoy_efi)/EFI/ventoy/grubx64.efi
+  else
+   echo ''
+   echo '  ERROR: Ventoy EFI binary missing on the found partition.'
+   echo '  Expected: /EFI/BOOT/BOOTX64.EFI or /EFI/ventoy/grubx64.efi'
+   echo '  Ventoy may need reinstalling to this drive.'
+   echo ''
+   sleep 10
+   exit
+  fi
  else
   echo 'Ventoy entry requires UEFI mode.'
   sleep 5
