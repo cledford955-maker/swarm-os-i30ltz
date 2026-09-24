@@ -60,6 +60,7 @@
 - [x] Shared-memory sync (`swarm-memory`) built and tested v1.0.0
 
 ### Companion / Android
+- [x] **Four private project repositories with ten-minute autosync** (2026-09-24): SWARM OS, I30LTZ Recovery OS, I30LTZ Companion, and Lucille Assistant each have their own GitHub destination. All four pushes verified; backup-file and oversized-unpublished-archive blockers repaired. See `70-scripts/GITHUB_AUTOSYNC.md`.
 - [x] Monitor tab device selector, actions, pooled fleet resources
 - [x] Dr. Boltz avatar screen
 - [x] IDE back-navigation, live terminal over WebSocket

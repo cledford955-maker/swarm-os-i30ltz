@@ -36,3 +36,10 @@ journalctl --user -u swarm-lucy-sync.service -n 40 --no-pager
 
 Repository names are intentionally separate: I30LTZ Companion is the recovery
 companion; Lucille Assistant is the assistant app. Neither replaces the other.
+
+Verified 2026-09-24: all four destinations reported `SYNC OK` and the service
+completed successfully. The previous blockage also included generated 4 GB
+installer archives in unpublished history. Those archives were removed only
+from unpublished commits, with the prior history preserved at
+`refs/checkpoints/pre-autosync-history-repair-20260924`; the final source tree
+was identical. GitHub main advanced normally without a force push.
