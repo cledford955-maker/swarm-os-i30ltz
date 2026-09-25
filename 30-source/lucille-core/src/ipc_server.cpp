@@ -94,6 +94,13 @@ void IpcServer::epoll_del(int fd) {
 // ---- Event loop ---------------------------------------------------------
 
 void IpcServer::run_event_loop() {
+    {
+        std::lock_guard<std::mutex> lk(lifecycle_mutex_);
+        if (!is_running_ || epoll_fd_ < 0) return;   // already shut down
+        loop_active_    = true;
+        loop_thread_id_ = std::this_thread::get_id();
+    }
+
     struct epoll_event events[kMaxEvents];
 
     while (is_running_) {
@@ -130,6 +137,14 @@ void IpcServer::run_event_loop() {
         }
     }
 done:
+    // Hand fd ownership back: after loop_active_ is cleared under the lock,
+    // shutdown() can no longer write to wake_fd_, so closing is safe.
+    {
+        std::lock_guard<std::mutex> lk(lifecycle_mutex_);
+        loop_active_ = false;
+        release_resources();
+    }
+    loop_exited_cv_.notify_all();
     std::cout << "[IpcServer] Event loop exited.\n";
 }
 
@@ -191,18 +206,33 @@ void IpcServer::close_client(int client_fd) {
 // ---- Shutdown ------------------------------------------------------------
 
 void IpcServer::shutdown() {
+    std::unique_lock<std::mutex> lk(lifecycle_mutex_);
     if (!is_running_.exchange(false)) return;
 
-    // Wake the event loop
-    if (wake_fd_ >= 0) {
-        uint64_t val = 1;
-        while (write(wake_fd_, &val, sizeof(val)) < 0 && errno == EINTR) {}
+    if (!loop_active_) {
+        // No loop running (never started, or already exited): clean up here
+        release_resources();
+        return;
     }
 
-    if (epoll_fd_ >= 0) { close(epoll_fd_); epoll_fd_ = -1; }
-    if (wake_fd_  >= 0) { close(wake_fd_);  wake_fd_  = -1; }
-    if (server_fd_ >= 0) { close(server_fd_); server_fd_ = -1; }
-    unlink(socket_path_.c_str());
+    // Loop is running and owns the fds — wake it; it releases them on exit
+    uint64_t val = 1;
+    while (write(wake_fd_, &val, sizeof(val)) < 0 && errno == EINTR) {}
+
+    // Wait for the loop to finish (unless shutdown() came from a handler
+    // running on the loop thread itself — it exits after this returns)
+    if (std::this_thread::get_id() != loop_thread_id_) {
+        loop_exited_cv_.wait(lk, [this] { return !loop_active_; });
+    }
+}
+
+void IpcServer::release_resources() {
+    if (epoll_fd_  >= 0) { close(epoll_fd_);  epoll_fd_  = -1; }
+    if (wake_fd_   >= 0) { close(wake_fd_);   wake_fd_   = -1; }
+    if (server_fd_ >= 0) {
+        close(server_fd_); server_fd_ = -1;
+        unlink(socket_path_.c_str());
+    }
 
     std::lock_guard<std::mutex> lock(clients_mutex_);
     for (int cfd : client_fds_) {

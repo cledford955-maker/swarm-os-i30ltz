@@ -28,6 +28,8 @@ public:
     ~SafetyGate() = default;
 
     // 1. Git Apply Dry-Run Checker + Checkpoint-then-Apply
+    // Non-empty workspace_dir: `git apply --check` against that tree.
+    // Empty workspace_dir: syntax-only (`git apply --stat`), no files touched.
     static bool verify_git_apply_check(
         const std::string& workspace_dir,
         const std::string& diff_patch,

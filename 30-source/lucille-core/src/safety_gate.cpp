@@ -146,11 +146,15 @@ bool SafetyGate::verify_git_apply_check(
         dup2(pipe_fd[1], STDERR_FILENO);
         close(pipe_fd[1]);
 
+        // With a workspace: full dry-run against its files. Without one there
+        // is nothing to apply against, so only parse the patch (--stat never
+        // touches the working tree) — this rejects corrupt/malformed diffs.
         if (!workspace_dir.empty()) {
-            chdir(workspace_dir.c_str());
+            if (chdir(workspace_dir.c_str()) != 0) _exit(126);
+            execlp("git", "git", "apply", "--check", "--ignore-whitespace", temp_patch.c_str(), nullptr);
+        } else {
+            execlp("git", "git", "apply", "--stat", temp_patch.c_str(), nullptr);
         }
-
-        execlp("git", "git", "apply", "--check", "--ignore-whitespace", temp_patch.c_str(), nullptr);
         _exit(127);
     }
 

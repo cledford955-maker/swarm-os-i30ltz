@@ -90,8 +90,8 @@
   - Remaining: fresh ISO build + physical boot verification that FSR is active when `SWARM_GAMESCOPE=1`
 
 ### 2.2 Change Journaling & Rollback
-- [!] **Regression found 2026-09-25 (Claude Code):** `test_swarm_router_two_tier_speculation` fails 2 assertions — with empty `workspace_dir`, `route_and_execute()` dry-runs `verify_git_apply_check("", mock_patch)` and the mock Kimi patch doesn't apply, so `success=false` and Tier 3 never runs. Introduced by the checkpoint wiring below. Not fixed — unclaimed.
-- [!] **TSan race found 2026-09-25 (Claude Code):** `IpcServer::shutdown()` closes the epoll/socket fds (`ipc_server.cpp:202-203`) while `run_event_loop()` is still in `epoll_wait`/`read` (lines 100-113). Use the eventfd wakeup and close fds only after the loop thread joins. Not fixed — unclaimed.
+- [!] **Regression found 2026-09-25 (Claude Code):** `test_swarm_router_two_tier_speculation` fails 2 assertions — with empty `workspace_dir`, `route_and_execute()` dry-runs `verify_git_apply_check("", mock_patch)` and the mock Kimi patch doesn't apply, so `success=false` and Tier 3 never runs. Introduced by the checkpoint wiring below. [>] — CLAIMED by Claude Code (Opus 5.5) 2026-09-25 08:34
+- [!] **TSan race found 2026-09-25 (Claude Code):** `IpcServer::shutdown()` closes the epoll/socket fds (`ipc_server.cpp:202-203`) while `run_event_loop()` is still in `epoll_wait`/`read` (lines 100-113). Use the eventfd wakeup and close fds only after the loop thread joins. [>] — CLAIMED by Claude Code (Opus 5.5) 2026-09-25 08:34
 - [x] **Wire Git-diff checkpoint journaling into production execution path** — landed 2026-09-24
   - `SwarmTaskRequest` extended with `workspace_dir` field; `SwarmTaskResponse` extended with `checkpoint_id`
   - `SwarmRouter::route_and_execute()` now calls `SafetyGate::checkpoint_and_apply()` when `workspace_dir` is non-empty: snapshot → dry-run → apply → auto-rollback on regression failure
@@ -130,8 +130,8 @@
   - Tests: `test_consensus_gate_high_risk_diffs()` 13 assertions pass; suite 129 pass / 2 pre-existing fail
 
 ### 2.5 Companion App & Tailscale Mesh
-- [ ] **Background push notifications for HITL approvals**
-- [ ] **5-second WebSocket ping/pong heartbeat on Tailscale :9091**
+- [>] **Background push notifications for HITL approvals** — CLAIMED by Claude Code (Opus 5.5) 2026-09-25 08:34
+- [>] **5-second WebSocket ping/pong heartbeat on Tailscale :9091** — CLAIMED by Claude Code (Opus 5.5) 2026-09-25 08:34
 - [~] **Workspace parity validation (bidirectional manifest check)** — implemented 2026-09-25. `70-scripts/swarm_workspace_parity.py` performs a read-only SHA-256 comparison in both directions and reports changed, source-only and mirror-only paths. It excludes secrets, SDKs and generated artifacts, never follows symlinks, and writes private atomic manifests outside both trees. Five fixture tests pass. Actual `/mnt/Lucy` versus reference-mirror comparison pending because `/run/media/i30ltz/lucy-master` was not mounted.
 - [~] **Continuous mirror integrity verification (SHA-256 tree comparisons)** — staged 2026-09-25 as a hardened oneshot service and six-hour persistent timer. It requires both roots to be real mountpoints and cleanly reports `skipped` when the encrypted mirror is absent, preventing an empty mount directory from becoming a false pass. Unit validation passes; fresh ISO boot/timer execution and a mounted-mirror result remain pending. See `70-scripts/WORKSPACE_PARITY.md`.
 

@@ -5,6 +5,8 @@
 #include <functional>
 #include <mutex>
 #include <atomic>
+#include <condition_variable>
+#include <thread>
 #include <cstdint>
 
 namespace lucille {
@@ -24,6 +26,8 @@ public:
 
     // Block the calling thread, running an edge-triggered epoll loop until
     // shutdown() is called from another thread. initialize() must succeed first.
+    // The loop owns the fds while it runs and closes them on exit; shutdown()
+    // only signals it and waits, so no fd is closed while the loop uses it.
     void run_event_loop();
 
     int get_server_fd() const { return server_fd_; }
@@ -49,6 +53,14 @@ private:
     std::mutex clients_mutex_;
     std::vector<int> client_fds_;
     IpcMessageHandler handler_;
+
+    // Loop lifecycle — guards the handoff of fd ownership in shutdown()
+    std::mutex              lifecycle_mutex_;
+    std::condition_variable loop_exited_cv_;
+    bool                    loop_active_{false};
+    std::thread::id         loop_thread_id_;
+
+    void release_resources();        // close all fds + unlink; idempotent
 
     void epoll_add(int fd, uint32_t events);
     void epoll_del(int fd);

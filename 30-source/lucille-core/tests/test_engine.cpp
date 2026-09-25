@@ -11,6 +11,7 @@
 #include <chrono>
 #include <thread>
 #include <random>
+#include <atomic>
 #include <algorithm>
 #include "bootloader.hpp"
 #include "ipc_server.hpp"
@@ -624,7 +625,7 @@ void test_consensus_gate_high_risk_diffs() {
                     && resp.error_message.find("Consensus gate blocked") != std::string::npos,
                     "Router blocks high-risk target when no consensus voters are configured");
 
-        int calls = 0;
+        std::atomic<int> calls{0};  // voters run concurrently
         router.set_consensus_backends(
             [&](const std::string& d, const std::string& ctx) {
                 ++calls; ConsensusVote v; v.approved = true;

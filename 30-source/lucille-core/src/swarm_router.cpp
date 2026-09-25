@@ -37,7 +37,7 @@ std::string SwarmRouter::call_kimi_coder(const std::string& prompt, const std::s
     std::stringstream patch;
     patch << "--- a/target_file\n"
           << "+++ b/target_file\n"
-          << "@@ -1,5 +1,6 @@\n"
+          << "@@ -1,2 +1,3 @@\n"
           << " // Refactored by Kimi 2.6 Coder\n"
           << "+ // Verified invariant patch\n"
           << " int process() { return 0; }\n";
