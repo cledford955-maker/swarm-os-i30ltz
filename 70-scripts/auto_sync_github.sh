@@ -60,18 +60,40 @@ else
   status=1
 fi
 
-# Subtree push is idempotent — a no-op push (nothing new under the prefix
-# since the last split) still exits 0, so this runs every tick unconditionally.
+# App repos get a SNAPSHOT of their folder, not `git subtree push`.
 #
-# --prefix must exactly match the CURRENT tracked directory path. Found
-# 2026-09-19: the i30ltz-recovery dir was renamed to add a
-# "(seperate-related-project)" suffix (2026-09-18) and this --prefix was
-# never updated — with `set -euo pipefail` active, that push's failure
-# aborted the script before the companion subtree push below it ever ran,
-# so BOTH downstream repos have likely been missing updates since the rename.
+# Found 2026-09-25: after 30-source/android_companion/swarm_os-companion was
+# archived (06:49) and restored (09:51), `git subtree split` matched 0 commits
+# and returned a commit whose tree was the companion but whose history was the
+# ENTIRE SWARM OS repo. GitHub rejected it only as non-fast-forward — a force
+# push would have uploaded all of swarm-os-i30ltz into the companion repo.
+#
+# Snapshot sync: fetch the remote's main; if its tree already equals the
+# folder's tree, do nothing; otherwise create ONE commit whose tree is exactly
+# HEAD:<prefix> and whose only parent is the remote tip, and push it
+# fast-forward. The pushed history is the remote's own history plus that
+# commit — no main-repo commits or objects outside the folder can leak, and a
+# moved/renamed/re-added folder can never break it. Never force-pushes.
+#
+# --prefix must exactly match the CURRENT tracked directory path; a missing
+# folder fails loudly instead of pushing an empty tree.
 sync_subtree() {
-  local prefix=$1 remote=$2
-  if git subtree --quiet push --prefix="$prefix" "$remote" main; then
+  local prefix=$1 remote=$2 tree remote_tip commit
+  if ! tree=$(git rev-parse --verify --quiet "HEAD:$prefix^{tree}"); then
+    echo "SYNC FAILED: $remote (folder '$prefix' is not in HEAD)" >&2
+    status=1; return
+  fi
+  if ! git fetch --quiet "$remote" main; then
+    echo "SYNC FAILED: $remote (fetch)" >&2
+    status=1; return
+  fi
+  remote_tip=$(git rev-parse FETCH_HEAD)
+  if [ "$(git rev-parse "$remote_tip^{tree}")" = "$tree" ]; then
+    echo "SYNC OK: $remote (up to date)"
+    return
+  fi
+  commit=$(git commit-tree "$tree" -p "$remote_tip" -m "auto-sync: $(date -Iseconds)")
+  if git push --quiet "$remote" "$commit:refs/heads/main"; then
     echo "SYNC OK: $remote"
   else
     echo "SYNC FAILED: $remote" >&2
