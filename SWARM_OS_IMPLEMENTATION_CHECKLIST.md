@@ -247,6 +247,8 @@
   - `SkillRouter` records the last completed call per skill with measured latency, selected model, success/failure, and free/paid fallback state. Prompts, outputs, audio and credentials are never recorded.
   - Dashboard cards surface paid/free fallback before a call and the actual route after a call. Two telemetry tests pass; targeted Flutter analysis is clean.
 
+  - Re-verified 2026-09-25 by Claude Code (Opus 5.5): `nim_skill_telemetry_test.dart` 2/2 pass on repeat runs (one earlier load failure was transient, coincided with a running Flutter daemon); `flutter analyze` clean on models_page, skill_router, nvidia_nim_skill.
+
 ### 4.10 Blueprint: ISO / Runtime Staging
 - [x] **Document NVIDIA runtime dependencies** (2026-09-25)
   - Added `70-scripts/NVIDIA_RUNTIME.md` with the direct NVIDIA and OpenRouter cloud paths, credentials, local-host prerequisites, and deployment boundary.
