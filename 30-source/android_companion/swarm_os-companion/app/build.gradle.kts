@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.sysopt.app"
     minSdk = 24
     targetSdk = 36
-    versionCode = 73
-    versionName = "6.2.13"
+    versionCode = 81  // must exceed 80: phone had an older build (6.2.20) from a previous numbering
+    versionName = "6.2.21"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

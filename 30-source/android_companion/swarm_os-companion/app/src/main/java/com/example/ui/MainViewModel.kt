@@ -62,11 +62,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    override fun onCleared() {
-        heartbeat.stop()
-        super.onCleared()
-    }
-
     fun optimizeSingleDevice(deviceId: Long) {
         if (deviceId == -1L) { runSuperchargerOptimization(); return }
         viewModelScope.launch {
@@ -292,7 +287,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
-        super.onCleared()
+        heartbeat.stop()
         ttsVoiceManager.shutdown()
+        super.onCleared()
     }
 }
