@@ -58,6 +58,7 @@ file_permissions=(
   ["/usr/local/bin/swarm-diagnostics"]="0:0:755"
   ["/usr/local/bin/lucille_wake_listener.py"]="0:0:755"
   ["/usr/bin/lucille-core"]="0:0:755"
+  ["/usr/bin/swarm-session"]="0:0:755"
   # Sealed secrets (2026-09-12, v1.0.0). The plaintext /etc/swarm_os.env is
   # gone for good — it used to put every API key in every ISO. Only the
   # AES-256 blob ships now; swarm-secrets.service unseals it into tmpfs.

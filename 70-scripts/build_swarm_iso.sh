@@ -471,3 +471,22 @@ if [[ $RESULT == failed ]]; then
  exit 1
 fi
 echo "Build complete ($RESULT). Stable status requires an explicit user decision."
+
+# ── SHA-256 checksum + optional GPG signature ────────────────────────────────
+# Generated immediately after a successful publish so downstream consumers
+# (Ventoy flash tooling, Companion integrity checks) can verify the image.
+# GPG signing is skipped if no signing key is configured — checksums alone
+# already protect against silent bit-rot and corrupted flashes.
+# (daily-audit upgrade #2, 2026-09-24)
+CHECKSUM_FILE="${TARGET_ISO%.iso}.sha256"
+sha256sum "$TARGET_ISO" | awk "{print \$1}" > "$CHECKSUM_FILE"
+echo "[build] SHA-256: $(cat "$CHECKSUM_FILE")  →  $(basename "$CHECKSUM_FILE")"
+
+if command -v gpg &>/dev/null && gpg --list-secret-keys swarm-sign@swarmos.dev &>/dev/null 2>&1; then
+    SIG_FILE="${TARGET_ISO%.iso}.sha256.asc"
+    gpg --batch --yes --local-user swarm-sign@swarmos.dev \
+        --detach-sign --armor "$CHECKSUM_FILE" --output "$SIG_FILE"
+    echo "[build] GPG signature: $(basename "$SIG_FILE")"
+else
+    echo "[build] GPG signing key swarm-sign@swarmos.dev not found — skipping signature (checksum only)."
+fi

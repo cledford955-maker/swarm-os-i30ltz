@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"slices"
 	"strings"
 	"sync"
@@ -20,7 +22,6 @@ import (
 
 // serverStartTime records when this process started so /health can report uptime.
 var serverStartTime = time.Now()
-
 
 func main() {
 	r := chi.NewRouter()
@@ -462,4 +463,129 @@ func rateLimiter(max int, window time.Duration) func(http.Handler) http.Handler 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// healthHandler returns a rich JSON health snapshot.
+// Consumed by Lucille Companion, wallpaper stats-fetch, and the Lucille
+// Assistant offline-detection layer (daily-audit upgrade #1, 2026-09-24).
+//
+// Response shape:
+//
+//	{
+//	  "status":           "ok" | "degraded",
+//	  "version":          "6.2.72",
+//	  "build_date":       "2026-09-24",
+//	  "uptime_seconds":   1234,
+//	  "lucy_mount_gb_used":  12.4,
+//	  "lucy_mount_gb_total": 482.0,
+//	  "services": {
+//	    "lucy_server":        "ok",
+//	    "gaming_agent":       "ok" | "unreachable",
+//	    "google_workspace":   "ok" | "unreachable"
+//	  }
+//	}
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// --- version ---
+	version := os.Getenv("SWARM_VERSION")
+	if version == "" {
+		if data, err := os.ReadFile("/mnt/Lucy/VERSION"); err == nil {
+			version = strings.TrimSpace(string(data))
+		} else {
+			version = "unknown"
+		}
+	}
+
+	buildDate := os.Getenv("SWARM_BUILD_DATE")
+	if buildDate == "" {
+		buildDate = "2026-09-24" // stamped at build time via ldflags in production
+	}
+
+	// --- uptime ---
+	uptimeSecs := int64(time.Since(serverStartTime).Seconds())
+
+	// --- Lucy mount disk stats ---
+	var lucyUsedGB, lucyTotalGB float64
+	const lucyMount = "/mnt/Lucy"
+	if stat, err := diskStats(lucyMount); err == nil {
+		lucyTotalGB = float64(stat.total) / (1 << 30)
+		lucyUsedGB = float64(stat.used) / (1 << 30)
+	}
+
+	// --- service liveness probes ---
+	services := map[string]string{
+		"lucy_server":      "ok", // we are lucy_server
+		"gaming_agent":     probeHTTP("http://127.0.0.1:8401/health", 500*time.Millisecond),
+		"google_workspace": probeHTTP("http://127.0.0.1:8402/health", 500*time.Millisecond),
+	}
+
+	// overall status: degraded if any service is unreachable
+	status := "ok"
+	for _, s := range services {
+		if s != "ok" {
+			status = "degraded"
+			break
+		}
+	}
+
+	resp := map[string]interface{}{
+		"status":              status,
+		"version":             version,
+		"build_date":          buildDate,
+		"uptime_seconds":      uptimeSecs,
+		"lucy_mount_gb_used":  math.Round(lucyUsedGB*10) / 10,
+		"lucy_mount_gb_total": math.Round(lucyTotalGB*10) / 10,
+		"services":            services,
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
+// diskUsage holds raw byte counts for a filesystem.
+type diskUsage struct {
+	total uint64
+	used  uint64
+}
+
+// diskStats returns total and used bytes for the filesystem at path.
+func diskStats(path string) (diskUsage, error) {
+	// Use os.Stat + filepath walk is too slow; use syscall.Statfs via os.Stat trick.
+	// We call /bin/df -B1 and parse it — avoids cgo import in a cross-compile scenario.
+	out, err := runCmd("df", "-B1", "--output=size,used", path)
+	if err != nil {
+		return diskUsage{}, err
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 2 {
+		return diskUsage{}, fmt.Errorf("unexpected df output")
+	}
+	fields := strings.Fields(lines[1])
+	if len(fields) < 2 {
+		return diskUsage{}, fmt.Errorf("unexpected df fields")
+	}
+	var total, used uint64
+	fmt.Sscan(fields[0], &total)
+	fmt.Sscan(fields[1], &used)
+	return diskUsage{total: total, used: used}, nil
+}
+
+// runCmd executes a command and returns combined output.
+func runCmd(name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	out, err := cmd.Output()
+	return string(out), err
+}
+
+// probeHTTP issues a GET to url with a short deadline and returns "ok" or "unreachable".
+func probeHTTP(url string, timeout time.Duration) string {
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Get(url)
+	if err != nil {
+		return "unreachable"
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 500 {
+		return "ok"
+	}
+	return "unreachable"
 }

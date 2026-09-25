@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# /usr/bin/swarm-session — SWARM OS Gamescope compositor session wrapper
+# Version: 6.2.72 · 2026-09-24
+#
+# Wraps the labwc Wayland compositor inside Gamescope for:
+#   • FSR 1.0/2.0 upscaling (enable via SWARM_FSR_SHARPNESS)
+#   • Adaptive-sync / VRR when the panel supports it
+#   • HDR passthrough (flag set; display must support it)
+#   • Reliable 60 Hz frame pacing on integrated Intel graphics
+#
+# Environment overrides (all optional):
+#   SWARM_WIDTH / SWARM_HEIGHT          — render resolution  (default: 1920×1080)
+#   SWARM_OUTPUT_WIDTH / SWARM_OUTPUT_HEIGHT — output resolution (default: same)
+#   SWARM_REFRESH                        — target frame rate  (default: 60)
+#   SWARM_FSR_SHARPNESS                  — 0–20, 0=off (default: 0)
+#   SWARM_GAMESCOPE_EXTRA                — any extra gamescope flags
+#
+# Called by swarm-ui.service ExecStart when Gamescope is available.
+# Falls back gracefully to plain labwc if /usr/bin/gamescope is absent.
+
+set -euo pipefail
+
+RENDER_W="${SWARM_WIDTH:-1920}"
+RENDER_H="${SWARM_HEIGHT:-1080}"
+OUTPUT_W="${SWARM_OUTPUT_WIDTH:-$RENDER_W}"
+OUTPUT_H="${SWARM_OUTPUT_HEIGHT:-$RENDER_H}"
+REFRESH="${SWARM_REFRESH:-60}"
+FSR="${SWARM_FSR_SHARPNESS:-0}"
+
+if ! command -v gamescope &>/dev/null; then
+    echo "[swarm-session] gamescope not found — starting labwc directly" >&2
+    exec /usr/bin/labwc "$@"
+fi
+
+GAMESCOPE_FLAGS=(
+    --width  "$RENDER_W"
+    --height "$RENDER_H"
+    --output-width  "$OUTPUT_W"
+    --output-height "$OUTPUT_H"
+    --framerate "$REFRESH"
+    --adaptive-sync
+    --hdr-enabled
+    # Nested Wayland mode: Gamescope runs as the outer compositor (DRM/KMS),
+    # labwc runs as a Wayland client inside it. Set DISPLAY/WAYLAND_DISPLAY
+    # so that labwc's autostart clients can connect back to labwc (not Gamescope).
+    --nested
+)
+
+# FSR upscaling: only activate when render res < output res or sharpness > 0.
+if [[ "$FSR" -gt 0 ]] || [[ "$RENDER_W" -ne "$OUTPUT_W" ]] || [[ "$RENDER_H" -ne "$OUTPUT_H" ]]; then
+    GAMESCOPE_FLAGS+=(--fsr-sharpness "$FSR")
+fi
+
+# Honour caller-supplied extra flags (split on spaces).
+if [[ -n "${SWARM_GAMESCOPE_EXTRA:-}" ]]; then
+    # shellcheck disable=SC2206
+    GAMESCOPE_FLAGS+=($SWARM_GAMESCOPE_EXTRA)
+fi
+
+echo "[swarm-session] launching: gamescope ${GAMESCOPE_FLAGS[*]} -- labwc" >&2
+exec /usr/bin/gamescope "${GAMESCOPE_FLAGS[@]}" -- /usr/bin/labwc "$@"

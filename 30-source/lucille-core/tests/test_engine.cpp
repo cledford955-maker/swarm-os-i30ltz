@@ -70,6 +70,66 @@ void test_ipc_socket_and_permissions() {
     TEST_ASSERT(!fs::exists(test_sock), "Socket file unlinked after shutdown");
 }
 
+void test_ipc_epoll_multi_client() {
+    std::cout << "\n--- 2b. Testing IpcServer epoll ET multi-client concurrency ---\n";
+
+    const std::string sock = "/tmp/lucille_ipc_epoll_test.sock";
+    lucille::IpcServer server(sock);
+    server.set_handler([](const std::string& req) -> std::string {
+        return "PONG:" + req;
+    });
+
+    std::string err;
+    bool init_ok = server.initialize(err);
+    TEST_ASSERT(init_ok, "Multi-client IpcServer initialized: " + (init_ok ? sock : err));
+    if (!init_ok) return;
+
+    // Run event loop in a background thread
+    std::thread loop_thread([&server]() { server.run_event_loop(); });
+
+    // Give the loop a moment to enter epoll_wait
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+
+    // Helper lambda: connect + send + recv via AF_UNIX
+    auto client_exchange = [&](const std::string& msg, std::string& out_reply) -> bool {
+        int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (fd < 0) return false;
+        struct sockaddr_un addr{};
+        addr.sun_family = AF_UNIX;
+        std::strncpy(addr.sun_path, sock.c_str(), sizeof(addr.sun_path) - 1);
+        if (connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+            close(fd); return false;
+        }
+        write(fd, msg.data(), msg.size());
+        char buf[256]{};
+        ssize_t n = read(fd, buf, sizeof(buf) - 1);
+        close(fd);
+        if (n > 0) { out_reply.assign(buf, n); return true; }
+        return false;
+    };
+
+    // Two concurrent clients
+    std::string reply_a, reply_b;
+    bool ok_a = false, ok_b = false;
+    std::thread ta([&](){ ok_a = client_exchange("PING_A", reply_a); });
+    std::thread tb([&](){ ok_b = client_exchange("PING_B", reply_b); });
+    ta.join(); tb.join();
+
+    TEST_ASSERT(ok_a, "Client A connected and received reply");
+    TEST_ASSERT(reply_a == "PONG:PING_A",
+        "Client A reply correct: '" + reply_a + "'");
+
+    TEST_ASSERT(ok_b, "Client B connected and received reply");
+    TEST_ASSERT(reply_b == "PONG:PING_B",
+        "Client B reply correct: '" + reply_b + "'");
+
+    // Clean shutdown
+    server.shutdown();
+    loop_thread.join();
+    TEST_ASSERT(!std::filesystem::exists(sock),
+        "Socket unlinked after multi-client shutdown");
+}
+
 void test_security_sandbox_and_soul() {
     std::cout << "\n--- 3. Testing Sandbox & SOUL.md SHA-256 Integrity ---\n";
     std::string test_soul = "/tmp/test_SOUL.md";
@@ -497,6 +557,7 @@ int main() {
 
     test_bootloader_and_topology();
     test_ipc_socket_and_permissions();
+    test_ipc_epoll_multi_client();
     test_security_sandbox_and_soul();
     test_error_interceptor();
     test_simd_and_quantization();
