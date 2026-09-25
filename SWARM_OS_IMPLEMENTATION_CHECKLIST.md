@@ -10,6 +10,7 @@
 - `[~]` Partially landed (staged, built, or wired but missing verification/production call site)
 - `[ ]` Open / not started
 - `[!]` Blocked (reason noted)
+- `[>]` **Claimed / in progress by an AI agent** — format: `[>] Item — CLAIMED by <agent> <YYYY-MM-DD HH:MM>`. Other agents: skip claimed items; if a claim is >24h old with no progress, ask the user before taking it over.
 
 ---
 
@@ -104,11 +105,11 @@
   - `test_ipc_epoll_multi_client()` in `tests/test_engine.cpp`: two concurrent AF_UNIX clients send PING_A/PING_B simultaneously and receive correct PONG replies; shutdown + unlink verified, all 4 assertions pass
 
 ### 2.4 Multi-Model Swarm Routing
-- [ ] **Pipelined asynchronous speculative execution**
+- [>] **Pipelined asynchronous speculative execution** — CLAIMED by Claude Code (Opus 5.5) 2026-09-24 23:40
 - [ ] **Concurrent safety audit while patch streams**
 - [ ] **Triage & metric logging (GLM aggregator)**
-- [ ] **Semantic entropy filtering in context ingestion**
-- [ ] **Dynamic context pruning via score dropoff**
+- [>] **Semantic entropy filtering in context ingestion** — CLAIMED by Claude Code (Opus 5.5) 2026-09-24 23:40
+- [>] **Dynamic context pruning via score dropoff** — CLAIMED by Claude Code (Opus 5.5) 2026-09-24 23:40
 - [ ] **Dual-model 2-of-2 consensus gating for high-risk diffs**
 
 ### 2.5 Companion App & Tailscale Mesh
@@ -135,7 +136,7 @@
 2. ~~Wire Git-diff checkpoint journaling into `SwarmRouter::route_and_execute()`~~ **DONE (2026-09-24)**
 3. ~~POSIX shared memory telemetry ring buffer~~ **DONE (2026-09-24)**
 4. ~~Multi-client epoll IPC broker~~ **DONE (2026-09-24)**
-5. **Speculative pipeline** + semantic entropy filtering + dynamic context pruning  ← NEXT
+5. **Speculative pipeline** + semantic entropy filtering + dynamic context pruning  ← CLAIMED by Claude Code (Opus 5.5) 2026-09-24 23:40
 6. **Dual-model 2-of-2 consensus gating** for high-risk diffs
 7. **Companion heartbeat** / push notifications / rsync manifest / SHA-256 integrity
 8. ~~TCP MSS clamping + EPP power script~~ **DONE (2026-09-21/24 — boot verification pending)**
