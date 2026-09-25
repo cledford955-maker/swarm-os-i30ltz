@@ -31,10 +31,43 @@ verify an AppArmor-enabled release.
 - Build and boot a fresh ISO through `70-scripts/build_swarm_iso.sh`; host sudo
   currently requires an interactive password. No new ISO was produced in this pass.
 - Verify the desktop beyond its splash screen on real hardware.
-- Fix desktop session teardown: deliberately killing the dbus session launcher
-  left labwc/Flutter in logind session scopes outside the system service cgroup.
-  A recovery prototype reproduced duplicate desktop processes and was removed.
-  Automatic SIGHUP restarts were therefore **not** added to the final unit.
+- ~~Fix desktop session teardown~~ — source fix 2026-09-25, see below; still
+  needs a guest/boot verification. Automatic SIGHUP restarts were **not** added.
+
+## Session teardown fix — 2026-09-25 (source + tests; not yet boot-verified)
+
+Deliberately killing the dbus session launcher had left labwc/Flutter running.
+Cause: `PAMName=login` makes pam_systemd move the launched desktop into a
+logind `session-N.scope`; only `(sd-pam)` stays in `swarm-ui.service`'s cgroup,
+so `KillMode=control-group` never reaches the desktop, and
+`KillUserProcesses=no` leaves the scope running as an abandoned session.
+
+A later same-day edit had added `pkill -u swarm -x labwc|swarm_flutter` lines.
+Those missed `swarm-slint` (also autostarted) and hardcoded `swarm`, although
+the installer rewrites the unit to `User=i30ltz`. Replaced by
+`/usr/lib/swarm/swarm-ui-cleanup.sh`, run as `ExecStartPre=+` and first
+`ExecStopPost=+` (before the tty reset). It reads the desktop user from the
+unit, terminates that user's tty1/VT1 logind sessions (closing ones included),
+escalates to SIGKILL after 3 s, and only then falls back to killing the three
+kiosk-only program names.
+
+The same edit also made `/usr/bin/swarm-session` start Gamescope whenever it
+was installed, with flags gamescope 3.16.25 rejects (`unrecognized option
+'--width'`, exit 1). Any system with gaming packages would have lost the desktop
+to the text getty. Gamescope is now opt-in (`SWARM_GAMESCOPE=1`) with flags the
+real binary accepts; labwc nested in Gamescope is still unverified.
+
+`.gitignore` excluded all of `airootfs/usr/lib/`, so none of the hand-written
+`usr/lib/swarm/` scripts (including `epp-tune.sh`) were in git; now tracked.
+
+Verified: 11 boot-contract tests with stubbed loginctl/systemctl/pkill (session
+selection, installer user rewrite, SIGKILL escalation, fallback coverage, unit
+ordering, launcher default/opt-in, flags checked against the host's real
+`gamescope --help`), and the real gamescope parsing the new flag set.
+**Not verified:** real logind behaviour in a guest. The VM check was stopped
+at root login. Next check: in a booted guest, `kill -9` the swarm-ui main PID,
+then confirm `loginctl list-sessions` and `pgrep -u swarm labwc` are empty and
+a restart yields exactly one compositor.
 
 Regression check: `python3 70-scripts/tests/test_desktop_boot_contract.py`.
 The canonical builder runs it before version stamping or privileged work.
