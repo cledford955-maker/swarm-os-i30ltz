@@ -226,6 +226,7 @@ class TelemetryService {
         'percent_total': cpu,
         'cpu': {
           'percent_total': cpu,
+          'temp_c': temp,
           'physical_cores': Platform.numberOfProcessors,
           'logical_cores': Platform.numberOfProcessors,
         },
