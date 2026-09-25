@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:type="linear">
+                <item android:color="#FF0B0C10" android:offset="0.0" />
+                <item android:color="#FF1A0933" android:offset="0.5" />
+                <item android:color="#FF2A0012" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Carbon weave crosshatch overlay lines -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,0 L108,108 M20,0 L108,88 M0,20 L88,108 M40,0 L108,68 M0,40 L68,108 M60,0 L108,48 M0,60 L48,108"
+        android:strokeWidth="1.2"
+        android:strokeColor="#229D00FF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M108,0 L0,108 M88,0 L0,88 M108,20 L20,108 M68,0 L0,68 M108,40 L40,108 M48,0 L0,48 M108,60 L60,108"
+        android:strokeWidth="1.2"
+        android:strokeColor="#22FF1744" />
+</vector>

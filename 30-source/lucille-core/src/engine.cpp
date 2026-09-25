@@ -108,6 +108,20 @@ bool LucilleEngine::start() {
         ipc_server_->broadcast(json_exit.str());
     });
 
+    // 6. Companion mesh socket — HITL approvals reach the phone through it
+    hitl_manager_ = std::make_shared<HitlSecurityManager>();
+    if (!config_.mesh_auth_token.empty()) {
+        telemetry_ = std::make_unique<TelemetryDaemon>(
+            config_.telemetry_port, config_.mesh_interface, config_.mesh_auth_token);
+        telemetry_->set_hitl_manager(hitl_manager_);
+        if (!telemetry_->start()) {
+            std::cerr << "[LucilleEngine] Companion socket not started — HITL approvals will be denied\n";
+            telemetry_.reset();
+        }
+    } else {
+        std::cerr << "[LucilleEngine] SWARM_AUTH_TOKEN unset — companion socket off, HITL approvals will be denied\n";
+    }
+
     is_running_ = true;
 
     // Launch Epoll worker thread (pinned to E-cores)
@@ -140,6 +154,8 @@ void LucilleEngine::stop() {
         ipc_server_->shutdown();
     }
 
+    if (telemetry_) telemetry_->stop();
+
     if (epoll_thread_.joinable()) epoll_thread_.join();
     if (ipc_dispatcher_thread_.joinable()) ipc_dispatcher_thread_.join();
 
@@ -170,6 +186,17 @@ pid_t LucilleEngine::dispatch_subagent(
     std::cout << "[LucilleEngine] Spawned subagent '" << agent_name << "' (PID=" << pid
               << ", Sandboxed=true, Overlay=" << target_workdir << ")\n";
     return pid;
+}
+
+bool LucilleEngine::request_human_approval(const std::string& command, uint32_t timeout_sec) {
+    if (!hitl_manager_ || !telemetry_ || !telemetry_->is_running()) {
+        std::cerr << "[LucilleEngine] HITL denied (no companion socket): " << command << "\n";
+        return false;
+    }
+    HitlChallenge chal = hitl_manager_->create_challenge(command, timeout_sec);
+    telemetry_->broadcast_hitl_challenge(chal);
+    std::cout << "[LucilleEngine] HITL challenge " << chal.challenge_id << " sent to companion (" << chal.risk_level << ")\n";
+    return hitl_manager_->await_challenge_resolution(chal.challenge_id, timeout_sec);
 }
 
 KimiRepairPayload LucilleEngine::analyze_build_failure(const std::string& compiler_output) {

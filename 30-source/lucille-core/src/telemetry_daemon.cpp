@@ -30,7 +30,38 @@ namespace {
 constexpr size_t kMaxHttpHeader   = 16 * 1024;   // handshake request cap
 constexpr size_t kMaxFramePayload = 64 * 1024;   // client frame cap
 constexpr auto   kHandshakeTimeout = std::chrono::seconds(5);
-const char* const kDefaultToken   = "swarm_mesh_secret_token";
+// Tokens that are public (in source/docs) and must never guard this socket
+bool is_public_default_token(const std::string& t) {
+    return t == "swarm_mesh_secret_token" || t == "swarm-token-2026";
+}
+
+std::string json_escape(const std::string& in) {
+    std::string out;
+    for (unsigned char c : in) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (c < 0x20) { char b[8]; snprintf(b, sizeof(b), "\\u%04x", c); out += b; }
+                else out += static_cast<char>(c);
+        }
+    }
+    return out;
+}
+
+std::string hitl_challenge_json(const HitlChallenge& chal) {
+    std::stringstream ss;
+    ss << "{\"event\":\"hitl_challenge\","
+       << "\"challenge_id\":\"" << json_escape(chal.challenge_id) << "\","
+       << "\"command\":\"" << json_escape(chal.command) << "\","
+       << "\"risk_level\":\"" << json_escape(chal.risk_level) << "\","
+       << "\"timeout_seconds\":" << (chal.expires_at - chal.created_at) << ","
+       << "\"expires_at\":" << chal.expires_at << "}";
+    return ss.str();
+}
 
 // Tailscale assigns from the CGNAT block 100.64.0.0/10
 bool is_tailscale_ipv4(const std::string& ip) {
@@ -147,7 +178,7 @@ bool TelemetryDaemon::start() {
     if (is_running_) return true;
 
     // The socket accepts HITL approvals and emergency rollback — never run open
-    if (auth_token_.empty() || auth_token_ == kDefaultToken) {
+    if (auth_token_.empty() || is_public_default_token(auth_token_)) {
         std::cerr << "[TelemetryDaemon] Refusing to start: set a real mesh auth token "
                      "(empty/default token would let any peer approve HITL or roll back)\n";
         return false;
@@ -347,14 +378,7 @@ void TelemetryDaemon::broadcast_log_line(const std::string& ansi_log) {
 }
 
 void TelemetryDaemon::broadcast_hitl_challenge(const HitlChallenge& chal) {
-    std::stringstream ss;
-    ss << "{\"event\":\"hitl_challenge\","
-       << "\"challenge_id\":\"" << chal.challenge_id << "\","
-       << "\"command\":\"" << chal.command << "\","
-       << "\"risk_level\":\"" << chal.risk_level << "\","
-       << "\"timeout_seconds\":60,"
-       << "\"expires_at\":" << chal.expires_at << "}";
-    broadcast_text(ss.str());
+    broadcast_text(hitl_challenge_json(chal));
 }
 
 TelemetryMetrics TelemetryDaemon::collect_system_metrics() {
@@ -410,8 +434,10 @@ void TelemetryDaemon::process_websocket_frame(int client_fd, const std::string& 
 
         bool approved = (payload.find("\"approved\":true") != std::string::npos);
         if (!chal_id.empty()) {
-            hitl_manager_->resolve_challenge(chal_id, approved);
-            send_websocket_frame(client_fd, "{\"status\":\"ok\",\"message\":\"challenge resolved\"}");
+            // false = unknown, already answered, or expired
+            bool ok = hitl_manager_->resolve_challenge(chal_id, approved);
+            send_websocket_frame(client_fd, std::string("{\"event\":\"hitl_resolved\",\"challenge_id\":\"")
+                + json_escape(chal_id) + "\",\"accepted\":" + (ok ? "true" : "false") + "}");
         }
     }
     // Handle emergency freeze
@@ -486,6 +512,12 @@ void TelemetryDaemon::handle_http_request(int fd, Client& c) {
     c.last_pong = std::chrono::steady_clock::now();
     send_websocket_frame(fd, "{\"event\":\"connected\",\"server\":\"lucille_telemetry_daemon\",\"version\":\"2026.2\","
                              "\"heartbeat_ms\":" + std::to_string(heartbeat_interval_.count()) + "}");
+
+    // A phone that was offline still gets every approval still waiting on it
+    if (hitl_manager_) {
+        for (const auto& chal : hitl_manager_->get_pending_challenges())
+            send_websocket_frame(fd, hitl_challenge_json(chal));
+    }
 }
 
 void TelemetryDaemon::service_client(int fd, Client& c) {

@@ -57,6 +57,7 @@ struct SwarmTaskResponse {
     std::string checkpoint_id;  // git SHA from SafetyGate::checkpoint_and_apply; empty if no workspace
     bool high_risk{false};          // diff touches systemd/firewall/kernel/boot/privileges
     bool consensus_approved{false}; // 2-of-2 gate passed (always true for low-risk diffs)
+    bool human_approved{false};     // HITL approval from the phone (high-risk only)
     std::vector<std::string> consensus_triggers;
 };
 
@@ -114,6 +115,13 @@ public:
     void set_consensus_backends(ConsensusGate::AuditFn syntax_audit,
                                 ConsensusGate::AuditFn risk_audit);
 
+    // Human-in-the-loop approver for high-risk diffs, called after the
+    // 2-of-2 consensus passes (e.g. LucilleEngine::request_human_approval).
+    // Until set, high-risk diffs are blocked.
+    void set_hitl_approver(std::function<bool(const std::string& summary)> approver) {
+        hitl_approver_ = std::move(approver);
+    }
+
     // Diagnostics from the most recent entropy filtering of compiler logs
     const EntropyFilter::CleanResult& last_log_filter() const { return last_log_filter_; }
 
@@ -131,6 +139,7 @@ private:
     SpeculativePipeline::GlmTriageFn     pipeline_glm_;
     EntropyFilter::CleanResult           last_log_filter_;
     ConsensusGate                        consensus_gate_;
+    std::function<bool(const std::string&)> hitl_approver_;
 
     // Simulated LLM API response generators / mock runners
     std::string call_kimi_coder(const std::string& prompt, const std::string& code);

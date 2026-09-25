@@ -189,6 +189,21 @@ SwarmTaskResponse SwarmRouter::route_and_execute(const SwarmTaskRequest& req) {
             resp.error_message = "Consensus gate blocked high-risk diff: " + cr.rejection_reason;
             return resp;
         }
+
+        // High-risk diffs also need a human (the HITL queue), after the models agree
+        if (cr.is_high_risk) {
+            std::string summary = "Apply patch to " + req.target_file + " [";
+            for (size_t i = 0; i < cr.triggers.size(); ++i)
+                summary += (i ? ", " : "") + cr.triggers[i];
+            summary += "]";
+            resp.human_approved = hitl_approver_ && hitl_approver_(summary);
+            if (!resp.human_approved) {
+                resp.success = false;
+                resp.error_message = hitl_approver_ ? "Human approval denied or timed out: " + summary
+                                                    : "No human approver configured — high-risk diff blocked";
+                return resp;
+            }
+        }
     }
 
     // 4b. Git-diff Checkpoint → Apply → Auto-rollback on regression failure

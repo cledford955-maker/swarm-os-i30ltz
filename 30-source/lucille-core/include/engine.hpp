@@ -10,6 +10,8 @@
 #include "error_interceptor.hpp"
 #include "affinity_manager.hpp"
 #include "process_manager.hpp"
+#include "hitl_security.hpp"
+#include "telemetry_daemon.hpp"
 
 namespace lucille {
 
@@ -22,6 +24,11 @@ struct EngineConfig {
     std::string work_dir{"/tmp/agent_work"};
     std::string merged_dir{"/tmp/agent_merged"};
     bool enforce_strict_immutability{false};
+    // Companion mesh socket (HITL approvals, telemetry). Started only when
+    // mesh_auth_token is set to a non-default value (SWARM_AUTH_TOKEN).
+    uint16_t telemetry_port{9091};
+    std::string mesh_interface{"tailscale0"};
+    std::string mesh_auth_token;
 };
 
 class LucilleEngine {
@@ -45,6 +52,11 @@ public:
         bool use_ephemeral_overlay = true
     );
 
+    // Ask the user's phone to approve a risky action. Blocks up to
+    // timeout_sec. Returns false (deny) when no companion socket is running,
+    // on rejection, or on timeout — never approves by default.
+    bool request_human_approval(const std::string& command, uint32_t timeout_sec = 60);
+
     // Manual or programmatic compiler error healing request
     KimiRepairPayload analyze_build_failure(const std::string& compiler_output);
 
@@ -67,6 +79,8 @@ private:
     std::unique_ptr<AffinityManager> affinity_manager_;
     std::unique_ptr<ProcessManager> process_manager_;
     std::unique_ptr<ErrorInterceptor> error_interceptor_;
+    std::shared_ptr<HitlSecurityManager> hitl_manager_;
+    std::unique_ptr<TelemetryDaemon> telemetry_;
 
     std::thread epoll_thread_;
     std::thread ipc_dispatcher_thread_;

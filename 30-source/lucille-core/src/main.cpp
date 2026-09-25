@@ -3,6 +3,7 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
+#include <cstdlib>
 #include "engine.hpp"
 
 static std::atomic<bool> g_shutdown_requested{false};
@@ -24,6 +25,7 @@ int main(int argc, char* argv[]) {
     lucille::EngineConfig config;
     config.socket_path = "/tmp/lucille_ipc.sock";
     config.soul_path = "SOUL.md";
+    if (const char* tok = std::getenv("SWARM_AUTH_TOKEN")) config.mesh_auth_token = tok;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -33,11 +35,14 @@ int main(int argc, char* argv[]) {
             config.soul_path = argv[++i];
         } else if (arg == "--workspace" && i + 1 < argc) {
             config.workspace_dir = argv[++i];
+        } else if (arg == "--telemetry-port" && i + 1 < argc) {
+            config.telemetry_port = static_cast<uint16_t>(std::stoi(argv[++i]));
         } else if (arg == "--help" || arg == "-h") {
             std::cout << "Usage: lucille-core [OPTIONS]\n"
                       << "  --socket <path>     UNIX domain socket path (default: /tmp/lucille_ipc.sock)\n"
                       << "  --soul <path>       SOUL.md prompt file path (default: SOUL.md)\n"
-                      << "  --workspace <path>  Base workspace directory (default: .)\n";
+                      << "  --workspace <path>  Base workspace directory (default: .)\n"
+                      << "  --telemetry-port N  Companion WebSocket port (default: 9091; needs SWARM_AUTH_TOKEN)\n";
             return 0;
         }
     }

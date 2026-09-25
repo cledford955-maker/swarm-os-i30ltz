@@ -130,7 +130,7 @@
   - Tests: `test_consensus_gate_high_risk_diffs()` 13 assertions pass; suite 129 pass / 2 pre-existing fail
 
 ### 2.5 Companion App & Tailscale Mesh
-- [~] **Background push notifications for HITL approvals** — server side ready 2026-09-25 (Claude Code); phone side needs a decision
+- [>] **Background push notifications for HITL approvals** — CLAIMED by Claude Code (Opus 5.5) 2026-09-25 09:51 — user chose Android foreground service (no FCM)
   - `hitl_challenge` events already broadcast on :9091; now only to authenticated, heartbeat-verified clients (see heartbeat below)
   - Not done: (1) nothing launches `TelemetryDaemon` — `LucilleEngine` doesn't own one; (2) the phone client lives in the separate I30LTZ Companion repo (the /mnt/Lucy copy was archived 2026-09-25). **User decision needed:** FCM push (needs Google/Firebase, works when app is killed) vs. an Android foreground service holding the Tailscale WebSocket (no Google, persistent notification, more battery)
 - [x] **5-second WebSocket ping/pong heartbeat on Tailscale :9091** — Claude Code (Opus 5.5), lucille-core `TelemetryDaemon` 2026-09-25
