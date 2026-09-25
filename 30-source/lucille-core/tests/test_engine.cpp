@@ -7,10 +7,14 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/mman.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <poll.h>
 #include <unistd.h>
 #include <chrono>
 #include <thread>
 #include <random>
+#include <functional>
 #include <atomic>
 #include <algorithm>
 #include "bootloader.hpp"
@@ -789,15 +793,144 @@ void test_shm_telemetry_ring_buffer() {
     }
 }
 
+// ---- Minimal WebSocket test client -----------------------------------------
+namespace wsclient {
+int connect_local(uint16_t port) {
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in a{};
+    a.sin_family = AF_INET; a.sin_port = htons(port);
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (connect(fd, reinterpret_cast<sockaddr*>(&a), sizeof(a)) < 0) { close(fd); return -1; }
+    return fd;
+}
+// Read until the predicate holds on the accumulated bytes, or timeout
+std::string read_until(int fd, int timeout_ms, const std::function<bool(const std::string&)>& done) {
+    std::string out;
+    auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+    while (!done(out)) {
+        auto left = std::chrono::duration_cast<std::chrono::milliseconds>(end - std::chrono::steady_clock::now()).count();
+        if (left <= 0) break;
+        struct pollfd p{fd, POLLIN, 0};
+        if (poll(&p, 1, static_cast<int>(left)) <= 0) break;
+        char b[4096]; ssize_t n = read(fd, b, sizeof(b));
+        if (n <= 0) { out += "<EOF>"; break; }
+        out.append(b, n);
+    }
+    return out;
+}
+int upgrade(uint16_t port, const std::string& auth_header, std::string& reply) {
+    int fd = connect_local(port);
+    if (fd < 0) return -1;
+    std::string req = "GET / HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                      "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n"
+                      + auth_header + "\r\n";
+    write(fd, req.data(), req.size());
+    reply = read_until(fd, 1000, [](const std::string& s) {
+        return s.find("\r\n\r\n") != std::string::npos; });
+    return fd;
+}
+void send_frame(int fd, uint8_t opcode, const std::string& payload, bool masked = true) {
+    std::string f;
+    f += static_cast<char>(0x80 | opcode);
+    f += static_cast<char>((masked ? 0x80 : 0) | payload.size());   // tests keep payloads < 126
+    const char mask[4] = {0x11, 0x22, 0x33, 0x44};
+    if (masked) f.append(mask, 4);
+    for (size_t i = 0; i < payload.size(); ++i) f += masked ? char(payload[i] ^ mask[i % 4]) : payload[i];
+    write(fd, f.data(), f.size());
+}
+// Server→client frame of the given opcode (0x89 = ping, 0x8A = pong, 0x88 = close)
+bool has_frame(const std::string& bytes, uint8_t first_byte) {
+    return bytes.find(static_cast<char>(first_byte)) != std::string::npos;
+}
+} // namespace wsclient
+
 void test_telemetry_daemon() {
     std::cout << "\n--- 11. Testing WebSocket Telemetry Daemon (Port 9091) ---\n";
     std::string tailscale_ip = lucille::TelemetryDaemon::discover_tailscale_ip("tailscale0");
     TEST_ASSERT(!tailscale_ip.empty(), "Tailscale mesh IP discovery completed: " + tailscale_ip);
 
     uint16_t test_port = 9100 + (getpid() % 500);
+
+    {
+        lucille::TelemetryDaemon open_daemon(test_port, "lo", "");
+        TEST_ASSERT(!open_daemon.start(), "Daemon refuses to start with an empty token");
+        lucille::TelemetryDaemon default_daemon(test_port, "lo");
+        TEST_ASSERT(!default_daemon.start(), "Daemon refuses to start with the built-in default token");
+    }
+
     lucille::TelemetryDaemon daemon(test_port, "lo", "test_token");
+    daemon.set_heartbeat(std::chrono::milliseconds(100), 3);
     bool started = daemon.start();
     TEST_ASSERT(started, "WebSocket Telemetry Daemon started on " + daemon.get_bound_ip() + ":" + std::to_string(test_port));
+    TEST_ASSERT(daemon.get_bound_ip() != "0.0.0.0", "Daemon never binds all interfaces");
+
+    if (started) {
+        std::string reply;
+
+        // Plain HTTP health check stays open (read-only status)
+        int h = wsclient::connect_local(test_port);
+        const std::string get = "GET /health HTTP/1.1\r\nHost: x\r\n\r\n";
+        write(h, get.data(), get.size());
+        reply = wsclient::read_until(h, 1000, [](const std::string& s) { return s.find("<EOF>") != std::string::npos; });
+        close(h);
+        TEST_ASSERT(reply.find("200 OK") != std::string::npos && reply.find("\"running\"") != std::string::npos,
+                    "Unauthenticated HTTP health check returns status");
+
+        int bad = wsclient::upgrade(test_port, "", reply);
+        TEST_ASSERT(reply.find("401") != std::string::npos, "WebSocket upgrade without token → 401");
+        close(bad);
+        bad = wsclient::upgrade(test_port, "Authorization: Bearer wrong_token\r\n", reply);
+        TEST_ASSERT(reply.find("401") != std::string::npos, "WebSocket upgrade with wrong token → 401");
+        close(bad);
+
+        // Authenticated client that answers pings stays connected
+        int good = wsclient::upgrade(test_port, "X-Swarm-Auth: test_token\r\n", reply);
+        TEST_ASSERT(reply.find("101 Switching Protocols") != std::string::npos
+                    && reply.find("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=") != std::string::npos,
+                    "Authenticated upgrade → 101 with correct Sec-WebSocket-Accept");
+
+        // Client that never answers pings
+        int silent = wsclient::upgrade(test_port, "Authorization: Bearer test_token\r\n", reply);
+        TEST_ASSERT(reply.find("101") != std::string::npos, "Bearer token also accepted");
+
+        std::string seen;
+        bool got_ping = false;
+        auto t_end = std::chrono::steady_clock::now() + std::chrono::milliseconds(700);
+        while (std::chrono::steady_clock::now() < t_end) {
+            std::string b = wsclient::read_until(good, 60, [](const std::string&) { return false; });
+            if (wsclient::has_frame(b, 0x89)) { got_ping = true; wsclient::send_frame(good, 0xA, "hb"); }
+            seen += b;
+        }
+        TEST_ASSERT(got_ping, "Server sends heartbeat pings to clients");
+        TEST_ASSERT(seen.find("<EOF>") == std::string::npos, "Client answering pings survives past the timeout window");
+
+        std::string silent_bytes = wsclient::read_until(silent, 800, [](const std::string& s) {
+            return s.find("<EOF>") != std::string::npos; });
+        TEST_ASSERT(silent_bytes.find("<EOF>") != std::string::npos && wsclient::has_frame(silent_bytes, 0x88),
+                    "Silent client dropped with close frame after 3 missed pongs");
+        TEST_ASSERT(daemon.client_count() == 1, "Only the live client remains (count=" + std::to_string(daemon.client_count()) + ")");
+
+        // Client-initiated ping gets a pong with the same payload
+        wsclient::send_frame(good, 0x9, "abc");
+        std::string pong = wsclient::read_until(good, 500, [](const std::string& s) {
+            return s.find(std::string("\x8A\x03" "abc", 5)) != std::string::npos; });
+        TEST_ASSERT(pong.find(std::string("\x8A\x03" "abc", 5)) != std::string::npos, "Client ping answered with matching pong");
+
+        // Malformed text frame (bad pid) doesn't kill the daemon
+        wsclient::send_frame(good, 0x1, "{\"action\":\"emergency_freeze\",\"pid\":x}");
+        std::string err = wsclient::read_until(good, 500, [](const std::string& s) {
+            return s.find("bad request") != std::string::npos; });
+        TEST_ASSERT(err.find("bad request") != std::string::npos && daemon.is_running(),
+                    "Malformed command answered with error, daemon keeps running");
+
+        // Unmasked client frame is a protocol violation
+        wsclient::send_frame(good, 0x1, "hi", /*masked=*/false);
+        std::string v = wsclient::read_until(good, 500, [](const std::string& s) {
+            return s.find("<EOF>") != std::string::npos; });
+        TEST_ASSERT(v.find("<EOF>") != std::string::npos, "Unmasked client frame closes the connection");
+        close(good);
+        close(silent);
+    }
 
     daemon.broadcast_log_line("\033[32m[Lucille-Daemon] Connected to Tailscale WireGuard mesh\033[0m");
     daemon.stop();

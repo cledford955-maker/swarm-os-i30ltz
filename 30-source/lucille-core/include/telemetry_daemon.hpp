@@ -8,6 +8,7 @@
 #include <mutex>
 #include <map>
 #include <functional>
+#include <chrono>
 #include "hitl_security.hpp"
 #include "mesh_sync.hpp"
 #include "bootloader.hpp"
@@ -27,6 +28,18 @@ struct TelemetryMetrics {
     std::vector<std::string> recent_terminal_logs;
 };
 
+// WebSocket server for the companion phones on the Tailscale mesh (:9091).
+//
+// Security: WebSocket upgrades must carry the mesh token (Authorization:
+// Bearer <t>, X-Swarm-Auth: <t>, or ?token=<t>); start() refuses an empty or
+// default token. If the Tailscale address can't be bound it falls back to
+// loopback, never 0.0.0.0. Plain HTTP GETs get an unauthenticated status JSON.
+//
+// Heartbeat: every heartbeat interval (default 5 s) each client gets a ping;
+// a client with no pong for max_missed intervals (default 3) is dropped.
+//
+// One poll() thread owns every socket; broadcast_*() may be called from any
+// thread and write under clients_mutex_.
 class TelemetryDaemon {
 public:
     explicit TelemetryDaemon(
@@ -43,6 +56,13 @@ public:
     bool start();
     void stop();
     bool is_running() const { return is_running_; }
+
+    // Call before start(). Defaults: 5000 ms, 3 missed pongs.
+    void set_heartbeat(std::chrono::milliseconds interval, int max_missed = 3) {
+        heartbeat_interval_ = interval;
+        heartbeat_max_missed_ = max_missed;
+    }
+    size_t client_count();   // upgraded (authenticated) WebSocket clients
 
     // Broadcast live telemetry & log events
     void broadcast_metrics(const TelemetryMetrics& metrics);
@@ -65,7 +85,10 @@ private:
     std::string auth_token_;
     std::string bound_ip_;
     int server_fd_{-1};
+    int wake_pipe_[2]{-1, -1};      // stop() writes to [1] to break poll()
     std::atomic<bool> is_running_{false};
+    std::chrono::milliseconds heartbeat_interval_{5000};
+    int heartbeat_max_missed_{3};
 
     std::shared_ptr<HitlSecurityManager> hitl_manager_;
     std::shared_ptr<MeshSyncEngine> sync_engine_;
@@ -75,15 +98,29 @@ private:
 
     std::thread server_thread_;
     std::thread telemetry_broadcaster_thread_;
-    std::mutex clients_mutex_;
-    std::vector<int> client_fds_;
+    struct Client {
+        std::string inbuf;
+        bool upgraded{false};
+        bool dead{false};               // write failed / protocol error — drop next pass
+        std::chrono::steady_clock::time_point connected_at;
+        std::chrono::steady_clock::time_point last_pong;
+    };
+    std::mutex clients_mutex_;          // guards clients_; held by the loop while it works
+    std::map<int, Client> clients_;     // fd → state; only the loop thread adds/removes
 
     void run_server_loop();
     void run_telemetry_loop();
-    void handle_client_socket(int client_fd);
+    void accept_clients();
+    void service_client(int fd, Client& c);
+    void handle_http_request(int fd, Client& c);
+    void run_heartbeat(std::chrono::steady_clock::time_point now);
+    bool authorized(const std::string& request) const;
     bool perform_websocket_handshake(int client_fd, const std::string& request);
     void process_websocket_frame(int client_fd, const std::string& payload);
+    // Unlocked primitives — callers hold clients_mutex_ (or own the fd)
+    bool send_frame(int client_fd, uint8_t opcode, const std::string& payload);
     void send_websocket_frame(int client_fd, const std::string& text);
+    void broadcast_text(const std::string& text);
 
     TelemetryMetrics collect_system_metrics();
 };

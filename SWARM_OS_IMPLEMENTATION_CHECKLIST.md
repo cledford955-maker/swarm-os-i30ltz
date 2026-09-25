@@ -90,8 +90,8 @@
   - Remaining: fresh ISO build + physical boot verification that FSR is active when `SWARM_GAMESCOPE=1`
 
 ### 2.2 Change Journaling & Rollback
-- [!] **Regression found 2026-09-25 (Claude Code):** `test_swarm_router_two_tier_speculation` fails 2 assertions — with empty `workspace_dir`, `route_and_execute()` dry-runs `verify_git_apply_check("", mock_patch)` and the mock Kimi patch doesn't apply, so `success=false` and Tier 3 never runs. Introduced by the checkpoint wiring below. [>] — CLAIMED by Claude Code (Opus 5.5) 2026-09-25 08:34
-- [!] **TSan race found 2026-09-25 (Claude Code):** `IpcServer::shutdown()` closes the epoll/socket fds (`ipc_server.cpp:202-203`) while `run_event_loop()` is still in `epoll_wait`/`read` (lines 100-113). Use the eventfd wakeup and close fds only after the loop thread joins. [>] — CLAIMED by Claude Code (Opus 5.5) 2026-09-25 08:34
+- [x] **Router regression fixed 2026-09-25 (Claude Code):** `test_swarm_router_two_tier_speculation` had 2 failures. Two causes: the mock Kimi patch had a corrupt hunk header (`@@ -1,5 +1,6 @@` over 2→3 lines), and with empty `workspace_dir` `verify_git_apply_check()` ran `git apply --check` against the current directory. Empty workspace now does a syntax-only `git apply --stat` (no files touched); mock hunk corrected.
+- [x] **IpcServer shutdown race fixed 2026-09-25 (Claude Code):** `shutdown()` closed epoll/wake/client fds while `run_event_loop()` still used them. The loop now owns the fds and closes them on exit; `shutdown()` only signals and waits (or cleans up itself if no loop ran). ThreadSanitizer clean.
 - [x] **Wire Git-diff checkpoint journaling into production execution path** — landed 2026-09-24
   - `SwarmTaskRequest` extended with `workspace_dir` field; `SwarmTaskResponse` extended with `checkpoint_id`
   - `SwarmRouter::route_and_execute()` now calls `SafetyGate::checkpoint_and_apply()` when `workspace_dir` is non-empty: snapshot → dry-run → apply → auto-rollback on regression failure
@@ -130,8 +130,14 @@
   - Tests: `test_consensus_gate_high_risk_diffs()` 13 assertions pass; suite 129 pass / 2 pre-existing fail
 
 ### 2.5 Companion App & Tailscale Mesh
-- [>] **Background push notifications for HITL approvals** — CLAIMED by Claude Code (Opus 5.5) 2026-09-25 08:34
-- [>] **5-second WebSocket ping/pong heartbeat on Tailscale :9091** — CLAIMED by Claude Code (Opus 5.5) 2026-09-25 08:34
+- [~] **Background push notifications for HITL approvals** — server side ready 2026-09-25 (Claude Code); phone side needs a decision
+  - `hitl_challenge` events already broadcast on :9091; now only to authenticated, heartbeat-verified clients (see heartbeat below)
+  - Not done: (1) nothing launches `TelemetryDaemon` — `LucilleEngine` doesn't own one; (2) the phone client lives in the separate I30LTZ Companion repo (the /mnt/Lucy copy was archived 2026-09-25). **User decision needed:** FCM push (needs Google/Firebase, works when app is killed) vs. an Android foreground service holding the Tailscale WebSocket (no Google, persistent notification, more battery)
+- [x] **5-second WebSocket ping/pong heartbeat on Tailscale :9091** — Claude Code (Opus 5.5), lucille-core `TelemetryDaemon` 2026-09-25
+  - Ping every 5 s (`set_heartbeat()`), client dropped with close 1001 after 3 missed pongs; client pings answered; stalled handshakes dropped after 5 s. OkHttp/browser clients answer pings automatically
+  - **Security fixes (the socket accepts HITL approve, process freeze and Btrfs rollback):** auth token was stored but never checked — upgrades now require `Authorization: Bearer`, `X-Swarm-Auth` or `?token=` (constant-time compare), and `start()` refuses empty/default tokens; failed Tailscale bind fell back to `0.0.0.0` — now loopback; Tailscale IP detection narrowed from any `100.*` to 100.64.0.0/10
+  - Rewritten as one `poll()` thread owning all sockets (was detached per-client threads that could outlive the object, and a stop()/loop fd race); RFC 6455 frame parser (masking required, 64 KiB cap, no fragments); a malformed command no longer terminates the daemon
+  - Tests: 17 assertions with a real WebSocket client; suite 146 pass / 0 fail; ThreadSanitizer clean ×3
 - [~] **Workspace parity validation (bidirectional manifest check)** — implemented 2026-09-25. `70-scripts/swarm_workspace_parity.py` performs a read-only SHA-256 comparison in both directions and reports changed, source-only and mirror-only paths. It excludes secrets, SDKs and generated artifacts, never follows symlinks, and writes private atomic manifests outside both trees. Five fixture tests pass. Actual `/mnt/Lucy` versus reference-mirror comparison pending because `/run/media/i30ltz/lucy-master` was not mounted.
 - [~] **Continuous mirror integrity verification (SHA-256 tree comparisons)** — staged 2026-09-25 as a hardened oneshot service and six-hour persistent timer. It requires both roots to be real mountpoints and cleanly reports `skipped` when the encrypted mirror is absent, preventing an empty mount directory from becoming a false pass. Unit validation passes; fresh ISO boot/timer execution and a mounted-mirror result remain pending. See `70-scripts/WORKSPACE_PARITY.md`.
 
@@ -155,7 +161,7 @@
 4. ~~Multi-client epoll IPC broker~~ **DONE (2026-09-24)**
 5. ~~Speculative pipeline + semantic entropy filtering + dynamic context pruning~~ **DONE (2026-09-25)** — real model HTTP clients + engine IPC entry point still open (see 2.4)
 6. ~~Dual-model 2-of-2 consensus gating~~ **DONE (2026-09-25)** — real voter clients pending with 2.4
-7. **Companion heartbeat** / push notifications / rsync manifest / SHA-256 integrity
+7. **Companion** — heartbeat DONE (2026-09-25); parity/integrity staged (other agent); push notifications need FCM-vs-foreground-service decision + engine to launch TelemetryDaemon
 8. ~~TCP MSS clamping + EPP power script~~ **DONE (2026-09-21/24 — boot verification pending)**
 9. ~~NVIDIA blueprints & skills~~ **DONE (4.1–4.8 confirmed 2026-09-24); 4.9–4.10 open**
 10. **Grant applications** (parallel — no code dependency)
@@ -250,3 +256,4 @@
 *Updated 2026-09-25 — Claude Code (Opus 5.5): speculative pipeline hardened + backend injection, entropy filtering in log ingestion, gap-based context pruning; test suite compile fix (missing socket/mman/cstring headers, TEST_ASSERT msg parens) — 116 pass / 2 pre-existing fail.*
 *Updated 2026-09-25 — Claude Code (Opus 4.6): desktop session teardown via logind scope termination; Gamescope launcher made opt-in with valid flags; usr/lib/swarm scripts tracked; SwarmHealthService + OSD HUD + Backend page wired to /api/health; stale profiledef backup removed; ax1/ax2 audit items resolved.*
 *Updated 2026-09-25 — Claude Code (Opus 5.5): 2-of-2 consensus gate fixed (case-insensitive classifier bypass), compiled, wired into route_and_execute, fail-closed; 129 pass / 2 pre-existing fail.*
+*Updated 2026-09-25 — Claude Code (Opus 5.5): router regression + IpcServer race fixed; :9091 TelemetryDaemon rewritten with auth, heartbeat, loopback fallback; lucille-core 146 pass / 0 fail, TSan clean.*
