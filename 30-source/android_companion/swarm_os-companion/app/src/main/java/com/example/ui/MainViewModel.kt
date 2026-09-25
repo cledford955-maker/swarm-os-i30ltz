@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.config.SwarmConnection
 import com.example.data.db.*
 import com.example.data.repository.AppRepository
+import com.example.data.service.CompanionHeartbeat
 import com.example.data.service.GeminiAiService
 import com.example.data.service.SystemInfoManager
 import com.example.data.service.SystemStats
@@ -25,6 +26,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val swarmConnection = SwarmConnection(application)
 
     val repository = AppRepository(db, systemInfoManager, ttsVoiceManager, geminiAiService, swarmConnection)
+    val heartbeat = CompanionHeartbeat(swarmConnection)
 
     val openRouterApiKey = openRouterManager.apiKey
     val selectedOpenRouterModel = openRouterManager.selectedModel
@@ -50,6 +52,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val systemStats: StateFlow<SystemStats> = _systemStats
 
     init {
+        heartbeat.start(viewModelScope)
         viewModelScope.launch {
             repository.seedDefaultTailscaleDevicesIfEmpty()
             while (kotlinx.coroutines.currentCoroutineContext().isActive) {
@@ -57,6 +60,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 kotlinx.coroutines.delay(30_000)
             }
         }
+    }
+
+    override fun onCleared() {
+        heartbeat.stop()
+        super.onCleared()
     }
 
     fun optimizeSingleDevice(deviceId: Long) {

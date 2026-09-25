@@ -141,6 +141,13 @@
   - **Security fixes (the socket accepts HITL approve, process freeze and Btrfs rollback):** auth token was stored but never checked — upgrades now require `Authorization: Bearer`, `X-Swarm-Auth` or `?token=` (constant-time compare), and `start()` refuses empty/default tokens; failed Tailscale bind fell back to `0.0.0.0` — now loopback; Tailscale IP detection narrowed from any `100.*` to 100.64.0.0/10
   - Rewritten as one `poll()` thread owning all sockets (was detached per-client threads that could outlive the object, and a stop()/loop fd race); RFC 6455 frame parser (masking required, 64 KiB cap, no fragments); a malformed command no longer terminates the daemon
   - Tests: 17 assertions with a real WebSocket client; suite 146 pass / 0 fail; ThreadSanitizer clean ×3
+- [x] **LucyServer companion WebSocket heartbeat** — Claude Code (Opus 4.6) 2026-09-25
+  - New `/api/companion/ws` endpoint on LucyServer-go (:5000): companion phones connect, send a JSON hello (`device_id`, `device_name`), server pings every 5s, OkHttp auto-pongs; 10s read deadline closes stale connections. CompanionHub tracks connected companions in-memory
+  - `/api/companion/status` REST endpoint: returns connected count and device list
+  - Health response gains `companions_connected` field; Flutter OSD HUD shows "PHONE ×N" or "PHONE ✗"
+  - Android client: `CompanionHeartbeat.kt` in data/service, started by MainViewModel, 2→60s exponential backoff reconnect, network-loss aware
+  - 5 Go tests (hello, hub tracking, status ack, ping receipt, REST status endpoint), all pass
+  - Complementary to the lucille-core TelemetryDaemon heartbeat on :9091 (HITL approval socket)
 - [~] **Workspace parity validation (bidirectional manifest check)** — implemented 2026-09-25. `70-scripts/swarm_workspace_parity.py` performs a read-only SHA-256 comparison in both directions and reports changed, source-only and mirror-only paths. It excludes secrets, SDKs and generated artifacts, never follows symlinks, and writes private atomic manifests outside both trees. Five fixture tests pass. Actual `/mnt/Lucy` versus reference-mirror comparison pending because `/run/media/i30ltz/lucy-master` was not mounted.
 - [~] **Continuous mirror integrity verification (SHA-256 tree comparisons)** — staged 2026-09-25 as a hardened oneshot service and six-hour persistent timer. It requires both roots to be real mountpoints and cleanly reports `skipped` when the encrypted mirror is absent, preventing an empty mount directory from becoming a false pass. Unit validation passes; fresh ISO boot/timer execution and a mounted-mirror result remain pending. See `70-scripts/WORKSPACE_PARITY.md`.
 
@@ -164,7 +171,7 @@
 4. ~~Multi-client epoll IPC broker~~ **DONE (2026-09-24)**
 5. ~~Speculative pipeline + semantic entropy filtering + dynamic context pruning~~ **DONE (2026-09-25)** — real model HTTP clients + engine IPC entry point still open (see 2.4)
 6. ~~Dual-model 2-of-2 consensus gating~~ **DONE (2026-09-25)** — real voter clients pending with 2.4
-7. **Companion** — heartbeat DONE; HITL approvals built end to end (foreground service, 2026-09-25) — phone install + launching lucille-core on SWARM pending; parity/integrity staged (other agent); GitHub subtree-sync hazard needs decision
+7. **Companion** — heartbeats DONE (lucille-core :9091 + LucyServer :5000/api/companion/ws); HITL approvals built end to end (foreground service, 2026-09-25) — phone install + launching lucille-core on SWARM pending; parity/integrity staged (other agent); GitHub subtree-sync hazard needs decision
 8. ~~TCP MSS clamping + EPP power script~~ **DONE (2026-09-21/24 — boot verification pending)**
 9. ~~NVIDIA blueprints & skills~~ **DONE (4.1–4.8 confirmed 2026-09-24); 4.9–4.10 open**
 10. **Grant applications** (parallel — no code dependency)
@@ -260,4 +267,5 @@
 *Updated 2026-09-25 — Claude Code (Opus 4.6): desktop session teardown via logind scope termination; Gamescope launcher made opt-in with valid flags; usr/lib/swarm scripts tracked; SwarmHealthService + OSD HUD + Backend page wired to /api/health; stale profiledef backup removed; ax1/ax2 audit items resolved.*
 *Updated 2026-09-25 — Claude Code (Opus 5.5): 2-of-2 consensus gate fixed (case-insensitive classifier bypass), compiled, wired into route_and_execute, fail-closed; 129 pass / 2 pre-existing fail.*
 *Updated 2026-09-25 — Claude Code (Opus 5.5): router regression + IpcServer race fixed; :9091 TelemetryDaemon rewritten with auth, heartbeat, loopback fallback; lucille-core 146 pass / 0 fail, TSan clean.*
+*Updated 2026-09-25 — Claude Code (Opus 4.6): LucyServer companion WebSocket heartbeat (/api/companion/ws + /api/companion/status), CompanionHub tracking, health.companions_connected, Flutter OSD HUD phone indicator, Android CompanionHeartbeat.kt client; 5 Go + 5 Flutter tests pass.*
 *Updated 2026-09-25 — Claude Code (Opus 5.5): companion restored; HITL approval push via Android foreground service + lucille-core engine/router wiring; subtree sync hazard logged.*

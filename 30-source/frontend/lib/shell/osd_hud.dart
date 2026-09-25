@@ -82,7 +82,23 @@ class _HudStrip extends StatelessWidget {
           pulse: backendLive && gamingOk,
           label: (backendLive && gamingOk) ? 'GAME' : 'GAME ✗',
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
+
+        // Companion phones connected via Tailscale
+        if (backendLive) ...[
+          _HudIndicator(
+            color: health.companionsConnected > 0
+                ? SwarmColors.statusOnline
+                : SwarmColors.textMuted,
+            pulse: health.companionsConnected > 0,
+            label: health.companionsConnected > 0
+                ? 'PHONE ×${health.companionsConnected}'
+                : 'PHONE ✗',
+          ),
+          const SizedBox(width: 12),
+        ] else ...[
+          const SizedBox(width: 12),
+        ],
 
         // CPU
         _HudGauge(

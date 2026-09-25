@@ -18,6 +18,7 @@ import (
 	"github.com/rs/cors"
 
 	"swarm-os/lucy-server/handlers"
+	services_pkg "swarm-os/lucy-server/services"
 )
 
 // serverStartTime records when this process started so /health can report uptime.
@@ -81,6 +82,10 @@ func main() {
 		api.Get("/android/builds/{id}/apk", androidH.Download)
 		api.Get("/android/devices", androidH.Devices)
 		api.Post("/android/adb", androidH.ADB)
+
+		// Companion heartbeat — 5s ping/pong over Tailscale mesh (§2.5)
+		api.Get("/companion/ws", companionH.WebSocket)
+		api.Get("/companion/status", companionH.Status)
 
 		// Shared memory (2026-09-16) — log at /mnt/brains/swarm-memory, synced
 		// across the OSes, the companion phones and Claude's memory files.
@@ -538,6 +543,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		"lucy_mount_gb_used":  math.Round(lucyUsedGB*10) / 10,
 		"lucy_mount_gb_total": math.Round(lucyTotalGB*10) / 10,
 		"services":            services,
+		"companions_connected": services_pkg.GetCompanionHub().Count(),
 	}
 	json.NewEncoder(w).Encode(resp)
 }

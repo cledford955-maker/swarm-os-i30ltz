@@ -16,6 +16,7 @@ void main() {
           'gaming_agent': 'ok',
           'google_workspace': 'connection refused',
         },
+        'companions_connected': 2,
       };
       final snap = SwarmHealthSnapshot.fromJson(json);
 
@@ -31,6 +32,7 @@ void main() {
       expect(snap.serviceOk('lucy_server'), isTrue);
       expect(snap.serviceOk('gaming_agent'), isTrue);
       expect(snap.serviceOk('google_workspace'), isFalse);
+      expect(snap.companionsConnected, 2);
       expect(snap.isStale(), isFalse); // just created
     });
 

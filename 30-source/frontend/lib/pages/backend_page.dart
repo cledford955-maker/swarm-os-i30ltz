@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/sentinel_providers.dart';
+import '../services/swarm_health_service.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../services/system_launcher.dart';
@@ -276,7 +278,11 @@ class _BackendPageState extends ConsumerState<BackendPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+
+                  // Health summary from /api/health
+                  _HealthSummaryBar(),
+                  const SizedBox(height: 16),
 
                   // Services List
                   Expanded(

@@ -17,6 +17,7 @@ class SwarmHealthSnapshot {
   final double diskUsedGb;
   final double diskTotalGb;
   final Map<String, String> services; // name → "ok" | error string
+  final int companionsConnected;
   final DateTime fetchedAt;
 
   const SwarmHealthSnapshot({
@@ -27,6 +28,7 @@ class SwarmHealthSnapshot {
     required this.diskUsedGb,
     required this.diskTotalGb,
     required this.services,
+    required this.companionsConnected,
     required this.fetchedAt,
   });
 
@@ -61,6 +63,7 @@ class SwarmHealthSnapshot {
     diskUsedGb: 0,
     diskTotalGb: 0,
     services: const {},
+    companionsConnected: 0,
     fetchedAt: DateTime.utc(1970),
   );
 
@@ -75,6 +78,7 @@ class SwarmHealthSnapshot {
       diskUsedGb: (json['lucy_mount_gb_used'] as num?)?.toDouble() ?? 0,
       diskTotalGb: (json['lucy_mount_gb_total'] as num?)?.toDouble() ?? 0,
       services: raw.map((k, v) => MapEntry(k, v.toString())),
+      companionsConnected: (json['companions_connected'] as num?)?.toInt() ?? 0,
       fetchedAt: DateTime.now(),
     );
   }
