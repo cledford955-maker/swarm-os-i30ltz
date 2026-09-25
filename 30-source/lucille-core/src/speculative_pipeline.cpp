@@ -50,56 +50,80 @@ bool StreamingBlockBuffer::is_block_starter(const std::string& line) const {
 
 void StreamingBlockBuffer::feed(const std::string& chunk) {
     std::lock_guard<std::mutex> lock(mutex_);
-    pending_ += chunk;
 
-    // Process pending text character by character
-    size_t i = 0;
-    while (i < pending_.size()) {
-        char c = pending_[i];
+    for (char c : chunk) {
+        current_block_ += c;
 
-        // For brace-delimited languages, track depth
-        if (language_ != "python") {
-            if (c == '{') {
-                ++brace_depth_;
-                in_block_ = true;
-                current_block_ += c;
-                ++i;
-                continue;
-            }
-            if (c == '}') {
-                current_block_ += c;
-                ++i;
-                if (brace_depth_ > 0) --brace_depth_;
-                if (brace_depth_ == 0 && in_block_) {
-                    try_emit();
-                }
+        if (language_ == "python") {
+            if (c == '\n') split_python_block();
+            continue;
+        }
+
+        // Lexer state persists across chunks: braces inside string/char
+        // literals and comments must not affect block depth.
+        if (line_comment_) {
+            if (c == '\n') line_comment_ = false;
+            prev_ = c;
+            continue;
+        }
+        if (block_comment_) {
+            if (prev_ == '*' && c == '/') { block_comment_ = false; prev_ = 0; }
+            else prev_ = c;
+            continue;
+        }
+        if (quote_) {
+            if (escape_)          escape_ = false;
+            else if (c == '\\')   escape_ = true;
+            else if (c == quote_) quote_ = 0;
+            prev_ = c;
+            continue;
+        }
+        if (prev_ == '/' && c == '/') { line_comment_  = true; prev_ = 0; continue; }
+        if (prev_ == '/' && c == '*') { block_comment_ = true; prev_ = 0; continue; }
+        if (c == '"' || c == '\'') { quote_ = c; prev_ = c; continue; }
+
+        if (c == '{') {
+            ++brace_depth_;
+            in_block_ = true;
+        } else if (c == '}') {
+            if (brace_depth_ > 0) --brace_depth_;
+            if (brace_depth_ == 0 && in_block_) {
+                try_emit();
+                prev_ = 0;
                 continue;
             }
         }
-
-        // Accumulate characters
-        if (c == '\n') {
-            // For Python: check if this completed line is a block starter
-            if (language_ == "python") {
-                // (already at \n) — check if the accumulated line is a block starter
-                if (!current_block_.empty() && is_block_starter(current_block_)) {
-                    // New block starting — emit previous if any
-                    if (in_block_) try_emit();
-                    in_block_ = true;
-                }
-            }
-            current_block_ += c;
-        } else {
-            current_block_ += c;
-            // Detect block starters in brace languages (accumulate until first {)
-            if (language_ != "python" && !in_block_) {
-                // Check if we've buffered a complete line that looks like a def
-                // (will actually open on the next `{` character above)
-            }
-        }
-        ++i;
+        prev_ = c;
     }
-    pending_.clear();
+}
+
+// Python: a completed line that is a top-level def/class starts a new block.
+// Everything before it (plus any decorators directly above it) is the
+// previous block, which is emitted now.
+void StreamingBlockBuffer::split_python_block() {
+    const size_t nl = current_block_.size() - 1;              // the '\n' just added
+    const size_t prev_nl = nl == 0 ? std::string::npos : current_block_.rfind('\n', nl - 1);
+    size_t line_start = prev_nl == std::string::npos ? 0 : prev_nl + 1;
+    const std::string line = current_block_.substr(line_start, nl - line_start);
+
+    if (line.empty() || std::isspace((unsigned char)line[0]) || !is_block_starter(line)) return;
+
+    // Pull decorator lines directly above the def into the new block
+    while (line_start > 0) {
+        size_t p = line_start - 1;                            // '\n' ending the line above
+        size_t above = p == 0 ? std::string::npos : current_block_.rfind('\n', p - 1);
+        size_t above_start = above == std::string::npos ? 0 : above + 1;
+        if (current_block_.compare(above_start, 1, "@") != 0) break;
+        line_start = above_start;
+    }
+
+    if (in_block_) {
+        std::string rest = current_block_.substr(line_start);
+        current_block_.resize(line_start);
+        try_emit();
+        current_block_ = std::move(rest);
+    }
+    in_block_ = true;
 }
 
 void StreamingBlockBuffer::try_emit() {
@@ -231,6 +255,7 @@ static PipelineMetrics mock_glm_triage(
 }
 
 void SpeculativePipeline::use_mock_backends() {
+    mock_backends_ = true;
     kimi_stream    = mock_kimi_stream;
     deepseek_audit = mock_deepseek_audit;
     glm_triage     = mock_glm_triage;
@@ -246,10 +271,10 @@ PipelineResult SpeculativePipeline::run(
 ) {
     auto t0 = std::chrono::steady_clock::now();
     PipelineResult result;
-    audit_results_.clear();
+    result.used_mock_backends = mock_backends_;
 
     if (!kimi_stream || !deepseek_audit || !glm_triage) {
-        result.error_message = "SpeculativePipeline: backends not configured — call use_mock_backends()";
+        result.error_message = "SpeculativePipeline: backends not configured";
         return result;
     }
 
@@ -272,9 +297,15 @@ PipelineResult SpeculativePipeline::run(
                 pb.block_text = b;
                 pb.language   = language;
 
-                pb.audit_passed = deepseek_audit(
-                    pb.block_text, language, pb.audit_cot, pb.audit_error
-                );
+                // A throwing auditor rejects the block (fail closed)
+                try {
+                    pb.audit_passed = deepseek_audit(
+                        pb.block_text, language, pb.audit_cot, pb.audit_error
+                    );
+                } catch (const std::exception& e) {
+                    pb.audit_passed = false;
+                    pb.audit_error  = std::string("audit threw: ") + e.what();
+                }
 
                 pb.audit_latency_ms = static_cast<uint32_t>(
                     std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -294,14 +325,27 @@ PipelineResult SpeculativePipeline::run(
     auto glm_future = std::async(std::launch::async,
         [this, &compiler_logs, &source_code]() -> PipelineMetrics {
             std::cout << "[Pipeline] GLM-5.6 triage started (parallel)\n";
-            auto m = glm_triage(compiler_logs, source_code);
+            PipelineMetrics m;
+            try {
+                m = glm_triage(compiler_logs, source_code);
+            } catch (const std::exception& e) {
+                m.glm_report = std::string("[GLM triage failed] ") + e.what();
+            }
             std::cout << "[Pipeline] " << m.glm_report << "\n";
             return m;
         });
 
     // Thread A — Kimi streaming (feeds completed chunks into buf, which fires callbacks)
     std::cout << "[Pipeline] Kimi-2.6 streaming started\n";
-    kimi_stream(prompt, source_code, buf);
+    // A stream failure still drains in-flight audits below, but the result
+    // is marked incomplete so a partial patch is never treated as final.
+    bool stream_ok = true;
+    try {
+        kimi_stream(prompt, source_code, buf);
+    } catch (const std::exception& e) {
+        stream_ok = false;
+        result.error_message = std::string("stream failed: ") + e.what();
+    }
     buf.flush(); // emit any trailing partial block
 
     std::cout << "[Pipeline] Kimi stream complete — "
@@ -326,7 +370,7 @@ PipelineResult SpeculativePipeline::run(
 
     result.total_blocks    = result.blocks.size();
     result.metrics         = glm_future.get();
-    result.pipeline_complete = true;
+    result.pipeline_complete = stream_ok;
     result.pipeline_latency_ms = static_cast<uint32_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - t0).count());

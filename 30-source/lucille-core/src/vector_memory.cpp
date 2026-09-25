@@ -586,14 +586,20 @@ std::vector<HybridSearchResult> VectorMemoryEngine::hybrid_search(
     }
     sqlite3_finalize(stmt);
 
-    // Dynamic context pruning: drop results that are outlier-far from the query
+    // Dynamic context pruning: cut dense hits past the largest score dropoff.
+    // Keyword-only hits (no dense rank, placeholder distance 1.0) are exempt so
+    // RRF's sparse recall isn't discarded, and RRF ordering is preserved.
     if (prune_by_distance && results.size() > 1) {
-        auto pr = EntropyFilter::prune_by_distance_dropoff(results, std_dev_mult);
+        auto pr = EntropyFilter::prune_by_distance_dropoff(
+            results,
+            [](const HybridSearchResult& r) { return r.dense_rank >= 0; },
+            std_dev_mult);
         if (pr.dropped > 0) {
             std::cout << "[VectorMemory] Distance pruning: kept=" << pr.kept
                       << " dropped=" << pr.dropped
                       << " threshold=" << pr.threshold
-                      << " (mean=" << pr.mean << " σ=" << pr.std_dev << ")\n";
+                      << " (gap=" << pr.largest_gap << " mean_gap=" << pr.mean
+                      << " σ=" << pr.std_dev << ")\n";
         }
     }
 

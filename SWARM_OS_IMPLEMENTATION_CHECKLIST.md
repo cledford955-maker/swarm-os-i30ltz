@@ -89,6 +89,8 @@
   - Remaining: fresh ISO build + physical boot verification that FSR is active
 
 ### 2.2 Change Journaling & Rollback
+- [!] **Regression found 2026-09-25 (Claude Code):** `test_swarm_router_two_tier_speculation` fails 2 assertions — with empty `workspace_dir`, `route_and_execute()` dry-runs `verify_git_apply_check("", mock_patch)` and the mock Kimi patch doesn't apply, so `success=false` and Tier 3 never runs. Introduced by the checkpoint wiring below. Not fixed — unclaimed.
+- [!] **TSan race found 2026-09-25 (Claude Code):** `IpcServer::shutdown()` closes the epoll/socket fds (`ipc_server.cpp:202-203`) while `run_event_loop()` is still in `epoll_wait`/`read` (lines 100-113). Use the eventfd wakeup and close fds only after the loop thread joins. Not fixed — unclaimed.
 - [x] **Wire Git-diff checkpoint journaling into production execution path** — landed 2026-09-24
   - `SwarmTaskRequest` extended with `workspace_dir` field; `SwarmTaskResponse` extended with `checkpoint_id`
   - `SwarmRouter::route_and_execute()` now calls `SafetyGate::checkpoint_and_apply()` when `workspace_dir` is non-empty: snapshot → dry-run → apply → auto-rollback on regression failure
@@ -105,11 +107,20 @@
   - `test_ipc_epoll_multi_client()` in `tests/test_engine.cpp`: two concurrent AF_UNIX clients send PING_A/PING_B simultaneously and receive correct PONG replies; shutdown + unlink verified, all 4 assertions pass
 
 ### 2.4 Multi-Model Swarm Routing
-- [>] **Pipelined asynchronous speculative execution** — CLAIMED by Claude Code (Opus 5.5) 2026-09-24 23:40
+- [~] **Pipelined asynchronous speculative execution** — Claude Code (Opus 5.5), landed in lucille-core 2026-09-25
+  - `SwarmRouter::set_pipeline_backends()` injects real Kimi/DeepSeek/GLM clients; unconfigured router falls back to simulated models and sets `PipelineResult::used_mock_backends` so mock output can't pass as real
+  - `StreamingBlockBuffer` rewritten: literal/comment-aware brace lexer (state survives chunk splits); Python mode fixed (was emitting every line as a block) — splits at top-level def/class, decorators stay with their def
+  - Fail-closed: throwing auditor rejects its block; throwing stream → `pipeline_complete=false` + error, in-flight audits still drained
+  - Tests: `test_speculative_pipeline_entropy_and_pruning()` (21 assertions) pass; ThreadSanitizer clean for pipeline code
+  - Remaining: real HTTP/SSE clients for Kimi/DeepSeek/GLM (lucille-core has no HTTP client) and an IPC command in `LucilleEngine::handle_ipc_command()` to reach it — engine owns no `SwarmRouter` yet
 - [ ] **Concurrent safety audit while patch streams**
 - [ ] **Triage & metric logging (GLM aggregator)**
-- [>] **Semantic entropy filtering in context ingestion** — CLAIMED by Claude Code (Opus 5.5) 2026-09-24 23:40
-- [>] **Dynamic context pruning via score dropoff** — CLAIMED by Claude Code (Opus 5.5) 2026-09-24 23:40
+- [x] **Semantic entropy filtering in context ingestion** — Claude Code (Opus 5.5) 2026-09-25
+  - `route_speculative_pipeline()` now runs compiler logs through `EntropyFilter::clean()` before GLM ingests them (diagnostics via `SwarmRouter::last_log_filter()`); `VectorMemoryEngine::insert_chunk_filtered()` already filters memory chunks
+  - `clean()` fixes: `[1] error:` no longer dropped as a progress bar; blank separators no longer deduped (paragraphs were merging); `lines_out` counts emitted lines after `max_chars` cap
+- [x] **Dynamic context pruning via score dropoff** — Claude Code (Opus 5.5) 2026-09-25
+  - `EntropyFilter::prune_by_distance_dropoff()` replaced: old rule kept only hits closer than mean−1.5σ (usually just 1 of 5 — discarded relevant context). Now cuts at the largest outlier gap between sorted distances; evenly spread results all kept
+  - Preserves RRF order (old code re-sorted by distance); `hybrid_search()` exempts keyword-only hits (placeholder distance 1.0) so sparse recall isn't thrown away
 - [ ] **Dual-model 2-of-2 consensus gating for high-risk diffs**
 
 ### 2.5 Companion App & Tailscale Mesh
@@ -136,7 +147,7 @@
 2. ~~Wire Git-diff checkpoint journaling into `SwarmRouter::route_and_execute()`~~ **DONE (2026-09-24)**
 3. ~~POSIX shared memory telemetry ring buffer~~ **DONE (2026-09-24)**
 4. ~~Multi-client epoll IPC broker~~ **DONE (2026-09-24)**
-5. **Speculative pipeline** + semantic entropy filtering + dynamic context pruning  ← CLAIMED by Claude Code (Opus 5.5) 2026-09-24 23:40
+5. ~~Speculative pipeline + semantic entropy filtering + dynamic context pruning~~ **DONE (2026-09-25)** — real model HTTP clients + engine IPC entry point still open (see 2.4)
 6. **Dual-model 2-of-2 consensus gating** for high-risk diffs
 7. **Companion heartbeat** / push notifications / rsync manifest / SHA-256 integrity
 8. ~~TCP MSS clamping + EPP power script~~ **DONE (2026-09-21/24 — boot verification pending)**
@@ -229,3 +240,4 @@
 
 *Rebuilt 2026-09-19 from prior `SWARM_OS_IMPLEMENTATION_CHECKLIST.md` and `SWARM_AI_FEATURES.md`.*
 *Updated 2026-09-24 v6.2.72 — session work: checkpoint wiring, Gamescope session wrapper, desktop scope-lifecycle fix, rich /api/health, ISO SHA-256/GPG, NVIDIA facade audit.*
+*Updated 2026-09-25 — Claude Code (Opus 5.5): speculative pipeline hardened + backend injection, entropy filtering in log ingestion, gap-based context pruning; test suite compile fix (missing socket/mman/cstring headers, TEST_ASSERT msg parens) — 116 pass / 2 pre-existing fail.*

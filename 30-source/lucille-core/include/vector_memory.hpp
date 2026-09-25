@@ -69,7 +69,8 @@ public:
 
     // Hybrid Search: Dense KNN + Sparse BM25 + Reciprocal Rank Fusion.
     // If prune_by_distance is true, applies dynamic score-dropoff after retrieval:
-    // drops results where cosine_distance > mean − std_dev_mult × std_dev.
+    // dense hits past the largest outlier gap in cosine distance are dropped
+    // (see EntropyFilter::prune_by_distance_dropoff); keyword-only hits are kept.
     std::vector<HybridSearchResult> hybrid_search(
         const std::string& query_text,
         const std::vector<float>& query_embedding,

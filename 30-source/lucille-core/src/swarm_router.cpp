@@ -245,20 +245,41 @@ SwarmTaskResponse SwarmRouter::route_and_execute(const SwarmTaskRequest& req) {
     return resp;
 }
 
+void SwarmRouter::set_pipeline_backends(
+    SpeculativePipeline::KimiStreamFn    kimi_stream,
+    SpeculativePipeline::DeepSeekAuditFn deepseek_audit,
+    SpeculativePipeline::GlmTriageFn     glm_triage
+) {
+    pipeline_kimi_  = std::move(kimi_stream);
+    pipeline_audit_ = std::move(deepseek_audit);
+    pipeline_glm_   = std::move(glm_triage);
+}
+
 PipelineResult SwarmRouter::route_speculative_pipeline(
     const SwarmTaskRequest& req,
     const std::string& compiler_logs
 ) {
     SpeculativePipeline pipeline;
-    pipeline.use_mock_backends(); // swap with real API stubs when ready
+    if (pipeline_kimi_ && pipeline_audit_ && pipeline_glm_) {
+        pipeline.kimi_stream    = pipeline_kimi_;
+        pipeline.deepseek_audit = pipeline_audit_;
+        pipeline.glm_triage     = pipeline_glm_;
+    } else {
+        std::cerr << "[SwarmRouter] No pipeline backends set — using simulated models\n";
+        pipeline.use_mock_backends();
+    }
 
     std::cout << "[SwarmRouter] Launching speculative pipeline for task: " << req.task_id << "\n";
+
+    // Semantic entropy filtering: strip ANSI, build-progress and duplicate
+    // noise from the logs before they are ingested into GLM's context.
+    last_log_filter_ = EntropyFilter::clean(compiler_logs);
 
     PipelineResult result = pipeline.run(
         req.user_instruction,
         req.file_content,
         req.language,
-        compiler_logs
+        last_log_filter_.text
     );
 
     // Feed latency into the circuit breaker

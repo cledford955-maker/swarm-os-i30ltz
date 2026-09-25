@@ -9,6 +9,7 @@
 #include "process_manager.hpp"
 #include "speculative_pipeline.hpp"
 #include "shm_telemetry.hpp"
+#include "entropy_filter.hpp"
 
 namespace lucille {
 
@@ -66,7 +67,9 @@ public:
     // Pipelined async speculative execution:
     //   Kimi streams → completed blocks audited concurrently by DeepSeek-R1
     //   GLM 5.6 triage runs in parallel from the start.
-    // compiler_logs: most recent build output for GLM to analyze.
+    // compiler_logs: most recent build output; entropy-filtered before GLM
+    // sees it. Uses backends from set_pipeline_backends(); until those are
+    // set, runs simulated backends and flags result.used_mock_backends.
     PipelineResult route_speculative_pipeline(
         const SwarmTaskRequest& req,
         const std::string& compiler_logs = ""
@@ -95,6 +98,16 @@ public:
         std::string& out_error
     );
 
+    // Install real model clients for route_speculative_pipeline().
+    void set_pipeline_backends(
+        SpeculativePipeline::KimiStreamFn    kimi_stream,
+        SpeculativePipeline::DeepSeekAuditFn deepseek_audit,
+        SpeculativePipeline::GlmTriageFn     glm_triage
+    );
+
+    // Diagnostics from the most recent entropy filtering of compiler logs
+    const EntropyFilter::CleanResult& last_log_filter() const { return last_log_filter_; }
+
     SafetyGate& get_safety_gate() { return safety_gate_; }
 
     // Select optimal model for a specific task category
@@ -104,6 +117,10 @@ private:
     std::shared_ptr<ProcessManager> process_manager_;
     SafetyGate safety_gate_;
     ShmTelemetryBuffer shm_buf_;  // high-freq telemetry ring → /dev/shm/swarm_telemetry_shm
+    SpeculativePipeline::KimiStreamFn    pipeline_kimi_;
+    SpeculativePipeline::DeepSeekAuditFn pipeline_audit_;
+    SpeculativePipeline::GlmTriageFn     pipeline_glm_;
+    EntropyFilter::CleanResult           last_log_filter_;
 
     // Simulated LLM API response generators / mock runners
     std::string call_kimi_coder(const std::string& prompt, const std::string& code);

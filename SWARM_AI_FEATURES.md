@@ -914,3 +914,5 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 *Last updated: 2026-09-21 — finished interrupted gaming/wake integration and host checks; privileged ISO build and human voice test on booted SWARM remain pending.*
 
 *Last updated: 2026-09-24 — Four private project repositories synced; ten-minute autosync repaired. Desktop boot fixes reproduced and staged; fresh ISO and session-lifecycle follow-up pending.*
+
+*Last updated: 2026-09-25 — lucille-core: speculative pipeline (backend injection, literal-aware block lexer, Python split fix, fail-closed audits), entropy-filtered log ingestion, gap-based context pruning preserving RRF order; test_engine compiles again (116 pass, 2 pre-existing router failures). See SWARM_OS_IMPLEMENTATION_CHECKLIST.md §2.2/§2.4.*

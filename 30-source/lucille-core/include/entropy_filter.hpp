@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cmath>
 #include <algorithm>
+#include <type_traits>
 
 namespace lucille {
 
@@ -32,23 +33,41 @@ public:
     // max_chars: hard cap on output size (0 = no cap).
     static CleanResult clean(const std::string& raw, size_t max_chars = 8192);
 
-    // After hybrid_search() returns results with cosine_distance populated,
-    // discard any result where  cosine_distance > mean − std_dev_mult × std_dev.
-    // Always keeps at least min_keep results (the lowest-distance ones).
+    // Dynamic context pruning via score dropoff, applied after hybrid_search().
+    // Sorts the prunable results' cosine distances, finds the largest jump
+    // between neighbours, and cuts there when that jump is a real outlier:
+    //     gap > mean_gap + std_dev_mult × std_dev_gap
+    // Evenly spread results (no dropoff) are all kept. Surviving results keep
+    // their original (e.g. RRF) order. Always keeps at least min_keep of the
+    // closest prunable results. Results where is_prunable(r) is false (e.g.
+    // keyword-only hits with no embedding distance) are never dropped.
     struct DistancePruneResult {
         size_t kept{0};
         size_t dropped{0};
-        float  threshold{1.0f};
-        float  mean{0.0f};
-        float  std_dev{0.0f};
+        float  threshold{1.0f};   // largest cosine_distance still kept
+        float  largest_gap{0.0f}; // biggest jump between sorted neighbours
+        float  mean{0.0f};        // mean gap between sorted neighbours
+        float  std_dev{0.0f};     // std-dev of those gaps
     };
+
+    template<typename T, typename Prunable,
+             typename = std::enable_if_t<std::is_invocable_r_v<bool, Prunable, const T&>>>
+    static DistancePruneResult prune_by_distance_dropoff(
+        std::vector<T>& results,
+        Prunable is_prunable,
+        float std_dev_mult = 1.5f,
+        size_t min_keep    = 1
+    );
 
     template<typename T>
     static DistancePruneResult prune_by_distance_dropoff(
         std::vector<T>& results,
         float std_dev_mult = 1.5f,
         size_t min_keep    = 1
-    );
+    ) {
+        return prune_by_distance_dropoff(
+            results, [](const T&) { return true; }, std_dev_mult, min_keep);
+    }
 
 private:
     static std::string strip_ansi(const std::string& s, size_t& bytes_removed);
@@ -58,52 +77,60 @@ private:
 
 // --- template implementation ---
 
-template<typename T>
+template<typename T, typename Prunable, typename>
 EntropyFilter::DistancePruneResult EntropyFilter::prune_by_distance_dropoff(
     std::vector<T>& results,
+    Prunable is_prunable,
     float std_dev_mult,
     size_t min_keep
 ) {
     DistancePruneResult pr;
-    if (results.size() <= min_keep) {
-        pr.kept = results.size();
+    pr.kept = results.size();
+
+    std::vector<float> dists;
+    for (const auto& r : results) {
+        if (is_prunable(r)) dists.push_back(r.cosine_distance);
+    }
+    if (min_keep < 1) min_keep = 1;
+    if (dists.size() <= min_keep) {
+        if (!dists.empty()) pr.threshold = *std::max_element(dists.begin(), dists.end());
         return pr;
     }
+    std::sort(dists.begin(), dists.end());
 
-    // Compute mean cosine distance across the result set
+    // Gap statistics between sorted neighbours
+    std::vector<float> gaps(dists.size() - 1);
     double sum = 0.0;
-    for (const auto& r : results) sum += r.cosine_distance;
-    pr.mean = static_cast<float>(sum / results.size());
-
-    // Compute standard deviation
-    double var = 0.0;
-    for (const auto& r : results) {
-        double d = r.cosine_distance - pr.mean;
-        var += d * d;
+    for (size_t i = 0; i + 1 < dists.size(); ++i) {
+        gaps[i] = dists[i + 1] - dists[i];
+        sum += gaps[i];
     }
-    pr.std_dev = static_cast<float>(std::sqrt(var / results.size()));
+    pr.mean = static_cast<float>(sum / gaps.size());
+    double var = 0.0;
+    for (float g : gaps) var += (g - pr.mean) * (g - pr.mean);
+    pr.std_dev = static_cast<float>(std::sqrt(var / gaps.size()));
 
-    // Threshold: keep only results tighter than mean − std_dev_mult * std_dev
-    // (i.e. the high-similarity cluster; outlier-far results are dropped)
-    pr.threshold = pr.mean - std_dev_mult * pr.std_dev;
-
-    // Sort ascending by cosine_distance so we keep the best min_keep
-    std::sort(results.begin(), results.end(), [](const T& a, const T& b) {
-        return a.cosine_distance < b.cosine_distance;
-    });
-
-    size_t keep_count = 0;
-    for (size_t i = 0; i < results.size(); ++i) {
-        if (i < min_keep || results[i].cosine_distance <= pr.threshold) {
-            ++keep_count;
-        } else {
-            break; // sorted, so everything after this is also above threshold
+    // Largest dropoff that still leaves at least min_keep results above it
+    size_t cut = gaps.size(); // index of the gap to cut at; gaps.size() = no cut
+    for (size_t i = min_keep - 1; i < gaps.size(); ++i) {
+        if (gaps[i] > pr.largest_gap) {
+            pr.largest_gap = gaps[i];
+            cut = i;
         }
     }
 
-    pr.dropped = results.size() - keep_count;
-    results.resize(keep_count);
-    pr.kept = keep_count;
+    const bool significant = cut < gaps.size() &&
+        pr.largest_gap > pr.mean + std_dev_mult * pr.std_dev;
+    pr.threshold = significant ? dists[cut] : dists.back();
+    if (!significant) return pr;
+
+    // Drop prunable results beyond the dropoff, preserving original order
+    const float threshold = pr.threshold;
+    auto new_end = std::remove_if(results.begin(), results.end(),
+        [&](const T& r) { return is_prunable(r) && r.cosine_distance > threshold; });
+    pr.dropped = static_cast<size_t>(results.end() - new_end);
+    results.erase(new_end, results.end());
+    pr.kept = results.size();
     return pr;
 }
 

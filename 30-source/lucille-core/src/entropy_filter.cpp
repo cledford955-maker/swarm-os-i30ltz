@@ -44,11 +44,11 @@ bool EntropyFilter::is_progress_line(const std::string& line) {
     if (line.size() >= 6 && line[0] == '[') {
         size_t close = line.find(']');
         if (close != std::string::npos && close <= 5) {
-            // Check that interior is digits and %
-            bool ok = true;
-            for (size_t i = 1; i < close; ++i) {
-                if (!std::isdigit(static_cast<unsigned char>(line[i])) && line[i] != '%' && line[i] != ' ') {
-                    ok = false; break;
+            // Interior must be digits/spaces ending in '%' — "[ 45%]", not "[1]"
+            bool ok = line[close - 1] == '%';
+            for (size_t i = 1; ok && i + 1 < close; ++i) {
+                if (!std::isdigit(static_cast<unsigned char>(line[i])) && line[i] != ' ') {
+                    ok = false;
                 }
             }
             if (ok) return true;
@@ -137,12 +137,15 @@ EntropyFilter::CleanResult EntropyFilter::clean(const std::string& raw, size_t m
             consecutive_blank = 0;
         }
 
-        // Deduplicate: allow each unique line at most twice
-        size_t& count = seen[line];
-        ++count;
-        if (count > 2) {
-            ++result.dupes_removed;
-            continue;
+        // Deduplicate: allow each unique non-blank line at most twice
+        // (blank separators are already collapsed above)
+        if (!line.empty()) {
+            size_t& count = seen[line];
+            ++count;
+            if (count > 2) {
+                ++result.dupes_removed;
+                continue;
+            }
         }
 
         kept.push_back(std::move(line));
@@ -151,17 +154,19 @@ EntropyFilter::CleanResult EntropyFilter::clean(const std::string& raw, size_t m
     // 4. Reassemble
     std::string out;
     out.reserve(std::min(stripped.size(), max_chars > 0 ? max_chars : stripped.size()));
+    size_t emitted = 0;
     for (size_t i = 0; i < kept.size(); ++i) {
         if (max_chars > 0 && out.size() + kept[i].size() + 1 > max_chars) break;
         out += kept[i];
         out += '\n';
+        ++emitted;
     }
 
     // Trim trailing blank lines
     while (out.size() >= 2 && out[out.size()-1] == '\n' && out[out.size()-2] == '\n')
         out.pop_back();
 
-    result.lines_out = kept.size();
+    result.lines_out = emitted;
     result.text = std::move(out);
     return result;
 }

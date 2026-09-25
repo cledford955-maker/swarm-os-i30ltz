@@ -2,7 +2,11 @@
 #include <cassert>
 #include <fstream>
 #include <filesystem>
+#include <cstring>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <chrono>
 #include <thread>
@@ -21,6 +25,8 @@
 #include "mesh_sync.hpp"
 #include "telemetry_daemon.hpp"
 #include "shm_telemetry.hpp"
+#include "entropy_filter.hpp"
+#include "speculative_pipeline.hpp"
 #include "engine.hpp"
 
 namespace fs = std::filesystem;
@@ -31,10 +37,10 @@ static int g_tests_failed = 0;
 #define TEST_ASSERT(cond, msg) \
     do { \
         if (cond) { \
-            std::cout << "  [PASS] " << msg << "\n"; \
+            std::cout << "  [PASS] " << (msg) << "\n"; \
             g_tests_passed++; \
         } else { \
-            std::cerr << "  [FAIL] " << msg << " (" << __FILE__ << ":" << __LINE__ << ")\n"; \
+            std::cerr << "  [FAIL] " << (msg) << " (" << __FILE__ << ":" << __LINE__ << ")\n"; \
             g_tests_failed++; \
         } \
     } while(0)
@@ -392,6 +398,150 @@ void test_swarm_router_two_tier_speculation() {
     TEST_ASSERT(resp.execution_output.find("Hermes-3-Agent") != std::string::npos, "Tier 3 Execution executed in Hermes 3 sandbox");
 }
 
+void test_speculative_pipeline_entropy_and_pruning() {
+    std::cout << "\n--- 8b. Testing Speculative Pipeline, Entropy Filter & Context Pruning ---\n";
+
+    // Block buffer: braces inside strings/comments must not split blocks,
+    // even when chunk boundaries fall mid-token.
+    {
+        const std::string src =
+            "void f() {\n  auto s = \"}\"; char c = '{'; // } stray\n  return;\n}\n"
+            "int g() { /* { */ return 1; }\n";
+        std::vector<std::string> blocks;
+        lucille::StreamingBlockBuffer buf("cpp");
+        buf.set_callback([&](std::string b, size_t) { blocks.push_back(std::move(b)); });
+        for (size_t i = 0; i < src.size(); i += 3) buf.feed(src.substr(i, 3));
+        buf.flush();
+        TEST_ASSERT(blocks.size() == 2, "C++ stream split into 2 blocks despite braces in literals/comments (got " + std::to_string(blocks.size()) + ")");
+        TEST_ASSERT(blocks.size() == 2 && blocks[0].find("return;") != std::string::npos
+                    && blocks[1].rfind("int g()", 0) == 0,
+                    "C++ block boundaries fall at function ends");
+    }
+
+    // Python: split only at top-level def/class; decorators travel with their def.
+    {
+        const std::string src =
+            "import os\n\ndef a():\n    def inner():\n        pass\n    return {1: 2}\n\n"
+            "@cache\ndef b():\n    return 2\n";
+        std::vector<std::string> blocks;
+        lucille::StreamingBlockBuffer buf("python");
+        buf.set_callback([&](std::string b, size_t) { blocks.push_back(std::move(b)); });
+        for (size_t i = 0; i < src.size(); i += 5) buf.feed(src.substr(i, 5));
+        buf.flush();
+        TEST_ASSERT(blocks.size() == 2, "Python stream split into 2 top-level blocks (got " + std::to_string(blocks.size()) + ")");
+        TEST_ASSERT(blocks.size() == 2 && blocks[0].find("def inner") != std::string::npos
+                    && blocks[1].rfind("@cache\ndef b():", 0) == 0,
+                    "Nested def stays in its parent; decorator moves with its def");
+    }
+
+    // Entropy filter on a noisy compiler log
+    {
+        const std::string raw =
+            "\033[1m[ 45%] Building CXX object foo.o\033[0m\n"
+            "-- Configuring done\n"
+            "[1] error: first real diagnostic\n"
+            "\n\n\n"
+            "note: repeated\nnote: repeated\nnote: repeated\nnote: repeated\n"
+            "\n"
+            "paragraph two\n"
+            "\n"
+            "paragraph three\n";
+        auto cr = lucille::EntropyFilter::clean(raw);
+        TEST_ASSERT(cr.text.find("[ 45%]") == std::string::npos && cr.text.find("Configuring") == std::string::npos,
+                    "Entropy filter drops build-progress noise");
+        TEST_ASSERT(cr.text.find('\033') == std::string::npos && cr.ansi_bytes_removed > 0, "Entropy filter strips ANSI escapes");
+        TEST_ASSERT(cr.text.find("[1] error: first real diagnostic") != std::string::npos,
+                    "Numbered diagnostic '[1] error:' is not mistaken for progress");
+        TEST_ASSERT(cr.dupes_removed == 2, "Repeated line kept twice, 2 extra copies dropped");
+        TEST_ASSERT(cr.text.find("paragraph two\n\nparagraph three") != std::string::npos,
+                    "Blank separators survive dedupe (paragraphs not merged)");
+    }
+
+    // Dynamic context pruning via score dropoff
+    {
+        struct Hit { int id; float cosine_distance; bool dense; };
+        std::vector<Hit> hits = {{1, 0.12f, true}, {2, 0.60f, true}, {3, 0.10f, true},
+                                 {4, 0.50f, true}, {5, 0.15f, true}, {6, 1.00f, false}};
+        auto pr = lucille::EntropyFilter::prune_by_distance_dropoff(
+            hits, [](const Hit& h) { return h.dense; });
+        std::string ids;
+        for (auto& h : hits) ids += std::to_string(h.id);
+        TEST_ASSERT(ids == "1356", "Pruning cuts at the dropoff, keeps input order and keyword-only hit (got " + ids + ")");
+        TEST_ASSERT(pr.dropped == 2 && pr.threshold > 0.149f && pr.threshold < 0.151f,
+                    "Pruning threshold sits at last result before the gap");
+
+        std::vector<Hit> even = {{1, 0.1f, true}, {2, 0.2f, true}, {3, 0.3f, true}, {4, 0.4f, true}};
+        auto pe = lucille::EntropyFilter::prune_by_distance_dropoff(even);
+        TEST_ASSERT(pe.dropped == 0 && even.size() == 4, "Evenly spread results are all kept (no dropoff)");
+
+        std::vector<Hit> lone = {{1, 0.1f, true}, {2, 0.9f, true}, {3, 0.95f, true}};
+        lucille::EntropyFilter::prune_by_distance_dropoff(lone, 1.5f, 2);
+        TEST_ASSERT(lone.size() >= 2, "min_keep is honoured even when the dropoff is after the first hit");
+    }
+
+    // Router pipeline with injected backends
+    {
+        lucille::SwarmRouter router;
+        std::string glm_saw_logs;
+        router.set_pipeline_backends(
+            [](const std::string&, const std::string&, lucille::StreamingBlockBuffer& buf) {
+                buf.feed("void ok() { return; }\n");
+                buf.feed("void bad() { system(\"rm -rf /\"); }\n");
+            },
+            [](const std::string& block, const std::string&, std::string& cot, std::string& err) {
+                if (block.find("system(") != std::string::npos) { err = "unsafe"; return false; }
+                cot = "ok";
+                return true;
+            },
+            [&](const std::string& logs, const std::string&) {
+                glm_saw_logs = logs;
+                lucille::PipelineMetrics m;
+                m.glm_report = "real-glm";
+                return m;
+            });
+
+        lucille::SwarmTaskRequest req;
+        req.task_id = "pipe-001";
+        req.language = "cpp";
+        auto r = router.route_speculative_pipeline(req, "\033[31m[ 10%] Building x\033[0m\nfoo.cpp:1: error: bad\n");
+        TEST_ASSERT(r.pipeline_complete && !r.used_mock_backends, "Pipeline ran on injected (non-mock) backends");
+        TEST_ASSERT(r.total_blocks == 2 && r.passed_blocks == 1 && r.rejected_blocks == 1,
+                    "Streamed blocks audited concurrently: 1 pass, 1 reject");
+        TEST_ASSERT(r.blocks.size() == 2 && r.blocks[0].index == 0 && r.blocks[0].audit_passed && !r.blocks[1].audit_passed,
+                    "Audit results returned in emission order");
+        TEST_ASSERT(glm_saw_logs == "foo.cpp:1: error: bad\n", "GLM received entropy-filtered logs: '" + glm_saw_logs + "'");
+        TEST_ASSERT(r.metrics.glm_report == "real-glm", "GLM triage metrics attached to result");
+    }
+
+    // No backends → simulated models, and the result says so
+    {
+        lucille::SwarmRouter router;
+        lucille::SwarmTaskRequest req;
+        req.task_id = "pipe-mock";
+        req.language = "cpp";
+        auto r = router.route_speculative_pipeline(req);
+        TEST_ASSERT(r.used_mock_backends && r.total_blocks > 0, "Unconfigured router flags simulated output");
+    }
+
+    // Failure paths: throwing auditor fails closed; throwing stream marks incomplete
+    {
+        lucille::SpeculativePipeline p;
+        p.kimi_stream = [](const std::string&, const std::string&, lucille::StreamingBlockBuffer& buf) {
+            buf.feed("void a() { }\n");
+            throw std::runtime_error("socket reset");
+        };
+        p.deepseek_audit = [](const std::string&, const std::string&, std::string&, std::string&) -> bool {
+            throw std::runtime_error("auditor down");
+        };
+        p.glm_triage = [](const std::string&, const std::string&) { return lucille::PipelineMetrics{}; };
+        auto r = p.run("x", "", "cpp");
+        TEST_ASSERT(!r.pipeline_complete && r.error_message.find("socket reset") != std::string::npos,
+                    "Stream failure leaves pipeline incomplete with error");
+        TEST_ASSERT(r.total_blocks == 1 && r.rejected_blocks == 1 && r.blocks[0].audit_error.find("auditor down") != std::string::npos,
+                    "Throwing auditor rejects the block (fail closed)");
+    }
+}
+
 void test_hitl_security_and_emergency() {
     std::cout << "\n--- 9. Testing HITL Security Interceptor & Emergency Controls ---\n";
     lucille::HitlSecurityManager hitl;
@@ -564,6 +714,7 @@ int main() {
     test_vector_memory_engine_and_hybrid_search();
     test_safety_gate_and_circuit_breaker();
     test_swarm_router_two_tier_speculation();
+    test_speculative_pipeline_entropy_and_pruning();
     test_hitl_security_and_emergency();
     test_mesh_sync_and_clipboard();
     test_shm_telemetry_ring_buffer();

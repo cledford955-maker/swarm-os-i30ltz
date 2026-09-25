@@ -36,6 +36,7 @@ struct PipelineResult {
     size_t   rejected_blocks{0};
     uint32_t pipeline_latency_ms{0};
     bool     pipeline_complete{false};
+    bool     used_mock_backends{false}; // true = simulated models, not real output
     std::string error_message;
 };
 
@@ -59,15 +60,21 @@ public:
 
 private:
     std::string language_;
-    std::string pending_;          // unparsed text since last block boundary
     std::string current_block_;    // text being accumulated for this block
     int         brace_depth_{0};
     bool        in_block_{false};  // true once we've seen the opening {
+    // Lexer state (brace languages) — carried across feed() chunks
+    char        quote_{0};         // active string/char delimiter, 0 = none
+    bool        escape_{false};
+    bool        line_comment_{false};
+    bool        block_comment_{false};
+    char        prev_{0};
     std::atomic<size_t> block_index_{0};
     mutable std::mutex  mutex_;
     BlockCallback       on_block_complete_;
 
     void try_emit();
+    void split_python_block();
     bool is_block_starter(const std::string& line) const;
 };
 
@@ -76,9 +83,9 @@ private:
 //   Thread B  — DeepSeek-R1 concurrent audit of each completed block
 //   Thread C  — GLM 5.6 metric triage running in parallel
 //
-// Real network calls are injected via the three callable fields below.
-// The mock implementations in speculative_pipeline.cpp satisfy the same
-// signatures so the pipeline runs end-to-end without live API keys.
+// Real network calls are injected via the three callable fields below
+// (or SwarmRouter::set_pipeline_backends). A throwing audit fails closed;
+// a throwing stream leaves pipeline_complete=false.
 class SpeculativePipeline {
 public:
     // Injection points — swap these out with real HTTP/gRPC stubs
@@ -102,7 +109,8 @@ public:
     DeepSeekAuditFn deepseek_audit{nullptr};
     GlmTriageFn     glm_triage{nullptr};
 
-    // Install default mock implementations
+    // Install simulated implementations (tests / offline). Results are
+    // flagged used_mock_backends so they can't pass for real model output.
     void use_mock_backends();
 
     // Run the full concurrent pipeline.
@@ -115,8 +123,7 @@ public:
     );
 
 private:
-    std::vector<PipelineBlock> audit_results_;
-    std::mutex                 results_mutex_;
+    bool mock_backends_{false};
 };
 
 } // namespace lucille
