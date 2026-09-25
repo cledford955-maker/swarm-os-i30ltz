@@ -94,13 +94,14 @@
   - `resp.checkpoint_id` carries the git SHA; callers must confirm via `CheckpointJournal::confirm_checkpoint()` after tests pass or `rollback_to_checkpoint()` on failure
 
 ### 2.3 Lucille C++ Core Engine
-- [ ] **POSIX shared memory telemetry ring buffer**
-  - Target: `/dev/shm/swarm_telemetry_shm`
-  - Note: shared-memory *sync* is landed; this item is the high-frequency VRAM/CPU/agent ring buffer inside `lucille-core`
+- [x] **POSIX shared memory telemetry ring buffer** — landed 2026-09-24
+  - `shm_telemetry.hpp/.cpp` verified in `lucille-core`: 256-slot lock-free seqlock ring buffer over `/dev/shm/swarm_telemetry_shm`
+  - `SwarmRouter` opens writer on construction; posts cpu_load/agents/ram/vram snapshot via `sysinfo()` after every `route_and_execute()` call
+  - `test_shm_telemetry_ring_buffer()` in `tests/test_engine.cpp`: write×3 → read_latest → value-check → ring wrap-around (kShmCapacity+1 writes), all passing
 
-- [ ] **Multi-client epoll IPC broker**
-  - Refactor `/tmp/lucille_ipc.sock` from blocking to `epoll_wait()`
-  - Verify with two concurrent `socat - UNIX-CONNECT:/tmp/lucille_ipc.sock` sessions
+- [x] **Multi-client epoll IPC broker** — landed 2026-09-24
+  - `ipc_server.cpp` uses `epoll_create1` + `EPOLLET` + `drain_accept_queue()` + `drain_client()` + eventfd shutdown; N clients with zero per-client threads
+  - `test_ipc_epoll_multi_client()` in `tests/test_engine.cpp`: two concurrent AF_UNIX clients send PING_A/PING_B simultaneously and receive correct PONG replies; shutdown + unlink verified, all 4 assertions pass
 
 ### 2.4 Multi-Model Swarm Routing
 - [ ] **Pipelined asynchronous speculative execution**
@@ -132,9 +133,9 @@
 
 1. ~~Publish/boot the desktop repair; fix session cleanup on launcher death~~ **DONE (2026-09-24)** → verify watchdog + Gamescope FSR on fresh ISO boot
 2. ~~Wire Git-diff checkpoint journaling into `SwarmRouter::route_and_execute()`~~ **DONE (2026-09-24)**
-3. **POSIX shared memory telemetry ring buffer** (`/dev/shm/swarm_telemetry_shm` in lucille-core)
-4. **Multi-client epoll IPC broker** (`/tmp/lucille_ipc.sock` → `epoll_wait()`)
-5. **Speculative pipeline** + semantic entropy filtering + dynamic context pruning
+3. ~~POSIX shared memory telemetry ring buffer~~ **DONE (2026-09-24)**
+4. ~~Multi-client epoll IPC broker~~ **DONE (2026-09-24)**
+5. **Speculative pipeline** + semantic entropy filtering + dynamic context pruning  ← NEXT
 6. **Dual-model 2-of-2 consensus gating** for high-risk diffs
 7. **Companion heartbeat** / push notifications / rsync manifest / SHA-256 integrity
 8. ~~TCP MSS clamping + EPP power script~~ **DONE (2026-09-21/24 — boot verification pending)**
