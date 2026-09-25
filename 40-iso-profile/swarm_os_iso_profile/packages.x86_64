@@ -125,6 +125,9 @@ lvm2
 # Task #2 (Podman rootless containers) + Task #3 (harden baseline) from the
 # SWARM OS journey roadmap. shadow (in base) already ships newuidmap/newgidmap
 # on Arch, so no separate "uidmap" package is needed for user namespaces.
+# NVIDIA Container Toolkit/CUDA are intentionally omitted. This machine has
+# Intel integrated graphics and 16 GB RAM; NVIDIA skills use hosted HTTP APIs.
+# See 70-scripts/NVIDIA_RUNTIME.md before adding any local NIM runtime.
 podman
 # provides /usr/bin/docker shim so DOCKER_HOST tooling "just works"
 podman-docker

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/agent.dart';
 import 'ai_client.dart';
 import 'live_model_catalog_service.dart';
+import 'nim_skill_telemetry.dart';
 import '../skills/nvidia_nim_skill.dart';
 
 /// Exception thrown when a skill cannot be routed or executed.
@@ -28,16 +29,19 @@ class SkillRouter {
   final AiClient _aiClient;
   final http.Client _httpClient;
   final Future<String?> Function() _apiKeyResolver;
+  final NimSkillTelemetry? _telemetry;
 
   SkillRouter({
     required LiveModelCatalogService catalog,
     required AiClient aiClient,
     http.Client? httpClient,
     Future<String?> Function()? apiKeyResolver,
+    NimSkillTelemetry? telemetry,
   })  : _catalog = catalog,
         _aiClient = aiClient,
         _httpClient = httpClient ?? http.Client(),
-        _apiKeyResolver = apiKeyResolver ?? _defaultApiKeyResolver;
+        _apiKeyResolver = apiKeyResolver ?? _defaultApiKeyResolver,
+        _telemetry = telemetry;
 
   static Future<String?> _defaultApiKeyResolver() async {
     // Prefer environment-style lookup first; fallback to SharedPreferences.
@@ -77,22 +81,74 @@ class SkillRouter {
     String? overrideModelId,
   }) async {
     final modelId = await resolveModelId(skill, overrideModelId: overrideModelId);
+    final stopwatch = Stopwatch()..start();
+    final usedFallback = modelId != skill.defaultModelId;
+    final liveModel = _catalog.byId(modelId);
+    final usedPaidRoute = liveModel != null
+        ? !liveModel.isFree
+        : !modelId.endsWith(':free');
 
-    switch (skill.modality) {
-      case NimSkillModality.chat:
-      case NimSkillModality.structuredChat:
-        return _executeChat(skill, modelId, inputs, agent);
-      case NimSkillModality.speechToText:
-        return _executeSpeechToText(skill, modelId, inputs);
-      case NimSkillModality.textToSpeech:
-        return _executeTextToSpeech(skill, modelId, inputs);
-      case NimSkillModality.embeddings:
-        return _executeEmbeddings(skill, modelId, inputs);
-      case NimSkillModality.rerank:
-        return _executeRerank(skill, modelId, inputs);
-      case NimSkillModality.image:
-        return _executeImage(skill, modelId, inputs);
+    try {
+      late final Map<String, dynamic> result;
+      switch (skill.modality) {
+        case NimSkillModality.chat:
+        case NimSkillModality.structuredChat:
+          result = await _executeChat(skill, modelId, inputs, agent);
+        case NimSkillModality.speechToText:
+          result = await _executeSpeechToText(skill, modelId, inputs);
+        case NimSkillModality.textToSpeech:
+          result = await _executeTextToSpeech(skill, modelId, inputs);
+        case NimSkillModality.embeddings:
+          result = await _executeEmbeddings(skill, modelId, inputs);
+        case NimSkillModality.rerank:
+          result = await _executeRerank(skill, modelId, inputs);
+        case NimSkillModality.image:
+          result = await _executeImage(skill, modelId, inputs);
+      }
+      stopwatch.stop();
+      _recordRun(
+        skill: skill,
+        modelId: modelId,
+        latency: stopwatch.elapsed,
+        succeeded: true,
+        usedFallback: usedFallback,
+        usedPaidRoute: usedPaidRoute,
+      );
+      return result;
+    } catch (error) {
+      stopwatch.stop();
+      _recordRun(
+        skill: skill,
+        modelId: modelId,
+        latency: stopwatch.elapsed,
+        succeeded: false,
+        usedFallback: usedFallback,
+        usedPaidRoute: usedPaidRoute,
+        error: error.toString(),
+      );
+      rethrow;
     }
+  }
+
+  void _recordRun({
+    required NimSkill skill,
+    required String modelId,
+    required Duration latency,
+    required bool succeeded,
+    required bool usedFallback,
+    required bool usedPaidRoute,
+    String? error,
+  }) {
+    _telemetry?.record(NimSkillRunRecord(
+      skillId: skill.id,
+      modelId: modelId,
+      completedAt: DateTime.now(),
+      latency: latency,
+      succeeded: succeeded,
+      usedFallback: usedFallback,
+      usedPaidRoute: usedPaidRoute,
+      error: error,
+    ));
   }
 
   Future<String> _apiKey() async {

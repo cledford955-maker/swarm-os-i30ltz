@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/telemetry_providers.dart';
 import '../providers/sentinel_providers.dart';
+import '../services/swarm_health_service.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 
 /// System HUD overlay — top-bar-integrated status strip.
-/// Shows CPU%, RAM%, temp, SSE connection, kernel, and uptime live.
+/// Shows CPU%, RAM%, temp, backend health, disk, and uptime live.
 class SwarmHud extends ConsumerWidget {
   const SwarmHud({super.key});
 
@@ -14,15 +15,22 @@ class SwarmHud extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final telemetry = ref.watch(telemetryProvider);
     final sseStatus = ref.watch(sseEventsProvider);
+    final healthAsync = ref.watch(swarmHealthProvider);
 
     final bool sentinelOnline = sseStatus.hasValue;
+    final health = healthAsync.valueOrNull ?? SwarmHealthSnapshot.empty;
 
     return telemetry.when(
-      loading: () => const _HudStrip(
-          snapshot: TelemetrySnapshot.empty, sentinelOnline: false),
-      error: (_, __) => const _HudStrip(
-          snapshot: TelemetrySnapshot.empty, sentinelOnline: false),
-      data: (snap) => _HudStrip(snapshot: snap, sentinelOnline: sentinelOnline),
+      loading: () => _HudStrip(
+          snapshot: TelemetrySnapshot.empty,
+          sentinelOnline: false,
+          health: health),
+      error: (_, __) => _HudStrip(
+          snapshot: TelemetrySnapshot.empty,
+          sentinelOnline: false,
+          health: health),
+      data: (snap) => _HudStrip(
+          snapshot: snap, sentinelOnline: sentinelOnline, health: health),
     );
   }
 }
@@ -30,11 +38,19 @@ class SwarmHud extends ConsumerWidget {
 class _HudStrip extends StatelessWidget {
   final TelemetrySnapshot snapshot;
   final bool sentinelOnline;
+  final SwarmHealthSnapshot health;
 
-  const _HudStrip({required this.snapshot, required this.sentinelOnline});
+  const _HudStrip({
+    required this.snapshot,
+    required this.sentinelOnline,
+    required this.health,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final bool backendLive = !health.isStale();
+    final bool gamingOk = health.serviceOk('gaming_agent');
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -45,6 +61,26 @@ class _HudStrip extends StatelessWidget {
               : SwarmColors.statusOffline,
           pulse: sentinelOnline,
           label: sentinelOnline ? 'SENTINEL' : 'OFFLINE',
+        ),
+        const SizedBox(width: 12),
+
+        // Backend health (LucyServer)
+        _HudIndicator(
+          color: backendLive
+              ? SwarmColors.statusOnline
+              : SwarmColors.statusOffline,
+          pulse: backendLive,
+          label: backendLive ? 'LUCY' : 'LUCY ✗',
+        ),
+        const SizedBox(width: 8),
+
+        // GamingAgent
+        _HudIndicator(
+          color: (backendLive && gamingOk)
+              ? SwarmColors.statusOnline
+              : SwarmColors.statusOffline,
+          pulse: backendLive && gamingOk,
+          label: (backendLive && gamingOk) ? 'GAME' : 'GAME ✗',
         ),
         const SizedBox(width: 12),
 
@@ -80,12 +116,34 @@ class _HudStrip extends StatelessWidget {
           const SizedBox(width: 12),
         ],
 
+        // LUCILLE disk (from backend health, not /proc)
+        if (backendLive && health.diskTotalGb > 0) ...[
+          _HudGauge(
+            label: 'DISK',
+            value: health.diskUsedGb,
+            max: health.diskTotalGb,
+            color: _gaugeColor(health.diskPercent, 100),
+            suffix: 'GB',
+          ),
+          const SizedBox(width: 12),
+        ],
+
         // Uptime
         _HudStat(
           label: 'UP',
           value: snapshot.uptimeFormatted,
           color: SwarmColors.textMuted,
         ),
+
+        // SWARM version badge
+        if (backendLive && health.version != '…') ...[
+          const SizedBox(width: 12),
+          _HudStat(
+            label: 'v',
+            value: health.version,
+            color: SwarmColors.accentCyan,
+          ),
+        ],
       ],
     );
   }

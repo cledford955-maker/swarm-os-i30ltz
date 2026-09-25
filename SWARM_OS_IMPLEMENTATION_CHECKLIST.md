@@ -218,15 +218,15 @@
   - Dedicated `lib/services/physics_ai_service.dart` facade exists and is exposed to Antigravity / UI Tandem
 
 ### 4.9 Blueprint: NVIDIA NIM Health & Cost Dashboard
-- [ ] **Add NVIDIA NIM panel to `models_page.dart`**
+- [>] **Add NVIDIA NIM panel to `models_page.dart` — CLAIMED by Codex 2026-09-25 06:43 EDT**
   - Show free-tier quota status, latency per NIM, last-used skill
   - Surface when a skill falls back to paid OpenRouter
 
 ### 4.10 Blueprint: ISO / Runtime Staging
-- [ ] **Document NVIDIA runtime dependencies**
-  - CUDA / cuDNN / TensorRT not required for NIM cloud endpoints, but local NIM containers need them
-  - Add optional `nvidia-container-toolkit` to ISO packages if local NIMs are desired later
-  - Keep cloud-NIM-first to avoid ISO bloat
+- [x] **Document NVIDIA runtime dependencies** (2026-09-25)
+  - Added `70-scripts/NVIDIA_RUNTIME.md` with the direct NVIDIA and OpenRouter cloud paths, credentials, local-host prerequisites, and deployment boundary.
+  - Recorded the actual target: 16 GB RAM, Intel UHD integrated graphics, no NVIDIA GPU. CUDA / cuDNN / TensorRT / NVIDIA Container Toolkit are not required for hosted calls and remain intentionally absent from the ISO.
+  - Local NIM is a future separate-host profile only after model-specific GPU/VRAM and platform validation; cloud-first remains the supported mode on this machine.
 
 ---
 

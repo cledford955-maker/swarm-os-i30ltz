@@ -3,6 +3,7 @@ import '../services/sentinel_client.dart';
 import '../services/sentinel_sse.dart';
 import '../services/ai_client.dart';
 import '../services/telemetry_service.dart';
+import '../services/swarm_health_service.dart';
 
 /// Singleton providers for backend services.
 // Defaults to the Flutter shell's own project root — the app Lucille/Forge/
@@ -47,4 +48,21 @@ final telemetryServiceProvider = Provider<TelemetryService>((ref) {
 final openRouterBalanceProvider = FutureProvider<String>((ref) async {
   final aiClient = ref.watch(aiClientProvider);
   return aiClient.fetchOpenRouterBalance();
+});
+
+// ─── Backend Health (LucyServer /api/health) ──────────────────────────────────
+
+final swarmHealthServiceProvider = Provider<SwarmHealthService>((ref) {
+  final svc = SwarmHealthService();
+  svc.start();
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+/// Streams live backend health snapshots from LucyServer's /api/health.
+/// Consumers get an "offline" [SwarmHealthSnapshot.empty] when the server
+/// is unreachable — never stale data.
+final swarmHealthProvider = StreamProvider<SwarmHealthSnapshot>((ref) {
+  final svc = ref.watch(swarmHealthServiceProvider);
+  return svc.snapshots;
 });
