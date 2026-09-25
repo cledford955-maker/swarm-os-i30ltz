@@ -70,6 +70,7 @@ func main() {
 	chatH := handlers.NewChatHandler()
 	installH := handlers.NewInstallHandler()
 	androidH := handlers.NewAndroidHandler()
+	companionH := handlers.NewCompanionHandler()
 
 	memAPI := openMemory()
 
