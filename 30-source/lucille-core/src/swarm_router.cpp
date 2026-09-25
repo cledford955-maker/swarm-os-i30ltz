@@ -175,7 +175,23 @@ SwarmTaskResponse SwarmRouter::route_and_execute(const SwarmTaskRequest& req) {
         resp.safety_verified = true;
     }
 
-    // 4. Git-diff Checkpoint → Apply → Auto-rollback on regression failure
+    // 4a. 2-of-2 consensus gate for high-risk diffs (systemd, firewall,
+    // kernel, boot, privileges). The target path is classified along with
+    // the diff so a risky file is caught even if the patch headers are bare.
+    {
+        const std::string gate_input = "# target: " + req.target_file + "\n" + resp.draft_patch;
+        ConsensusResult cr = consensus_gate_.evaluate(gate_input, req.target_file);
+        resp.high_risk          = cr.is_high_risk;
+        resp.consensus_approved = cr.approved;
+        resp.consensus_triggers = cr.triggers;
+        if (!cr.approved) {
+            resp.success = false;
+            resp.error_message = "Consensus gate blocked high-risk diff: " + cr.rejection_reason;
+            return resp;
+        }
+    }
+
+    // 4b. Git-diff Checkpoint → Apply → Auto-rollback on regression failure
     // workspace_dir provided → snapshot git state, apply diff atomically.
     // Empty workspace_dir → validate patch syntax only (dry-run).
     if (!req.workspace_dir.empty()) {
@@ -243,6 +259,12 @@ SwarmTaskResponse SwarmRouter::route_and_execute(const SwarmTaskRequest& req) {
 
     resp.success = true;
     return resp;
+}
+
+void SwarmRouter::set_consensus_backends(ConsensusGate::AuditFn syntax_audit,
+                                         ConsensusGate::AuditFn risk_audit) {
+    consensus_gate_.kimi_syntax_audit   = std::move(syntax_audit);
+    consensus_gate_.deepseek_risk_audit = std::move(risk_audit);
 }
 
 void SwarmRouter::set_pipeline_backends(

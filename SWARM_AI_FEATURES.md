@@ -926,3 +926,5 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 *Last updated: 2026-09-25 — lucille-core: speculative pipeline (backend injection, literal-aware block lexer, Python split fix, fail-closed audits), entropy-filtered log ingestion, gap-based context pruning preserving RRF order; test_engine compiles again (116 pass, 2 pre-existing router failures). See SWARM_OS_IMPLEMENTATION_CHECKLIST.md §2.2/§2.4.*
 
 *Last updated: 2026-09-25 — Desktop session teardown fixed via logind session termination; Gamescope launcher made opt-in with valid flags; usr/lib/swarm scripts now tracked. Guest/boot verification and a fresh ISO (needs your sudo) remain pending.*
+
+*Last updated: 2026-09-25 — lucille-core 2-of-2 consensus gate: fixed classifier case bug that let CAP_SYS_ADMIN/ExecStart/firewall-DROP diffs skip the gate, added to build, wired before patch apply, fail-closed without voters.*

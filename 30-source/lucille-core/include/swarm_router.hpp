@@ -10,6 +10,7 @@
 #include "speculative_pipeline.hpp"
 #include "shm_telemetry.hpp"
 #include "entropy_filter.hpp"
+#include "consensus_gate.hpp"
 
 namespace lucille {
 
@@ -54,6 +55,9 @@ struct SwarmTaskResponse {
     uint32_t total_latency_ms{0};
     bool used_local_fallback{false};
     std::string checkpoint_id;  // git SHA from SafetyGate::checkpoint_and_apply; empty if no workspace
+    bool high_risk{false};          // diff touches systemd/firewall/kernel/boot/privileges
+    bool consensus_approved{false}; // 2-of-2 gate passed (always true for low-risk diffs)
+    std::vector<std::string> consensus_triggers;
 };
 
 class SwarmRouter {
@@ -105,6 +109,11 @@ public:
         SpeculativePipeline::GlmTriageFn     glm_triage
     );
 
+    // Install real voters for the 2-of-2 consensus gate on high-risk diffs.
+    // Until set, route_and_execute() blocks every high-risk diff.
+    void set_consensus_backends(ConsensusGate::AuditFn syntax_audit,
+                                ConsensusGate::AuditFn risk_audit);
+
     // Diagnostics from the most recent entropy filtering of compiler logs
     const EntropyFilter::CleanResult& last_log_filter() const { return last_log_filter_; }
 
@@ -121,6 +130,7 @@ private:
     SpeculativePipeline::DeepSeekAuditFn pipeline_audit_;
     SpeculativePipeline::GlmTriageFn     pipeline_glm_;
     EntropyFilter::CleanResult           last_log_filter_;
+    ConsensusGate                        consensus_gate_;
 
     // Simulated LLM API response generators / mock runners
     std::string call_kimi_coder(const std::string& prompt, const std::string& code);

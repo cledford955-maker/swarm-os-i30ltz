@@ -19,6 +19,8 @@ struct ConsensusVote {
 struct ConsensusResult {
     bool                       approved{false}; // true only when ALL votes pass
     bool                       is_high_risk{false};
+    bool                       used_mock_backends{false}; // votes came from simulated models
+    std::vector<std::string>   triggers;                  // classifier matches, e.g. "priv:CAP_SYS_ADMIN"
     std::vector<ConsensusVote> votes;
     std::string                rejection_reason;
     uint32_t                   total_latency_ms{0};
@@ -37,7 +39,8 @@ struct ConsensusResult {
 // Model B — DeepSeek-R1:    permission escalation, race conditions, rollback safety
 class ConsensusGate {
 public:
-    // Injection points — replace with real API stubs; mocks ship by default.
+    // Injection points for real model clients. With none set, high-risk
+    // diffs are rejected (fail closed); a throwing voter counts as a reject.
     using AuditFn = std::function<ConsensusVote(
         const std::string& diff,
         const std::string& context   // extra metadata (file list, system state)
@@ -46,7 +49,8 @@ public:
     AuditFn kimi_syntax_audit{nullptr};
     AuditFn deepseek_risk_audit{nullptr};
 
-    // Install default mock implementations
+    // Install simulated voters (tests / offline); results are flagged
+    // used_mock_backends.
     void use_mock_backends();
 
     // Classify the diff and, if high-risk, run both audits concurrently.
@@ -62,6 +66,9 @@ public:
         const std::string& diff_patch,
         std::vector<std::string>& out_reasons
     );
+
+private:
+    bool mock_backends_{false};
 };
 
 } // namespace lucille

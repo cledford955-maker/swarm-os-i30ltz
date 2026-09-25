@@ -11,6 +11,7 @@
 #include <chrono>
 #include <thread>
 #include <random>
+#include <algorithm>
 #include "bootloader.hpp"
 #include "ipc_server.hpp"
 #include "security_sandbox.hpp"
@@ -27,6 +28,7 @@
 #include "shm_telemetry.hpp"
 #include "entropy_filter.hpp"
 #include "speculative_pipeline.hpp"
+#include "consensus_gate.hpp"
 #include "engine.hpp"
 
 namespace fs = std::filesystem;
@@ -542,6 +544,107 @@ void test_speculative_pipeline_entropy_and_pruning() {
     }
 }
 
+void test_consensus_gate_high_risk_diffs() {
+    std::cout << "\n--- 8c. Testing 2-of-2 Consensus Gate for High-Risk Diffs ---\n";
+    using lucille::ConsensusGate;
+    using lucille::ConsensusVote;
+
+    // Classifier: patterns are case-insensitive and removed lines count
+    {
+        std::vector<std::string> r;
+        bool f = ConsensusGate::classify_high_risk(
+            "--- a/src/app.conf\n+++ b/src/app.conf\n+AmbientCapabilities=CAP_SYS_ADMIN\n", r);
+        TEST_ASSERT(f && std::find(r.begin(), r.end(), "priv:CAP_SYS_ADMIN") != r.end(),
+                    "Added CAP_SYS_ADMIN flagged (mixed-case content pattern matches)");
+
+        r.clear();
+        f = ConsensusGate::classify_high_risk(
+            "--- a/rules.conf\n+++ b/rules.conf\n-policy INPUT DROP\n+policy accept\n", r);
+        TEST_ASSERT(f && std::find(r.begin(), r.end(), "firewall:INPUT_DROP") != r.end(),
+                    "Removing a firewall DROP policy is flagged");
+
+        r.clear();
+        f = ConsensusGate::classify_high_risk(
+            "--- a/lib/ui.dart\n+++ b/lib/ui.dart\n+  final label = 'hello';\n", r);
+        TEST_ASSERT(!f && r.empty(), "Ordinary app diff is low-risk");
+    }
+
+    const std::string risky =
+        "--- a/etc/systemd/system/x.service\n+++ b/etc/systemd/system/x.service\n+ExecStart=/usr/bin/x\n";
+
+    auto vote = [](bool ok) {
+        return [ok](const std::string&, const std::string&) {
+            ConsensusVote v; v.model_name = "m"; v.approved = ok; v.rationale = ok ? "ok" : "no";
+            return v;
+        };
+    };
+
+    // 2-of-2 truth table
+    {
+        ConsensusGate g; g.kimi_syntax_audit = vote(true); g.deepseek_risk_audit = vote(true);
+        auto r = g.evaluate(risky);
+        TEST_ASSERT(r.is_high_risk && r.approved && r.votes.size() == 2 && !r.used_mock_backends,
+                    "Both voters approve → high-risk diff approved");
+        g.deepseek_risk_audit = vote(false);
+        r = g.evaluate(risky);
+        TEST_ASSERT(!r.approved && r.rejection_reason.find("[DeepSeek-R1]") != std::string::npos,
+                    "One voter rejects → blocked with reason");
+        g.kimi_syntax_audit = vote(false); g.deepseek_risk_audit = vote(true);
+        TEST_ASSERT(!g.evaluate(risky).approved, "Other voter rejects → blocked");
+    }
+
+    // Fail closed
+    {
+        ConsensusGate g;
+        auto r = g.evaluate(risky);
+        TEST_ASSERT(!r.approved && r.votes.empty(), "No backends → high-risk diff blocked");
+        TEST_ASSERT(g.evaluate("--- a/a.txt\n+++ b/a.txt\n+hi\n").approved, "No backends → low-risk diff still passes");
+
+        g.kimi_syntax_audit = vote(true);
+        g.deepseek_risk_audit = [](const std::string&, const std::string&) -> ConsensusVote {
+            throw std::runtime_error("timeout");
+        };
+        r = g.evaluate(risky);
+        TEST_ASSERT(!r.approved && r.votes.size() == 2 && r.votes[1].rationale.find("timeout") != std::string::npos,
+                    "Throwing voter counts as rejection");
+    }
+
+    // Router integration: gate sits before apply
+    {
+        lucille::SwarmRouter router;
+        lucille::SwarmTaskRequest req;
+        req.task_id = "cg-001";
+        req.language = "cpp";
+        req.file_content = "int x() { return 0; }";
+        req.target_file = "airootfs/etc/systemd/system/swarm-ui.service";
+        req.allow_tool_execution = false;
+
+        auto resp = router.route_and_execute(req);
+        TEST_ASSERT(resp.high_risk && !resp.consensus_approved && !resp.success
+                    && resp.error_message.find("Consensus gate blocked") != std::string::npos,
+                    "Router blocks high-risk target when no consensus voters are configured");
+
+        int calls = 0;
+        router.set_consensus_backends(
+            [&](const std::string& d, const std::string& ctx) {
+                ++calls; ConsensusVote v; v.approved = true;
+                v.rationale = ctx; (void)d; return v; },
+            [&](const std::string&, const std::string&) {
+                ++calls; ConsensusVote v; v.approved = true; return v; });
+        resp = router.route_and_execute(req);
+        TEST_ASSERT(calls == 2 && resp.high_risk && resp.consensus_approved
+                    && resp.error_message.find("Consensus gate") == std::string::npos,
+                    "Router passes high-risk target once both voters approve");
+        TEST_ASSERT(!resp.consensus_triggers.empty(), "Router reports consensus triggers");
+
+        req.target_file = "src/allocator.cpp";
+        calls = 0;
+        resp = router.route_and_execute(req);
+        TEST_ASSERT(!resp.high_risk && resp.consensus_approved && calls == 0,
+                    "Low-risk target skips voters entirely");
+    }
+}
+
 void test_hitl_security_and_emergency() {
     std::cout << "\n--- 9. Testing HITL Security Interceptor & Emergency Controls ---\n";
     lucille::HitlSecurityManager hitl;
@@ -715,6 +818,7 @@ int main() {
     test_safety_gate_and_circuit_breaker();
     test_swarm_router_two_tier_speculation();
     test_speculative_pipeline_entropy_and_pruning();
+    test_consensus_gate_high_risk_diffs();
     test_hitl_security_and_emergency();
     test_mesh_sync_and_clipboard();
     test_shm_telemetry_ring_buffer();

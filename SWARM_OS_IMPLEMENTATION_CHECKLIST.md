@@ -122,7 +122,12 @@
 - [x] **Dynamic context pruning via score dropoff** — Claude Code (Opus 5.5) 2026-09-25
   - `EntropyFilter::prune_by_distance_dropoff()` replaced: old rule kept only hits closer than mean−1.5σ (usually just 1 of 5 — discarded relevant context). Now cuts at the largest outlier gap between sorted distances; evenly spread results all kept
   - Preserves RRF order (old code re-sorted by distance); `hybrid_search()` exempts keyword-only hits (placeholder distance 1.0) so sparse recall isn't thrown away
-- [ ] **Dual-model 2-of-2 consensus gating for high-risk diffs**
+- [x] **Dual-model 2-of-2 consensus gating for high-risk diffs** — Claude Code (Opus 5.5), landed in lucille-core 2026-09-25
+  - Security fix: `ConsensusGate::classify_high_risk()` lowercased the diff but not the patterns, so `ExecStart=`, `CAP_SYS_ADMIN`, `INPUT DROP` etc. never matched — a capability grant in a non-obvious path bypassed the gate. Now case-insensitive; removed lines are checked too (deleting a DROP policy is flagged)
+  - `consensus_gate.cpp` was missing from CMakeLists (never compiled) — added
+  - Wired into `SwarmRouter::route_and_execute()` after the DeepSeek audit, before checkpoint/apply; classifies `target_file` as well as the diff. Response carries `high_risk`, `consensus_approved`, `consensus_triggers`
+  - Fail closed: no voters configured → high-risk diffs blocked; throwing voter = reject. Real voters via `SwarmRouter::set_consensus_backends()` (needs the same real HTTP clients as 2.4 pipeline)
+  - Tests: `test_consensus_gate_high_risk_diffs()` 13 assertions pass; suite 129 pass / 2 pre-existing fail
 
 ### 2.5 Companion App & Tailscale Mesh
 - [ ] **Background push notifications for HITL approvals**
@@ -149,7 +154,7 @@
 3. ~~POSIX shared memory telemetry ring buffer~~ **DONE (2026-09-24)**
 4. ~~Multi-client epoll IPC broker~~ **DONE (2026-09-24)**
 5. ~~Speculative pipeline + semantic entropy filtering + dynamic context pruning~~ **DONE (2026-09-25)** — real model HTTP clients + engine IPC entry point still open (see 2.4)
-6. **Dual-model 2-of-2 consensus gating** for high-risk diffs
+6. ~~Dual-model 2-of-2 consensus gating~~ **DONE (2026-09-25)** — real voter clients pending with 2.4
 7. **Companion heartbeat** / push notifications / rsync manifest / SHA-256 integrity
 8. ~~TCP MSS clamping + EPP power script~~ **DONE (2026-09-21/24 — boot verification pending)**
 9. ~~NVIDIA blueprints & skills~~ **DONE (4.1–4.8 confirmed 2026-09-24); 4.9–4.10 open**
@@ -244,3 +249,4 @@
 *Updated 2026-09-24 v6.2.72 — session work: checkpoint wiring, Gamescope session wrapper, desktop scope-lifecycle fix, rich /api/health, ISO SHA-256/GPG, NVIDIA facade audit.*
 *Updated 2026-09-25 — Claude Code (Opus 5.5): speculative pipeline hardened + backend injection, entropy filtering in log ingestion, gap-based context pruning; test suite compile fix (missing socket/mman/cstring headers, TEST_ASSERT msg parens) — 116 pass / 2 pre-existing fail.*
 *Updated 2026-09-25 — Claude Code (Opus 4.6): desktop session teardown via logind scope termination; Gamescope launcher made opt-in with valid flags; usr/lib/swarm scripts tracked; SwarmHealthService + OSD HUD + Backend page wired to /api/health; stale profiledef backup removed; ax1/ax2 audit items resolved.*
+*Updated 2026-09-25 — Claude Code (Opus 5.5): 2-of-2 consensus gate fixed (case-insensitive classifier bypass), compiled, wired into route_and_execute, fail-closed; 129 pass / 2 pre-existing fail.*

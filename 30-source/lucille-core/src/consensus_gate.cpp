@@ -86,22 +86,26 @@ bool ConsensusGate::classify_high_risk(
     std::string lower = to_lower(diff_patch);
     bool flagged = false;
 
-    // Check path patterns (against diff header lines: "--- a/..." "+++ b/...")
+    // Patterns are written in natural case (ExecStart=, CAP_SYS_ADMIN) and
+    // compared case-insensitively — lowercase them too, or they never match.
+    // Path patterns are checked against the whole diff (headers and body).
     for (int i = 0; kPathPatterns[i].pattern; ++i) {
-        if (lower.find(kPathPatterns[i].pattern) != std::string::npos) {
+        if (lower.find(to_lower(kPathPatterns[i].pattern)) != std::string::npos) {
             out_reasons.emplace_back(kPathPatterns[i].trigger_name);
             flagged = true;
         }
     }
 
-    // Check content patterns (against added lines in the diff, prefixed with +)
+    // Content patterns: added AND removed lines — deleting a firewall DROP
+    // policy or a capability restriction is as risky as adding one.
     std::istringstream ss(diff_patch);
     std::string line;
     while (std::getline(ss, line)) {
-        if (line.empty() || line[0] != '+') continue; // only added lines
+        if (line.empty() || (line[0] != '+' && line[0] != '-')) continue;
+        if (line.rfind("+++", 0) == 0 || line.rfind("---", 0) == 0) continue; // file headers
         std::string lline = to_lower(line);
         for (int i = 0; kContentPatterns[i].pattern; ++i) {
-            if (lline.find(kContentPatterns[i].pattern) != std::string::npos) {
+            if (lline.find(to_lower(kContentPatterns[i].pattern)) != std::string::npos) {
                 const std::string trigger(kContentPatterns[i].trigger_name);
                 if (std::find(out_reasons.begin(), out_reasons.end(), trigger) == out_reasons.end())
                     out_reasons.emplace_back(trigger);
@@ -177,6 +181,7 @@ static ConsensusVote mock_deepseek_risk(const std::string& diff, const std::stri
 }
 
 void ConsensusGate::use_mock_backends() {
+    mock_backends_     = true;
     kimi_syntax_audit  = mock_kimi_syntax;
     deepseek_risk_audit= mock_deepseek_risk;
 }
@@ -189,6 +194,7 @@ ConsensusResult ConsensusGate::evaluate(
 ) {
     auto t0 = std::chrono::steady_clock::now();
     ConsensusResult result;
+    result.used_mock_backends = mock_backends_;
 
     // Fast path: classify without any model calls
     std::vector<std::string> reasons;
@@ -199,24 +205,39 @@ ConsensusResult ConsensusGate::evaluate(
         return result;
     }
 
+    result.triggers = reasons;
     std::cout << "[ConsensusGate] High-risk diff detected. Triggers: ";
     for (size_t i = 0; i < reasons.size(); ++i) {
         std::cout << reasons[i] << (i + 1 < reasons.size() ? ", " : "\n");
     }
-    std::cout << "[ConsensusGate] Dispatching Kimi + DeepSeek-R1 concurrently (2-of-2 required)...\n";
 
+    // Fail closed: a high-risk diff is never approved without both voters
     if (!kimi_syntax_audit || !deepseek_risk_audit) {
-        result.rejection_reason = "ConsensusGate: backends not configured — call use_mock_backends()";
+        result.rejection_reason = "ConsensusGate: audit backends not configured — high-risk diff blocked";
         result.approved = false;
         return result;
     }
+    std::cout << "[ConsensusGate] Dispatching Kimi + DeepSeek-R1 concurrently (2-of-2 required)...\n";
+
+    // A voter that throws counts as a rejection (fail closed)
+    auto safe_vote = [&](const AuditFn& fn, const char* model, const char* dim) {
+        try {
+            return fn(diff_patch, context);
+        } catch (const std::exception& e) {
+            ConsensusVote v;
+            v.model_name = model;
+            v.dimension  = dim;
+            v.approved   = false;
+            v.rationale  = std::string("audit failed: ") + e.what();
+            return v;
+        }
+    };
 
     // Both audits run concurrently — wall-clock time = max(kimi, deepseek), not sum
     auto kimi_future = std::async(std::launch::async,
-        [this, &diff_patch, &context]() { return kimi_syntax_audit(diff_patch, context); });
-
+        [&]() { return safe_vote(kimi_syntax_audit, "Kimi-2.6-Coder", "syntax_validity"); });
     auto deepseek_future = std::async(std::launch::async,
-        [this, &diff_patch, &context]() { return deepseek_risk_audit(diff_patch, context); });
+        [&]() { return safe_vote(deepseek_risk_audit, "DeepSeek-R1", "risk_escalation"); });
 
     ConsensusVote kimi_vote     = kimi_future.get();
     ConsensusVote deepseek_vote = deepseek_future.get();

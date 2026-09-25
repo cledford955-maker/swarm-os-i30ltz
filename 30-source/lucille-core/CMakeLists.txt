@@ -37,6 +37,7 @@ add_library(lucille_engine_lib STATIC
     src/shm_telemetry.cpp
     src/entropy_filter.cpp
     src/speculative_pipeline.cpp
+    src/consensus_gate.cpp
     src/engine.cpp
 )
 
