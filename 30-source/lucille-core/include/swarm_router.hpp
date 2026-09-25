@@ -32,6 +32,7 @@ struct SwarmTaskRequest {
     std::string target_file;
     std::string file_content;
     std::string language; // "cpp", "dart", "python", "json"
+    std::string workspace_dir; // absolute path to git repo root; empty = dry-run only
     bool require_two_tier_speculation{true};
     bool allow_tool_execution{true};
 };
@@ -50,6 +51,7 @@ struct SwarmTaskResponse {
     std::string error_message;
     uint32_t total_latency_ms{0};
     bool used_local_fallback{false};
+    std::string checkpoint_id;  // git SHA from SafetyGate::checkpoint_and_apply; empty if no workspace
 };
 
 class SwarmRouter {

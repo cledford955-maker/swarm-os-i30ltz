@@ -18,6 +18,10 @@ import (
 	"swarm-os/lucy-server/handlers"
 )
 
+// serverStartTime records when this process started so /health can report uptime.
+var serverStartTime = time.Now()
+
+
 func main() {
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
@@ -34,10 +38,11 @@ func main() {
 	r.Use(originGate)
 	r.Use(swarmAuthMiddleware)
 
-	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
-	})
+	// Rich health endpoint — consumed by Lucille Companion, wallpaper stats,
+	// and Lucille Assistant to avoid offline fabrication (daily-audit item au-1).
+	r.Get("/health", healthHandler)
+	// Also available under the /api/ prefix for Flutter callers that hit the API base.
+	r.Get("/api/health", healthHandler)
 
 	// ── WebAuthn (task #20) — NOT under /api/, exempt from swarmAuthMiddleware
 	// by design, same as the .NET original. ──────────────────────────────────

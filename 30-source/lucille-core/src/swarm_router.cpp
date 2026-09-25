@@ -167,8 +167,35 @@ SwarmTaskResponse SwarmRouter::route_and_execute(const SwarmTaskRequest& req) {
         resp.safety_verified = true;
     }
 
-    // 4. Git Apply Check
-    resp.git_apply_verified = true; // Verified dry-run
+    // 4. Git-diff Checkpoint → Apply → Auto-rollback on regression failure
+    // workspace_dir provided → snapshot git state, apply diff atomically.
+    // Empty workspace_dir → validate patch syntax only (dry-run).
+    if (!req.workspace_dir.empty()) {
+        std::string cp_err;
+        CheckpointResult cp = SafetyGate::checkpoint_and_apply(
+            req.workspace_dir,
+            resp.draft_patch,
+            "swarm_task_" + req.task_id,
+            cp_err
+        );
+        if (!cp.ok) {
+            resp.success = false;
+            resp.error_message = "Checkpoint-apply failed: " + cp_err;
+            return resp;
+        }
+        resp.checkpoint_id = cp.checkpoint_id;
+        resp.git_apply_verified = true;
+        std::cout << "[SwarmRouter] Checkpoint " << cp.checkpoint_id
+                  << " created. Call CheckpointJournal::confirm_checkpoint() after tests "
+                  << "pass or rollback_to_checkpoint() on failure.\n";
+    } else {
+        resp.git_apply_verified = SafetyGate::verify_git_apply_check(
+            "", resp.draft_patch, resp.error_message);
+        if (!resp.git_apply_verified) {
+            resp.success = false;
+            return resp;
+        }
+    }
 
     // 5. Tier 3: Sandboxed Execution via Hermes 3
     if (req.allow_tool_execution) {
