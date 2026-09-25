@@ -79,7 +79,9 @@ fi
 # folder fails loudly instead of pushing an empty tree.
 sync_subtree() {
   local prefix=$1 remote=$2 tree remote_tip commit
-  if ! tree=$(git rev-parse --verify --quiet "HEAD:$prefix^{tree}"); then
+  # (no ^{tree} suffix here — after "HEAD:" git would read it as part of the path)
+  if ! tree=$(git rev-parse --verify --quiet "HEAD:$prefix") ||
+     [ "$(git cat-file -t "$tree")" != tree ]; then
     echo "SYNC FAILED: $remote (folder '$prefix' is not in HEAD)" >&2
     status=1; return
   fi
