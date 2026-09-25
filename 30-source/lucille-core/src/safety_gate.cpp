@@ -1,4 +1,5 @@
 #include "safety_gate.hpp"
+#include <fcntl.h>
 #include "checkpoint_journal.hpp"
 #include <iostream>
 #include <sstream>
@@ -153,6 +154,8 @@ bool SafetyGate::verify_git_apply_check(
             if (chdir(workspace_dir.c_str()) != 0) _exit(126);
             execlp("git", "git", "apply", "--check", "--ignore-whitespace", temp_patch.c_str(), nullptr);
         } else {
+            int devnull = open("/dev/null", O_WRONLY);          // --stat summary isn't wanted
+            if (devnull >= 0) { dup2(devnull, STDOUT_FILENO); close(devnull); }
             execlp("git", "git", "apply", "--stat", temp_patch.c_str(), nullptr);
         }
         _exit(127);

@@ -261,6 +261,7 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                                 connection.authToken = authTokenInput
                                 portInput.toIntOrNull()?.takeIf { it in 1..65535 }?.let { connection.port = it }
                                 com.example.data.memory.MemorySyncEngine.connectionChanged()
+                                if (connection.hitlAlertsEnabled) com.example.data.hitl.HitlApprovalService.restart(context)
                                 isIpConfigExpanded = false
                                 terminalLog.add("Node saved: ${connection.host}:${connection.port}")
                                 checkConnection()
@@ -272,6 +273,7 @@ fun RemotePcScreen(onBack: () -> Unit = {}) {
                         }
                     }
                 }
+                HitlAlertsCard(connection)
             }
 
             // Quick Desktop Command Launchers
@@ -394,5 +396,59 @@ private fun QuickCommandTile(cmd: String, label: String, color: Color, onClick: 
     }
 }
 
+/**
+ * Toggle for background approval alerts: keeps a foreground service connected
+ * to lucille-core :9091 so SWARM can ask this phone to approve risky actions.
+ */
+@Composable
+private fun HitlAlertsCard(connection: SwarmConnection) {
+    val context = LocalContext.current
+    var enabled by remember { mutableStateOf(connection.hitlAlertsEnabled) }
+    var status by remember { mutableStateOf(com.example.data.hitl.HitlApprovalService.statusText) }
+    LaunchedEffect(enabled) {
+        while (true) {
+            status = com.example.data.hitl.HitlApprovalService.statusText
+            kotlinx.coroutines.delay(1000)
+        }
+    }
 
+    fun apply(on: Boolean) {
+        enabled = on
+        connection.hitlAlertsEnabled = on
+        com.example.data.hitl.HitlApprovalService.sync(context)
+    }
 
+    val notificationPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) apply(true)
+        else android.widget.Toast.makeText(context, "Approval alerts need notification permission.", android.widget.Toast.LENGTH_LONG).show()
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = CarbonSurfaceVariant),
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+    ) {
+        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Approval alerts (port ${connection.hitlPort})", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (enabled) status else "Off — SWARM denies risky actions it can't ask you about",
+                    color = TextPrimary.copy(alpha = 0.7f), fontSize = 10.sp
+                )
+            }
+            androidx.compose.material3.Switch(
+                checked = enabled,
+                onCheckedChange = { on ->
+                    val needsPermission = on && android.os.Build.VERSION.SDK_INT >= 33 &&
+                        androidx.core.content.ContextCompat.checkSelfPermission(
+                            context, android.Manifest.permission.POST_NOTIFICATIONS
+                        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (needsPermission) notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    else apply(on)
+                }
+            )
+        }
+    }
+}

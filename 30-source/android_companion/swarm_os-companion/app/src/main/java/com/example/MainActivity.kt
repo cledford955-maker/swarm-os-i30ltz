@@ -90,6 +90,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         com.example.data.memory.MemorySyncEngine.start(applicationContext)
+        com.example.data.hitl.HitlApprovalService.sync(applicationContext)
 
         setContent {
             MyApplicationTheme {

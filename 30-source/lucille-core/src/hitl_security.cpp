@@ -1,4 +1,6 @@
 #include "hitl_security.hpp"
+#include <openssl/rand.h>
+#include <stdexcept>
 #include <iostream>
 #include <sstream>
 #include <regex>
@@ -34,8 +36,13 @@ bool HitlSecurityManager::is_high_risk_command(const std::string& cmd, std::stri
 }
 
 std::string HitlSecurityManager::generate_challenge_id() {
-    static uint64_t counter = 1000;
-    return "hitl_chal_" + std::to_string(++counter) + "_" + std::to_string(rand() % 10000);
+    // Unguessable: the id is what the phone sends back to approve
+    unsigned char raw[12];
+    if (RAND_bytes(raw, sizeof(raw)) != 1) throw std::runtime_error("RAND_bytes failed");
+    static const char* hex = "0123456789abcdef";
+    std::string id = "hitl_";
+    for (unsigned char c : raw) { id += hex[c >> 4]; id += hex[c & 0xF]; }
+    return id;
 }
 
 HitlChallenge HitlSecurityManager::create_challenge(const std::string& command, uint32_t timeout_sec) {

@@ -31,6 +31,16 @@ class SwarmConnection(context: Context) {
         get() = prefs.getString(KEY_TOKEN, DEFAULT_TOKEN) ?: DEFAULT_TOKEN
         set(value) = prefs.edit().putString(KEY_TOKEN, value.trim()).apply()
 
+    /** lucille-core companion socket (HITL approvals); same host and token. */
+    var hitlPort: Int
+        get() = prefs.getInt(KEY_HITL_PORT, DEFAULT_HITL_PORT)
+        set(value) = prefs.edit().putInt(KEY_HITL_PORT, value).apply()
+
+    /** Keep the approval link open in the background (foreground service). */
+    var hitlAlertsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_HITL_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_HITL_ENABLED, value).apply()
+
     fun httpBase(): String = "http://$host:$port"
     fun wsBase(): String = "ws://$host:$port"
 
@@ -69,6 +79,9 @@ class SwarmConnection(context: Context) {
         private const val KEY_HOST = "host"
         private const val KEY_PORT = "port"
         private const val KEY_TOKEN = "auth_token"
+        private const val KEY_HITL_PORT = "hitl_port"
+        private const val KEY_HITL_ENABLED = "hitl_enabled"
+        const val DEFAULT_HITL_PORT = 9091
 
         // Matches LucyServer-go's swarmAuthMiddleware fallback (main.go),
         // used whenever SWARM_AUTH_TOKEN isn't set in the environment —

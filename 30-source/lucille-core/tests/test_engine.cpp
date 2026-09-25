@@ -637,9 +637,21 @@ void test_consensus_gate_high_risk_diffs() {
             [&](const std::string&, const std::string&) {
                 ++calls; ConsensusVote v; v.approved = true; return v; });
         resp = router.route_and_execute(req);
-        TEST_ASSERT(calls == 2 && resp.high_risk && resp.consensus_approved
-                    && resp.error_message.find("Consensus gate") == std::string::npos,
-                    "Router passes high-risk target once both voters approve");
+        TEST_ASSERT(calls == 2 && resp.consensus_approved && !resp.human_approved
+                    && resp.error_message.find("No human approver") != std::string::npos,
+                    "Consensus alone is not enough — no HITL approver blocks the diff");
+
+        std::string asked;
+        router.set_hitl_approver([&](const std::string& summary) { asked = summary; return false; });
+        resp = router.route_and_execute(req);
+        TEST_ASSERT(!resp.success && !resp.human_approved && asked.find("swarm-ui.service") != std::string::npos,
+                    "Human denial blocks the diff; approver sees target + triggers: " + asked);
+
+        router.set_hitl_approver([](const std::string&) { return true; });
+        calls = 0;
+        resp = router.route_and_execute(req);
+        TEST_ASSERT(calls == 2 && resp.high_risk && resp.consensus_approved && resp.human_approved && resp.success,
+                    "Router passes high-risk target after 2-of-2 consensus + human approval");
         TEST_ASSERT(!resp.consensus_triggers.empty(), "Router reports consensus triggers");
 
         req.target_file = "src/allocator.cpp";
@@ -923,7 +935,7 @@ void test_telemetry_daemon() {
         TEST_ASSERT(err.find("bad request") != std::string::npos && daemon.is_running(),
                     "Malformed command answered with error, daemon keeps running");
 
-        // Unmasked client frame is a protocol violation
+        // Unmasked client frame is a protocol violation (runs last on this socket)
         wsclient::send_frame(good, 0x1, "hi", /*masked=*/false);
         std::string v = wsclient::read_until(good, 500, [](const std::string& s) {
             return s.find("<EOF>") != std::string::npos; });
@@ -935,6 +947,69 @@ void test_telemetry_daemon() {
     daemon.broadcast_log_line("\033[32m[Lucille-Daemon] Connected to Tailscale WireGuard mesh\033[0m");
     daemon.stop();
     TEST_ASSERT(!daemon.is_running(), "Telemetry Daemon stopped cleanly");
+
+    {
+        lucille::TelemetryDaemon pub(test_port, "lo", "swarm-token-2026");
+        TEST_ASSERT(!pub.start(), "Daemon refuses the public LucyServer fallback token");
+    }
+
+    // ---- End-to-end HITL approval over the socket ----
+    auto hitl = std::make_shared<lucille::HitlSecurityManager>();
+    lucille::TelemetryDaemon hd(test_port, "lo", "test_token");
+    hd.set_hitl_manager(hitl);
+    if (hd.start()) {
+        auto extract_id = [](const std::string& bytes) {
+            auto p = bytes.find("\"challenge_id\":\"");
+            if (p == std::string::npos) return std::string();
+            p += 16;
+            return bytes.substr(p, bytes.find('"', p) - p);
+        };
+
+        // A challenge created while no phone is connected is replayed on connect
+        auto early = hitl->create_challenge("systemctl \"restart\" swarm-ui", 30);
+        std::string reply;
+        int phone = wsclient::upgrade(test_port, "X-Swarm-Auth: test_token\r\n", reply);
+        // The replay can arrive in the same read as the 101 response
+        std::string replay = reply;
+        if (replay.find("systemctl") == std::string::npos)
+            replay += wsclient::read_until(phone, 1000, [](const std::string& b) {
+                return b.find("systemctl") != std::string::npos; });
+        TEST_ASSERT(extract_id(replay) == early.challenge_id, "Pending challenge replayed to a phone that connects later");
+        TEST_ASSERT(replay.find("systemctl \\\"restart\\\" swarm-ui") != std::string::npos,
+                    "Challenge command is JSON-escaped");
+        TEST_ASSERT(early.challenge_id.size() == 29 && early.challenge_id.rfind("hitl_", 0) == 0,
+                    "Challenge id is 96-bit random hex: " + early.challenge_id);
+        hitl->resolve_challenge(early.challenge_id, false);
+
+        // Live challenge: engine-style request → phone approves → await returns true
+        std::atomic<bool> approved{false};
+        std::thread requester([&] {
+            auto chal = hitl->create_challenge("rm -rf /var/cache/pacman", 5);
+            hd.broadcast_hitl_challenge(chal);
+            approved = hitl->await_challenge_resolution(chal.challenge_id, 5);
+        });
+        std::string frame = wsclient::read_until(phone, 2000, [](const std::string& b) {
+            return b.find("rm -rf /var/cache/pacman") != std::string::npos; });
+        // The live challenge's id sits just before its command in the frame
+        size_t cmd_pos = frame.find("rm -rf /var/cache/pacman");
+        size_t id_pos  = cmd_pos == std::string::npos ? std::string::npos : frame.rfind("\"challenge_id\":\"", cmd_pos);
+        std::string id = id_pos == std::string::npos ? "" : extract_id(frame.substr(id_pos));
+        TEST_ASSERT(!id.empty() && frame.find("\"risk_level\":\"CRITICAL\"") != std::string::npos,
+                    "Phone receives live CRITICAL challenge");
+        wsclient::send_frame(phone, 0x1, "{\"action\":\"hitl_response\",\"challenge_id\":\"" + id + "\",\"approved\":true}");
+        std::string ack = wsclient::read_until(phone, 2000, [](const std::string& b) {
+            return b.find("hitl_resolved") != std::string::npos; });
+        requester.join();
+        TEST_ASSERT(approved && ack.find("\"accepted\":true") != std::string::npos,
+                    "Phone approval resolves the waiting request");
+
+        wsclient::send_frame(phone, 0x1, "{\"action\":\"hitl_response\",\"challenge_id\":\"" + id + "\",\"approved\":false}");
+        ack = wsclient::read_until(phone, 1000, [](const std::string& b) {
+            return b.find("\"accepted\":false") != std::string::npos; });
+        TEST_ASSERT(ack.find("\"accepted\":false") != std::string::npos, "Second answer to a resolved challenge is refused");
+        close(phone);
+        hd.stop();
+    }
 }
 
 int main() {
