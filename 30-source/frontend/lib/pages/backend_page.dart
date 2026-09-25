@@ -544,3 +544,86 @@ class _BackendPageState extends ConsumerState<BackendPage> {
     );
   }
 }
+
+class _HealthSummaryBar extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final healthAsync = ref.watch(swarmHealthProvider);
+    final health = healthAsync.valueOrNull ?? SwarmHealthSnapshot.empty;
+    final bool live = !health.isStale();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: SwarmColors.bgElevated,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: live
+              ? SwarmColors.statusHealthy.withValues(alpha: 0.2)
+              : SwarmColors.borderSubtle,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            live ? Icons.check_circle_rounded : Icons.cloud_off_rounded,
+            color: live ? SwarmColors.statusHealthy : SwarmColors.statusCritical,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            live ? 'SYSTEM HEALTHY' : 'BACKEND OFFLINE',
+            style: TextStyle(
+              color: live ? SwarmColors.statusHealthy : SwarmColors.statusCritical,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+          if (live) ...[
+            const SizedBox(width: 20),
+            _chip('v${health.version}', SwarmColors.accentCyan),
+            const SizedBox(width: 12),
+            _chip('UP ${health.uptimeFormatted}', SwarmColors.textMuted),
+            const SizedBox(width: 12),
+            _chip(
+              'DISK ${health.diskUsedGb.toStringAsFixed(0)}/${health.diskTotalGb.toStringAsFixed(0)} GB',
+              health.diskPercent > 85
+                  ? SwarmColors.statusCritical
+                  : SwarmColors.textMuted,
+            ),
+            const SizedBox(width: 12),
+            _chip(
+              health.companionsConnected > 0
+                  ? 'PHONES ${health.companionsConnected}'
+                  : 'NO PHONES',
+              health.companionsConnected > 0
+                  ? SwarmColors.statusHealthy
+                  : SwarmColors.textMuted,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'monospace',
+        ),
+      ),
+    );
+  }
+}

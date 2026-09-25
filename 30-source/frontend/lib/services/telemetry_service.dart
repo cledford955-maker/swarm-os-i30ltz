@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
+
+import 'package:http/http.dart' as http;
+import 'swarm_config.dart';
 
 /// Real system telemetry via dart:io — replaces the Tauri Rust commands.
 /// Reads /proc/ and runs lightweight system commands for live metrics.
@@ -127,105 +131,160 @@ class TelemetryService {
     final ramUsed = await getTotalRam() - await getAvailableRam();
     final ramTotal = await getTotalRam();
 
-    return {
-      'mesh_name': 'SWARM WireGuard Mesh',
-      'tailscale_ip': '100.82.1.19',
-      'active_node_count': 2,
-      'devices': [
-        {
-          'id': 'workstation-local',
-          'name': '$hostname (SWARM OS)',
-          'type': 'desktop',
-          'status': 'online',
-          'ip': '100.82.1.19',
+    final devices = <Map<String, dynamic>>[
+      {
+        'device_id': 'workstation-local',
+        'hostname': '$hostname (SWARM OS)',
+        'device_type': 'desktop',
+        'online': true,
+        'ip': await _tailscaleIp(),
+        'platform': 'Arch Linux',
+        'telemetry': {
           'cpu_percent': cpu,
+          'ram_percent': ramTotal > 0 ? (ramUsed / ramTotal) * 100 : 0,
           'ram_used_gb': ramUsed,
           'ram_total_gb': ramTotal,
         },
-        {
-          'id': 'dr-i30ltz-companion',
-          'name': 'DR.-I30LTZ-Companion (Android)',
-          'type': 'mobile',
-          'status': 'online',
-          'ip': '100.105.12.33',
-          'cpu_percent': 12.0,
-          'ram_used_gb': 3.2,
-          'ram_total_gb': 12.0,
-        },
-      ],
+      },
+    ];
+
+    // Fetch real companion connections from LucyServer's /api/companion/status.
+    try {
+      final uri = Uri.parse('${SwarmConfig.httpBase}/api/companion/status');
+      final resp = await http.get(uri, headers: SwarmConfig.authHeaders)
+          .timeout(const Duration(seconds: 3));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final companions = data['companions'] as List? ?? [];
+        for (final c in companions) {
+          devices.add({
+            'device_id': c['device_id'] ?? 'unknown',
+            'hostname': c['device_name'] ?? 'Companion',
+            'device_type': 'phone',
+            'online': true,
+            'ip': '',
+            'platform': 'Android',
+            'telemetry': {},
+          });
+        }
+      }
+    } catch (_) {}
+
+    return {
+      'mesh_name': 'SWARM Tailscale Mesh',
+      'active_node_count': devices.where((d) => d['online'] == true).length,
+      'devices': devices,
     };
   }
 
-  /// Get detailed telemetry for a specific device in the mesh
+  /// Get detailed telemetry for a specific device in the mesh.
+  /// For the local workstation: real /proc data. For companions: we only
+  /// know they're connected (no remote telemetry endpoint yet).
   Future<Map<String, dynamic>?> getDeviceTelemetry(String id) async {
+    if (id != 'workstation-local') {
+      return {
+        'device_id': id,
+        'hostname': id,
+        'device_type': 'phone',
+        'online': true,
+        'platform': 'Android',
+        'telemetry': {},
+      };
+    }
+
     final cpu = await getCpuUsage();
     final temp = await getCpuTemp();
     final ramTotal = await getTotalRam();
     final ramUsed = ramTotal - await getAvailableRam();
 
+    final disks = <Map<String, dynamic>>[];
+    try {
+      final result = await Process.run('df', ['-BG', '--output=target,fstype,size,used,pcent', '/']);
+      for (final line in (result.stdout as String).split('\n').skip(1)) {
+        final parts = line.trim().split(RegExp(r'\s+'));
+        if (parts.length >= 5) {
+          disks.add({
+            'mountpoint': parts[0],
+            'fstype': parts[1],
+            'total_gb': double.tryParse(parts[2].replaceAll('G', '')) ?? 0,
+            'used_gb': double.tryParse(parts[3].replaceAll('G', '')) ?? 0,
+            'percent': double.tryParse(parts[4].replaceAll('%', '')) ?? 0,
+          });
+        }
+      }
+    } catch (_) {}
+
     return {
       'device_id': id,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-      'cpu': {
-        'overall_percent': cpu,
-        'temp_c': temp,
-        'core_count': Platform.numberOfProcessors,
+      'hostname': await getHostname(),
+      'device_type': 'desktop',
+      'online': true,
+      'ip': await _tailscaleIp(),
+      'platform': 'Arch Linux',
+      'telemetry': {
+        'cpu_percent': cpu,
+        'percent_total': cpu,
+        'cpu': {
+          'percent_total': cpu,
+          'physical_cores': Platform.numberOfProcessors,
+          'logical_cores': Platform.numberOfProcessors,
+        },
+        'memory': {
+          'ram_percent': ramTotal > 0 ? (ramUsed / ramTotal) * 100 : 0,
+          'ram_used_gb': double.parse(ramUsed.toStringAsFixed(1)),
+          'ram_total_gb': double.parse(ramTotal.toStringAsFixed(1)),
+        },
+        'ram_percent': ramTotal > 0 ? (ramUsed / ramTotal) * 100 : 0,
+        'disk': disks,
       },
-      'memory': {
-        'used_gb': ramUsed,
-        'total_gb': ramTotal,
-        'percent': ramTotal > 0 ? (ramUsed / ramTotal) * 100 : 0.0,
-      },
-      'gpus': [
-        {
-          'vendor': 'nvidia',
-          'name': 'NVIDIA GeForce RTX Neural Accelerator',
-          'gpu_util_percent': 15.0,
-          'mem_used_mb': 2400.0,
-          'mem_total_mb': 24576.0,
-          'temp_c': 44.0,
-          'power_draw_w': 48.0,
-          'power_limit_w': 350.0,
-          'fan_speed_percent': 30.0,
-        }
-      ],
-      'disks': [
-        {
-          'mountpoint': '/',
-          'device': '/dev/nvme0n1p2',
-          'fstype': 'btrfs',
-          'used_gb': 42.5,
-          'total_gb': 512.0,
-          'percent': 8.3,
-        }
-      ],
     };
   }
 
-  /// Scan network for reachable companion nodes
+  /// Scan network by re-fetching the mesh summary (real companion connections).
   Future<List<Map<String, dynamic>>> scanNetwork() async {
-    return [
-      {'ip': '100.82.1.19', 'hostname': 'swarm-master', 'port': 9091, 'status': 'open'},
-      {'ip': '100.105.12.33', 'hostname': 'dr-i30ltz-companion', 'port': 9091, 'status': 'open'},
-    ];
+    final mesh = await getMeshSummary();
+    return (mesh['devices'] as List? ?? []).cast<Map<String, dynamic>>();
   }
 
-  /// Shared clipboard retrieval
+  /// Shared clipboard retrieval via LucyServer's /api/clipboard.
   Future<String> getSharedClipboard() async {
-    return 'SWARM_OS_SECURE_MESH_SYNC_PAYLOAD';
+    try {
+      final result = await Process.run('bash', ['-c', 'wl-paste 2>/dev/null || xclip -selection clipboard -o 2>/dev/null || echo ""']);
+      return (result.stdout as String).trim();
+    } catch (_) {
+      return '';
+    }
   }
 
-  /// Shared file list retrieval
-  Future<List<String>> getSharedFiles() async {
-    return ['/tmp/lucille_sync/SOUL.md', '/tmp/lucille_sync/telemetry.json'];
+  /// Shared file list — returns files in the Lucille sync directory if it exists.
+  Future<List<dynamic>> getSharedFiles() async {
+    try {
+      final dir = Directory('/tmp/lucille_sync');
+      if (!await dir.exists()) return [];
+      return await dir.list().map((e) => {
+        'filename': e.path.split('/').last,
+        'from_device': 'local',
+      }).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
-  /// Send mesh alert notification
+  /// Send mesh alert notification (placeholder — needs real push infrastructure).
   Future<bool> sendNotification(String targetId, String title, String body, [String senderId = '']) async {
-    return true;
+    return false;
   }
 
   // ─── Internal ─────────────────────────────────────────────────────────
+
+  Future<String> _tailscaleIp() async {
+    try {
+      final result = await Process.run('tailscale', ['ip', '-4']);
+      final ip = (result.stdout as String).trim();
+      if (ip.isNotEmpty && result.exitCode == 0) return ip;
+    } catch (_) {}
+    return '';
+  }
 
   Future<_CpuStat> _readCpuStat() async {
     final contents = await File('/proc/stat').readAsString();
