@@ -10,8 +10,8 @@ StartLimitIntervalSec=60
 
 [Service]
 Type=simple
-# Kill the entire control-group on stop — prevents labwc/Flutter children from
-# surviving in logind session scopes after swarm-ui.service exits (2026-09-24 fix).
+# control-group only reaches (sd-pam): pam_systemd moves the desktop itself
+# into a logind session scope. swarm-ui-cleanup.sh (below) ends that scope.
 KillMode=control-group
 KillSignal=SIGTERM
 TimeoutStopSec=10
@@ -56,10 +56,9 @@ Environment=WLR_LOG_LEVEL=debug
 # llvmpipe supports ES 3.1 and is the correct software fallback if no GPU is
 # found. On real hardware (vulkan-intel here, since this targets integrated
 # graphics) Mesa auto-selects the right driver.
-# Terminate any stale desktop processes from a previous crashed or unclean session.
-# Without this, a fast restart leaves old labwc+Flutter in the user session scope
-# and the new start creates duplicate compositor instances (2026-09-24 scope-lifecycle fix).
-ExecStartPre=+/usr/bin/bash -c 'pkill -u swarm -x labwc 2>/dev/null; pkill -u swarm -x swarm_flutter 2>/dev/null; sleep 0.3; true'
+# End any desktop session left on tty1 by a crash, so a restart never runs two
+# compositors. Runs without PAM ("+"), so it cannot touch this start's session.
+ExecStartPre=+/usr/lib/swarm/swarm-ui-cleanup.sh
 ExecStartPre=+/usr/bin/mkdir -p /run/user/1000
 ExecStartPre=+/usr/bin/chown -R swarm:swarm /run/user/1000
 ExecStartPre=+/usr/bin/chmod 0700 /run/user/1000
@@ -67,6 +66,10 @@ ExecStartPre=+/usr/bin/mkdir -p /mnt/Lucy/logs
 # labwc starts the compositor; its autostart script (~/.config/labwc/autostart)
 # launches the Flutter shell as a normal Wayland client inside it.
 ExecStart=/usr/bin/dbus-run-session -- /usr/bin/swarm-session
+# Terminate the tty1 logind session scope (labwc, Flutter, swarm-slint, and
+# anything else autostart launched) before the log dump and tty reset below;
+# a still-running compositor would own the VT and undo the reset.
+ExecStopPost=+/usr/lib/swarm/swarm-ui-cleanup.sh
 # The 1s sleep and systemctl-status snapshot exist because the plain
 # journalctl dump below was losing the crash reason entirely on a fast
 # exit (see the WLR_LOG_LEVEL comment above) — likely a journald flush race
@@ -83,9 +86,6 @@ ExecStopPost=+/usr/bin/bash -c 'sleep 1; { echo "=== systemctl status ==="; syst
 # leftover graphics-mode noise on screen. Force a full VT100 reset after every
 # stop so tty1 always comes back clean before anything else touches it.
 ExecStopPost=+/usr/bin/sh -c 'TERM=linux /usr/bin/reset > /dev/tty1 2>&1 < /dev/tty1 || true'
-# Clean up any labwc/Flutter processes that escaped the control-group (e.g.
-# adopted by the user@1000 scope before KillMode could catch them).
-ExecStopPost=+/usr/bin/bash -c 'pkill -u swarm -x labwc 2>/dev/null; pkill -u swarm -x swarm_flutter 2>/dev/null; true'
 Restart=on-failure
 RestartSec=10
 
