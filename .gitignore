@@ -20,7 +20,9 @@ lost+found/
 
 # --- ISO profile payload (configs kept, bundled apps excluded) ------
 40-iso-profile/*/airootfs/opt/
-40-iso-profile/*/airootfs/usr/lib/
+40-iso-profile/*/airootfs/usr/lib/*
+# usr/lib/swarm holds hand-written boot/power scripts, not bundled apps.
+!40-iso-profile/*/airootfs/usr/lib/swarm/
 40-iso-profile/*/airootfs/var/cache/
 40-iso-profile/*/airootfs/usr/local/share/swarm-os/airootfs.tar
 
