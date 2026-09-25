@@ -936,3 +936,5 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 *Last updated: 2026-09-25 — I30LTZ Companion restored to 30-source/android_companion/swarm_os-companion. HITL approvals: phone foreground service (Deny one tap, Approve needs biometric) ↔ lucille-core :9091; engine starts it when SWARM_AUTH_TOKEN is set; high-risk diffs need consensus + human. Pending: phone install, launching lucille-core on SWARM, companion GitHub subtree-sync fix (do NOT force-push).*
 
 *Last updated: 2026-09-25 — I30LTZ Companion 6.2.21 (HITL approval alerts) installed on A67L Gen2 + Samsung SM-S176V with data kept; GitHub app-repo sync now snapshot-based (no subtree, no force); lucille-core.service enabled in the ISO (reads sealed SWARM_AUTH_TOKEN, :9091 on tailscale0 only). Next ISO build picks it up.*
+
+*Last updated: 2026-09-25 — "Wire up everything": LucilleEngine owns SwarmRouter, HITL approver injected; route_pipeline_full() chains streaming audit + 2-of-2 consensus + HITL + checkpoint; structured metric logging to stdout/SHM; IPC route_task/run_pipeline commands. 172 pass / 0 fail, TSan clean.*
