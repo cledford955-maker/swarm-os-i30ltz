@@ -1,0 +1,13 @@
+[Unit]
+Description=Run SWARM workspace parity checks periodically
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+RandomizedDelaySec=10min
+Persistent=true
+Unit=swarm-workspace-parity.service
+
+[Install]
+WantedBy=timers.target
+

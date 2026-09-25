@@ -13,6 +13,7 @@ import '../theme/swarm_text_styles.dart';
 import '../widgets/extensions_dialog.dart';
 import '../widgets/agent_avatar.dart';
 import '../providers/skill_router_providers.dart';
+import '../providers/sentinel_providers.dart';
 
 /// Adapts a live-fetched OpenRouter model into a SwarmModel so it can flow
 /// through the existing model-card UI unchanged. Only ever built from data
@@ -26,13 +27,13 @@ SwarmModel swarmModelFromLive(LiveModel m) {
     provider: m.isNvidiaFree ? ProviderId.nvidia : ProviderId.openrouter,
     tier: m.isFree ? ModelTier.freeOnline : ModelTier.paidOnline,
     pricePer1M: m.blendedPriceDisplay,
-    originalPricePer1M: sale != null && sale < 100
-        ? m.pricePer1MDisplay
-        : null,
+    originalPricePer1M: sale != null && sale < 100 ? m.pricePer1MDisplay : null,
     isOnSale: sale != null,
     saleDiscount: sale != null ? '$sale% OFF' : null,
     contextWindow: m.contextDisplay,
-    description: m.description.isNotEmpty ? m.description : 'Live model from OpenRouter — no static description available.',
+    description: m.description.isNotEmpty
+        ? m.description
+        : 'Live model from OpenRouter — no static description available.',
     keywords: const ['live'],
   );
 }
@@ -56,7 +57,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      p.Provider.of<LiveModelCatalogService>(context, listen: false).ensureLoaded();
+      p.Provider.of<LiveModelCatalogService>(context, listen: false)
+          .ensureLoaded();
     });
   }
 
@@ -66,7 +68,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
       _selectedLiveCategory = category;
       _loadingLiveCategory = true;
     });
-    final catalog = p.Provider.of<LiveModelCatalogService>(context, listen: false);
+    final catalog =
+        p.Provider.of<LiveModelCatalogService>(context, listen: false);
     final results = await catalog.fetchCategory(category);
     if (!mounted) return;
     setState(() {
@@ -110,7 +113,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
     return modelId.split('/').last;
   }
 
-  void _assignModelToAgent(String modelId, String modelName, {String? specificAgentId, bool isVideo = false, bool isAuto = false}) {
+  void _assignModelToAgent(String modelId, String modelName,
+      {String? specificAgentId, bool isVideo = false, bool isAuto = false}) {
     final targetAgentId = specificAgentId ?? _selectedAgentId;
 
     if (targetAgentId == 'all') {
@@ -195,12 +199,15 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
           ],
         ),
         action: SnackBarAction(
-          label: targetAgentId == 'all' ? 'OPEN HUB' : 'OPEN ${targetName.toUpperCase()}',
+          label: targetAgentId == 'all'
+              ? 'OPEN HUB'
+              : 'OPEN ${targetName.toUpperCase()}',
           textColor: SwarmColors.accent,
           onPressed: () {
             if (targetAgentId == 'forge') {
               context.go('/forge');
-            } else if (targetAgentId == 'lucille' || targetAgentId == 'orchestrator') {
+            } else if (targetAgentId == 'lucille' ||
+                targetAgentId == 'orchestrator') {
               context.go('/lucille');
             } else if (targetAgentId == 'droid') {
               context.go('/agent/droid');
@@ -228,8 +235,13 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
     // completes, nothing is excluded this way (liveCatalog.hasData is false),
     // so the list is never empty on cold start.
     bool isDeadStaticEntry(SwarmModel m) {
-      if (!liveCatalog.hasData) return false;
-      if (m.provider != ProviderId.openrouter && m.provider != ProviderId.nvidia) return false;
+      if (!liveCatalog.hasData) {
+        return false;
+      }
+      if (m.provider != ProviderId.openrouter &&
+          m.provider != ProviderId.nvidia) {
+        return false;
+      }
       return !liveCatalog.exists(m.id);
     }
 
@@ -249,7 +261,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
         provider: m.provider,
         tier: live.isFree ? ModelTier.freeOnline : m.tier,
         pricePer1M: live.blendedPriceDisplay,
-        originalPricePer1M: sale != null && sale < 100 ? live.pricePer1MDisplay : null,
+        originalPricePer1M:
+            sale != null && sale < 100 ? live.pricePer1MDisplay : null,
         isOnSale: sale != null,
         saleDiscount: sale != null ? '$sale% OFF' : null,
         contextWindow: live.contextDisplay,
@@ -260,30 +273,61 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
 
     List<SwarmModel> filteredModels;
     if (_selectedFilter == 'TOP MODELS') {
-      filteredModels = liveCatalog.topFlagshipModels(limit: 50).map(swarmModelFromLive).toList();
+      filteredModels = liveCatalog
+          .topFlagshipModels(limit: 50)
+          .map(swarmModelFromLive)
+          .toList();
     } else if (_selectedFilter == 'LIVE ON SALE') {
-      filteredModels = liveCatalog.onSaleModels.map(swarmModelFromLive).toList();
+      filteredModels =
+          liveCatalog.onSaleModels.map(swarmModelFromLive).toList();
     } else if (_selectedFilter == 'LIVE CODING') {
-      filteredModels = liveCatalog.topCodingModels(limit: 100).map(swarmModelFromLive).toList();
-    } else if (_selectedFilter == 'LIVE CATEGORY' && _selectedLiveCategory != null) {
+      filteredModels = liveCatalog
+          .topCodingModels(limit: 100)
+          .map(swarmModelFromLive)
+          .toList();
+    } else if (_selectedFilter == 'LIVE CATEGORY' &&
+        _selectedLiveCategory != null) {
       filteredModels = _liveCategoryResults.map(swarmModelFromLive).toList();
     } else if (_selectedFilter == 'NVIDIA NIM' && liveCatalog.hasData) {
-      filteredModels = liveCatalog.nvidiaNimFree.map(swarmModelFromLive).toList();
+      filteredModels =
+          liveCatalog.nvidiaNimFree.map(swarmModelFromLive).toList();
     } else {
-      filteredModels = allModels.where((m) {
-        if (isDeadStaticEntry(m)) return false;
-        // Category filter
-        if (_selectedFilter == 'ON SALE' && !m.isOnSale) return false;
-        if (_selectedFilter == 'NVIDIA NIM' && m.provider != ProviderId.nvidia) return false;
-        if (_selectedFilter == 'OPENROUTER' && m.provider != ProviderId.openrouter) return false;
-        if (_selectedFilter == 'LOCAL' && m.provider != ProviderId.ollama) return false;
-        if (_selectedFilter == 'VIDEO' && !m.keywords.contains('video')) return false;
-        if (_selectedFilter == 'AUTOROUTER' && !m.keywords.contains('autorouter')) return false;
-        return true;
-      }).map(withLivePrice).toList();
+      filteredModels = allModels
+          .where((m) {
+            if (isDeadStaticEntry(m)) {
+              return false;
+            }
+            // Category filter
+            if (_selectedFilter == 'ON SALE' && !m.isOnSale) {
+              return false;
+            }
+            if (_selectedFilter == 'NVIDIA NIM' &&
+                m.provider != ProviderId.nvidia) {
+              return false;
+            }
+            if (_selectedFilter == 'OPENROUTER' &&
+                m.provider != ProviderId.openrouter) {
+              return false;
+            }
+            if (_selectedFilter == 'LOCAL' && m.provider != ProviderId.ollama) {
+              return false;
+            }
+            if (_selectedFilter == 'VIDEO' && !m.keywords.contains('video')) {
+              return false;
+            }
+            if (_selectedFilter == 'AUTOROUTER' &&
+                !m.keywords.contains('autorouter')) {
+              return false;
+            }
+            return true;
+          })
+          .map(withLivePrice)
+          .toList();
     }
 
-    if (_searchQuery.isNotEmpty && _selectedFilter != 'LIVE CODING' && _selectedFilter != 'LIVE CATEGORY') {
+    if (_searchQuery.isNotEmpty &&
+        _selectedFilter != 'LIVE CODING' &&
+        _selectedFilter != 'LIVE CATEGORY') {
       final query = _searchQuery.toLowerCase();
       filteredModels = filteredModels.where((m) {
         final matchId = m.id.toLowerCase().contains(query);
@@ -295,12 +339,21 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
       }).toList();
     }
 
-    final onSaleCount = allModels.where((m) => m.isOnSale && !isDeadStaticEntry(m)).length;
-    final nvidiaCount = liveCatalog.hasData ? liveCatalog.nvidiaNimFree.length : allModels.where((m) => m.provider == ProviderId.nvidia).length;
-    final openrouterCount = allModels.where((m) => m.provider == ProviderId.openrouter && !isDeadStaticEntry(m)).length;
-    final videoCount = allModels.where((m) => m.keywords.contains('video')).length;
-    final autoRouterCount = allModels.where((m) => m.keywords.contains('autorouter')).length;
-    final deadCount = liveCatalog.hasData ? allModels.where(isDeadStaticEntry).length : 0;
+    final onSaleCount =
+        allModels.where((m) => m.isOnSale && !isDeadStaticEntry(m)).length;
+    final nvidiaCount = liveCatalog.hasData
+        ? liveCatalog.nvidiaNimFree.length
+        : allModels.where((m) => m.provider == ProviderId.nvidia).length;
+    final openrouterCount = allModels
+        .where(
+            (m) => m.provider == ProviderId.openrouter && !isDeadStaticEntry(m))
+        .length;
+    final videoCount =
+        allModels.where((m) => m.keywords.contains('video')).length;
+    final autoRouterCount =
+        allModels.where((m) => m.keywords.contains('autorouter')).length;
+    final deadCount =
+        liveCatalog.hasData ? allModels.where(isDeadStaticEntry).length : 0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -327,7 +380,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                     const SizedBox(height: 6),
                     Text(
                       'Browse and orchestrate verified LLMs: Free NVIDIA NIM endpoints, OpenRouter models & AutoRouter, high-fidelity video generation suite, and multi-agent swarms.',
-                      style: SwarmTextStyles.body.copyWith(color: SwarmColors.textMuted),
+                      style: SwarmTextStyles.body
+                          .copyWith(color: SwarmColors.textMuted),
                     ),
                   ],
                 ),
@@ -341,14 +395,21 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: SwarmColors.agentPurple.withValues(alpha: 0.2),
+                        backgroundColor:
+                            SwarmColors.agentPurple.withValues(alpha: 0.2),
                         foregroundColor: SwarmColors.agentPurple,
-                        side: BorderSide(color: SwarmColors.agentPurple.withValues(alpha: 0.6)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        side: BorderSide(
+                            color:
+                                SwarmColors.agentPurple.withValues(alpha: 0.6)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                       icon: const Icon(Icons.extension_rounded, size: 16),
-                      label: const Text('GET EXTENSIONS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      label: const Text('GET EXTENSIONS',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
@@ -356,11 +417,15 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: SwarmColors.accent,
                         foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                       icon: const Icon(Icons.hub_rounded, size: 16),
-                      label: const Text('MANAGE SWARMS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      label: const Text('MANAGE SWARMS',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
                   ],
                 ),
@@ -375,12 +440,14 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                 color: const Color(0xFF130D26),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: (_selectedAgent?.accent ?? SwarmColors.accent).withValues(alpha: 0.5),
+                  color: (_selectedAgent?.accent ?? SwarmColors.accent)
+                      .withValues(alpha: 0.5),
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (_selectedAgent?.accent ?? SwarmColors.accent).withValues(alpha: 0.08),
+                    color: (_selectedAgent?.accent ?? SwarmColors.accent)
+                        .withValues(alpha: 0.08),
                     blurRadius: 16,
                   ),
                 ],
@@ -412,7 +479,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                       ),
                       if (_selectedAgentId != 'all')
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: SwarmColors.bgElevated,
                             borderRadius: BorderRadius.circular(6),
@@ -423,12 +491,15 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                             children: [
                               const Text(
                                 'Active Model: ',
-                                style: TextStyle(color: SwarmColors.textMuted, fontSize: 11),
+                                style: TextStyle(
+                                    color: SwarmColors.textMuted, fontSize: 11),
                               ),
                               Text(
-                                _getModelDisplayName(ref.watch(agentModelProvider(_selectedAgentId))),
+                                _getModelDisplayName(ref.watch(
+                                    agentModelProvider(_selectedAgentId))),
                                 style: TextStyle(
-                                  color: _selectedAgent?.accent ?? SwarmColors.accent,
+                                  color: _selectedAgent?.accent ??
+                                      SwarmColors.accent,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 11,
                                 ),
@@ -445,17 +516,21 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                       children: [
                         ...agents.map((agent) {
                           final isSelected = _selectedAgentId == agent.id;
-                          final agentCurrentModel = ref.watch(agentModelProvider(agent.id));
-                          final modelDisplay = _getModelShortName(agentCurrentModel);
+                          final agentCurrentModel =
+                              ref.watch(agentModelProvider(agent.id));
+                          final modelDisplay =
+                              _getModelShortName(agentCurrentModel);
 
                           return Padding(
                             padding: const EdgeInsets.only(right: 8.0),
                             child: InkWell(
-                              onTap: () => setState(() => _selectedAgentId = agent.id),
+                              onTap: () =>
+                                  setState(() => _selectedAgentId = agent.id),
                               borderRadius: BorderRadius.circular(8),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 180),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? agent.accent.withValues(alpha: 0.22)
@@ -474,21 +549,28 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                                     AgentAvatar(agentId: agent.id, size: 18),
                                     const SizedBox(width: 8),
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
                                           agent.name,
                                           style: TextStyle(
-                                            color: isSelected ? Colors.white : SwarmColors.textSecondary,
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : SwarmColors.textSecondary,
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.w500,
                                             fontSize: 12,
                                           ),
                                         ),
                                         Text(
                                           modelDisplay,
                                           style: TextStyle(
-                                            color: isSelected ? agent.accent : SwarmColors.textMuted,
+                                            color: isSelected
+                                                ? agent.accent
+                                                : SwarmColors.textMuted,
                                             fontSize: 9.5,
                                             fontFamily: 'JetBrains Mono',
                                           ),
@@ -507,7 +589,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                           borderRadius: BorderRadius.circular(8),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
                               color: _selectedAgentId == 'all'
                                   ? SwarmColors.warning.withValues(alpha: 0.22)
@@ -526,7 +609,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                                 Icon(
                                   Icons.public_rounded,
                                   size: 16,
-                                  color: _selectedAgentId == 'all' ? SwarmColors.warning : SwarmColors.textMuted,
+                                  color: _selectedAgentId == 'all'
+                                      ? SwarmColors.warning
+                                      : SwarmColors.textMuted,
                                 ),
                                 const SizedBox(width: 8),
                                 const Column(
@@ -569,18 +654,23 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.layers_rounded, color: SwarmColors.accent, size: 20),
+                    const Icon(Icons.layers_rounded,
+                        color: SwarmColors.accent, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       'SWARM ARCHITECTURES (ALL MODELS LISTED)',
-                      style: SwarmTextStyles.title.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: SwarmTextStyles.title
+                          .copyWith(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
                 TextButton.icon(
                   onPressed: () => context.go('/swarm'),
-                  icon: const Icon(Icons.arrow_forward, size: 14, color: SwarmColors.accent),
-                  label: const Text('Configure Custom Swarms', style: TextStyle(color: SwarmColors.accent, fontSize: 12)),
+                  icon: const Icon(Icons.arrow_forward,
+                      size: 14, color: SwarmColors.accent),
+                  label: const Text('Configure Custom Swarms',
+                      style:
+                          TextStyle(color: SwarmColors.accent, fontSize: 12)),
                 ),
               ],
             ),
@@ -589,7 +679,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
             Wrap(
               spacing: 16,
               runSpacing: 16,
-              children: swarms.values.map((s) => _buildSwarmSummaryCard(s)).toList(),
+              children:
+                  swarms.values.map((s) => _buildSwarmSummaryCard(s)).toList(),
             ),
 
             const SizedBox(height: 44),
@@ -600,11 +691,13 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.psychology_rounded, color: SwarmColors.agentCyan, size: 20),
+                    const Icon(Icons.psychology_rounded,
+                        color: SwarmColors.agentCyan, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       'COMPLETE MODEL LIBRARY (${filteredModels.length} / ${allModels.length})',
-                      style: SwarmTextStyles.title.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: SwarmTextStyles.title
+                          .copyWith(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -622,14 +715,17 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, color: SwarmColors.textMuted, size: 20),
+                  const Icon(Icons.search_rounded,
+                      color: SwarmColors.textMuted, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       style: const TextStyle(color: SwarmColors.textPrimary),
                       decoration: const InputDecoration(
-                        hintText: 'Search 120+ models by name, role, ID, provider, or keywords (e.g. "Claude", "NIM", "Sale", "Coder", "GLM")...',
-                        hintStyle: TextStyle(color: SwarmColors.textMuted, fontSize: 13),
+                        hintText:
+                            'Search 120+ models by name, role, ID, provider, or keywords (e.g. "Claude", "NIM", "Sale", "Coder", "GLM")...',
+                        hintStyle: TextStyle(
+                            color: SwarmColors.textMuted, fontSize: 13),
                         border: InputBorder.none,
                       ),
                       onChanged: (val) => setState(() => _searchQuery = val),
@@ -637,7 +733,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   ),
                   if (_searchQuery.isNotEmpty)
                     IconButton(
-                      icon: const Icon(Icons.clear, size: 16, color: SwarmColors.textMuted),
+                      icon: const Icon(Icons.clear,
+                          size: 16, color: SwarmColors.textMuted),
                       onPressed: () => setState(() => _searchQuery = ''),
                     ),
                 ],
@@ -650,16 +747,32 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildFilterChip('ALL', 'ALL (${allModels.length})', SwarmColors.accent),
-                _buildFilterChip('TOP MODELS', 'TOP MODELS (${liveCatalog.hasData ? liveCatalog.topFlagshipModels(limit: 50).length : 0} 🏆)', SwarmColors.lucilleCore),
-                _buildFilterChip('LIVE ON SALE', 'LIVE ON SALE (${liveCatalog.hasData ? liveCatalog.onSaleModels.length : 0} 🔥)', SwarmColors.success),
-                _buildFilterChip('LIVE CODING', 'LIVE CODING (TOP ${liveCatalog.topCodingModels(limit: 100).length} 🔴)', SwarmColors.success),
-                _buildFilterChip('NVIDIA NIM', 'NVIDIA NIM ($nvidiaCount FREE)', SwarmColors.agentPurple),
-                _buildFilterChip('OPENROUTER', 'OPENROUTER ($openrouterCount)', SwarmColors.agentCyan),
-                _buildFilterChip('VIDEO', 'VIDEO ($videoCount 🎬)', SwarmColors.agentPink),
-                _buildFilterChip('AUTOROUTER', 'AUTOROUTER ($autoRouterCount ⚡)', SwarmColors.warning),
-                _buildFilterChip('ON SALE', 'ON SALE ($onSaleCount 🔥)', SwarmColors.success),
-                _buildFilterChip('LOCAL', 'LOCAL OFFLINE (OLLAMA)', SwarmColors.textMuted),
+                _buildFilterChip(
+                    'ALL', 'ALL (${allModels.length})', SwarmColors.accent),
+                _buildFilterChip(
+                    'TOP MODELS',
+                    'TOP MODELS (${liveCatalog.hasData ? liveCatalog.topFlagshipModels(limit: 50).length : 0} 🏆)',
+                    SwarmColors.lucilleCore),
+                _buildFilterChip(
+                    'LIVE ON SALE',
+                    'LIVE ON SALE (${liveCatalog.hasData ? liveCatalog.onSaleModels.length : 0} 🔥)',
+                    SwarmColors.success),
+                _buildFilterChip(
+                    'LIVE CODING',
+                    'LIVE CODING (TOP ${liveCatalog.topCodingModels(limit: 100).length} 🔴)',
+                    SwarmColors.success),
+                _buildFilterChip('NVIDIA NIM', 'NVIDIA NIM ($nvidiaCount FREE)',
+                    SwarmColors.agentPurple),
+                _buildFilterChip('OPENROUTER', 'OPENROUTER ($openrouterCount)',
+                    SwarmColors.agentCyan),
+                _buildFilterChip(
+                    'VIDEO', 'VIDEO ($videoCount 🎬)', SwarmColors.agentPink),
+                _buildFilterChip('AUTOROUTER',
+                    'AUTOROUTER ($autoRouterCount ⚡)', SwarmColors.warning),
+                _buildFilterChip('ON SALE', 'ON SALE ($onSaleCount 🔥)',
+                    SwarmColors.success),
+                _buildFilterChip(
+                    'LOCAL', 'LOCAL OFFLINE (OLLAMA)', SwarmColors.textMuted),
                 _buildLiveCategoryChip(),
               ],
             ),
@@ -671,22 +784,33 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
             Row(
               children: [
                 Icon(
-                  liveCatalog.hasData ? Icons.wifi_tethering : (liveCatalog.loading ? Icons.sync : Icons.wifi_off),
+                  liveCatalog.hasData
+                      ? Icons.wifi_tethering
+                      : (liveCatalog.loading ? Icons.sync : Icons.wifi_off),
                   size: 13,
-                  color: liveCatalog.hasData ? SwarmColors.success : SwarmColors.textMuted,
+                  color: liveCatalog.hasData
+                      ? SwarmColors.success
+                      : SwarmColors.textMuted,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   liveCatalog.hasData
                       ? 'Live: ${liveCatalog.all.length} models from OpenRouter${liveCatalog.fetchedAt != null ? ' · fetched ${_timeAgo(liveCatalog.fetchedAt!)}' : ''}${deadCount > 0 ? ' · $deadCount static entries hidden (not on OpenRouter right now)' : ''}'
-                      : (liveCatalog.loading ? 'Fetching live OpenRouter catalog…' : 'Live catalog not loaded yet — showing static list only'),
-                  style: const TextStyle(color: SwarmColors.textMuted, fontSize: 11),
+                      : (liveCatalog.loading
+                          ? 'Fetching live OpenRouter catalog…'
+                          : 'Live catalog not loaded yet — showing static list only'),
+                  style: const TextStyle(
+                      color: SwarmColors.textMuted, fontSize: 11),
                 ),
                 if (liveCatalog.hasData) ...[
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => liveCatalog.refresh(),
-                    child: const Text('Refresh', style: TextStyle(color: SwarmColors.agentCyan, fontSize: 11, fontWeight: FontWeight.w600)),
+                    child: const Text('Refresh',
+                        style: TextStyle(
+                            color: SwarmColors.agentCyan,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ],
               ],
@@ -737,9 +861,12 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                 child: Center(
                   child: Text(
                     (_selectedFilter == 'LIVE CODING' && liveCatalog.loading) ||
-                            (_selectedFilter == 'LIVE CATEGORY' && _loadingLiveCategory)
+                            (_selectedFilter == 'LIVE CATEGORY' &&
+                                _loadingLiveCategory)
                         ? 'Fetching live results from OpenRouter…'
-                        : (_selectedFilter == 'LIVE CODING' || _selectedFilter == 'NVIDIA NIM') && !liveCatalog.hasData
+                        : (_selectedFilter == 'LIVE CODING' ||
+                                    _selectedFilter == 'NVIDIA NIM') &&
+                                !liveCatalog.hasData
                             ? 'Live catalog hasn\'t loaded yet — check your connection and try Refresh above.'
                             : 'No models found matching your search and filter criteria.',
                     style: const TextStyle(color: SwarmColors.textMuted),
@@ -750,7 +877,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               Wrap(
                 spacing: 16,
                 runSpacing: 16,
-                children: filteredModels.map((m) => _buildModelCard(m)).toList(),
+                children:
+                    filteredModels.map((m) => _buildModelCard(m)).toList(),
               ),
           ],
         ),
@@ -837,7 +965,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
             : Colors.black.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDefault ? SwarmColors.accent : cardAccent.withValues(alpha: 0.5),
+          color: isDefault
+              ? SwarmColors.accent
+              : cardAccent.withValues(alpha: 0.5),
           width: isDefault ? 1.5 : 1.0,
         ),
       ),
@@ -860,21 +990,29 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               ),
               if (isDefault)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: SwarmColors.accent,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text('DEFAULT', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
+                  child: const Text('DEFAULT',
+                      style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold)),
                 ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(s.role, style: const TextStyle(color: SwarmColors.textMuted, fontSize: 11.5)),
+          Text(s.role,
+              style: const TextStyle(
+                  color: SwarmColors.textMuted, fontSize: 11.5)),
           const SizedBox(height: 10),
           Text(
             'Est. Cost: ${s.estimatedPrice ?? "FREE"}',
-            style: TextStyle(color: cardAccent, fontSize: 11.5, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: cardAccent, fontSize: 11.5, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
           Container(
@@ -888,32 +1026,39 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               children: [
                 Text(
                   'MODELS LISTED (${s.models.length}):',
-                  style: const TextStyle(color: SwarmColors.textMuted, fontSize: 8.5, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: SwarmColors.textMuted,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 ...s.models.map((m) => Padding(
-                  padding: const EdgeInsets.only(bottom: 2.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '• ${m.name} (${m.role})',
-                          style: const TextStyle(color: SwarmColors.textSecondary, fontSize: 10),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      padding: const EdgeInsets.only(bottom: 2.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '• ${m.name} (${m.role})',
+                              style: const TextStyle(
+                                  color: SwarmColors.textSecondary,
+                                  fontSize: 10),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            m.pricePer1M ?? 'FREE',
+                            style: TextStyle(
+                              color: m.pricePer1M == 'FREE'
+                                  ? SwarmColors.success
+                                  : SwarmColors.agentSky,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        m.pricePer1M ?? 'FREE',
-                        style: TextStyle(
-                          color: m.pricePer1M == 'FREE' ? SwarmColors.success : SwarmColors.agentSky,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
+                    )),
               ],
             ),
           ),
@@ -926,7 +1071,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                 child: SizedBox(
                   height: 32,
                   child: ElevatedButton.icon(
-                    onPressed: () => _assignModelToAgent(s.id, s.name, isVideo: isVideo, isAuto: isAuto),
+                    onPressed: () => _assignModelToAgent(s.id, s.name,
+                        isVideo: isVideo, isAuto: isAuto),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: cardAccent.withValues(alpha: 0.18),
                       foregroundColor: cardAccent,
@@ -934,7 +1080,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
-                        side: BorderSide(color: cardAccent.withValues(alpha: 0.6)),
+                        side: BorderSide(
+                            color: cardAccent.withValues(alpha: 0.6)),
                       ),
                     ),
                     icon: Icon(
@@ -970,10 +1117,12 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                     border: Border.all(color: SwarmColors.border),
                   ),
                   child: const Center(
-                    child: Icon(Icons.person_add_alt_1_rounded, size: 13, color: SwarmColors.textSecondary),
+                    child: Icon(Icons.person_add_alt_1_rounded,
+                        size: 13, color: SwarmColors.textSecondary),
                   ),
                 ),
-                onSelected: (agentId) => _assignModelToAgent(s.id, s.name, specificAgentId: agentId, isVideo: isVideo, isAuto: isAuto),
+                onSelected: (agentId) => _assignModelToAgent(s.id, s.name,
+                    specificAgentId: agentId, isVideo: isVideo, isAuto: isAuto),
                 itemBuilder: (context) => [
                   ...agents.map((a) => PopupMenuItem(
                         value: a.id,
@@ -981,7 +1130,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                           children: [
                             AgentAvatar(agentId: a.id, size: 16),
                             const SizedBox(width: 8),
-                            Text('Assign to ${a.name}', style: const TextStyle(fontSize: 12, color: Colors.white)),
+                            Text('Assign to ${a.name}',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.white)),
                           ],
                         ),
                       )),
@@ -990,9 +1141,14 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                     value: 'all',
                     child: Row(
                       children: [
-                        Icon(Icons.public_rounded, size: 14, color: SwarmColors.warning),
+                        Icon(Icons.public_rounded,
+                            size: 14, color: SwarmColors.warning),
                         SizedBox(width: 8),
-                        Text('Assign to All Agents', style: TextStyle(fontSize: 12, color: SwarmColors.warning, fontWeight: FontWeight.bold)),
+                        Text('Assign to All Agents',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: SwarmColors.warning,
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -1068,7 +1224,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                 decoration: BoxDecoration(
                   color: providerColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: providerColor.withValues(alpha: 0.4)),
+                  border:
+                      Border.all(color: providerColor.withValues(alpha: 0.4)),
                 ),
                 child: Text(
                   m.provider.name.toUpperCase(),
@@ -1085,20 +1242,27 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   if (isVideo)
                     Container(
                       margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: SwarmColors.agentPink.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: SwarmColors.agentPink.withValues(alpha: 0.6)),
+                        border: Border.all(
+                            color:
+                                SwarmColors.agentPink.withValues(alpha: 0.6)),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.videocam_rounded, color: SwarmColors.agentPink, size: 10),
+                          Icon(Icons.videocam_rounded,
+                              color: SwarmColors.agentPink, size: 10),
                           SizedBox(width: 3),
                           Text(
                             'VIDEO',
-                            style: TextStyle(color: SwarmColors.agentPink, fontSize: 8.5, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                color: SwarmColors.agentPink,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -1106,27 +1270,34 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   if (isAuto)
                     Container(
                       margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: SwarmColors.warning.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: SwarmColors.warning.withValues(alpha: 0.6)),
+                        border: Border.all(
+                            color: SwarmColors.warning.withValues(alpha: 0.6)),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.alt_route_rounded, color: SwarmColors.warning, size: 10),
+                          Icon(Icons.alt_route_rounded,
+                              color: SwarmColors.warning, size: 10),
                           SizedBox(width: 3),
                           Text(
                             'AUTOROUTER',
-                            style: TextStyle(color: SwarmColors.warning, fontSize: 8.5, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                color: SwarmColors.warning,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     ),
                   if (m.isOnSale)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: SwarmColors.success.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
@@ -1135,11 +1306,15 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.local_fire_department, color: SwarmColors.success, size: 10),
+                          const Icon(Icons.local_fire_department,
+                              color: SwarmColors.success, size: 10),
                           const SizedBox(width: 2),
                           Text(
                             m.saleDiscount ?? 'SALE',
-                            style: const TextStyle(color: SwarmColors.success, fontSize: 8.5, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                color: SwarmColors.success,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -1207,7 +1382,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         m.pricePer1M ?? 'FREE',
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: m.pricePer1M == 'FREE' ? SwarmColors.success : SwarmColors.accentSky,
+                          color: m.pricePer1M == 'FREE'
+                              ? SwarmColors.success
+                              : SwarmColors.accentSky,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1232,14 +1409,16 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
               ),
               if (m.contextWindow != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: SwarmColors.bgElevated,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     m.contextWindow!,
-                    style: const TextStyle(color: SwarmColors.textMuted, fontSize: 9),
+                    style: const TextStyle(
+                        color: SwarmColors.textMuted, fontSize: 9),
                   ),
                 ),
             ],
@@ -1253,13 +1432,15 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                 child: SizedBox(
                   height: 32,
                   child: ElevatedButton.icon(
-                    onPressed: () => _assignModelToAgent(m.id, m.name, isVideo: isVideo, isAuto: isAuto),
+                    onPressed: () => _assignModelToAgent(m.id, m.name,
+                        isVideo: isVideo, isAuto: isAuto),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isAuto
                           ? SwarmColors.warning.withValues(alpha: 0.22)
                           : isVideo
                               ? SwarmColors.agentPink.withValues(alpha: 0.22)
-                              : (_selectedAgent?.accent ?? SwarmColors.accent).withValues(alpha: 0.15),
+                              : (_selectedAgent?.accent ?? SwarmColors.accent)
+                                  .withValues(alpha: 0.15),
                       foregroundColor: isAuto
                           ? SwarmColors.warning
                           : isVideo
@@ -1274,7 +1455,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                               ? SwarmColors.warning.withValues(alpha: 0.7)
                               : isVideo
                                   ? SwarmColors.agentPink.withValues(alpha: 0.7)
-                                  : (_selectedAgent?.accent ?? SwarmColors.accent).withValues(alpha: 0.5),
+                                  : (_selectedAgent?.accent ??
+                                          SwarmColors.accent)
+                                      .withValues(alpha: 0.5),
                         ),
                       ),
                     ),
@@ -1311,10 +1494,12 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                     border: Border.all(color: SwarmColors.border),
                   ),
                   child: const Center(
-                    child: Icon(Icons.person_add_alt_1_rounded, size: 13, color: SwarmColors.textSecondary),
+                    child: Icon(Icons.person_add_alt_1_rounded,
+                        size: 13, color: SwarmColors.textSecondary),
                   ),
                 ),
-                onSelected: (agentId) => _assignModelToAgent(m.id, m.name, specificAgentId: agentId, isVideo: isVideo, isAuto: isAuto),
+                onSelected: (agentId) => _assignModelToAgent(m.id, m.name,
+                    specificAgentId: agentId, isVideo: isVideo, isAuto: isAuto),
                 itemBuilder: (context) => [
                   ...agents.map((a) => PopupMenuItem(
                         value: a.id,
@@ -1322,7 +1507,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                           children: [
                             AgentAvatar(agentId: a.id, size: 16),
                             const SizedBox(width: 8),
-                            Text('Assign to ${a.name}', style: const TextStyle(fontSize: 12, color: Colors.white)),
+                            Text('Assign to ${a.name}',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.white)),
                           ],
                         ),
                       )),
@@ -1331,9 +1518,14 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                     value: 'all',
                     child: Row(
                       children: [
-                        Icon(Icons.public_rounded, size: 14, color: SwarmColors.warning),
+                        Icon(Icons.public_rounded,
+                            size: 14, color: SwarmColors.warning),
                         SizedBox(width: 8),
-                        Text('Assign to All Agents', style: TextStyle(fontSize: 12, color: SwarmColors.warning, fontWeight: FontWeight.bold)),
+                        Text('Assign to All Agents',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: SwarmColors.warning,
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -1350,16 +1542,24 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
     final voiceService = ref.read(nvidiaVoiceServiceProvider);
     final ragService = ref.read(nvidiaRagServiceProvider);
     final imageService = ref.read(nvidiaImageServiceProvider);
+    final telemetry = ref.watch(nimSkillTelemetryProvider);
+    final balance = ref.watch(openRouterBalanceProvider);
 
     const nimSkills = NvidiaNimSkillRegistry.all;
-    final freeNimModels = catalog.hasData ? catalog.nvidiaNimFree : <LiveModel>[];
+    final liveDefaultCount =
+        nimSkills.where((skill) => catalog.exists(skill.defaultModelId)).length;
+    final latestRun = telemetry.mostRecent;
+    final latestSkill = latestRun == null
+        ? null
+        : NvidiaNimSkillRegistry.byId(latestRun.skillId);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF130D26),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SwarmColors.agentPurple.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(
+            color: SwarmColors.agentPurple.withValues(alpha: 0.5), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: SwarmColors.agentPurple.withValues(alpha: 0.08),
@@ -1372,7 +1572,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.dashboard_customize_rounded, color: SwarmColors.agentPurple, size: 20),
+              const Icon(Icons.dashboard_customize_rounded,
+                  color: SwarmColors.agentPurple, size: 20),
               const SizedBox(width: 8),
               Text(
                 'NVIDIA NIM HEALTH & COST DASHBOARD',
@@ -1388,10 +1589,11 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                 decoration: BoxDecoration(
                   color: SwarmColors.agentPurple.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: SwarmColors.agentPurple.withValues(alpha: 0.4)),
+                  border: Border.all(
+                      color: SwarmColors.agentPurple.withValues(alpha: 0.4)),
                 ),
                 child: Text(
-                  '${freeNimModels.length} FREE NIMs LIVE',
+                  '$liveDefaultCount/${nimSkills.length} SKILL ROUTES LIVE',
                   style: const TextStyle(
                     color: SwarmColors.agentPurple,
                     fontSize: 10,
@@ -1399,6 +1601,36 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                     fontFamily: 'JetBrains Mono',
                   ),
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildNimStatusChip(
+                icon: Icons.account_balance_wallet_outlined,
+                label: balance.when(
+                  data: (value) => 'OPENROUTER $value',
+                  loading: () => 'OPENROUTER CHECKING',
+                  error: (_, __) => 'OPENROUTER OFFLINE',
+                ),
+                color: SwarmColors.agentCyan,
+              ),
+              _buildNimStatusChip(
+                icon: Icons.speed_rounded,
+                label: latestRun == null
+                    ? 'NO SKILL RUNS THIS SESSION'
+                    : 'LAST ${latestSkill?.name ?? latestRun.skillId} · ${_formatNimLatency(latestRun.latency)}',
+                color: latestRun?.succeeded == false
+                    ? SwarmColors.error
+                    : SwarmColors.success,
+              ),
+              _buildNimStatusChip(
+                icon: Icons.cloud_outlined,
+                label: 'PER-SKILL QUOTA MANAGED BY PROVIDER',
+                color: SwarmColors.textSecondary,
               ),
             ],
           ),
@@ -1410,9 +1642,27 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
             runSpacing: 12,
             children: nimSkills.map((skill) {
               final isFree = skill.costTier == NimSkillCostTier.free;
-              final liveModel = freeNimModels.where((m) => m.id == skill.defaultModelId).firstOrNull;
-              final isAvailable = liveModel != null;
-              final statusColor = isAvailable ? SwarmColors.success : SwarmColors.error;
+              final liveModel = catalog.byId(skill.defaultModelId);
+              final fallbackModel = skill.fallbackModelId == null
+                  ? null
+                  : catalog.byId(skill.fallbackModelId!);
+              final routedModel = liveModel ?? fallbackModel;
+              final isAvailable = routedModel != null;
+              final wouldFallback = liveModel == null && fallbackModel != null;
+              final fallbackIsPaid = wouldFallback && !fallbackModel.isFree;
+              final lastRun = telemetry.forSkill(skill.id);
+              final statusColor = !isAvailable
+                  ? SwarmColors.error
+                  : wouldFallback
+                      ? SwarmColors.warning
+                      : SwarmColors.success;
+              final statusLabel = !isAvailable
+                  ? 'UNAVAILABLE'
+                  : fallbackIsPaid
+                      ? 'PAID FALLBACK'
+                      : wouldFallback
+                          ? 'FREE FALLBACK'
+                          : 'LIVE';
 
               return Container(
                 width: 280,
@@ -1433,14 +1683,16 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: statusColor.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                            border: Border.all(
+                                color: statusColor.withValues(alpha: 0.4)),
                           ),
                           child: Text(
-                            isAvailable ? 'LIVE' : 'UNAVAILABLE',
+                            statusLabel,
                             style: TextStyle(
                               color: statusColor,
                               fontSize: 7.5,
@@ -1451,11 +1703,15 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         const SizedBox(width: 8),
                         if (isFree)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: SwarmColors.success.withValues(alpha: 0.15),
+                              color:
+                                  SwarmColors.success.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: SwarmColors.success.withValues(alpha: 0.4)),
+                              border: Border.all(
+                                  color: SwarmColors.success
+                                      .withValues(alpha: 0.4)),
                             ),
                             child: const Text(
                               'FREE',
@@ -1507,7 +1763,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                           child: Text(
                             'Cost: ${skill.costTier.name.toUpperCase()}',
                             style: TextStyle(
-                              color: isFree ? SwarmColors.success : SwarmColors.warning,
+                              color: isFree
+                                  ? SwarmColors.success
+                                  : SwarmColors.warning,
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1515,7 +1773,7 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                         ),
                         if (isAvailable)
                           Text(
-                            liveModel.pricePer1MDisplay,
+                            routedModel.pricePer1MDisplay,
                             style: const TextStyle(
                               color: SwarmColors.success,
                               fontSize: 9,
@@ -1525,6 +1783,43 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                           ),
                       ],
                     ),
+                    if (lastRun != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: (lastRun.succeeded
+                                  ? SwarmColors.success
+                                  : SwarmColors.error)
+                              .withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: (lastRun.succeeded
+                                    ? SwarmColors.success
+                                    : SwarmColors.error)
+                                .withValues(alpha: 0.30),
+                          ),
+                        ),
+                        child: Text(
+                          '${lastRun.succeeded ? "LAST RUN OK" : "LAST RUN FAILED"} · '
+                          '${_formatNimLatency(lastRun.latency)} · '
+                          '${lastRun.usedPaidRoute ? "PAID" : "FREE"}'
+                          '${lastRun.usedFallback ? " FALLBACK" : ""}',
+                          style: TextStyle(
+                            color: lastRun.succeeded
+                                ? SwarmColors.success
+                                : SwarmColors.error,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'JetBrains Mono',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               );
@@ -1544,7 +1839,8 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                   () async {
                     // Would need an audio file - placeholder
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('STT test requires audio file input')),
+                      const SnackBar(
+                          content: Text('STT test requires audio file input')),
                     );
                   },
                 ),
@@ -1587,7 +1883,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                       ]);
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Embedded ${vectors.length} chunks, dim=${vectors.first.length}')),
+                        SnackBar(
+                            content: Text(
+                                'Embedded ${vectors.length} chunks, dim=${vectors.first.length}')),
                       );
                     } catch (e) {
                       if (!mounted) return;
@@ -1611,7 +1909,9 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
                       );
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Image: ${img.url.isNotEmpty ? "OK" : "No URL"}')),
+                        SnackBar(
+                            content: Text(
+                                'Image: ${img.url.isNotEmpty ? "OK" : "No URL"}')),
                       );
                     } catch (e) {
                       if (!mounted) return;
@@ -1629,7 +1929,46 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
     );
   }
 
-  Widget _buildNimTestButton(String label, IconData icon, Color color, VoidCallback onPressed) {
+  String _formatNimLatency(Duration latency) {
+    if (latency.inMilliseconds < 1000) {
+      return '${latency.inMilliseconds}ms';
+    }
+    return '${(latency.inMilliseconds / 1000).toStringAsFixed(1)}s';
+  }
+
+  Widget _buildNimStatusChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 8.5,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'JetBrains Mono',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNimTestButton(
+      String label, IconData icon, Color color, VoidCallback onPressed) {
     return SizedBox(
       height: 40,
       child: ElevatedButton.icon(

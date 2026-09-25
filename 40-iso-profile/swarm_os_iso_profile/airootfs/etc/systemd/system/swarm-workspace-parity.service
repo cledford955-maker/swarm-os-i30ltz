@@ -1,0 +1,20 @@
+[Unit]
+Description=SWARM workspace SHA-256 parity check
+After=local-fs.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/swarm-workspace-parity
+ExecStart=/usr/local/bin/swarm-workspace-parity --source ${SWARM_PARITY_SOURCE} --mirror ${SWARM_PARITY_MIRROR} --manifest-dir ${SWARM_PARITY_OUTPUT} --skip-missing --require-mounts
+StateDirectory=swarm/workspace-parity
+StateDirectoryMode=0700
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=-/mnt/Lucy -/run/media/i30ltz/lucy-master
+ReadWritePaths=/var/lib/swarm/workspace-parity
+CapabilityBoundingSet=
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictSUIDSGID=yes

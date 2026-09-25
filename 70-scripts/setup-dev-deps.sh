@@ -27,7 +27,36 @@ sudo pacman -Sy --needed \
     libgtk-3-0 \
     gtk3 \
     curl \
-    unzip
+    unzip \
+    gitleaks
+
+# ── Git pre-commit hook: secret scanner ─────────────────────────────────────
+# Catches credentials before they reach the 10-minute auto-sync commits.
+# Closes audit standing item av4.
+HOOK="/mnt/Lucy/.git/hooks/pre-commit"
+if [ ! -f "$HOOK" ]; then
+    echo "Installing gitleaks pre-commit hook..."
+    mkdir -p "$(dirname "$HOOK")"
+    cat > "$HOOK" <<'HOOK_EOF'
+#!/usr/bin/env bash
+# SWARM OS — gitleaks pre-commit secret scanner.
+# Installed by setup-dev-deps.sh. Blocks commits that contain secrets.
+if ! command -v gitleaks &>/dev/null; then
+    echo "[pre-commit] gitleaks not found — skipping secret scan"
+    exit 0
+fi
+gitleaks protect --staged --no-banner || {
+    echo ""
+    echo "[pre-commit] gitleaks: secret detected — commit aborted."
+    echo "If this is a false positive, commit with: git commit --no-verify"
+    exit 1
+}
+HOOK_EOF
+    chmod 755 "$HOOK"
+    echo "✓ Pre-commit hook installed at $HOOK"
+else
+    echo "Pre-commit hook already exists at $HOOK — not overwritten."
+fi
 
 echo ""
 echo "All done. Flutter SDK is at /mnt/Lucy/30-source/flutter-sdk/"

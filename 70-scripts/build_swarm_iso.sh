@@ -287,6 +287,10 @@ echo -e "  ${GREEN}✓ lucille-core staged to /usr/bin/lucille-core.${NC}"
 # Local diagnostic export, shared by Telemetry UI and CLI.
 install -Dm755 "$LUCY/70-scripts/collect_swarm_diagnostics.py" "$AIROOTFS/usr/local/bin/swarm-diagnostics"
 
+# Read-only source/mirror SHA-256 parity checker. The timer skips cleanly when
+# the encrypted mirror is not mounted and writes reports outside both trees.
+install -Dm755 "$LUCY/70-scripts/swarm_workspace_parity.py" "$AIROOTFS/usr/local/bin/swarm-workspace-parity"
+
 # Lucille's OS-wide wake-word listener (lucille-wake-listener.service). The
 # Vosk model is fetched once into a persistent cache outside $WORK_DIR (which
 # gets wiped every run) so repeat builds don't re-download ~40MB every time.

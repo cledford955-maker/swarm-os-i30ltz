@@ -45,4 +45,3 @@ class NimSkillTelemetry extends ChangeNotifier {
     notifyListeners();
   }
 }
-

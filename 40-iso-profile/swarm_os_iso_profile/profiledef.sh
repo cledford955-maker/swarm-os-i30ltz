@@ -57,7 +57,11 @@ file_permissions=(
   ["/usr/local/bin/swarm-memory"]="0:0:755"
   ["/usr/local/bin/swarm-overlay-toggle.sh"]="0:0:755"
   ["/usr/local/bin/swarm-diagnostics"]="0:0:755"
+  ["/usr/local/bin/swarm-workspace-parity"]="0:0:755"
   ["/usr/local/bin/lucille_wake_listener.py"]="0:0:755"
+  ["/etc/default/swarm-workspace-parity"]="0:0:644"
+  ["/etc/systemd/system/swarm-workspace-parity.service"]="0:0:644"
+  ["/etc/systemd/system/swarm-workspace-parity.timer"]="0:0:644"
   ["/usr/bin/lucille-core"]="0:0:755"
   ["/usr/bin/swarm-session"]="0:0:755"
   # Sealed secrets (2026-09-12, v1.0.0). The plaintext /etc/swarm_os.env is

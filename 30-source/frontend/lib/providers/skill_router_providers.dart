@@ -11,7 +11,8 @@ import '../services/nim_skill_telemetry.dart';
 import 'sentinel_providers.dart';
 
 /// Live model catalog singleton. Notifies listeners when the catalog refreshes.
-final liveModelCatalogProvider = ChangeNotifierProvider<LiveModelCatalogService>((ref) {
+final liveModelCatalogProvider =
+    ChangeNotifierProvider<LiveModelCatalogService>((ref) {
   final service = LiveModelCatalogService();
   service.ensureLoaded();
   ref.onDispose(() {});
@@ -20,7 +21,8 @@ final liveModelCatalogProvider = ChangeNotifierProvider<LiveModelCatalogService>
 
 /// Last-run latency and routing state for the NVIDIA dashboard. The store is
 /// intentionally memory-only and never captures prompts or generated data.
-final nimSkillTelemetryProvider = ChangeNotifierProvider<NimSkillTelemetry>((ref) {
+final nimSkillTelemetryProvider =
+    ChangeNotifierProvider<NimSkillTelemetry>((ref) {
   return NimSkillTelemetry();
 });
 
@@ -30,7 +32,7 @@ final nimSkillTelemetryProvider = ChangeNotifierProvider<NimSkillTelemetry>((ref
 final skillRouterProvider = Provider<SkillRouter>((ref) {
   final catalog = ref.watch(liveModelCatalogProvider);
   final aiClient = ref.watch(aiClientProvider);
-  final telemetry = ref.watch(nimSkillTelemetryProvider);
+  final telemetry = ref.read(nimSkillTelemetryProvider);
   return SkillRouter(
     catalog: catalog,
     aiClient: aiClient,

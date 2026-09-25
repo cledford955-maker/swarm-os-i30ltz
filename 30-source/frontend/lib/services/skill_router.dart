@@ -56,7 +56,8 @@ class SkillRouter {
   }
 
   /// Resolve a skill to a live model ID, validating against the catalog.
-  Future<String> resolveModelId(NimSkill skill, {String? overrideModelId}) async {
+  Future<String> resolveModelId(NimSkill skill,
+      {String? overrideModelId}) async {
     await _catalog.ensureLoaded();
     return skill.resolveModelId(
       overrideModelId: overrideModelId,
@@ -80,13 +81,13 @@ class SkillRouter {
     required Map<String, dynamic> inputs,
     String? overrideModelId,
   }) async {
-    final modelId = await resolveModelId(skill, overrideModelId: overrideModelId);
+    final modelId =
+        await resolveModelId(skill, overrideModelId: overrideModelId);
     final stopwatch = Stopwatch()..start();
     final usedFallback = modelId != skill.defaultModelId;
     final liveModel = _catalog.byId(modelId);
-    final usedPaidRoute = liveModel != null
-        ? !liveModel.isFree
-        : !modelId.endsWith(':free');
+    final usedPaidRoute =
+        liveModel != null ? !liveModel.isFree : !modelId.endsWith(':free');
 
     try {
       late final Map<String, dynamic> result;
@@ -176,7 +177,8 @@ class SkillRouter {
         inputs['usdSnippet'] as String? ??
         '';
     if (prompt.isEmpty) {
-      throw SkillRouterException('Skill ${skill.id} requires a prompt/context input');
+      throw SkillRouterException(
+          'Skill ${skill.id} requires a prompt/context input');
     }
 
     final buffer = StringBuffer();
@@ -201,7 +203,8 @@ class SkillRouter {
   ) async {
     final audio = inputs['audio'];
     if (audio is! File) {
-      throw SkillRouterException('Skill ${skill.id} requires an audio File input');
+      throw SkillRouterException(
+          'Skill ${skill.id} requires an audio File input');
     }
     if (!audio.existsSync()) {
       throw SkillRouterException('Audio file does not exist: ${audio.path}');
@@ -221,7 +224,8 @@ class SkillRouter {
     final response = await _httpClient.send(request);
     final body = await response.stream.transform(utf8.decoder).join();
     if (response.statusCode != 200) {
-      throw SkillRouterException('STT failed: HTTP ${response.statusCode} — $body');
+      throw SkillRouterException(
+          'STT failed: HTTP ${response.statusCode} — $body');
     }
     final json = jsonDecode(body) as Map<String, dynamic>;
     return {'text': json['text'] as String? ?? ''};
@@ -252,7 +256,8 @@ class SkillRouter {
     );
 
     if (response.statusCode != 200) {
-      throw SkillRouterException('TTS failed: HTTP ${response.statusCode} — ${response.body}');
+      throw SkillRouterException(
+          'TTS failed: HTTP ${response.statusCode} — ${response.body}');
     }
 
     final tempDir = await getTemporaryDirectory();
@@ -267,11 +272,11 @@ class SkillRouter {
     Map<String, dynamic> inputs,
   ) async {
     final raw = inputs['inputs'];
-    final List<String> chunks = (raw is List)
-        ? raw.whereType<String>().toList()
-        : [raw.toString()];
+    final List<String> chunks =
+        (raw is List) ? raw.whereType<String>().toList() : [raw.toString()];
     if (chunks.isEmpty) {
-      throw SkillRouterException('Skill ${skill.id} requires a non-empty inputs list');
+      throw SkillRouterException(
+          'Skill ${skill.id} requires a non-empty inputs list');
     }
 
     final apiKey = await _apiKey();
@@ -288,7 +293,8 @@ class SkillRouter {
     );
 
     if (response.statusCode != 200) {
-      throw SkillRouterException('Embeddings failed: HTTP ${response.statusCode} — ${response.body}');
+      throw SkillRouterException(
+          'Embeddings failed: HTTP ${response.statusCode} — ${response.body}');
     }
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -311,7 +317,8 @@ class SkillRouter {
     final List<String> documents =
         (docs is List) ? docs.whereType<String>().toList() : [docs.toString()];
     if (query.isEmpty || documents.isEmpty) {
-      throw SkillRouterException('Skill ${skill.id} requires query and documents');
+      throw SkillRouterException(
+          'Skill ${skill.id} requires query and documents');
     }
 
     final apiKey = await _apiKey();
@@ -329,7 +336,8 @@ class SkillRouter {
     );
 
     if (response.statusCode != 200) {
-      throw SkillRouterException('Rerank failed: HTTP ${response.statusCode} — ${response.body}');
+      throw SkillRouterException(
+          'Rerank failed: HTTP ${response.statusCode} — ${response.body}');
     }
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -371,12 +379,15 @@ class SkillRouter {
     );
 
     if (response.statusCode != 200) {
-      throw SkillRouterException('Image generation failed: HTTP ${response.statusCode} — ${response.body}');
+      throw SkillRouterException(
+          'Image generation failed: HTTP ${response.statusCode} — ${response.body}');
     }
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;
     final data = json['data'] as List<dynamic>? ?? [];
-    final url = data.isNotEmpty ? (data.first as Map<String, dynamic>)['url'] as String? : null;
+    final url = data.isNotEmpty
+        ? (data.first as Map<String, dynamic>)['url'] as String?
+        : null;
     return {'image': url ?? ''};
   }
 

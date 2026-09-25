@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:swarm_os_frontend/services/nim_skill_telemetry.dart';
+import 'package:swarm_flutter/services/nim_skill_telemetry.dart';
 
 void main() {
   test('stores only the latest run for each skill and finds most recent', () {

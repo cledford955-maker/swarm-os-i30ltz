@@ -61,6 +61,7 @@
 - [x] Shared-memory sync (`swarm-memory`) built and tested v1.0.0
 - [x] **Rich `/api/health` endpoint in LucyServer-go** (2026-09-24) — returns `status`, `version`, `build_date`, `uptime_seconds`, `lucy_mount_gb_used/total`, and `services` map (`lucy_server`, `gaming_agent`, `google_workspace`). Registered at both `/health` and `/api/health`. Fixes offline-fabrication warnings across Companion, wallpaper service, and Lucille Assistant.
 - [x] **SHA-256 checksum + optional GPG signature on ISO build** (2026-09-24) — `build_swarm_iso.sh` now generates `<iso>.sha256` after every successful publish; if `swarm-sign@swarmos.dev` GPG key exists, also emits `<iso>.sha256.asc`. Fixes audit finding au7 (no integrity artifact alongside ISO).
+- [x] **SwarmHealthService + OSD HUD + Backend page wired to /api/health** (2026-09-25) — new `SwarmHealthService` polls LucyServer's `/api/health` every 10s, parses version/uptime/disk/services into `SwarmHealthSnapshot`, streams via Riverpod. OSD HUD now shows LUCY/GAME backend indicators, LUCILLE disk gauge, and SWARM version badge alongside existing CPU/RAM/temp. Staleness guard: >60s without a response → offline state, never stale numbers. Backend page updated: LucyServer entry corrected from `.NET 8 Kestrel` to `Go`; GamingAgent (port 8401) added; Tailscale port fixed (was 9091, same as lucille_core). 5 unit tests, zero analysis errors. Fixes daily-audit item av-1 (health endpoint unwired) and §3 upgrade #1 + #4.
 
 ### Companion / Android
 - [x] **Four private project repositories with ten-minute autosync** (2026-09-24): SWARM OS, I30LTZ Recovery OS, I30LTZ Companion, and Lucille Assistant each have their own GitHub destination. All four pushes verified; backup-file and oversized-unpublished-archive blockers repaired. See `70-scripts/GITHUB_AUTOSYNC.md`.
@@ -77,16 +78,16 @@
 
 ### Urgent boot blockers — 2026-09-24
 - [~] **Kiosk terminal collision and non-executable Flutter binary** — reproduced in an existing ISO VM and repaired in source/staging. ReserveVT moved from tty1 to tty6, getty/Plymouth handoff ordered, missing executable modes added to profiledef. Modified guest rendered Flutter splash and both backends returned HTTP 200. Fresh canonical ISO and physical boot pending; see `70-scripts/DESKTOP_BOOT_REPAIR.md`.
-- [x] **Desktop session cleanup on launcher death** — `KillMode=control-group`, `KillSignal=SIGTERM`, `TimeoutStopSec=10` added to `swarm-ui.service`; `ExecStartPre` pkill clears stale labwc/swarm_flutter before restart; `ExecStopPost` mirrors cleanup. `ExecStart` updated to `dbus-run-session -- /usr/bin/swarm-session`. Scope-lifecycle fix landed 2026-09-24.
+- [x] **Desktop session cleanup on launcher death** — `KillMode=control-group`, `KillSignal=SIGTERM`, `TimeoutStopSec=10` added to `swarm-ui.service`; `ExecStartPre` pkill clears stale labwc/swarm_flutter before restart; `ExecStopPost` mirrors cleanup. `ExecStart` updated to `dbus-run-session -- /usr/bin/swarm-session`. Scope-lifecycle fix landed 2026-09-24. **Superseded 2026-09-25:** `pkill -u swarm` lines replaced by `/usr/lib/swarm/swarm-ui-cleanup.sh` which reads the desktop user from the unit (so it works for both `swarm` and `i30ltz`), terminates the tty1 logind session scope (catching swarm-slint, which the old lines missed), and escalates to SIGKILL after 3s. 11 boot-contract tests.
 
 ### 2.1 System Reliability
 - [~] **Verify systemd hardware watchdog on installed SWARM OS**
   - File already staged; needs a real boot test and `systemctl show | grep -i watchdog`
 
 - [~] **Gamescope dynamic FSR upscaling**
-  - `airootfs/usr/bin/swarm-session` created 2026-09-24: Gamescope FSR wrapper with env-override support (SWARM_WIDTH/HEIGHT, SWARM_FSR_SHARPNESS, SWARM_GAMESCOPE_EXTRA); falls back to plain labwc when gamescope not installed.
+  - `airootfs/usr/bin/swarm-session` created 2026-09-24; **rewritten 2026-09-25** — Gamescope is now opt-in (`SWARM_GAMESCOPE=1`), not auto-enabled when present. Original flags (`--width`, `--nested`) are invalid in gamescope 3.16.25; replaced with real flags (`--nested-width`, `--expose-wayland`). Default path runs labwc directly — no Gamescope wrapper by default.
   - `profiledef.sh` updated: `["/usr/bin/swarm-session"]="0:0:755"` ensures executable bits survive mkarchiso `--no-preserve`.
-  - Remaining: fresh ISO build + physical boot verification that FSR is active
+  - Remaining: fresh ISO build + physical boot verification that FSR is active when `SWARM_GAMESCOPE=1`
 
 ### 2.2 Change Journaling & Rollback
 - [!] **Regression found 2026-09-25 (Claude Code):** `test_swarm_router_two_tier_speculation` fails 2 assertions — with empty `workspace_dir`, `route_and_execute()` dry-runs `verify_git_apply_check("", mock_patch)` and the mock Kimi patch doesn't apply, so `success=false` and Tier 3 never runs. Introduced by the checkpoint wiring below. Not fixed — unclaimed.
@@ -126,8 +127,8 @@
 ### 2.5 Companion App & Tailscale Mesh
 - [ ] **Background push notifications for HITL approvals**
 - [ ] **5-second WebSocket ping/pong heartbeat on Tailscale :9091**
-- [ ] **Workspace parity validation (bidirectional rsync manifest check)**
-- [ ] **Continuous mirror integrity verification (SHA-256 tree comparisons)**
+- [~] **Workspace parity validation (bidirectional manifest check)** — implemented 2026-09-25. `70-scripts/swarm_workspace_parity.py` performs a read-only SHA-256 comparison in both directions and reports changed, source-only and mirror-only paths. It excludes secrets, SDKs and generated artifacts, never follows symlinks, and writes private atomic manifests outside both trees. Five fixture tests pass. Actual `/mnt/Lucy` versus reference-mirror comparison pending because `/run/media/i30ltz/lucy-master` was not mounted.
+- [~] **Continuous mirror integrity verification (SHA-256 tree comparisons)** — staged 2026-09-25 as a hardened oneshot service and six-hour persistent timer. It requires both roots to be real mountpoints and cleanly reports `skipped` when the encrypted mirror is absent, preventing an empty mount directory from becoming a false pass. Unit validation passes; fresh ISO boot/timer execution and a mounted-mirror result remain pending. See `70-scripts/WORKSPACE_PARITY.md`.
 
 ### 2.6 System Tuning
 - [~] **TCP MSS clamping on Tailscale via nftables** — implemented 2026-09-24. IPv4/IPv6 downward-only MSS caps on tunnel ingress/egress cover SYN and SYN-ACK, local traffic and forwarding. Fixed existing interface-index matches that made the full firewall fail to load before `tailscale0` existed; added missing live-ISO firewall startup link (installer already enables it). Full rules load and 56 real-packet/checksum cases pass in an isolated network namespace. Fresh SWARM boot and physical tailnet transfer pending; Tailscale installation remains separate. See `70-scripts/TAILSCALE_MSS.md`.
@@ -218,9 +219,10 @@
   - Dedicated `lib/services/physics_ai_service.dart` facade exists and is exposed to Antigravity / UI Tandem
 
 ### 4.9 Blueprint: NVIDIA NIM Health & Cost Dashboard
-- [>] **Add NVIDIA NIM panel to `models_page.dart` — CLAIMED by Codex 2026-09-25 06:43 EDT**
-  - Show free-tier quota status, latency per NIM, last-used skill
-  - Surface when a skill falls back to paid OpenRouter
+- [x] **Add NVIDIA NIM panel to `models_page.dart`** (2026-09-25)
+  - Shows live default/fallback route availability from the OpenRouter catalog and the account balance; per-skill quota is explicitly provider-managed because OpenRouter exposes no trustworthy per-model remaining-call count.
+  - `SkillRouter` records the last completed call per skill with measured latency, selected model, success/failure, and free/paid fallback state. Prompts, outputs, audio and credentials are never recorded.
+  - Dashboard cards surface paid/free fallback before a call and the actual route after a call. Two telemetry tests pass; targeted Flutter analysis is clean.
 
 ### 4.10 Blueprint: ISO / Runtime Staging
 - [x] **Document NVIDIA runtime dependencies** (2026-09-25)
@@ -241,3 +243,4 @@
 *Rebuilt 2026-09-19 from prior `SWARM_OS_IMPLEMENTATION_CHECKLIST.md` and `SWARM_AI_FEATURES.md`.*
 *Updated 2026-09-24 v6.2.72 — session work: checkpoint wiring, Gamescope session wrapper, desktop scope-lifecycle fix, rich /api/health, ISO SHA-256/GPG, NVIDIA facade audit.*
 *Updated 2026-09-25 — Claude Code (Opus 5.5): speculative pipeline hardened + backend injection, entropy filtering in log ingestion, gap-based context pruning; test suite compile fix (missing socket/mman/cstring headers, TEST_ASSERT msg parens) — 116 pass / 2 pre-existing fail.*
+*Updated 2026-09-25 — Claude Code (Opus 4.6): desktop session teardown via logind scope termination; Gamescope launcher made opt-in with valid flags; usr/lib/swarm scripts tracked; SwarmHealthService + OSD HUD + Backend page wired to /api/health; stale profiledef backup removed; ax1/ax2 audit items resolved.*
