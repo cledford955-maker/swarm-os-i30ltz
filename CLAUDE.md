@@ -66,6 +66,7 @@ labwc config lives at:
     GamingAgent/                                 ← .NET 10 (replaced — do not use)
     GamingAgent-go/                              ← Go rewrite, fully active on port 8401
     lucille-core/                                ← C++20 native engine — do not touch
+  lucille-companion/                             ← CANONICAL Android companion (com.swarm.lucille, v1.0.0)
     deploy_swarm_os_foundation.sh                ← stages configs into airootfs
     install_swarm_os.sh                          ← installer run from live USB
   40-iso-profile/swarm_os_iso_profile/

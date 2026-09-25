@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<data-extraction-rules>
-<cloud-backup><exclude domain="sharedpref" path="cdr_git_credentials.xml" /><exclude domain="sharedpref" path="swarm_connection.xml" /><exclude domain="sharedpref" path="swarm_connection_secure.xml" /><exclude domain="sharedpref" path="openrouter_config.xml" /><exclude domain="sharedpref" path="openrouter_config_secure.xml" /></cloud-backup>
-<device-transfer><exclude domain="sharedpref" path="cdr_git_credentials.xml" /><exclude domain="sharedpref" path="swarm_connection.xml" /><exclude domain="sharedpref" path="swarm_connection_secure.xml" /><exclude domain="sharedpref" path="openrouter_config.xml" /><exclude domain="sharedpref" path="openrouter_config_secure.xml" /></device-transfer>
-</data-extraction-rules>
