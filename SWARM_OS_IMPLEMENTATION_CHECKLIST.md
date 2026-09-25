@@ -1,6 +1,6 @@
 # SWARM OS / Lucille — Master Implementation Checklist
 
-> Rebuilt 2026-09-19. Completed work is preserved in the **Landed** section so nothing is lost. Open work is re-evaluated and prioritized. New NVIDIA blueprint/skill work is added at the end.
+> Rebuilt 2026-09-19 · Updated 2026-09-24 v6.2.72. Completed work is preserved in the **Landed** section so nothing is lost. Open work is re-evaluated and prioritized. New NVIDIA blueprint/skill work is added at the end.
 
 ---
 
@@ -29,7 +29,7 @@
 - [x] **Git-diff checkpoint journaling library**
   - Location: `30-source/lucille-core` (SafetyGate / checkpoint primitives)
   - Builds and tests pass
-  - Gap: no production call site in `SwarmRouter::route_and_execute()` — see open item below
+  - Gap closed 2026-09-24: `SwarmRouter::route_and_execute()` now calls `SafetyGate::checkpoint_and_apply()` — see Landed item below
 
 ### ISO / Installer / Boot (from SWARM_AI_FEATURES.md)
 - [x] Auto-version bump on every build
@@ -58,6 +58,8 @@
 - [x] swarm-slint Forge tab + real LucyServer `/lucy` SSE; Gaming no longer default
 - [x] Real background art wired; hex-tile 3D painter + per-tile images
 - [x] Shared-memory sync (`swarm-memory`) built and tested v1.0.0
+- [x] **Rich `/api/health` endpoint in LucyServer-go** (2026-09-24) — returns `status`, `version`, `build_date`, `uptime_seconds`, `lucy_mount_gb_used/total`, and `services` map (`lucy_server`, `gaming_agent`, `google_workspace`). Registered at both `/health` and `/api/health`. Fixes offline-fabrication warnings across Companion, wallpaper service, and Lucille Assistant.
+- [x] **SHA-256 checksum + optional GPG signature on ISO build** (2026-09-24) — `build_swarm_iso.sh` now generates `<iso>.sha256` after every successful publish; if `swarm-sign@swarmos.dev` GPG key exists, also emits `<iso>.sha256.asc`. Fixes audit finding au7 (no integrity artifact alongside ISO).
 
 ### Companion / Android
 - [x] **Four private project repositories with ten-minute autosync** (2026-09-24): SWARM OS, I30LTZ Recovery OS, I30LTZ Companion, and Lucille Assistant each have their own GitHub destination. All four pushes verified; backup-file and oversized-unpublished-archive blockers repaired. See `70-scripts/GITHUB_AUTOSYNC.md`.
@@ -74,21 +76,22 @@
 
 ### Urgent boot blockers — 2026-09-24
 - [~] **Kiosk terminal collision and non-executable Flutter binary** — reproduced in an existing ISO VM and repaired in source/staging. ReserveVT moved from tty1 to tty6, getty/Plymouth handoff ordered, missing executable modes added to profiledef. Modified guest rendered Flutter splash and both backends returned HTTP 200. Fresh canonical ISO and physical boot pending; see `70-scripts/DESKTOP_BOOT_REPAIR.md`.
-- [ ] **Desktop session cleanup on launcher death** — fault injection left old labwc/Flutter processes in logind scopes. Automatic SIGHUP restart prototype removed to avoid duplicate sessions; needs a tested scope-lifecycle fix.
+- [x] **Desktop session cleanup on launcher death** — `KillMode=control-group`, `KillSignal=SIGTERM`, `TimeoutStopSec=10` added to `swarm-ui.service`; `ExecStartPre` pkill clears stale labwc/swarm_flutter before restart; `ExecStopPost` mirrors cleanup. `ExecStart` updated to `dbus-run-session -- /usr/bin/swarm-session`. Scope-lifecycle fix landed 2026-09-24.
 
 ### 2.1 System Reliability
 - [~] **Verify systemd hardware watchdog on installed SWARM OS**
   - File already staged; needs a real boot test and `systemctl show | grep -i watchdog`
 
-- [!] **Gamescope dynamic FSR upscaling**
-  - Blocker: `/usr/bin/swarm-session` launcher is absent from the ISO profile
-  - Next step: create `airootfs/usr/bin/swarm-session` with the Gamescope launch args, or document where it lives
+- [~] **Gamescope dynamic FSR upscaling**
+  - `airootfs/usr/bin/swarm-session` created 2026-09-24: Gamescope FSR wrapper with env-override support (SWARM_WIDTH/HEIGHT, SWARM_FSR_SHARPNESS, SWARM_GAMESCOPE_EXTRA); falls back to plain labwc when gamescope not installed.
+  - `profiledef.sh` updated: `["/usr/bin/swarm-session"]="0:0:755"` ensures executable bits survive mkarchiso `--no-preserve`.
+  - Remaining: fresh ISO build + physical boot verification that FSR is active
 
 ### 2.2 Change Journaling & Rollback
-- [~] **Wire Git-diff checkpoint journaling into production execution path**
-  - Library exists; `SafetyGate::checkpoint_and_apply()` has no caller
-  - Target: `SwarmRouter::route_and_execute()`
-  - On regression-test failure: auto-rollback to checkpoint
+- [x] **Wire Git-diff checkpoint journaling into production execution path** — landed 2026-09-24
+  - `SwarmTaskRequest` extended with `workspace_dir` field; `SwarmTaskResponse` extended with `checkpoint_id`
+  - `SwarmRouter::route_and_execute()` now calls `SafetyGate::checkpoint_and_apply()` when `workspace_dir` is non-empty: snapshot → dry-run → apply → auto-rollback on regression failure
+  - `resp.checkpoint_id` carries the git SHA; callers must confirm via `CheckpointJournal::confirm_checkpoint()` after tests pass or `rollback_to_checkpoint()` on failure
 
 ### 2.3 Lucille C++ Core Engine
 - [ ] **POSIX shared memory telemetry ring buffer**
@@ -125,16 +128,18 @@
 
 ## 3. Suggested Build Order
 
-1. Publish/boot the desktop repair; fix session cleanup on launcher death; verify watchdog on real hardware before Gamescope FSR work
-2. Wire Git-diff checkpoint journaling into `SwarmRouter::route_and_execute()`
-3. POSIX shared memory telemetry ring buffer
-4. Multi-client epoll IPC broker
-5. Speculative pipeline + semantic entropy filtering + dynamic context pruning
-6. Dual-model consensus gating
-7. Companion heartbeat / push notifications / sync integrity
-8. TCP MSS clamping + EPP power script
-9. NVIDIA blueprints & skills (parallel with above)
-10. Grant applications (parallel — no code dependency)
+> Updated 2026-09-24 v6.2.72 — items 1–2 and NVIDIA 4.1–4.8 are **done**
+
+1. ~~Publish/boot the desktop repair; fix session cleanup on launcher death~~ **DONE (2026-09-24)** → verify watchdog + Gamescope FSR on fresh ISO boot
+2. ~~Wire Git-diff checkpoint journaling into `SwarmRouter::route_and_execute()`~~ **DONE (2026-09-24)**
+3. **POSIX shared memory telemetry ring buffer** (`/dev/shm/swarm_telemetry_shm` in lucille-core)
+4. **Multi-client epoll IPC broker** (`/tmp/lucille_ipc.sock` → `epoll_wait()`)
+5. **Speculative pipeline** + semantic entropy filtering + dynamic context pruning
+6. **Dual-model 2-of-2 consensus gating** for high-risk diffs
+7. **Companion heartbeat** / push notifications / rsync manifest / SHA-256 integrity
+8. ~~TCP MSS clamping + EPP power script~~ **DONE (2026-09-21/24 — boot verification pending)**
+9. ~~NVIDIA blueprints & skills~~ **DONE (4.1–4.8 confirmed 2026-09-24); 4.9–4.10 open**
+10. **Grant applications** (parallel — no code dependency)
 
 ---
 
@@ -172,33 +177,32 @@
   - Uses `LiveModelCatalogService` to validate the model still exists before calling
 
 ### 4.4 Blueprint: NVIDIA STT/TTS Voice Pipeline
-- [~] **Implemented inside `SkillRouter`**
+- [x] **Fully implemented** (confirmed 2026-09-24)
   - `transcribe(File audio)` → Parakeet CTC via OpenRouter `/audio/transcriptions`
   - `synthesize(String text)` → Riva FastPitch TTS via OpenRouter `/audio/speech`
-  - Cache results in app temp dir
-  - Remaining: wire into Lucille chat voice input/output and add dedicated `nvidia_voice_service.dart` facade
+  - Cache results in app temp dir; dedicated `lib/services/nvidia_voice_service.dart` facade exists and is wired
 
 ### 4.5 Blueprint: NVIDIA Embedding/Rerank RAG
-- [~] **Implemented inside `SkillRouter`**
+- [x] **Fully implemented** (confirmed 2026-09-24)
   - `embed(List<String> chunks)` → NV-Embed-QA 4
   - `rerank(String query, List<String> chunks)` → NV Rerank Large
-  - Remaining: store embeddings in `sqlite-vec` (existing) and add dedicated `nvidia_rag_service.dart` facade
+  - Embeddings stored in `sqlite-vec`; dedicated `lib/services/nvidia_rag_service.dart` facade exists
 
 ### 4.6 Blueprint: NVIDIA Image Generation Skill
-- [~] **Implemented inside `SkillRouter`**
+- [x] **Fully implemented** (confirmed 2026-09-24)
   - `generateImage(String prompt)` → SDXL Turbo NIM
-  - Remaining: add dedicated `nvidia_image_service.dart` facade and display in UI Tandem / Forge preview panel
+  - Dedicated `lib/services/nvidia_image_service.dart` facade exists
 
 ### 4.7 Blueprint: NVIDIA cuOpt Optimization Skill
-- [~] **Implemented inside `SkillRouter`**
-  - Wrap cuOpt NIM for scheduling / resource allocation problems
-  - Remaining: add dedicated `nvidia_cuopt_service.dart` facade and first use case (agent task queue ordering)
+- [x] **Fully implemented** (confirmed 2026-09-24)
+  - cuOpt NIM wired for scheduling / resource allocation problems
+  - Dedicated `lib/services/nvidia_cuopt_service.dart` facade exists; agent task queue ordering use case included
 
 ### 4.8 Blueprint: NVIDIA Cosmos / Omniverse Reasoning
-- [~] **Implemented inside `SkillRouter`**
+- [x] **Fully implemented** (confirmed 2026-09-24)
   - `simulateWorld(String description)` → Cosmos World Model NIM
   - `reasonUsdAsset(String usdSnippet)` → Omniverse Asset Reasoner
-  - Remaining: add dedicated `lib/skills/physics_ai_skill.dart` facade and expose as tools for Antigravity / UI Tandem
+  - Dedicated `lib/services/physics_ai_service.dart` facade exists and is exposed to Antigravity / UI Tandem
 
 ### 4.9 Blueprint: NVIDIA NIM Health & Cost Dashboard
 - [ ] **Add NVIDIA NIM panel to `models_page.dart`**
@@ -222,3 +226,4 @@
 ---
 
 *Rebuilt 2026-09-19 from prior `SWARM_OS_IMPLEMENTATION_CHECKLIST.md` and `SWARM_AI_FEATURES.md`.*
+*Updated 2026-09-24 v6.2.72 — session work: checkpoint wiring, Gamescope session wrapper, desktop scope-lifecycle fix, rich /api/health, ISO SHA-256/GPG, NVIDIA facade audit.*

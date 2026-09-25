@@ -1,5 +1,6 @@
 #include "swarm_router.hpp"
 #include <iostream>
+#include <sys/sysinfo.h>
 #include <sstream>
 #include <chrono>
 #include <thread>
@@ -9,7 +10,14 @@ namespace lucille {
 
 SwarmRouter::SwarmRouter(std::shared_ptr<ProcessManager> process_mgr)
     : process_manager_(process_mgr),
-      safety_gate_(1500) {}
+      safety_gate_(1500)
+{
+    // Open shared memory ring buffer; fail-open (telemetry is best-effort)
+    std::string shm_err;
+    if (!shm_buf_.open_writer(shm_err)) {
+        std::cerr << "[SwarmRouter] shm_telemetry open_writer failed (non-fatal): " << shm_err << "\n";
+    }
+}
 
 SwarmModelType SwarmRouter::select_model_for_task(const std::string& task_category) {
     if (task_category == "refactor" || task_category == "code_patch" || task_category == "unit_test") {
@@ -215,6 +223,23 @@ SwarmTaskResponse SwarmRouter::route_and_execute(const SwarmTaskRequest& req) {
 
     // Record latency in circuit breaker
     safety_gate_.record_request_latency(resp.total_latency_ms, false);
+
+    // ── Post telemetry snapshot to shared memory ring ────────────────────────
+    if (shm_buf_.is_open()) {
+        struct sysinfo si{};
+        if (sysinfo(&si) == 0) {
+            uint64_t total_mb = static_cast<uint64_t>(si.totalram)  * si.mem_unit / (1024*1024);
+            uint64_t free_mb  = static_cast<uint64_t>(si.freeram)   * si.mem_unit / (1024*1024);
+            uint32_t n_agents = static_cast<uint32_t>(
+                si.procs < 1 ? 1 : (si.procs < 255 ? si.procs : 255));
+            float cpu_load_f = (si.loads[0] / 65536.0f) / static_cast<float>(
+                std::max(1UL, (unsigned long)si.procs));
+            shm_buf_.write(cpu_load_f, n_agents,
+                           total_mb, free_mb,
+                           /*vram_total_mb=*/0, /*vram_used_mb=*/0,
+                           resp.drafter_model.c_str());
+        }
+    }
 
     resp.success = true;
     return resp;

@@ -8,6 +8,7 @@
 #include "safety_gate.hpp"
 #include "process_manager.hpp"
 #include "speculative_pipeline.hpp"
+#include "shm_telemetry.hpp"
 
 namespace lucille {
 
@@ -102,6 +103,7 @@ public:
 private:
     std::shared_ptr<ProcessManager> process_manager_;
     SafetyGate safety_gate_;
+    ShmTelemetryBuffer shm_buf_;  // high-freq telemetry ring → /dev/shm/swarm_telemetry_shm
 
     // Simulated LLM API response generators / mock runners
     std::string call_kimi_coder(const std::string& prompt, const std::string& code);
