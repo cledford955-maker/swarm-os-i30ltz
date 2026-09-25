@@ -122,6 +122,17 @@ bool LucilleEngine::start() {
         std::cerr << "[LucilleEngine] SWARM_AUTH_TOKEN unset — companion socket off, HITL approvals will be denied\n";
     }
 
+    // 7. SwarmRouter — speculative pipeline, consensus gate, HITL chain
+    router_ = std::make_unique<SwarmRouter>();
+    if (hitl_manager_ && telemetry_ && telemetry_->is_running()) {
+        router_->set_hitl_approver([this](const std::string& summary) {
+            return request_human_approval(summary);
+        });
+    }
+    std::cout << "[LucilleEngine] [OK] SwarmRouter wired"
+              << (telemetry_ && telemetry_->is_running() ? " (HITL connected)" : " (HITL offline)")
+              << "\n";
+
     is_running_ = true;
 
     // Launch Epoll worker thread (pinned to E-cores)
@@ -144,6 +155,8 @@ void LucilleEngine::stop() {
     if (!is_running_) return;
     std::cout << "[LucilleEngine] Stopping engine daemon...\n";
     is_running_ = false;
+
+    router_.reset();
 
     if (process_manager_) {
         process_manager_->stop_epoll_loop();
@@ -199,8 +212,52 @@ bool LucilleEngine::request_human_approval(const std::string& command, uint32_t 
     return hitl_manager_->await_challenge_resolution(chal.challenge_id, timeout_sec);
 }
 
+SwarmTaskResponse LucilleEngine::route_task(const SwarmTaskRequest& req) {
+    if (!router_) {
+        SwarmTaskResponse r;
+        r.task_id = req.task_id;
+        r.error_message = "Router not initialized";
+        return r;
+    }
+    return router_->route_and_execute(req);
+}
+
+FullPipelineResult LucilleEngine::run_pipeline(const SwarmTaskRequest& req, const std::string& compiler_logs) {
+    if (!router_) {
+        FullPipelineResult r;
+        r.error_message = "Router not initialized";
+        return r;
+    }
+    return router_->route_pipeline_full(req, compiler_logs);
+}
+
 KimiRepairPayload LucilleEngine::analyze_build_failure(const std::string& compiler_output) {
     return error_interceptor_->parse_compiler_output(compiler_output);
+}
+
+// Extract a JSON string value by key from a flat JSON object.
+// Only handles top-level string values — sufficient for the IPC protocol.
+static std::string json_str(const std::string& json, const std::string& key) {
+    std::string needle = "\"" + key + "\":\"";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return "";
+    pos += needle.size();
+    std::string val;
+    for (size_t i = pos; i < json.size(); ++i) {
+        if (json[i] == '\\' && i + 1 < json.size()) { val += json[++i]; continue; }
+        if (json[i] == '"') break;
+        val += json[i];
+    }
+    return val;
+}
+
+static bool json_bool(const std::string& json, const std::string& key, bool fallback) {
+    std::string needle = "\"" + key + "\":";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return fallback;
+    pos += needle.size();
+    while (pos < json.size() && json[pos] == ' ') ++pos;
+    return json.substr(pos, 4) == "true";
 }
 
 void LucilleEngine::setup_ipc_handlers() {
@@ -241,6 +298,66 @@ std::string LucilleEngine::handle_ipc_command(const std::string& raw_request) {
         std::string compiler_diag = req.substr(7);
         auto payload = analyze_build_failure(compiler_diag);
         return payload.structured_repair_prompt + "\n";
+    }
+
+    // JSON commands: {"command":"route_task",...} or {"command":"run_pipeline",...}
+    if (req.size() > 2 && req[0] == '{') {
+        std::string cmd = json_str(req, "command");
+
+        if (cmd == "route_task" || cmd == "run_pipeline") {
+            if (!router_) return "{\"status\":\"error\",\"message\":\"router not initialized\"}\n";
+
+            SwarmTaskRequest task;
+            task.task_id         = json_str(req, "task_id");
+            task.user_instruction= json_str(req, "instruction");
+            task.target_file     = json_str(req, "target_file");
+            task.file_content    = json_str(req, "content");
+            task.language        = json_str(req, "language");
+            task.workspace_dir   = json_str(req, "workspace");
+            task.require_two_tier_speculation = json_bool(req, "two_tier", true);
+            task.allow_tool_execution         = json_bool(req, "tool_exec", true);
+
+            if (task.task_id.empty()) task.task_id = "ipc-" + std::to_string(
+                std::chrono::steady_clock::now().time_since_epoch().count());
+
+            if (cmd == "route_task") {
+                auto r = router_->route_and_execute(task);
+                std::stringstream ss;
+                ss << "{\"task_id\":\"" << r.task_id << "\""
+                   << ",\"success\":" << (r.success ? "true" : "false")
+                   << ",\"drafter\":\"" << r.drafter_model << "\""
+                   << ",\"high_risk\":" << (r.high_risk ? "true" : "false")
+                   << ",\"consensus\":" << (r.consensus_approved ? "true" : "false")
+                   << ",\"human\":" << (r.human_approved ? "true" : "false")
+                   << ",\"checkpoint\":\"" << r.checkpoint_id << "\""
+                   << ",\"latency_ms\":" << r.total_latency_ms;
+                if (!r.error_message.empty())
+                    ss << ",\"error\":\"" << r.error_message << "\"";
+                ss << "}\n";
+                return ss.str();
+            } else {
+                std::string logs = json_str(req, "compiler_logs");
+                auto r = router_->route_pipeline_full(task, logs);
+                std::stringstream ss;
+                ss << "{\"task_id\":\"" << task.task_id << "\""
+                   << ",\"success\":" << (r.success ? "true" : "false")
+                   << ",\"blocks\":" << r.pipeline.total_blocks
+                   << ",\"passed\":" << r.pipeline.passed_blocks
+                   << ",\"rejected\":" << r.pipeline.rejected_blocks
+                   << ",\"high_risk\":" << (r.high_risk ? "true" : "false")
+                   << ",\"consensus\":" << (r.consensus_approved ? "true" : "false")
+                   << ",\"human\":" << (r.human_approved ? "true" : "false")
+                   << ",\"applied\":" << (r.applied ? "true" : "false")
+                   << ",\"checkpoint\":\"" << r.checkpoint_id << "\""
+                   << ",\"latency_ms\":" << r.total_latency_ms
+                   << ",\"mock\":" << (r.pipeline.used_mock_backends ? "true" : "false");
+                if (!r.error_message.empty())
+                    ss << ",\"error\":\"" << r.error_message << "\"";
+                ss << "}\n";
+                return ss.str();
+            }
+        }
+        return "{\"status\":\"error\",\"message\":\"unknown JSON command: " + cmd + "\"}\n";
     }
 
     return "{\"status\":\"error\",\"message\":\"unknown command: " + req + "\"}\n";

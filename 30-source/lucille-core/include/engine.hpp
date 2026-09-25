@@ -12,6 +12,7 @@
 #include "process_manager.hpp"
 #include "hitl_security.hpp"
 #include "telemetry_daemon.hpp"
+#include "swarm_router.hpp"
 
 namespace lucille {
 
@@ -57,6 +58,17 @@ public:
     // on rejection, or on timeout — never approves by default.
     bool request_human_approval(const std::string& command, uint32_t timeout_sec = 60);
 
+    // Route a task through the legacy sequential path (draft → audit →
+    // consensus → HITL → checkpoint). Exposes the router over the engine.
+    SwarmTaskResponse route_task(const SwarmTaskRequest& req);
+
+    // Run the full streaming pipeline end-to-end: Kimi streams → DeepSeek
+    // audits blocks concurrently → consensus gate → HITL → checkpoint/apply.
+    // Metrics logged to stdout + shared memory.
+    FullPipelineResult run_pipeline(const SwarmTaskRequest& req, const std::string& compiler_logs = "");
+
+    SwarmRouter* router() { return router_.get(); }
+
     // Manual or programmatic compiler error healing request
     KimiRepairPayload analyze_build_failure(const std::string& compiler_output);
 
@@ -81,6 +93,7 @@ private:
     std::unique_ptr<ErrorInterceptor> error_interceptor_;
     std::shared_ptr<HitlSecurityManager> hitl_manager_;
     std::unique_ptr<TelemetryDaemon> telemetry_;
+    std::unique_ptr<SwarmRouter> router_;
 
     std::thread epoll_thread_;
     std::thread ipc_dispatcher_thread_;

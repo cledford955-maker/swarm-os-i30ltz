@@ -113,9 +113,17 @@
   - `StreamingBlockBuffer` rewritten: literal/comment-aware brace lexer (state survives chunk splits); Python mode fixed (was emitting every line as a block) — splits at top-level def/class, decorators stay with their def
   - Fail-closed: throwing auditor rejects its block; throwing stream → `pipeline_complete=false` + error, in-flight audits still drained
   - Tests: `test_speculative_pipeline_entropy_and_pruning()` (21 assertions) pass; ThreadSanitizer clean for pipeline code
-  - Remaining: real HTTP/SSE clients for Kimi/DeepSeek/GLM (lucille-core has no HTTP client) and an IPC command in `LucilleEngine::handle_ipc_command()` to reach it — engine owns no `SwarmRouter` yet
-- [ ] **Concurrent safety audit while patch streams**
-- [ ] **Triage & metric logging (GLM aggregator)**
+  - **Engine wiring landed 2026-09-25 (Opus 4.6):** `LucilleEngine` now owns `SwarmRouter`; `start()` creates the router and injects the HITL approver from `request_human_approval()`. IPC commands `route_task` and `run_pipeline` (JSON over the Unix socket) forward to the router. `engine.route_task()` and `engine.run_pipeline()` are the public C++ API.
+  - Remaining: real HTTP/SSE clients for Kimi/DeepSeek/GLM (lucille-core has no HTTP client)
+- [x] **Concurrent safety audit while patch streams** — Claude Code (Opus 4.6) 2026-09-25
+  - New `SwarmRouter::route_pipeline_full()` runs the complete streaming pipeline end-to-end: Kimi streams → DeepSeek audits each block concurrently → assemble approved blocks → 2-of-2 consensus gate on the assembled patch → HITL phone approval for high-risk targets → checkpoint/apply with auto-rollback
+  - Bridges the gap between the streaming pipeline (which only audited blocks) and the safety chain (which only ran in the legacy sequential path)
+  - All blocks rejected by audit → early exit; high-risk assembled patch blocked without consensus voters; consensus alone insufficient without HITL; full chain passes only when all layers approve
+  - 17 new test assertions covering the full pipeline chain, 172 pass / 0 fail, TSan clean (2 pre-existing ProcessManager warnings only)
+- [x] **Triage & metric logging (GLM aggregator)** — Claude Code (Opus 4.6) 2026-09-25
+  - `SwarmRouter::log_pipeline_metrics()` emits structured JSON to stdout on every pipeline run: task ID, block counts (total/passed/rejected), pipeline latency, GLM report, compiler warnings/errors/token density, consensus/HITL/mock flags, success status
+  - Same method pushes a telemetry snapshot to the POSIX shared memory ring (`/dev/shm/swarm_telemetry_shm`) so the Flutter OSD HUD can display pipeline activity
+  - Logging fires on every exit path (success, audit failure, consensus block, HITL denial, checkpoint failure) so no pipeline run goes unrecorded
 - [x] **Semantic entropy filtering in context ingestion** — Claude Code (Opus 5.5) 2026-09-25
   - `route_speculative_pipeline()` now runs compiler logs through `EntropyFilter::clean()` before GLM ingests them (diagnostics via `SwarmRouter::last_log_filter()`); `VectorMemoryEngine::insert_chunk_filtered()` already filters memory chunks
   - `clean()` fixes: `[1] error:` no longer dropped as a progress bar; blank separators no longer deduped (paragraphs were merging); `lines_out` counts emitted lines after `max_chars` cap
@@ -137,7 +145,7 @@
   - **PC (lucille-core):** `LucilleEngine` owns `HitlSecurityManager` + `TelemetryDaemon`, starts :9091 when `SWARM_AUTH_TOKEN` is set, and adds `request_human_approval()` (fails closed). `SwarmRouter::set_hitl_approver()` — high-risk diffs now need 2-of-2 consensus **and** a human; unset approver blocks. Pending challenges replayed to phones that reconnect; command JSON-escaped; challenge IDs 96-bit random (were counter+`rand()`); daemon also refuses the public `swarm-token-2026` token. Smoke test: engine binds the Tailscale IP only. Suite 155 pass / 0 fail ×3, TSan clean
   - **Installed 2026-09-25** as 6.2.21 (versionCode 81 — phones had an older 09-07 build numbered 80) on A67L Gen2 (USB) and Samsung SM-S176V (wireless adb, 192.168.1.116). Same debug key → in-place update; Room 1→2 migration verified with all rows kept; DB backups in `99-archive/companion-phone-backup-2026-09-25/`. Also fixed another agent's duplicate `MainViewModel.onCleared()` that broke the build
   - **SWARM launch:** new `airootfs/etc/systemd/system/lucille-core.service` (enabled; User=swarm; reads `/run/swarm_os.env` → real SWARM_AUTH_TOKEN; waits ≤30 s for tailscale0; IPC socket in /run/lucille). Existing nftables already allows :9091 only on tailscale0
-  - Remaining: turn on **Remote PC → Approval alerts** on each phone (token must be the real SWARM_AUTH_TOKEN, not `swarm-token-2026`); rebuild ISO + boot test; `SwarmRouter` not yet owned by the engine (same gap as 2.4)
+  - Remaining: turn on **Remote PC → Approval alerts** on each phone (token must be the real SWARM_AUTH_TOKEN, not `swarm-token-2026`); rebuild ISO + boot test
 - [x] **5-second WebSocket ping/pong heartbeat on Tailscale :9091** — Claude Code (Opus 5.5), lucille-core `TelemetryDaemon` 2026-09-25
   - Ping every 5 s (`set_heartbeat()`), client dropped with close 1001 after 3 missed pongs; client pings answered; stalled handshakes dropped after 5 s. OkHttp/browser clients answer pings automatically
   - **Security fixes (the socket accepts HITL approve, process freeze and Btrfs rollback):** auth token was stored but never checked — upgrades now require `Authorization: Bearer`, `X-Swarm-Auth` or `?token=` (constant-time compare), and `start()` refuses empty/default tokens; failed Tailscale bind fell back to `0.0.0.0` — now loopback; Tailscale IP detection narrowed from any `100.*` to 100.64.0.0/10
@@ -171,7 +179,7 @@
 2. ~~Wire Git-diff checkpoint journaling into `SwarmRouter::route_and_execute()`~~ **DONE (2026-09-24)**
 3. ~~POSIX shared memory telemetry ring buffer~~ **DONE (2026-09-24)**
 4. ~~Multi-client epoll IPC broker~~ **DONE (2026-09-24)**
-5. ~~Speculative pipeline + semantic entropy filtering + dynamic context pruning~~ **DONE (2026-09-25)** — real model HTTP clients + engine IPC entry point still open (see 2.4)
+5. ~~Speculative pipeline + semantic entropy filtering + dynamic context pruning~~ **DONE (2026-09-25)** — engine IPC entry point wired (2026-09-25 Opus 4.6); real model HTTP clients still open
 6. ~~Dual-model 2-of-2 consensus gating~~ **DONE (2026-09-25)** — real voter clients pending with 2.4
 7. **Companion** — heartbeats DONE (lucille-core :9091 + LucyServer :5000/api/companion/ws); HITL approvals built end to end (foreground service, 2026-09-25) — phone install + launching lucille-core on SWARM pending; parity/integrity staged (other agent); GitHub subtree-sync hazard needs decision
 8. ~~TCP MSS clamping + EPP power script~~ **DONE (2026-09-21/24 — boot verification pending)**
@@ -274,3 +282,4 @@
 *Updated 2026-09-25 — Claude Code (Opus 4.6): LucyServer companion WebSocket heartbeat (/api/companion/ws + /api/companion/status), CompanionHub tracking, health.companions_connected, Flutter OSD HUD phone indicator, Android CompanionHeartbeat.kt client; 5 Go + 5 Flutter tests pass.*
 *Updated 2026-09-25 — Claude Code (Opus 5.5): companion restored; HITL approval push via Android foreground service + lucille-core engine/router wiring; subtree sync hazard logged.*
 *Updated 2026-09-25 — Claude Code (Opus 5.5): companion 6.2.21 installed on both phones; snapshot GitHub sync; lucille-core.service added to ISO.*
+*Updated 2026-09-25 — Claude Code (Opus 4.6): "Wire up everything" — LucilleEngine now owns SwarmRouter; HITL approver injected from engine→router; route_pipeline_full() chains streaming audit + consensus + HITL + checkpoint; log_pipeline_metrics() writes structured JSON + SHM telemetry; IPC commands route_task/run_pipeline added. 172 pass / 0 fail, TSan clean.*

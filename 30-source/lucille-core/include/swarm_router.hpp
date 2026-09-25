@@ -61,6 +61,21 @@ struct SwarmTaskResponse {
     std::vector<std::string> consensus_triggers;
 };
 
+// End-to-end pipeline result: streaming audit + consensus + HITL + checkpoint
+struct FullPipelineResult {
+    PipelineResult pipeline;           // per-block audit results from the streaming pipeline
+    std::string    assembled_patch;    // approved blocks joined
+    bool high_risk{false};
+    bool consensus_approved{false};
+    bool human_approved{false};
+    std::vector<std::string> consensus_triggers;
+    std::string checkpoint_id;
+    bool applied{false};               // checkpoint_and_apply succeeded
+    bool success{false};
+    std::string error_message;
+    uint32_t total_latency_ms{0};
+};
+
 class SwarmRouter {
 public:
     explicit SwarmRouter(std::shared_ptr<ProcessManager> process_mgr = nullptr);
@@ -122,6 +137,14 @@ public:
         hitl_approver_ = std::move(approver);
     }
 
+    // Full end-to-end pipeline: Kimi streams → DeepSeek audits each block
+    // concurrently → assemble approved blocks → consensus gate → HITL approval
+    // → checkpoint/apply. Combines streaming concurrency with the safety chain.
+    FullPipelineResult route_pipeline_full(
+        const SwarmTaskRequest& req,
+        const std::string& compiler_logs = ""
+    );
+
     // Diagnostics from the most recent entropy filtering of compiler logs
     const EntropyFilter::CleanResult& last_log_filter() const { return last_log_filter_; }
 
@@ -131,6 +154,7 @@ public:
     SwarmModelType select_model_for_task(const std::string& task_category);
 
 private:
+    void log_pipeline_metrics(const std::string& task_id, const FullPipelineResult& result);
     std::shared_ptr<ProcessManager> process_manager_;
     SafetyGate safety_gate_;
     ShmTelemetryBuffer shm_buf_;  // high-freq telemetry ring → /dev/shm/swarm_telemetry_shm

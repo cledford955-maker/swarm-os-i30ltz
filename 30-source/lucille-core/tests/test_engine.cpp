@@ -1012,6 +1012,162 @@ void test_telemetry_daemon() {
     }
 }
 
+void test_engine_full_wiring() {
+    std::cout << "\n--- 12. Testing Engine ↔ Router ↔ Pipeline Full Wiring ---\n";
+
+    // ---- A. SwarmRouter::route_pipeline_full end-to-end ----
+    {
+        lucille::SwarmRouter router;
+
+        // Inject pipeline backends: Kimi produces 2 blocks, one targeting systemd
+        std::string glm_report_out;
+        router.set_pipeline_backends(
+            [](const std::string&, const std::string&, lucille::StreamingBlockBuffer& buf) {
+                buf.feed("void safe() { return; }\n");
+                buf.feed("void add_unit() { /* ExecStart=/usr/bin/x */ }\n");
+            },
+            [](const std::string& block, const std::string&, std::string& cot, std::string& err) {
+                cot = "ok"; return true; // both blocks pass audit
+            },
+            [&](const std::string& logs, const std::string&) {
+                glm_report_out = "triage_complete";
+                lucille::PipelineMetrics m;
+                m.glm_report = "triage_complete";
+                m.compiler_warnings = 2;
+                m.compiler_errors = 1;
+                m.token_density = 42;
+                return m;
+            });
+
+        // No consensus backends → high-risk assembled patch blocked
+        lucille::SwarmTaskRequest req;
+        req.task_id = "full-001";
+        req.language = "cpp";
+        req.target_file = "etc/systemd/system/test.service";
+
+        auto r = router.route_pipeline_full(req);
+        TEST_ASSERT(!r.success && r.high_risk && !r.consensus_approved
+                    && r.error_message.find("Consensus gate blocked") != std::string::npos,
+                    "Full pipeline: consensus gate blocks high-risk assembled patch");
+        TEST_ASSERT(r.pipeline.pipeline_complete && r.pipeline.passed_blocks == 2,
+                    "Full pipeline: streaming audit phase completed first");
+
+        // Install consensus voters that approve
+        router.set_consensus_backends(
+            [](const std::string&, const std::string&) {
+                lucille::ConsensusVote v; v.approved = true; return v; },
+            [](const std::string&, const std::string&) {
+                lucille::ConsensusVote v; v.approved = true; return v; });
+
+        // Still no HITL → blocked
+        r = router.route_pipeline_full(req);
+        TEST_ASSERT(!r.success && r.high_risk && r.consensus_approved && !r.human_approved
+                    && r.error_message.find("No HITL approver") != std::string::npos,
+                    "Full pipeline: passes consensus but blocked without HITL");
+
+        // Wire HITL approver that approves
+        std::string hitl_asked;
+        router.set_hitl_approver([&](const std::string& summary) { hitl_asked = summary; return true; });
+
+        r = router.route_pipeline_full(req);
+        TEST_ASSERT(r.success && r.high_risk && r.consensus_approved && r.human_approved,
+                    "Full pipeline: approved by consensus + HITL");
+        TEST_ASSERT(hitl_asked.find("test.service") != std::string::npos
+                    && hitl_asked.find("2 blocks") != std::string::npos,
+                    "HITL approver sees target and block count: " + hitl_asked);
+        TEST_ASSERT(!r.assembled_patch.empty() && r.assembled_patch.find("safe()") != std::string::npos
+                    && r.assembled_patch.find("add_unit()") != std::string::npos,
+                    "Assembled patch contains both approved blocks");
+
+        // GLM metrics were logged
+        TEST_ASSERT(r.pipeline.metrics.glm_report == "triage_complete",
+                    "GLM triage report captured");
+        TEST_ASSERT(r.pipeline.metrics.compiler_warnings == 2 && r.pipeline.metrics.compiler_errors == 1
+                    && r.pipeline.metrics.token_density == 42,
+                    "GLM metrics (warnings/errors/density) propagated");
+        TEST_ASSERT(r.success, "Full pipeline returns success=true after full chain approval");
+
+        // Low-risk target: consensus + HITL skipped
+        req.target_file = "src/utils.cpp";
+        hitl_asked.clear();
+        r = router.route_pipeline_full(req);
+        TEST_ASSERT(r.success && !r.high_risk && r.consensus_approved && hitl_asked.empty(),
+                    "Low-risk target skips consensus voters and HITL entirely");
+    }
+
+    // ---- B. Engine owns router and exposes it through IPC ----
+    {
+        // Create an engine with a minimal config (no telemetry, just IPC + router)
+        std::string sock = "/tmp/lucille_wiring_test.sock";
+        lucille::EngineConfig cfg;
+        cfg.socket_path = sock;
+        cfg.soul_path = "/tmp/test_SOUL_wiring.md";
+        {   std::ofstream f(cfg.soul_path);
+            f << "# Test soul\n"; }
+
+        lucille::LucilleEngine engine(cfg);
+        bool started = engine.start();
+        TEST_ASSERT(started, "Engine starts successfully");
+        TEST_ASSERT(engine.router() != nullptr, "Engine owns a SwarmRouter after start()");
+
+        if (started) {
+            // Direct API: route_task goes through the router
+            lucille::SwarmTaskRequest req;
+            req.task_id = "eng-001";
+            req.language = "cpp";
+            req.file_content = "int x() { return 0; }";
+            req.target_file = "src/test.cpp";
+            auto resp = engine.route_task(req);
+            TEST_ASSERT(resp.success && resp.drafter_model == "Kimi-2.6-Coder",
+                        "engine.route_task() routes through SwarmRouter");
+
+            // Direct API: run_pipeline
+            auto pr = engine.run_pipeline(req);
+            TEST_ASSERT(pr.pipeline.pipeline_complete && pr.pipeline.used_mock_backends,
+                        "engine.run_pipeline() runs streaming pipeline (mock)");
+            TEST_ASSERT(pr.success, "engine.run_pipeline() low-risk target succeeds end-to-end");
+
+            // IPC: send a route_task command over the socket
+            auto ipc_exchange = [&](const std::string& msg) -> std::string {
+                int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+                if (fd < 0) return "<socket-error>";
+                struct sockaddr_un addr{};
+                addr.sun_family = AF_UNIX;
+                std::strncpy(addr.sun_path, sock.c_str(), sizeof(addr.sun_path) - 1);
+                if (connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+                    close(fd); return "<connect-error>";
+                }
+                write(fd, msg.data(), msg.size());
+                char buf[4096]{};
+                struct pollfd pfd{fd, POLLIN, 0};
+                poll(&pfd, 1, 2000);
+                ssize_t n = read(fd, buf, sizeof(buf) - 1);
+                close(fd);
+                return n > 0 ? std::string(buf, n) : "<empty>";
+            };
+
+            std::string ipc_reply = ipc_exchange(
+                "{\"command\":\"route_task\",\"task_id\":\"ipc-rt\","
+                "\"instruction\":\"test\",\"language\":\"cpp\","
+                "\"content\":\"int f() { return 1; }\","
+                "\"target_file\":\"src/a.cpp\"}");
+            TEST_ASSERT(ipc_reply.find("\"success\":true") != std::string::npos
+                        && ipc_reply.find("ipc-rt") != std::string::npos,
+                        "IPC route_task command reaches router and returns JSON");
+
+            ipc_reply = ipc_exchange(
+                "{\"command\":\"run_pipeline\",\"task_id\":\"ipc-pl\","
+                "\"language\":\"cpp\",\"target_file\":\"src/b.cpp\"}");
+            TEST_ASSERT(ipc_reply.find("\"success\":true") != std::string::npos
+                        && ipc_reply.find("\"mock\":true") != std::string::npos,
+                        "IPC run_pipeline command returns pipeline result");
+
+            engine.stop();
+        }
+        fs::remove(cfg.soul_path);
+    }
+}
+
 int main() {
     std::cout << "=====================================================\n";
     std::cout << "        LUCILLE CORE ENGINE — FULL TEST SUITE        \n";
@@ -1032,6 +1188,7 @@ int main() {
     test_mesh_sync_and_clipboard();
     test_shm_telemetry_ring_buffer();
     test_telemetry_daemon();
+    test_engine_full_wiring();
 
     std::cout << "\n=====================================================\n";
     std::cout << "Test Summary: " << g_tests_passed << " passed, " << g_tests_failed << " failed.\n";

@@ -326,4 +326,142 @@ PipelineResult SwarmRouter::route_speculative_pipeline(
     return result;
 }
 
+FullPipelineResult SwarmRouter::route_pipeline_full(
+    const SwarmTaskRequest& req,
+    const std::string& compiler_logs
+) {
+    auto start_time = std::chrono::steady_clock::now();
+    FullPipelineResult result;
+
+    // 1. Streaming pipeline: Kimi streams → DeepSeek audits each block concurrently
+    result.pipeline = route_speculative_pipeline(req, compiler_logs);
+
+    if (!result.pipeline.pipeline_complete) {
+        result.error_message = "Pipeline incomplete: " + result.pipeline.error_message;
+        log_pipeline_metrics(req.task_id, result);
+        return result;
+    }
+
+    // 2. Assemble approved blocks into a unified patch
+    for (const auto& block : result.pipeline.blocks) {
+        if (block.audit_passed) {
+            if (!result.assembled_patch.empty()) result.assembled_patch += "\n";
+            result.assembled_patch += block.block_text;
+        }
+    }
+
+    if (result.assembled_patch.empty()) {
+        result.error_message = "All " + std::to_string(result.pipeline.total_blocks) + " blocks rejected by audit";
+        log_pipeline_metrics(req.task_id, result);
+        return result;
+    }
+
+    // 3. 2-of-2 consensus gate on the assembled patch
+    {
+        const std::string gate_input = "# target: " + req.target_file + "\n" + result.assembled_patch;
+        ConsensusResult cr = consensus_gate_.evaluate(gate_input, req.target_file);
+        result.high_risk          = cr.is_high_risk;
+        result.consensus_approved = cr.approved;
+        result.consensus_triggers = cr.triggers;
+        if (!cr.approved) {
+            result.error_message = "Consensus gate blocked pipeline patch: " + cr.rejection_reason;
+            log_pipeline_metrics(req.task_id, result);
+            return result;
+        }
+    }
+
+    // 4. HITL approval for high-risk diffs
+    if (result.high_risk) {
+        std::string summary = "Pipeline patch to " + req.target_file + " [";
+        for (size_t i = 0; i < result.consensus_triggers.size(); ++i)
+            summary += (i ? ", " : "") + result.consensus_triggers[i];
+        summary += "] (" + std::to_string(result.pipeline.passed_blocks) + " blocks)";
+        result.human_approved = hitl_approver_ && hitl_approver_(summary);
+        if (!result.human_approved) {
+            result.error_message = hitl_approver_
+                ? "Human denied pipeline patch: " + summary
+                : "No HITL approver — high-risk pipeline patch blocked";
+            log_pipeline_metrics(req.task_id, result);
+            return result;
+        }
+    } else {
+        result.consensus_approved = true;
+    }
+
+    // 5. Checkpoint & apply
+    if (!req.workspace_dir.empty()) {
+        std::string cp_err;
+        CheckpointResult cp = SafetyGate::checkpoint_and_apply(
+            req.workspace_dir, result.assembled_patch,
+            "swarm_pipeline_" + req.task_id, cp_err);
+        if (!cp.ok) {
+            result.error_message = "Checkpoint-apply failed: " + cp_err;
+            log_pipeline_metrics(req.task_id, result);
+            return result;
+        }
+        result.checkpoint_id = cp.checkpoint_id;
+        result.applied = true;
+        std::cout << "[SwarmRouter] Pipeline checkpoint " << cp.checkpoint_id
+                  << " created (" << result.pipeline.passed_blocks << " blocks applied)\n";
+    }
+
+    auto end_time = std::chrono::steady_clock::now();
+    result.total_latency_ms = static_cast<uint32_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count());
+    result.success = true;
+    log_pipeline_metrics(req.task_id, result);
+    return result;
+}
+
+// Escape a string for embedding in a JSON value (quotes and backslashes)
+static std::string json_escape_str(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:   out += c;
+        }
+    }
+    return out;
+}
+
+void SwarmRouter::log_pipeline_metrics(const std::string& task_id, const FullPipelineResult& result) {
+    std::cout << "[SwarmRouter:metrics] {"
+              << "\"task\":\"" << json_escape_str(task_id) << "\""
+              << ",\"blocks\":" << result.pipeline.total_blocks
+              << ",\"passed\":" << result.pipeline.passed_blocks
+              << ",\"rejected\":" << result.pipeline.rejected_blocks
+              << ",\"pipeline_ms\":" << result.pipeline.pipeline_latency_ms
+              << ",\"glm_report\":\"" << json_escape_str(result.pipeline.metrics.glm_report) << "\""
+              << ",\"warnings\":" << result.pipeline.metrics.compiler_warnings
+              << ",\"errors\":" << result.pipeline.metrics.compiler_errors
+              << ",\"token_density\":" << result.pipeline.metrics.token_density
+              << ",\"high_risk\":" << (result.high_risk ? "true" : "false")
+              << ",\"consensus\":" << (result.consensus_approved ? "true" : "false")
+              << ",\"human\":" << (result.human_approved ? "true" : "false")
+              << ",\"applied\":" << (result.applied ? "true" : "false")
+              << ",\"mock\":" << (result.pipeline.used_mock_backends ? "true" : "false")
+              << ",\"success\":" << (result.success ? "true" : "false")
+              << "}\n";
+
+    // Push to shared memory telemetry ring
+    if (shm_buf_.is_open()) {
+        struct sysinfo si{};
+        if (sysinfo(&si) == 0) {
+            uint64_t total_mb = static_cast<uint64_t>(si.totalram) * si.mem_unit / (1024*1024);
+            uint64_t free_mb  = static_cast<uint64_t>(si.freeram)  * si.mem_unit / (1024*1024);
+            shm_buf_.write(
+                si.loads[0] / 65536.0f / static_cast<float>(std::max(1UL, (unsigned long)si.procs)),
+                static_cast<uint32_t>(result.pipeline.total_blocks),
+                total_mb, free_mb, 0, 0,
+                result.pipeline.used_mock_backends ? "mock" : "pipeline");
+        }
+    }
+}
+
 } // namespace lucille
