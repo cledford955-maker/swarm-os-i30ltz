@@ -344,7 +344,7 @@ class _CoderPageState extends State<CoderPage> {
                       onFileOpen: _openFile,
                       onOpenFolder: _openFolder,
                       onResultTap: (rec) => _openFile(rec.$1).then((_) {
-                        // TODO: scroll to line rec.$2
+                        setState(() { _cursorLine = rec.$2; _cursorCol = 1; });
                       }),
                     ),
                     // Resize handle
@@ -379,6 +379,7 @@ class _CoderPageState extends State<CoderPage> {
                                   secondaryIdx: _secondaryFileIdx >= 0 ? _secondaryFileIdx : null,
                                   direction: _splitDir,
                                   workspacePath: _workspacePath,
+                                  targetLine: _cursorLine,
                                   onChanged: (_) => setState(() {}),
                                   onCursorMoved: (pos) => setState(() { _cursorLine = pos.$1; _cursorCol = pos.$2; }),
                                   onBlameUpdated: (blame) => setState(() => _currentBlame = blame),

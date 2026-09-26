@@ -99,6 +99,46 @@ class _SearchPanelState extends State<SearchPanel> {
 
   int get _totalMatches => _results.values.fold(0, (acc, r) => acc + r.length);
 
+  Future<void> _replaceAll() async {
+    final query = _queryCtrl.text;
+    final replacement = _replaceCtrl.text;
+    if (query.isEmpty || _results.isEmpty) return;
+
+    int replaced = 0;
+    for (final filePath in _results.keys) {
+      try {
+        final file = File(filePath);
+        var content = await file.readAsString();
+        final original = content;
+        if (_useRegex) {
+          content = content.replaceAll(
+            RegExp(query, caseSensitive: _caseSensitive),
+            replacement,
+          );
+        } else if (_caseSensitive) {
+          content = content.replaceAll(query, replacement);
+        } else {
+          content = content.replaceAll(
+            RegExp(RegExp.escape(query), caseSensitive: false),
+            replacement,
+          );
+        }
+        if (content != original) {
+          await file.writeAsString(content);
+          replaced++;
+        }
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Replaced in $replaced file${replaced == 1 ? '' : 's'}'),
+        duration: const Duration(seconds: 2),
+      ));
+      _search();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -150,7 +190,7 @@ class _SearchPanelState extends State<SearchPanel> {
                 Tooltip(
                   message: 'Replace All',
                   child: InkWell(
-                    onTap: () {}, // TODO: replace all
+                    onTap: _replaceAll,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                       decoration: BoxDecoration(color: SwarmColors.agentAmber.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4), border: Border.all(color: SwarmColors.agentAmber.withValues(alpha: 0.4))),

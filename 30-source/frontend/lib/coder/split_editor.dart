@@ -20,6 +20,7 @@ class SplitEditor extends StatefulWidget {
   final VoidCallback? onSplitVertical;
   final VoidCallback? onSplitHorizontal;
   final VoidCallback? onCloseSecondary;
+  final int? targetLine;
 
   const SplitEditor({
     super.key,
@@ -34,6 +35,7 @@ class SplitEditor extends StatefulWidget {
     this.onSplitVertical,
     this.onSplitHorizontal,
     this.onCloseSecondary,
+    this.targetLine,
   });
 
   @override
@@ -61,12 +63,12 @@ class _SplitEditorState extends State<SplitEditor> {
     if (_primary == null) return _EmptyEditor();
 
     if (!_hasSplit) {
-      return _EditorPane(file: _primary!, workspacePath: widget.workspacePath, onChanged: widget.onChanged, onCursorMoved: widget.onCursorMoved, onBlameUpdated: widget.onBlameUpdated, onSplitV: widget.onSplitVertical, onSplitH: widget.onSplitHorizontal, showSplitBtns: true);
+      return _EditorPane(file: _primary!, workspacePath: widget.workspacePath, onChanged: widget.onChanged, onCursorMoved: widget.onCursorMoved, onBlameUpdated: widget.onBlameUpdated, onSplitV: widget.onSplitVertical, onSplitH: widget.onSplitHorizontal, showSplitBtns: true, targetLine: widget.targetLine);
     }
 
     final isVertical = widget.direction == SplitDirection.vertical;
 
-    Widget primary = _EditorPane(file: _primary!, workspacePath: widget.workspacePath, onChanged: widget.onChanged, onCursorMoved: widget.onCursorMoved, onBlameUpdated: widget.onBlameUpdated, isFocused: _primaryFocused, onFocus: () => setState(() => _primaryFocused = true), showSplitBtns: false);
+    Widget primary = _EditorPane(file: _primary!, workspacePath: widget.workspacePath, onChanged: widget.onChanged, onCursorMoved: widget.onCursorMoved, onBlameUpdated: widget.onBlameUpdated, isFocused: _primaryFocused, onFocus: () => setState(() => _primaryFocused = true), showSplitBtns: false, targetLine: widget.targetLine);
     Widget secondary = _EditorPane(file: _secondary!, workspacePath: widget.workspacePath, onChanged: widget.onChanged, onCursorMoved: widget.onCursorMoved, onBlameUpdated: widget.onBlameUpdated, isFocused: !_primaryFocused, onFocus: () => setState(() => _primaryFocused = false), onClose: widget.onCloseSecondary, showSplitBtns: false);
 
     Widget divider = GestureDetector(
@@ -132,6 +134,7 @@ class _EditorPane extends StatelessWidget {
   final VoidCallback? onSplitV;
   final VoidCallback? onSplitH;
   final bool showSplitBtns;
+  final int? targetLine;
 
   const _EditorPane({
     required this.file,
@@ -145,6 +148,7 @@ class _EditorPane extends StatelessWidget {
     this.onSplitV,
     this.onSplitH,
     required this.showSplitBtns,
+    this.targetLine,
   });
 
   @override
@@ -165,6 +169,7 @@ class _EditorPane extends StatelessWidget {
                 onChanged: onChanged,
                 onCursorMoved: onCursorMoved,
                 onBlameUpdated: onBlameUpdated,
+                targetLine: targetLine,
               ),
             ),
           ),

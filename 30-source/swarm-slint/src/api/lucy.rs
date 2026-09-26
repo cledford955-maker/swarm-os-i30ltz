@@ -2,7 +2,7 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-const BASE: &str = "http://localhost:5000";
+const BASE: &str = "http://127.0.0.1:5000";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChatMsg {

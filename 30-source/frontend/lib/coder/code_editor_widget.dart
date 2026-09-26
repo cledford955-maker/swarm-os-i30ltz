@@ -29,6 +29,7 @@ class CodeEditorWidget extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<(int line, int col)>? onCursorMoved;
   final ValueChanged<GitBlameInfo?>? onBlameUpdated;
+  final int? targetLine;
 
   const CodeEditorWidget({
     super.key,
@@ -37,6 +38,7 @@ class CodeEditorWidget extends StatefulWidget {
     this.onChanged,
     this.onCursorMoved,
     this.onBlameUpdated,
+    this.targetLine,
   });
 
   @override
@@ -102,6 +104,17 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       _controller.addListener(_onTextChanged);
       _loadGitLensData();
     }
+    if (widget.targetLine != null && widget.targetLine != old.targetLine) {
+      _scrollToLine(widget.targetLine!);
+    }
+  }
+
+  void _scrollToLine(int line) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_vertScroll.hasClients) return;
+      final offset = ((line - 1) * _lineHeight).clamp(0.0, _vertScroll.position.maxScrollExtent);
+      _vertScroll.animateTo(offset, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+    });
   }
 
   Future<void> _loadGitLensData() async {
