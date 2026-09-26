@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/swarm_text_styles.dart';
+import '../services/garden_photos_service.dart';
 
 // ── Strain database ───────────────────────────────────────────────────────────
 
@@ -168,16 +170,46 @@ class _CannabisModeScreenState extends State<CannabisModeScreen>
             ),
           ),
 
-          // ── Pulsing center bud ────────────────────────────────────
+          // ── Center bud: real photo when the strain has one on disk,
+          //    procedural painter otherwise. Photos live at
+          //    /opt/swarm_os/garden/<slug>.{jpg,jpeg,png,webp} and are
+          //    resolved by GardenPhotosService.instance. The glow/accent
+          //    ring stays under both paths so the animation reads the same.
           Center(
-            child: AnimatedBuilder(
-              animation: _glowController,
-              builder: (_, __) => CustomPaint(
-                size: const Size(280, 280),
-                painter: _CenterBudPainter(
-                  pulse: _glowController.value,
-                  accent: accent,
-                ),
+            child: SizedBox(
+              width: 300, height: 300,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  AnimatedBuilder(
+                    animation: _glowController,
+                    builder: (_, __) => CustomPaint(
+                      painter: _CenterBudPainter(
+                        pulse: _glowController.value,
+                        accent: accent,
+                        drawBud: GardenPhotosService.instance.photoPathFor(strain.$1) == null,
+                      ),
+                    ),
+                  ),
+                  Builder(builder: (_) {
+                    final path = GardenPhotosService.instance.photoPathFor(strain.$1);
+                    if (path == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: ClipOval(
+                        child: Image.file(
+                          File(path),
+                          fit: BoxFit.cover,
+                          // If the file suddenly disappears (btrfs snapshot
+                          // rollback mid-render, unlikely but possible), fall
+                          // back to the painter — never let a broken image
+                          // widget crash the garden.
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
           ),
@@ -485,14 +517,18 @@ class _FloatingBudsPainter extends CustomPainter {
 class _CenterBudPainter extends CustomPainter {
   final double pulse;
   final Color accent;
-  _CenterBudPainter({required this.pulse, required this.accent});
+  /// When false, only the glow rings behind the bud are drawn (the caller is
+  /// overlaying a real photo instead of the procedural bud/leaves/sparkles).
+  final bool drawBud;
+  _CenterBudPainter({required this.pulse, required this.accent, this.drawBud = true});
 
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
     final cy = size.height / 2;
 
-    // Outer glow rings
+    // Outer glow rings — always drawn, they're the ambient light around the
+    // bud regardless of whether a real photo is overlaid on top.
     for (int r = 3; r >= 0; r--) {
       final radius = 60.0 + r * 22 + pulse * 14;
       final alpha = (0.04 + (3 - r) * 0.025 - pulse * 0.01).clamp(0.0, 1.0);
@@ -502,6 +538,8 @@ class _CenterBudPainter extends CustomPainter {
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22),
       );
     }
+
+    if (!drawBud) return;
 
     // Main bud: large cluster
     final clusters = [
@@ -553,5 +591,6 @@ class _CenterBudPainter extends CustomPainter {
     canvas.restore();
   }
 
-  @override bool shouldRepaint(_CenterBudPainter old) => old.pulse != pulse || old.accent != accent;
+  @override bool shouldRepaint(_CenterBudPainter old) =>
+      old.pulse != pulse || old.accent != accent || old.drawBud != drawBud;
 }

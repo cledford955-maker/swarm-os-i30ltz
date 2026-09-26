@@ -12,18 +12,20 @@ import (
 )
 
 type GamesService struct {
-	gfn   *GfnService
-	steam *SteamService
-	db    *sql.DB
-	cs    *http.Client
+	gfn      *GfnService
+	steam    *SteamService
+	db       *sql.DB
+	cs       *http.Client
+	steamSpy *SteamSpyService
 }
 
 func NewGamesService(gfn *GfnService, steam *SteamService, database *sql.DB) *GamesService {
 	return &GamesService{
-		gfn:   gfn,
-		steam: steam,
-		db:    database,
-		cs:    &http.Client{Timeout: 10 * time.Second},
+		gfn:      gfn,
+		steam:    steam,
+		db:       database,
+		cs:       &http.Client{Timeout: 10 * time.Second},
+		steamSpy: NewSteamSpyService(),
 	}
 }
 
@@ -95,6 +97,20 @@ func (s *GamesService) GetIntersection() ([]models.EnrichedGame, error) {
 			eg.Publisher = gfn.Publisher
 			if gfn.Genres != nil {
 				eg.Genres = gfn.Genres
+			}
+		}
+
+		// SteamSpy enrichment — fill genre gaps for games that GFN either
+		// doesn't know about or returned empty for. Best-effort with a 24h
+		// cache; upstream failure never blocks intersection assembly.
+		if len(eg.Genres) == 0 {
+			if extra, ok := s.steamSpy.Enrich(sg.AppId); ok {
+				if len(extra.Genres) > 0 {
+					eg.Genres = extra.Genres
+				}
+				if eg.Publisher == "" {
+					eg.Publisher = extra.Publisher
+				}
 			}
 		}
 		result = append(result, eg)

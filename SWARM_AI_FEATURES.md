@@ -383,7 +383,7 @@ All code written and `flutter analyze` clean (0 errors, 0 warnings). Not yet tes
 - [x] **Hidden garden cipher** — second optional cipher (4–6 glyphs, must differ from main). Setup flows: main cipher → prompted for garden cipher (skippable). At login: main → `/`, garden → `/garden`. Reset wipes both.
 - [x] **`CannabisModeScreen`** — `30-source/frontend/lib/screens/cannabis_mode_screen.dart`. Procedural grow-room: 5 LED beam colors, drifting spotlight, 18 floating buds/leaves, central bud cluster with trichome sparkles, 16-strain database rotating every 7 s with cross-fade. Route: `/garden` (standalone, no shell chrome).
 - [ ] **Test on real hardware** — verify cipher setup flow, both unlock paths, garden animations at full frame rate
-- [ ] **Real bud photos** — load actual strain images from `/opt/swarm_os/garden/` on-device folder; fall back to procedural art if folder empty. Rotate image per strain cycle. (Currently 100% procedural — no actual photos yet.)
+- [x] **Real bud photos with procedural fallback** (2026-09-25 Opus 4.7) — `GardenPhotosService` on `lib/services/` looks up `/opt/swarm_os/garden/<slug>.{jpg,jpeg,png,webp}` per strain (slug = snake_case of the display name; digits preserved). `cannabis_mode_screen` overlays the real photo via `ClipOval`; `_CenterBudPainter.drawBud` suppresses the procedural bud/leaves/sparkles under a photo (glow rings stay). Missing-file → procedural fallback; `errorBuilder` recovers if a file disappears mid-render. `airootfs/opt/swarm_os/garden/` + README staged so the ISO ships the drop-in location. 13 unit tests, analyze clean, bundle rebuilt + restaged.
 - [ ] **Settings page: reconfigure garden cipher** without resetting main cipher — add "Garden Cipher" row in settings that lets user change only the garden pattern
 - [ ] **Garden content updater** — cron/service that periodically pulls new strain images into `/opt/swarm_os/garden/` from a local or LAN source (not internet — keep it offline-first)
 
@@ -413,7 +413,7 @@ All code written and `flutter analyze` clean (0 errors, 0 warnings). Not yet tes
   - **Caught a real process failure worth recording**: the first verification pass used `grep -c` on a binary and got *blank* output for every string, which could easily have been misread as "verified". Binary files need `grep -a`; always include a known-absent control string so a zero means something.
 - [ ] **Deploy to installed root `/dev/nvme0n1p2`** — NOT done. Installed shell at `/mnt/swarm/@/opt/swarm_os/swarm_flutter/` is still the stale 18:53 bundle. `/mnt/swarm` is mounted `ro` (btrfs top level, `subvolid=5`, so the OS root is under `@`). Deploy commands handed to user; procedure moves the old bundle to `.bak` rather than `rm -rf`-ing it, so a failed copy can't reproduce the 2026-09-13 black-screen-no-shell failure.
 - [ ] **Test on real hardware** — verify icons over wallpaper, drag-snap, native app launch, scrolling; GRUB terminal right-click/toolbar, File Explorer drag-drop + Kate handoff
-- [ ] Waybar taskbar — labwc has no panel; add `waybar` to packages.x86_64 + config for window switcher strip
+- [x] **Waybar taskbar** (2026-09-25 Opus 4.7 — see SWARM_OS_IMPLEMENTATION_CHECKLIST.md "Wire-up pass" entry for details) — `waybar` in `packages.x86_64`, config+style at `airootfs/etc/xdg/waybar/`, labwc autostart launches it, cleanup script kills it, boot-contract test guards.
 - [ ] App definitions file — hardcoded in `HexDesktopPage`; make editable from settings
 
 ### Active: Boot / ISO Verification
@@ -748,7 +748,7 @@ everywhere at once the moment `mock` flips.
 
 ### GamingAgent (implement in Go rewrite, not .NET)
 - [ ] Price alert: poll CheapShark daily, write to gaming.db when a game drops below threshold, surface in dashboard
-- [ ] Add IGDB or SteamSpy API for richer genre/description data (GFN catalog has sparse genres)
+- [x] **SteamSpy genre enrichment** (2026-09-25 Opus 4.7) — `services/steamspy_service.go` on GamingAgent-go: `SteamSpyService.Enrich(appid)` calls the free SteamSpy `appdetails` endpoint, 24h in-memory cache (1h backoff on errors), merges the `genre` string with top-N most-voted `tags` (deduped, capped). Wired into `GetIntersection`: any game with an empty Genres slice after GFN lookup gets filled from SteamSpy. Best-effort — upstream failure/malformed JSON/bad appid all silently skip. 10 Go tests.
 - [x] **Steam library persistent cache** (2026-09-25 Opus 4.7) — `services/steam_cache.go` writes atomic JSON to `BaseDir()/steam_library.json` on success; when the Steam key is dead (2026-09-20 incident) the cached payload is served with `cached=true, cached_at, upstream_error` so the dashboard keeps rendering. 7 Go tests. (No SQLite dep added — matches LucyServer's existing flat-file pattern.)
 - [x] **Webhook endpoint for external services** (2026-09-25 Opus 4.7) — POST `/api/webhooks/{source}` accepts JSON or raw text (256 KiB cap), persists to `BaseDir()/webhooks/<source>.jsonl`, and broadcasts a `{type:"webhook",source,at}` notice to companion phones. GET `/api/webhooks` lists sources. Source name gated to `[A-Za-z0-9_-]{1,64}` (no traversal). Same LucyServer auth-token gate as the rest of `/api/*`. 6 Go tests.
 
