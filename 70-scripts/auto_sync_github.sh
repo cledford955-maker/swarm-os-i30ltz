@@ -14,6 +14,22 @@ exec 9>"$(git rev-parse --git-path swarm-auto-sync.lock)"
 flock -n 9 || { echo 'Another GitHub sync is already running.'; exit 0; }
 status=0
 
+# Never checkpoint an unfinished merge/rebase or somebody else's staged commit.
+if [ "$(git branch --show-current)" != main ]; then
+  echo 'SYNC PAUSED: local checkout is not main.' >&2
+  exit 1
+fi
+for operation in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD rebase-merge rebase-apply index.lock; do
+  if [ -e "$(git rev-parse --git-path "$operation")" ]; then
+    echo 'SYNC PAUSED: a Git operation is in progress.' >&2
+    exit 1
+  fi
+done
+if ! git diff --cached --quiet; then
+  echo 'SYNC PAUSED: existing staged changes require their owner to commit.' >&2
+  exit 1
+fi
+
 # Shared memory (2026-09-16): mirror /mnt/brains/swarm-memory into the repo so
 # it is versioned and pushed with everything else. Skipped quietly when the
 # brains partition isn't mounted — the last mirrored copy stays in git.
@@ -52,6 +68,17 @@ if [ -n "$(git status --porcelain)" ]; then
     status=1
   fi
 fi
+# Each destination has a verified last-common snapshot. The helper merges
+# changes from both sides before exporting a commit with destination-only history.
+# Conflicts stop that project, without overwriting the remote or touching its peers.
+sync_subtree() {
+  if ! python3 "$(dirname "${BASH_SOURCE[0]}")/sync_project_repo.py" "$1" "$2"; then
+    status=1
+  fi
+}
+sync_subtree "30-source/i30ltz-recovery(seperate-related-project)" i30ltz-recovery
+sync_subtree "30-source/android_companion/swarm_os-companion" i30ltz-swarm-companion
+sync_subtree "lucille-companion" i30ltz-lucille-assistant
 # Always retry origin: an earlier failed push can leave a clean but unpushed tree.
 if git push origin main; then
   echo 'SYNC OK: swarm-os-i30ltz'
@@ -60,49 +87,4 @@ else
   status=1
 fi
 
-# App repos get a SNAPSHOT of their folder, not `git subtree push`.
-#
-# Found 2026-09-25: after 30-source/android_companion/swarm_os-companion was
-# archived (06:49) and restored (09:51), `git subtree split` matched 0 commits
-# and returned a commit whose tree was the companion but whose history was the
-# ENTIRE SWARM OS repo. GitHub rejected it only as non-fast-forward — a force
-# push would have uploaded all of swarm-os-i30ltz into the companion repo.
-#
-# Snapshot sync: fetch the remote's main; if its tree already equals the
-# folder's tree, do nothing; otherwise create ONE commit whose tree is exactly
-# HEAD:<prefix> and whose only parent is the remote tip, and push it
-# fast-forward. The pushed history is the remote's own history plus that
-# commit — no main-repo commits or objects outside the folder can leak, and a
-# moved/renamed/re-added folder can never break it. Never force-pushes.
-#
-# --prefix must exactly match the CURRENT tracked directory path; a missing
-# folder fails loudly instead of pushing an empty tree.
-sync_subtree() {
-  local prefix=$1 remote=$2 tree remote_tip commit
-  # (no ^{tree} suffix here — after "HEAD:" git would read it as part of the path)
-  if ! tree=$(git rev-parse --verify --quiet "HEAD:$prefix") ||
-     [ "$(git cat-file -t "$tree")" != tree ]; then
-    echo "SYNC FAILED: $remote (folder '$prefix' is not in HEAD)" >&2
-    status=1; return
-  fi
-  if ! git fetch --quiet "$remote" main; then
-    echo "SYNC FAILED: $remote (fetch)" >&2
-    status=1; return
-  fi
-  remote_tip=$(git rev-parse FETCH_HEAD)
-  if [ "$(git rev-parse "$remote_tip^{tree}")" = "$tree" ]; then
-    echo "SYNC OK: $remote (up to date)"
-    return
-  fi
-  commit=$(git commit-tree "$tree" -p "$remote_tip" -m "auto-sync: $(date -Iseconds)")
-  if git push --quiet "$remote" "$commit:refs/heads/main"; then
-    echo "SYNC OK: $remote"
-  else
-    echo "SYNC FAILED: $remote" >&2
-    status=1
-  fi
-}
-sync_subtree "30-source/i30ltz-recovery(seperate-related-project)" i30ltz-recovery
-sync_subtree "30-source/android_companion/swarm_os-companion" i30ltz-swarm-companion
-sync_subtree "lucille-companion" i30ltz-lucille-assistant
 exit "$status"
