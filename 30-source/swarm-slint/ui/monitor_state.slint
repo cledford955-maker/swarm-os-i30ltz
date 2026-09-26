@@ -10,6 +10,8 @@ export global MonitorState {
     // there is NO disk-usage field on LucyServer today, so none is shown here).
     in property <string> cpu-label: "CPU  --%";
     in property <string> ram-label: "RAM  --/-- MB";
+    in property <string> engine-label: "ENGINE  --";
+    in property <bool> engine-online: false;
 
     in property <[ProcessRow]> processes: [];
 

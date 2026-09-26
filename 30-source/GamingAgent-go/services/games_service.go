@@ -135,6 +135,42 @@ func (s *GamesService) cheapSharkGet(url string) (*http.Response, error) {
 	return s.cs.Do(req)
 }
 
+// GetTopDeals returns the current cheapest CheapShark deals, capped at n. Used
+// by Lucille's context builder so she can reference specific prices when
+// recommending games. Best-effort: any HTTP or decode error returns an empty
+// slice, never blocks the chat pipeline.
+type DealSummary struct {
+	Title       string `json:"title"`
+	SalePrice   string `json:"salePrice"`
+	NormalPrice string `json:"normalPrice"`
+	Savings     string `json:"savings"`
+	SteamAppID  string `json:"steamAppID,omitempty"`
+	DealID      string `json:"dealID"`
+}
+
+func (s *GamesService) GetTopDeals(n int) ([]DealSummary, error) {
+	if n <= 0 {
+		n = 8
+	}
+	// storeID=1 = Steam; upperPrice=15 mirrors LucyServer's default so deals
+	// track the same catalog.
+	url := fmt.Sprintf("https://www.cheapshark.com/api/1.0/deals?storeID=1&upperPrice=15&pageSize=%d&sortBy=Price", n)
+	resp, err := s.cheapSharkGet(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var raw []DealSummary
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, err
+	}
+	if len(raw) > n {
+		raw = raw[:n]
+	}
+	return raw, nil
+}
+
 func (s *GamesService) GetPrices(appId string) (*models.CheapSharkGameDetail, error) {
 	url := fmt.Sprintf("https://www.cheapshark.com/api/1.0/games?steamAppID=%s&limit=1", appId)
 	resp, err := s.cheapSharkGet(url)

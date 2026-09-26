@@ -742,7 +742,7 @@ everywhere at once the moment `mock` flips.
 ### GamingAgent (implement in Go rewrite, not .NET)
 - [ ] Price alert: poll CheapShark daily, write to gaming.db when a game drops below threshold, surface in dashboard
 - [ ] Add IGDB or SteamSpy API for richer genre/description data (GFN catalog has sparse genres)
-- [ ] Cache Steam library to SQLite so dashboard loads offline
+- [x] **Steam library persistent cache** (2026-09-25 Opus 4.7) — `services/steam_cache.go` writes atomic JSON to `BaseDir()/steam_library.json` on success; when the Steam key is dead (2026-09-20 incident) the cached payload is served with `cached=true, cached_at, upstream_error` so the dashboard keeps rendering. 7 Go tests. (No SQLite dep added — matches LucyServer's existing flat-file pattern.)
 - [ ] Webhook endpoint so external services can push events to the dashboard
 
 ### Gaming Dashboard (Artifact — no language changes needed)
@@ -756,7 +756,7 @@ everywhere at once the moment `mock` flips.
 
 ### News & Gaming Agent
 **CORRECTION (found 2026-09-10 while scaffolding LucyServer-go, task #15):** this already exists — `NewsAndGamesService` inside LucyServer (`/api/news`, `/api/deals`, `/api/news-feed`, `/api/dev-news`, `/api/steam-library`, `/api/game-prices`, `/api/game-info`, `/api/gfn/games`, `/api/gfn/optimize`), not a separate future agent. It's in scope for LucyServer Go rewrite task #19. The ideas below (RSS sources, update notifications) are still real gaps in that EXISTING service, not justification for a new one.
-- [ ] Sources: GamingOnLinux RSS, Phoronix, Steam news API per owned game — check what `NewsAndGamesService` already sources before assuming gaps
+- [x] **Sources: GamingOnLinux RSS + Phoronix added** (2026-09-25 Opus 4.7) — both feeds pulled by `services/news.go` in `GetNews()` and `GetNewsFeed()` alongside GameSpot / Boiling Steam / Linux Gaming News. Steam news API per-owned-game deferred (Steam API key currently revoked).
 - [ ] Surface "your games got updates" notification in dashboard
 
 ### Desktop Shell (hex grid — LARGELY DONE 2026-09-11, launcher+layout fixed 2026-09-15)
@@ -770,7 +770,7 @@ everywhere at once the moment `mock` flips.
 - [x] **Desktop scroll layout bug fixed (2026-09-15)** — endless `ListView.builder` was wrapping back to ORIGIN after only ~3 spaces because each space section was shorter than the viewport; ORIGIN repeated ~10 times on screen. Fixed by wrapping each list item in `ConstrainedBox(constraints: BoxConstraints(minHeight: viewportHeight))` so each space occupies at least one full screen.
 - [x] **Whole-shell zoom added (2026-09-15)** — new `services/ui_scale_service.dart` (`UiScaleService`, a `ChangeNotifier`, persisted via `shared_preferences` key `swarm_ui_scale`, range 0.75x-1.75x) plus `widgets/ui_zoom_control.dart` (a persistent bottom-left `-`/`%`/`+` pill visible on every screen). `main.dart`'s `SwarmApp` now wraps the router's `child` in a `MediaQuery`+`OverflowBox`+`Transform.scale` combo (`_wholeShellZoom`) that lays content out against a virtually shrunk/grown screen size and stretches it back to the real one — this scales the *entire* UI (icons, layout, buttons, not just font sizes) and keeps hit-testing correct, unlike a text-only `textScaler` override. Also wired `Ctrl+=`/`Ctrl+-`/`Ctrl+0` as global keyboard shortcuts (works from any screen, same `HardwareKeyboard` handler pattern already used in `hex_desktop_page.dart` for Meta+Tab). This is separate from the terminal's own `A-`/`A+` font zoom below — that one only resizes text inside the terminal widget; this one resizes everything.
 - [x] **Embedded terminal ('terminal' hex tile) made bigger + personalized (2026-09-15)** — user asked for "colorful text, bigger text, copy/paste/enter/cut by clicking buttons or right-clicking." Turned out `widgets/swarm_terminal.dart` already had all of that (ANSI color, toolbar Copy/Paste/Cut/Clear buttons, ENTER button, right-click context menu) — it was just cramped (10-12.5px text) and the user likely never noticed since the *external* "Terminal" tiles (hub grid, drawer) shell out via `SystemLauncher.terminalCmd` instead of opening this widget, and those were the ones silently failing (see launcher fix above). Bumped base sizes ~35-40% (single-pane 12.5→17, split 11→15, quad 10→13, input/prompt to match) and added a persisted zoom control (`A-`/`A+` toolbar buttons + right-click "Bigger/Smaller Text", stored in `shared_preferences` under `swarm_terminal_font_scale`, range 0.8x-2.2x) so size is a per-user preference, not a fixed value. Note: this in-app terminal never needed alacritty/foot/xterm to begin with — it runs `bash -c` directly via `Process.start`, so it already worked even before the packages.x86_64 fix, it was just tiny.
-- [ ] Taskbar / window-switcher strip (labwc has no panel — needs `waybar` pkg + config)
+- [x] **Waybar taskbar / window-switcher strip** (2026-09-25 Opus 4.7) — `waybar` added to `packages.x86_64`; `airootfs/etc/xdg/waybar/{config,style.css}` staged (bottom-anchored wlr/taskbar + workspaces + clock + network + battery + temperature + tray, translucent dark-cyan theme matching Flutter shell); labwc autostart launches it before the shell; `swarm-ui-cleanup.sh` pkills it; `test_desktop_boot_contract` guards autostart line + package + config file presence.
 - [ ] **Software-center / "install any compatible program from the web"** — user asked for this 2026-09-15 but it's unscoped; likely candidates are a GUI wrapper over `pacman`/`yay` (AUR) or a curated Flatpak catalog. Needs a follow-up conversation to pin down UX before building.
 - [ ] **Live-patch of the currently-booted SWARM OS install — blocked, needs the user to run it themselves (2026-09-15).** User said yes to installing alacritty/chromium/nodejs/npm onto the current boot, not just the next ISO rebuild. Could not be done directly from this session: the Bash tool here runs on the **CachyOS host** (`/etc/os-release` confirms `ID=cachyos`), not inside the actual booted SWARM OS session the user is looking at — there is no shell access to that boot from here. The SWARM OS install partition (`nvme0n1p2`) is visible from CachyOS at `/mnt/swarm`, mounted **read-only**, and installing into it requires root (`sudo`), which this session does not have a password for (asked, real prompt, not a sandbox artifact). **User needs to run this themselves** on the CachyOS side (a terminal there, not inside the currently-broken SWARM OS boot which has no terminal yet — that's the chicken-and-egg reason this can't be self-hosted):
   ```
@@ -806,17 +806,17 @@ everywhere at once the moment `mock` flips.
 
 ### SWARM OS / ISO
 - [x] **`GoogleWorkspaceService` build and staging automated** — `70-scripts/build_swarm_iso_6.2.19_2026-09-08.sh` now publishes from `30-source/GoogleWorkspaceService` into an out-of-tree build directory and stages the fresh output on every ISO build; runtime OAuth credentials are not copied from the host. `dotnet publish` verified successfully 2026-09-12.
-- [ ] Google OAuth flow for GoogleWorkspaceService in LucyServer
+- [x] **Google OAuth flow for GoogleWorkspaceService in LucyServer** (2026-09-25 Opus 4.7) — `handlers/google_oauth.go` proxies `/api/google/auth/{status,url,upload_credentials,exchange,logout}` to the .NET service on 8402 (preserves upstream status, multipart content-type, query strings, 503 fallback). Flutter `GoogleWorkspaceService` client + tests.
 - [ ] Android Companion app — build.gradle.kts version stamp wired but app not tested
-- [ ] Snapshot/restore: btrfs subvolume snapshot before each build run so bad builds are recoverable
-- [ ] OTA update mechanism: check `/mnt/Lucy/10-releases/` version file vs running version
+- [x] **Snapshot/restore: btrfs subvolume snapshot** — `airootfs/usr/local/bin/swarm-snapshot.sh` runs at every boot via `swarm-snapshot.service` on the installed root; captures `@` into `@snapshots/swarm-<ts>` and writes a GRUB rollback entry into `custom.cfg`. Keeps 5 newest snapshots, prunes older with matching GRUB entries removed. Skips gracefully on the live ISO (UUID mismatch). Build workspace itself is ext4, so build-time snapshot isn't available there — installed root snapshotting covers the recoverability intent.
+- [x] **OTA update mechanism** (2026-09-25 Opus 4.7) — `handlers/updates.go` GET `/api/updates/check` scans `/mnt/ventoy/ISO/SWARM_OS` + `/mnt/Lucy/10-releases`, picks newest semver ISO (defeats stale `latest.txt`), returns SHA-256 sidecar. Flutter `SwarmUpdateService` polls every 15 min; top-bar renders `↑ v<latest>` pill when update available.
 
 ### Lucille AI
 - [x] Nemotron SSE streaming — `/api/lucille/chat/stream` streams word-by-word via Server-Sent Events
 - [x] SQLite chat history — persists all Lucille conversations to `gaming.db` (chat_history table)
 - [x] "Ask Lucille" free-text — `POST /api/lucille/chat` takes arbitrary message history
-- [ ] Lucille aware of current deals — reference specific prices in suggestions
-- [ ] Lucille cross-agent: can query LucyServer for calendar/weather context when suggesting gaming sessions
+- [x] **Lucille aware of current deals** (2026-09-25 Opus 4.7) — `GamesService.GetTopDeals(n)` feeds current CheapShark Steam deals into `buildContextMessages` when `LucilleService.WithGamesService()` is wired (main.go does this). System prompt updated to reference specific prices from the deal block.
+- [x] **Lucille cross-agent: calendar context** (2026-09-25 Opus 4.7) — `buildContextMessages` now hits GoogleWorkspaceService `/cal/events?maxResults=6&daysAhead=7` and appends an "Upcoming calendar events" system message so Lucille avoids suggesting a long gaming session before something scheduled. Best-effort: service down / not authenticated / no events / malformed JSON all silently skip the block (no chat blocking). 5 unit tests. Weather context still open (no weather API wired yet).
 
 ---
 

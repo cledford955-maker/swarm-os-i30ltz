@@ -31,7 +31,9 @@ func main() {
 	gfnSvc := services.NewGfnService()
 	steamSvc := services.NewSteamService()
 	gamesSvc := services.NewGamesService(gfnSvc, steamSvc, database)
-	lucilleSvc := services.NewLucilleService(gfnSvc, steamSvc, database)
+	// gamesSvc feeds Lucille current CheapShark deals so she can reference
+	// specific prices in recommendations (SWARM_AI_FEATURES.md 2026-09-15 item).
+	lucilleSvc := services.NewLucilleService(gfnSvc, steamSvc, database).WithGamesService(gamesSvc)
 	mediaSvc := services.NewMediaService()
 
 	// Warm GFN catalog in background

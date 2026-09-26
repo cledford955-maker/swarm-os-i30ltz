@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/google_workspace_service.dart';
 import '../theme/swarm_colors.dart';
+import '../theme/swarm_text_styles.dart';
 import '../widgets/agent_voice_prompt_settings.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -208,12 +210,175 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               );
             }),
+            const SizedBox(height: 24),
+            const Divider(color: SwarmColors.border),
+            const SizedBox(height: 20),
+            const _GoogleWorkspaceSection(),
             const SizedBox(height: 20),
             const Divider(color: SwarmColors.border),
             const SizedBox(height: 20),
             const AgentVoicePromptSettings(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _GoogleWorkspaceSection extends StatefulWidget {
+  const _GoogleWorkspaceSection();
+
+  @override
+  State<_GoogleWorkspaceSection> createState() =>
+      _GoogleWorkspaceSectionState();
+}
+
+class _GoogleWorkspaceSectionState extends State<_GoogleWorkspaceSection> {
+  final _svc = GoogleWorkspaceService();
+  GoogleAuthStatus _status = GoogleAuthStatus.offline;
+  bool _loading = true;
+  bool _actionInProgress = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final s = await _svc.status();
+    if (mounted) setState(() { _status = s; _loading = false; });
+  }
+
+  Future<void> _startLogin() async {
+    setState(() => _actionInProgress = true);
+    try {
+      final url = await _svc.getAuthUrl();
+      await Process.run('xdg-open', [url]);
+      await Future.delayed(const Duration(seconds: 3));
+      await _refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: SwarmColors.bgElevated,
+            content: Text('Google login failed: $e',
+                style: const TextStyle(color: SwarmColors.statusCritical)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _actionInProgress = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    setState(() => _actionInProgress = true);
+    try {
+      await _svc.logout();
+      await _refresh();
+    } finally {
+      if (mounted) setState(() => _actionInProgress = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color statusColor;
+    final String statusLabel;
+    if (_loading) {
+      statusColor = SwarmColors.textMuted;
+      statusLabel = 'Checking...';
+    } else if (_status.isOffline) {
+      statusColor = SwarmColors.statusOffline;
+      statusLabel = 'Service offline';
+    } else if (_status.authenticated) {
+      statusColor = SwarmColors.statusOnline;
+      statusLabel = _status.email ?? 'Authenticated';
+    } else if (_status.hasCredentials) {
+      statusColor = SwarmColors.statusIdle;
+      statusLabel = 'Credentials loaded, not signed in';
+    } else {
+      statusColor = SwarmColors.statusOffline;
+      statusLabel = 'No credentials';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SwarmColors.bgElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: SwarmColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.cloud_outlined,
+                  color: SwarmColors.accent, size: 18),
+              const SizedBox(width: 8),
+              Text('Google Workspace',
+                  style: SwarmTextStyles.label
+                      .copyWith(color: SwarmColors.textPrimary, fontSize: 13)),
+              const Spacer(),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(statusLabel,
+                  style: SwarmTextStyles.codeSmall
+                      .copyWith(color: statusColor, fontSize: 11)),
+            ],
+          ),
+          if (!_loading && !_status.isOffline) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (_status.authenticated)
+                  ElevatedButton.icon(
+                    onPressed: _actionInProgress ? null : _logout,
+                    icon: const Icon(Icons.logout, size: 14),
+                    label: const Text('Sign Out'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          SwarmColors.statusCritical.withValues(alpha: 0.15),
+                      foregroundColor: SwarmColors.statusCritical,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                    ),
+                  )
+                else
+                  ElevatedButton.icon(
+                    onPressed: _actionInProgress ? null : _startLogin,
+                    icon: const Icon(Icons.login, size: 14),
+                    label: const Text('Sign In with Google'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          SwarmColors.accent.withValues(alpha: 0.15),
+                      foregroundColor: SwarmColors.accent,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _actionInProgress ? null : _refresh,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  color: SwarmColors.textMuted,
+                  tooltip: 'Refresh status',
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

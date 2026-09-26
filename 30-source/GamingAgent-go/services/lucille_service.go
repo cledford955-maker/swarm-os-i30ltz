@@ -48,6 +48,7 @@ const (
 type LucilleService struct {
 	gfn    *GfnService
 	steam  *SteamService
+	games  *GamesService // optional — feeds current CheapShark deals into context
 	db     *sql.DB
 	client *http.Client
 }
@@ -59,6 +60,15 @@ func NewLucilleService(gfn *GfnService, steam *SteamService, database *sql.DB) *
 		db:     database,
 		client: &http.Client{Timeout: 120 * time.Second},
 	}
+}
+
+// WithGamesService injects the CheapShark-backed price service used to enrich
+// Lucille's context with current deals. Wire from main.go AFTER both services
+// exist. Safe to leave unset in tests — buildContextMessages skips the deals
+// block when games is nil.
+func (s *LucilleService) WithGamesService(g *GamesService) *LucilleService {
+	s.games = g
+	return s
 }
 
 // Eval builds context from real Steam + GFN data and asks the chat model for dashboard actions.
@@ -213,11 +223,95 @@ func (s *LucilleService) buildContextMessages() []models.ChatMessage {
 			g.Name, float64(g.PlaytimeMinutes)/60, gfnTitles[NormalizeTitle(g.Name)]))
 	}
 
-	return []models.ChatMessage{
-		{Role: "system", Content: "You are Lucille, the SWARM OS AI. You know about the user's Steam library and NVIDIA GeForce NOW catalog. Be helpful, concise, and gaming-focused."},
+	messages := []models.ChatMessage{
+		{Role: "system", Content: "You are Lucille, the SWARM OS AI. You know about the user's Steam library, NVIDIA GeForce NOW catalog, and current deal prices. Be helpful, concise, and gaming-focused. When suggesting games, reference specific prices from the deal list below if the game is on sale."},
 		{Role: "system", Content: sb.String()},
-		{Role: "system", Content: lucilleActionProtocol},
 	}
+
+	// Current deals — best effort. A network failure or throttling does not
+	// block chat; Lucille just answers without price context in that case.
+	if s.games != nil {
+		if deals, err := s.games.GetTopDeals(8); err == nil && len(deals) > 0 {
+			var db strings.Builder
+			db.WriteString("Current Steam deals (from CheapShark, cheapest first):\n")
+			for _, d := range deals {
+				db.WriteString(fmt.Sprintf("  %s — $%s (was $%s, %s%% off)\n",
+					d.Title, d.SalePrice, d.NormalPrice, d.Savings))
+			}
+			messages = append(messages, models.ChatMessage{Role: "system", Content: db.String()})
+		}
+	}
+
+	// Calendar context from GoogleWorkspaceService (8402). Silently skipped if
+	// the service is down or not authenticated — Lucille just answers without
+	// scheduling awareness. Never blocks chat.
+	if cal := fetchUpcomingCalendarSummary(); cal != "" {
+		messages = append(messages, models.ChatMessage{Role: "system", Content: cal})
+	}
+
+	messages = append(messages, models.ChatMessage{Role: "system", Content: lucilleActionProtocol})
+	return messages
+}
+
+// googleWorkspaceCalendarBase is overridable in tests.
+var googleWorkspaceCalendarBase = func() string {
+	if v := os.Getenv("GOOGLE_WORKSPACE_URL"); v != "" {
+		return v
+	}
+	return "http://127.0.0.1:8402"
+}
+
+var calendarHTTPClient = &http.Client{Timeout: 3 * time.Second}
+
+// fetchUpcomingCalendarSummary returns a short "next few calendar events" block
+// suitable for Lucille's system context. Returns "" (empty) if:
+//   - the service is unreachable / returns non-2xx (not authenticated, offline);
+//   - no events are returned;
+//   - decode fails.
+// Never returns an error — a broken calendar must not break chat.
+func fetchUpcomingCalendarSummary() string {
+	base := googleWorkspaceCalendarBase()
+	// Fetch the primary calendar, next 7 days, up to 6 events.
+	url := fmt.Sprintf("%s/cal/events?maxResults=6&daysAhead=7&calendarId=primary", base)
+	resp, err := calendarHTTPClient.Get(url)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return ""
+	}
+
+	var raw struct {
+		OK     bool `json:"ok"`
+		Events []struct {
+			Summary string `json:"summary"`
+			Start   struct {
+				DateTime string `json:"dateTime"`
+				Date     string `json:"date"`
+			} `json:"start"`
+		} `json:"events"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return ""
+	}
+	if len(raw.Events) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("Upcoming calendar events (next 7 days — use to avoid suggesting a long gaming session before something scheduled):\n")
+	for _, e := range raw.Events {
+		when := e.Start.DateTime
+		if when == "" {
+			when = e.Start.Date
+		}
+		if when == "" {
+			continue
+		}
+		sb.WriteString(fmt.Sprintf("  %s — %s\n", when, e.Summary))
+	}
+	return sb.String()
 }
 
 // lucilleActionProtocol lets Lucille actually do things from the gaming

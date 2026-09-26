@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/agent.dart';
 import '../hub/hub_page.dart';
+import '../providers/lucille_engine_providers.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../services/lucille_voice_service.dart';
 
 /// LUCILLE CORE: DEDICATED VOICE & CHAT WORKSTATION
-class LucilleChatPage extends StatefulWidget {
+class LucilleChatPage extends ConsumerStatefulWidget {
   const LucilleChatPage({super.key});
 
   @override
-  State<LucilleChatPage> createState() => _LucilleChatPageState();
+  ConsumerState<LucilleChatPage> createState() => _LucilleChatPageState();
 }
 
-class _LucilleChatPageState extends State<LucilleChatPage> {
+class _LucilleChatPageState extends ConsumerState<LucilleChatPage> {
   final LucilleVoiceService _voiceService = LucilleVoiceService();
 
   @override
@@ -118,12 +120,18 @@ class _LucilleChatPageState extends State<LucilleChatPage> {
                             ),
                           ],
                         ),
-                        Text(
-                          'Primary Autonomous AI · Swarm Mind & Voice Engine',
-                          style: SwarmTextStyles.codeSmall.copyWith(
-                            color: SwarmColors.textMuted,
-                            fontSize: 10,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              'Primary Autonomous AI · Swarm Mind & Voice Engine',
+                              style: SwarmTextStyles.codeSmall.copyWith(
+                                color: SwarmColors.textMuted,
+                                fontSize: 10,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _EngineStatusChip(ref: ref),
+                          ],
                         ),
                       ],
                     ),
@@ -210,6 +218,48 @@ class _LucilleChatPageState extends State<LucilleChatPage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EngineStatusChip extends StatelessWidget {
+  final WidgetRef ref;
+  const _EngineStatusChip({required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final engineAsync = ref.watch(lucilleEngineStatusProvider);
+    return engineAsync.when(
+      loading: () => _chip('ENGINE ...', SwarmColors.textMuted),
+      error: (_, __) => _chip('ENGINE ✗', SwarmColors.statusOffline),
+      data: (status) {
+        if (!status.running) {
+          return _chip('ENGINE ✗', SwarmColors.statusOffline);
+        }
+        final label = status.activeProcesses > 0
+            ? 'ENGINE ×${status.activeProcesses}'
+            : 'ENGINE';
+        return _chip(label, SwarmColors.accentCyan);
+      },
+    );
+  }
+
+  Widget _chip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        label,
+        style: SwarmTextStyles.codeSmall.copyWith(
+          color: color,
+          fontSize: 8,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

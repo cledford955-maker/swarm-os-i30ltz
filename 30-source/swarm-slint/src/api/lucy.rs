@@ -10,6 +10,41 @@ pub struct ChatMsg {
     pub content: String,
 }
 
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct LucilleEngineStatus {
+    pub status: String,
+    #[serde(default)] pub user: String,
+    #[serde(default)] pub uid: i32,
+    #[serde(default)] pub p_cores: i32,
+    #[serde(default)] pub e_cores: i32,
+    #[serde(default)] pub total_ram_mb: i64,
+    #[serde(default)] pub cgroup_memory_high_mb: i64,
+    #[serde(default)] pub soul_sha256: String,
+    #[serde(default)] pub active_processes: i32,
+}
+
+impl LucilleEngineStatus {
+    pub fn is_running(&self) -> bool {
+        self.status == "running"
+    }
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct PipelineResult {
+    #[serde(default)] pub success: bool,
+    #[serde(default)] pub blocks: i32,
+    #[serde(default)] pub passed: i32,
+    #[serde(default)] pub rejected: i32,
+    #[serde(default)] pub high_risk: bool,
+    #[serde(default)] pub consensus: bool,
+    #[serde(default)] pub human: bool,
+    #[serde(default)] pub applied: bool,
+    #[serde(default)] pub checkpoint: String,
+    #[serde(default)] pub latency_ms: i64,
+    #[serde(rename = "mock", default)] pub is_mock: bool,
+    #[serde(default)] pub error: Option<String>,
+}
+
 // Field names verified against LucyServer/Services/ISystemIntegrationService.cs —
 // ASP.NET's default Web JSON policy (camelCase) applies, no [JsonPropertyName] overrides exist.
 // NOTE: LucyServer has NO disk-usage endpoint at all — do not fabricate one here.
@@ -39,6 +74,35 @@ pub struct LucyClient {
 impl LucyClient {
     pub fn new() -> Self {
         Self { client: Client::new() }
+    }
+
+    pub async fn lucille_status(&self) -> reqwest::Result<LucilleEngineStatus> {
+        self.client.get(format!("{BASE}/api/lucille/status"))
+            .send().await?
+            .json::<LucilleEngineStatus>().await
+    }
+
+    pub async fn lucille_pipeline(&self, task_id: &str, instruction: &str, target_file: &str, content: &str, language: &str, workspace: &str) -> reqwest::Result<PipelineResult> {
+        #[derive(Serialize)]
+        struct Body {
+            task_id: String,
+            instruction: String,
+            target_file: String,
+            content: String,
+            language: String,
+            workspace: String,
+        }
+        self.client.post(format!("{BASE}/api/lucille/pipeline"))
+            .json(&Body {
+                task_id: task_id.to_string(),
+                instruction: instruction.to_string(),
+                target_file: target_file.to_string(),
+                content: content.to_string(),
+                language: language.to_string(),
+                workspace: workspace.to_string(),
+            })
+            .send().await?
+            .json::<PipelineResult>().await
     }
 
     pub async fn get_system_stats(&self) -> reqwest::Result<SystemStats> {
