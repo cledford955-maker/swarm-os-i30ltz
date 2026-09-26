@@ -221,6 +221,7 @@ CMakeFiles/lucille-core.dir/src/main.cpp.o: \
  /usr/include/c++/16/bits/binders.h /usr/include/c++/16/mutex \
  /usr/include/c++/16/bits/std_mutex.h \
  /usr/include/c++/16/bits/unique_lock.h \
+ /usr/include/c++/16/condition_variable \
  /mnt/Lucy/30-source/lucille-core/include/security_sandbox.hpp \
  /mnt/Lucy/30-source/lucille-core/include/error_interceptor.hpp \
  /mnt/Lucy/30-source/lucille-core/include/affinity_manager.hpp \
@@ -234,4 +235,39 @@ CMakeFiles/lucille-core.dir/src/main.cpp.o: \
  /usr/include/asm-generic/ioctl.h /usr/include/linux/sockios.h \
  /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h \
  /usr/include/bits/ioctl-types.h /usr/include/sys/ttydefaults.h \
- /usr/include/bits/epoll.h
+ /usr/include/bits/epoll.h \
+ /mnt/Lucy/30-source/lucille-core/include/hitl_security.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/telemetry_daemon.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/mesh_sync.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/shm_telemetry.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/swarm_router.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/safety_gate.hpp \
+ /usr/include/c++/16/deque /usr/include/c++/16/bits/stl_deque.h \
+ /usr/include/c++/16/bits/deque.tcc \
+ /mnt/Lucy/30-source/lucille-core/include/checkpoint_journal.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/speculative_pipeline.hpp \
+ /usr/include/c++/16/future /usr/include/c++/16/bits/atomic_futex.h \
+ /mnt/Lucy/30-source/lucille-core/include/entropy_filter.hpp \
+ /usr/include/c++/16/cmath /usr/include/math.h \
+ /usr/include/bits/math-vector.h /usr/include/bits/libm-simd-decl-stubs.h \
+ /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
+ /usr/include/bits/fp-fast.h /usr/include/bits/mathcalls-macros.h \
+ /usr/include/bits/mathcalls-helper-functions.h \
+ /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
+ /usr/include/bits/iscanonical.h /usr/include/c++/16/bits/specfun.h \
+ /usr/include/c++/16/tr1/gamma.tcc \
+ /usr/include/c++/16/tr1/special_function_util.h \
+ /usr/include/c++/16/tr1/bessel_function.tcc \
+ /usr/include/c++/16/tr1/beta_function.tcc \
+ /usr/include/c++/16/tr1/ell_integral.tcc \
+ /usr/include/c++/16/tr1/exp_integral.tcc \
+ /usr/include/c++/16/tr1/hypergeometric.tcc \
+ /usr/include/c++/16/tr1/legendre_function.tcc \
+ /usr/include/c++/16/tr1/modified_bessel_func.tcc \
+ /usr/include/c++/16/tr1/poly_hermite.tcc \
+ /usr/include/c++/16/tr1/poly_laguerre.tcc \
+ /usr/include/c++/16/tr1/riemann_zeta.tcc /usr/include/c++/16/algorithm \
+ /usr/include/c++/16/bits/ranges_algo.h \
+ /usr/include/c++/16/pstl/glue_algorithm_defs.h \
+ /mnt/Lucy/30-source/lucille-core/include/consensus_gate.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/openrouter_backends.hpp

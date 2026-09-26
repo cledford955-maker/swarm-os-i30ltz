@@ -154,7 +154,7 @@ class _RightSettingsDrawerState extends State<RightSettingsDrawer> {
 
   Future<void> _checkSubsystems() async {
     // Check IPC socket
-    final sock = File('/tmp/lucille_ipc.sock');
+    final sock = File('/run/lucille/ipc.sock');
     final sockExists = await sock.exists();
 
     // Check Docker socket
@@ -332,7 +332,7 @@ class _RightSettingsDrawerState extends State<RightSettingsDrawer> {
                           ),
                           const SizedBox(height: 8),
                           _buildStatusRow('Lucille IPC Socket', _ipcSocketActive,
-                              detail: _ipcSocketActive ? '/tmp/lucille_ipc.sock' : 'Connecting...'),
+                              detail: _ipcSocketActive ? '/run/lucille/ipc.sock' : 'Connecting...'),
                           _buildStatusRow('Docker Runtime', _dockerActive,
                               detail: _dockerActive ? 'RUNNING' : 'INACTIVE'),
                           _buildStatusRow('Tailscale Mesh', _tailscaleIp.startsWith('100.'),

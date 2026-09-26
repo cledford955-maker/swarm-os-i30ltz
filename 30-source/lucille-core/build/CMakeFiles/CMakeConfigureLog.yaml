@@ -4217,3 +4217,746 @@ events:
         
       exitCode: 0
 ...
+
+---
+events:
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/FindCURL.cmake:174 (find_package)"
+      - "CMakeLists.txt:14 (find_package)"
+    name: "CURL"
+    configs:
+      -
+        filename: "CURL.cps"
+        kind: "cps"
+      -
+        filename: "curl.cps"
+        kind: "cps"
+      -
+        filename: "CURLConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "curl-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "optional"
+      quiet: true
+      global: false
+      policy_scope: true
+      bypass_provider: false
+      names:
+        - "CURL"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: true
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: true
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/pkgRedirects/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/pkgRedirects/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/pkgRedirects/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/pkgRedirects/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/pkgRedirects/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/mnt/Lucy/30-source/lucille-core/build/CMakeFiles/pkgRedirects/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/flutter/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/flutter/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/flutter/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/flutter/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/flutter/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/flutter/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/Android/Sdk/platform-tools/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/Android/Sdk/platform-tools/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/Android/Sdk/platform-tools/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/Android/Sdk/platform-tools/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/Android/Sdk/platform-tools/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/Android/Sdk/platform-tools/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/local/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/local/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/share/flatpak/exports/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/share/flatpak/exports/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/share/flatpak/exports/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/share/flatpak/exports/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/share/flatpak/exports/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/i30ltz/.local/share/flatpak/exports/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/var/lib/flatpak/exports/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/var/lib/flatpak/exports/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/var/lib/flatpak/exports/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/var/lib/flatpak/exports/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/var/lib/flatpak/exports/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/var/lib/flatpak/exports/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/jvm/default/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/jvm/default/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/jvm/default/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/jvm/default/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/jvm/default/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/jvm/default/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/site_perl/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/site_perl/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/site_perl/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/site_perl/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/site_perl/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/site_perl/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/vendor_perl/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/vendor_perl/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/vendor_perl/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/vendor_perl/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/vendor_perl/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/vendor_perl/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/core_perl/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/core_perl/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/core_perl/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/core_perl/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/core_perl/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/bin/core_perl/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/CURLConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/curl-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/lib/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/lib/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/share/cps/CURL.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/share/cps/curl.cps"
+        mode: "cps"
+        reason: "no_exist"
+    found: null
+    search_context:
+      ENV{PATH}:
+        - "/opt/flutter/bin"
+        - "/home/i30ltz/.local/bin"
+        - "/home/i30ltz/Android/Sdk/platform-tools"
+        - "/opt/flutter/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/local/sbin"
+        - "/home/i30ltz/.local/share/flatpak/exports/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/usr"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/FindPkgConfig.cmake:761 (find_library)"
+      - "/usr/share/cmake/Modules/FindPkgConfig.cmake:811 (_pkg_find_libs)"
+      - "/usr/share/cmake/Modules/FindPkgConfig.cmake:1149 (_pkg_recalculate)"
+      - "/usr/share/cmake/Modules/FindPkgConfig.cmake:1166 (_pkg_check_modules_internal)"
+      - "/usr/share/cmake/Modules/FindCURL.cmake:191 (pkg_check_modules)"
+      - "CMakeLists.txt:14 (find_package)"
+    mode: "library"
+    variable: "pkgcfg_lib_PC_CURL_curl"
+    description: "Path to a library."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "curl"
+    candidate_directories:
+      - "/usr/lib/"
+    found: "/usr/lib/libcurl.so"
+    search_context:
+      ENV{PATH}:
+        - "/opt/flutter/bin"
+        - "/home/i30ltz/.local/bin"
+        - "/home/i30ltz/Android/Sdk/platform-tools"
+        - "/opt/flutter/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/local/sbin"
+        - "/home/i30ltz/.local/share/flatpak/exports/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/usr"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_LIBRARY_PATH:
+        - "/usr/lib/X11"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/FindCURL.cmake:201 (find_path)"
+      - "CMakeLists.txt:14 (find_package)"
+    mode: "path"
+    variable: "CURL_INCLUDE_DIR"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "curl/curl.h"
+    candidate_directories:
+      - "/usr/include/"
+      - "/opt/flutter/bin/"
+      - "/home/i30ltz/.local/bin/"
+      - "/home/i30ltz/Android/Sdk/platform-tools/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/local/sbin/"
+      - "/home/i30ltz/.local/share/flatpak/exports/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/local/include/"
+      - "/usr/local/"
+      - "/usr/include/"
+      - "/usr/"
+      - "/include/"
+      - "/usr/X11R6/include/"
+      - "/usr/X11R6/"
+      - "/usr/pkg/include/"
+      - "/usr/pkg/"
+      - "/opt/include/"
+      - "/opt/"
+      - "/usr/include/X11/"
+    found: "/usr/include/"
+    search_context:
+      ENV{PATH}:
+        - "/opt/flutter/bin"
+        - "/home/i30ltz/.local/bin"
+        - "/home/i30ltz/Android/Sdk/platform-tools"
+        - "/opt/flutter/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/local/sbin"
+        - "/home/i30ltz/.local/share/flatpak/exports/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/usr"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_INCLUDE_PATH:
+        - "/usr/include/X11"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/FindCURL.cmake:208 (find_library)"
+      - "CMakeLists.txt:14 (find_package)"
+    mode: "library"
+    variable: "CURL_LIBRARY_RELEASE"
+    description: "Path to a library."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "curl"
+      - "curllib"
+      - "libcurl_imp"
+      - "curllib_static"
+      - "libcurl"
+      - "libcurl_a"
+    candidate_directories:
+      - "/usr/lib/"
+      - "/opt/flutter/bin/"
+      - "/home/i30ltz/.local/bin/"
+      - "/home/i30ltz/Android/Sdk/platform-tools/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/local/sbin/"
+      - "/home/i30ltz/.local/share/flatpak/exports/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/local/lib/"
+      - "/usr/local/"
+      - "/usr/lib/"
+      - "/usr/"
+      - "/lib/"
+      - "/usr/X11R6/lib/"
+      - "/usr/X11R6/"
+      - "/usr/pkg/lib/"
+      - "/usr/pkg/"
+      - "/opt/lib/"
+      - "/opt/"
+      - "/usr/lib/X11/"
+    found: "/usr/lib/libcurl.so"
+    search_context:
+      ENV{PATH}:
+        - "/opt/flutter/bin"
+        - "/home/i30ltz/.local/bin"
+        - "/home/i30ltz/Android/Sdk/platform-tools"
+        - "/opt/flutter/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/local/sbin"
+        - "/home/i30ltz/.local/share/flatpak/exports/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/usr"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_LIBRARY_PATH:
+        - "/usr/lib/X11"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/FindCURL.cmake:223 (find_library)"
+      - "CMakeLists.txt:14 (find_package)"
+    mode: "library"
+    variable: "CURL_LIBRARY_DEBUG"
+    description: "Path to a library."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "libcurl-d_imp"
+      - "libcurl-d"
+    candidate_directories:
+      - "/usr/lib/"
+      - "/opt/flutter/bin/"
+      - "/home/i30ltz/.local/bin/"
+      - "/home/i30ltz/Android/Sdk/platform-tools/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/local/sbin/"
+      - "/home/i30ltz/.local/share/flatpak/exports/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/local/lib/"
+      - "/usr/local/"
+      - "/usr/lib/"
+      - "/usr/"
+      - "/lib/"
+      - "/usr/X11R6/lib/"
+      - "/usr/X11R6/"
+      - "/usr/pkg/lib/"
+      - "/usr/pkg/"
+      - "/opt/lib/"
+      - "/opt/"
+      - "/usr/lib/X11/"
+    searched_directories:
+      - "/usr/lib/"
+      - "/usr/lib/"
+      - "/opt/flutter/bin/"
+      - "/opt/flutter/bin/"
+      - "/home/i30ltz/.local/bin/"
+      - "/home/i30ltz/.local/bin/"
+      - "/home/i30ltz/Android/Sdk/platform-tools/"
+      - "/home/i30ltz/Android/Sdk/platform-tools/"
+      - "/usr/local/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/sbin/"
+      - "/home/i30ltz/.local/share/flatpak/exports/bin/"
+      - "/home/i30ltz/.local/share/flatpak/exports/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/local/lib/"
+      - "/usr/local/lib/"
+      - "/usr/local/"
+      - "/usr/local/"
+      - "/usr/lib/"
+      - "/usr/lib/"
+      - "/usr/"
+      - "/usr/"
+      - "/lib/"
+      - "/lib/"
+      - "/usr/X11R6/lib/"
+      - "/usr/X11R6/lib/"
+      - "/usr/X11R6/"
+      - "/usr/X11R6/"
+      - "/usr/pkg/lib/"
+      - "/usr/pkg/lib/"
+      - "/usr/pkg/"
+      - "/usr/pkg/"
+      - "/opt/lib/"
+      - "/opt/lib/"
+      - "/opt/"
+      - "/opt/"
+      - "/usr/lib/X11/"
+      - "/usr/lib/X11/"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "/opt/flutter/bin"
+        - "/home/i30ltz/.local/bin"
+        - "/home/i30ltz/Android/Sdk/platform-tools"
+        - "/opt/flutter/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/local/sbin"
+        - "/home/i30ltz/.local/share/flatpak/exports/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/usr"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_LIBRARY_PATH:
+        - "/usr/lib/X11"
+...

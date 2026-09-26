@@ -6,5 +6,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I/mnt/Lucy/30-source/lucille-core/include
 
-CXX_FLAGS = -O3 -DNDEBUG -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter -pthread -O3 -mavx2 -mfma
+CXX_FLAGS = -O3 -DNDEBUG -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter -pthread -O3 -mavx2 -mfma -DWITH_GZFILEOP
 

@@ -99,6 +99,8 @@ lucille-core: CMakeFiles/lucille-core.dir/compiler_depend.ts
 lucille-core: liblucille_engine_lib.a
 lucille-core: /usr/lib/libcrypto.so
 lucille-core: /usr/lib/libsqlite3.so
+lucille-core: /usr/lib/libcurl.so
+lucille-core: /usr/lib/libcurl.so
 lucille-core: CMakeFiles/lucille-core.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/Lucy/30-source/lucille-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable lucille-core"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/lucille-core.dir/link.txt --verbose=$(VERBOSE)

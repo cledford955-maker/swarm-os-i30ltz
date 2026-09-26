@@ -192,6 +192,11 @@ CMakeFiles/lucille_engine_lib.dir/src/safety_gate.cpp.o: \
  /usr/include/c++/16/bits/unique_lock.h /usr/include/c++/16/deque \
  /usr/include/c++/16/bits/stl_deque.h /usr/include/c++/16/bits/deque.tcc \
  /mnt/Lucy/30-source/lucille-core/include/checkpoint_journal.hpp \
+ /usr/include/fcntl.h /usr/include/bits/fcntl.h \
+ /usr/include/bits/fcntl-linux.h /usr/include/bits/types/struct_iovec.h \
+ /usr/include/bits/cloexec.h /usr/include/linux/falloc.h \
+ /usr/include/linux/openat2.h /usr/include/bits/openat2.h \
+ /usr/include/bits/stat.h /usr/include/bits/struct_stat.h \
  /usr/include/c++/16/iostream /usr/include/c++/16/fstream \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/basic_file.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++io.h \

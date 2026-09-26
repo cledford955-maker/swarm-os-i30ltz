@@ -310,10 +310,52 @@ CMakeFiles/lucille_engine_lib.dir/src/speculative_pipeline.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/lucille_engine_lib.dir/src/speculative_pipeline.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/Lucy/30-source/lucille-core/src/speculative_pipeline.cpp -o CMakeFiles/lucille_engine_lib.dir/src/speculative_pipeline.cpp.s
 
+CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o: CMakeFiles/lucille_engine_lib.dir/flags.make
+CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o: /mnt/Lucy/30-source/lucille-core/src/consensus_gate.cpp
+CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o: CMakeFiles/lucille_engine_lib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Lucy/30-source/lucille-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o -MF CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o.d -o CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o -c /mnt/Lucy/30-source/lucille-core/src/consensus_gate.cpp
+
+CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/Lucy/30-source/lucille-core/src/consensus_gate.cpp > CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.i
+
+CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/Lucy/30-source/lucille-core/src/consensus_gate.cpp -o CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.s
+
+CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o: CMakeFiles/lucille_engine_lib.dir/flags.make
+CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o: /mnt/Lucy/30-source/lucille-core/src/http_client.cpp
+CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o: CMakeFiles/lucille_engine_lib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Lucy/30-source/lucille-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o -MF CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o.d -o CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o -c /mnt/Lucy/30-source/lucille-core/src/http_client.cpp
+
+CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/Lucy/30-source/lucille-core/src/http_client.cpp > CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.i
+
+CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/Lucy/30-source/lucille-core/src/http_client.cpp -o CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.s
+
+CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o: CMakeFiles/lucille_engine_lib.dir/flags.make
+CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o: /mnt/Lucy/30-source/lucille-core/src/openrouter_backends.cpp
+CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o: CMakeFiles/lucille_engine_lib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Lucy/30-source/lucille-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building CXX object CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o -MF CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o.d -o CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o -c /mnt/Lucy/30-source/lucille-core/src/openrouter_backends.cpp
+
+CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/Lucy/30-source/lucille-core/src/openrouter_backends.cpp > CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.i
+
+CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/Lucy/30-source/lucille-core/src/openrouter_backends.cpp -o CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.s
+
 CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o: CMakeFiles/lucille_engine_lib.dir/flags.make
 CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o: /mnt/Lucy/30-source/lucille-core/src/engine.cpp
 CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o: CMakeFiles/lucille_engine_lib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Lucy/30-source/lucille-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Lucy/30-source/lucille-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o -MF CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o.d -o CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o -c /mnt/Lucy/30-source/lucille-core/src/engine.cpp
 
 CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.i: cmake_force
@@ -343,6 +385,9 @@ lucille_engine_lib_OBJECTS = \
 "CMakeFiles/lucille_engine_lib.dir/src/shm_telemetry.cpp.o" \
 "CMakeFiles/lucille_engine_lib.dir/src/entropy_filter.cpp.o" \
 "CMakeFiles/lucille_engine_lib.dir/src/speculative_pipeline.cpp.o" \
+"CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o" \
+"CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o" \
+"CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o" \
 "CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o"
 
 # External object files for target lucille_engine_lib
@@ -365,10 +410,13 @@ liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/src/telemetry_daemon.
 liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/src/shm_telemetry.cpp.o
 liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/src/entropy_filter.cpp.o
 liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/src/speculative_pipeline.cpp.o
+liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o
+liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o
+liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o
 liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o
 liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/build.make
 liblucille_engine_lib.a: CMakeFiles/lucille_engine_lib.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/Lucy/30-source/lucille-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Linking CXX static library liblucille_engine_lib.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/Lucy/30-source/lucille-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Linking CXX static library liblucille_engine_lib.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/lucille_engine_lib.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/lucille_engine_lib.dir/link.txt --verbose=$(VERBOSE)
 

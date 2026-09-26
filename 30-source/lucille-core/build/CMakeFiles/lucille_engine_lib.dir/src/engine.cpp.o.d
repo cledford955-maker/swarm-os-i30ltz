@@ -186,6 +186,7 @@ CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o: \
  /usr/include/c++/16/bits/binders.h /usr/include/c++/16/mutex \
  /usr/include/c++/16/bits/std_mutex.h \
  /usr/include/c++/16/bits/unique_lock.h \
+ /usr/include/c++/16/condition_variable \
  /mnt/Lucy/30-source/lucille-core/include/security_sandbox.hpp \
  /mnt/Lucy/30-source/lucille-core/include/error_interceptor.hpp \
  /mnt/Lucy/30-source/lucille-core/include/affinity_manager.hpp \
@@ -199,28 +200,64 @@ CMakeFiles/lucille_engine_lib.dir/src/engine.cpp.o: \
  /usr/include/asm-generic/ioctl.h /usr/include/linux/sockios.h \
  /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h \
  /usr/include/bits/ioctl-types.h /usr/include/sys/ttydefaults.h \
- /usr/include/bits/epoll.h /usr/include/c++/16/iostream \
- /usr/include/c++/16/ostream /usr/include/c++/16/bits/ostream_print.h \
- /usr/include/c++/16/bits/ostream.tcc /usr/include/c++/16/istream \
- /usr/include/c++/16/bits/istream.tcc /usr/include/c++/16/sstream \
- /usr/include/c++/16/bits/sstream.tcc /usr/include/c++/16/iomanip \
- /usr/include/c++/16/locale \
+ /usr/include/bits/epoll.h \
+ /mnt/Lucy/30-source/lucille-core/include/hitl_security.hpp \
+ /usr/include/c++/16/chrono /usr/include/c++/16/bits/stl_algo.h \
+ /usr/include/c++/16/bits/algorithmfwd.h \
+ /usr/include/c++/16/bits/stl_heap.h \
+ /usr/include/c++/16/bits/uniform_int_dist.h /usr/include/c++/16/sstream \
+ /usr/include/c++/16/istream /usr/include/c++/16/ostream \
+ /usr/include/c++/16/bits/ostream_print.h \
+ /usr/include/c++/16/bits/ostream.tcc \
+ /usr/include/c++/16/bits/istream.tcc \
+ /usr/include/c++/16/bits/sstream.tcc \
+ /usr/include/c++/16/bits/chrono_io.h /usr/include/c++/16/format \
+ /usr/include/c++/16/charconv /usr/include/c++/16/locale \
  /usr/include/c++/16/bits/locale_facets_nonio.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/time_members.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/messages_members.h \
  /usr/include/libintl.h /usr/include/c++/16/bits/codecvt.h \
  /usr/include/c++/16/bits/locale_facets_nonio.tcc \
- /usr/include/c++/16/bits/locale_conv.h \
+ /usr/include/c++/16/bits/locale_conv.h /usr/include/c++/16/optional \
+ /usr/include/c++/16/span /usr/include/c++/16/bits/monostate.h \
+ /usr/include/c++/16/bits/formatfwd.h /usr/include/c++/16/bits/unicode.h \
+ /usr/include/c++/16/bits/unicode-data.h \
+ /mnt/Lucy/30-source/lucille-core/include/telemetry_daemon.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/mesh_sync.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/shm_telemetry.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/swarm_router.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/safety_gate.hpp \
+ /usr/include/c++/16/deque /usr/include/c++/16/bits/stl_deque.h \
+ /usr/include/c++/16/bits/deque.tcc \
+ /mnt/Lucy/30-source/lucille-core/include/checkpoint_journal.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/speculative_pipeline.hpp \
+ /usr/include/c++/16/future /usr/include/c++/16/bits/atomic_futex.h \
+ /mnt/Lucy/30-source/lucille-core/include/entropy_filter.hpp \
+ /usr/include/c++/16/cmath /usr/include/math.h \
+ /usr/include/bits/math-vector.h /usr/include/bits/libm-simd-decl-stubs.h \
+ /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
+ /usr/include/bits/fp-fast.h /usr/include/bits/mathcalls-macros.h \
+ /usr/include/bits/mathcalls-helper-functions.h \
+ /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
+ /usr/include/bits/iscanonical.h /usr/include/c++/16/bits/specfun.h \
+ /usr/include/c++/16/tr1/gamma.tcc \
+ /usr/include/c++/16/tr1/special_function_util.h \
+ /usr/include/c++/16/tr1/bessel_function.tcc \
+ /usr/include/c++/16/tr1/beta_function.tcc \
+ /usr/include/c++/16/tr1/ell_integral.tcc \
+ /usr/include/c++/16/tr1/exp_integral.tcc \
+ /usr/include/c++/16/tr1/hypergeometric.tcc \
+ /usr/include/c++/16/tr1/legendre_function.tcc \
+ /usr/include/c++/16/tr1/modified_bessel_func.tcc \
+ /usr/include/c++/16/tr1/poly_hermite.tcc \
+ /usr/include/c++/16/tr1/poly_laguerre.tcc \
+ /usr/include/c++/16/tr1/riemann_zeta.tcc /usr/include/c++/16/algorithm \
+ /usr/include/c++/16/bits/ranges_algo.h \
+ /usr/include/c++/16/pstl/glue_algorithm_defs.h \
+ /mnt/Lucy/30-source/lucille-core/include/consensus_gate.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/openrouter_backends.hpp \
+ /usr/include/c++/16/iostream /usr/include/c++/16/iomanip \
  /usr/include/c++/16/bits/quoted_string.h /usr/include/c++/16/filesystem \
  /usr/include/c++/16/bits/fs_fwd.h /usr/include/c++/16/bits/fs_path.h \
  /usr/include/c++/16/codecvt /usr/include/c++/16/bits/fs_dir.h \
- /usr/include/c++/16/bits/fs_ops.h /usr/include/c++/16/chrono \
- /usr/include/c++/16/bits/stl_algo.h \
- /usr/include/c++/16/bits/algorithmfwd.h \
- /usr/include/c++/16/bits/stl_heap.h \
- /usr/include/c++/16/bits/uniform_int_dist.h \
- /usr/include/c++/16/bits/chrono_io.h /usr/include/c++/16/format \
- /usr/include/c++/16/charconv /usr/include/c++/16/optional \
- /usr/include/c++/16/span /usr/include/c++/16/bits/monostate.h \
- /usr/include/c++/16/bits/formatfwd.h /usr/include/c++/16/bits/unicode.h \
- /usr/include/c++/16/bits/unicode-data.h
+ /usr/include/c++/16/bits/fs_ops.h

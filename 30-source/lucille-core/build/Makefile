@@ -237,6 +237,30 @@ src/checkpoint_journal.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/checkpoint_journal.cpp.s
 .PHONY : src/checkpoint_journal.cpp.s
 
+src/consensus_gate.o: src/consensus_gate.cpp.o
+.PHONY : src/consensus_gate.o
+
+# target to build an object file
+src/consensus_gate.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.o
+.PHONY : src/consensus_gate.cpp.o
+
+src/consensus_gate.i: src/consensus_gate.cpp.i
+.PHONY : src/consensus_gate.i
+
+# target to preprocess a source file
+src/consensus_gate.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.i
+.PHONY : src/consensus_gate.cpp.i
+
+src/consensus_gate.s: src/consensus_gate.cpp.s
+.PHONY : src/consensus_gate.s
+
+# target to generate assembly for a file
+src/consensus_gate.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/consensus_gate.cpp.s
+.PHONY : src/consensus_gate.cpp.s
+
 src/engine.o: src/engine.cpp.o
 .PHONY : src/engine.o
 
@@ -333,6 +357,30 @@ src/hitl_security.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/hitl_security.cpp.s
 .PHONY : src/hitl_security.cpp.s
 
+src/http_client.o: src/http_client.cpp.o
+.PHONY : src/http_client.o
+
+# target to build an object file
+src/http_client.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.o
+.PHONY : src/http_client.cpp.o
+
+src/http_client.i: src/http_client.cpp.i
+.PHONY : src/http_client.i
+
+# target to preprocess a source file
+src/http_client.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.i
+.PHONY : src/http_client.cpp.i
+
+src/http_client.s: src/http_client.cpp.s
+.PHONY : src/http_client.s
+
+# target to generate assembly for a file
+src/http_client.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/http_client.cpp.s
+.PHONY : src/http_client.cpp.s
+
 src/ipc_server.o: src/ipc_server.cpp.o
 .PHONY : src/ipc_server.o
 
@@ -404,6 +452,30 @@ src/mesh_sync.s: src/mesh_sync.cpp.s
 src/mesh_sync.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/mesh_sync.cpp.s
 .PHONY : src/mesh_sync.cpp.s
+
+src/openrouter_backends.o: src/openrouter_backends.cpp.o
+.PHONY : src/openrouter_backends.o
+
+# target to build an object file
+src/openrouter_backends.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.o
+.PHONY : src/openrouter_backends.cpp.o
+
+src/openrouter_backends.i: src/openrouter_backends.cpp.i
+.PHONY : src/openrouter_backends.i
+
+# target to preprocess a source file
+src/openrouter_backends.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.i
+.PHONY : src/openrouter_backends.cpp.i
+
+src/openrouter_backends.s: src/openrouter_backends.cpp.s
+.PHONY : src/openrouter_backends.s
+
+# target to generate assembly for a file
+src/openrouter_backends.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lucille_engine_lib.dir/build.make CMakeFiles/lucille_engine_lib.dir/src/openrouter_backends.cpp.s
+.PHONY : src/openrouter_backends.cpp.s
 
 src/process_manager.o: src/process_manager.cpp.o
 .PHONY : src/process_manager.o
@@ -666,6 +738,9 @@ help:
 	@echo "... src/checkpoint_journal.o"
 	@echo "... src/checkpoint_journal.i"
 	@echo "... src/checkpoint_journal.s"
+	@echo "... src/consensus_gate.o"
+	@echo "... src/consensus_gate.i"
+	@echo "... src/consensus_gate.s"
 	@echo "... src/engine.o"
 	@echo "... src/engine.i"
 	@echo "... src/engine.s"
@@ -678,6 +753,9 @@ help:
 	@echo "... src/hitl_security.o"
 	@echo "... src/hitl_security.i"
 	@echo "... src/hitl_security.s"
+	@echo "... src/http_client.o"
+	@echo "... src/http_client.i"
+	@echo "... src/http_client.s"
 	@echo "... src/ipc_server.o"
 	@echo "... src/ipc_server.i"
 	@echo "... src/ipc_server.s"
@@ -687,6 +765,9 @@ help:
 	@echo "... src/mesh_sync.o"
 	@echo "... src/mesh_sync.i"
 	@echo "... src/mesh_sync.s"
+	@echo "... src/openrouter_backends.o"
+	@echo "... src/openrouter_backends.i"
+	@echo "... src/openrouter_backends.s"
 	@echo "... src/process_manager.o"
 	@echo "... src/process_manager.i"
 	@echo "... src/process_manager.s"

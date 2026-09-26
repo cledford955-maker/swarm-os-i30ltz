@@ -172,11 +172,23 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: \
  /usr/include/c++/16/bits/align.h \
  /usr/include/c++/16/bits/stl_uninitialized.h \
  /usr/include/c++/16/bits/fs_dir.h /usr/include/c++/16/bits/fs_ops.h \
+ /usr/include/c++/16/cstring /usr/include/string.h /usr/include/strings.h \
  /usr/include/sys/stat.h /usr/include/bits/stat.h \
  /usr/include/bits/struct_stat.h /usr/include/bits/statx.h \
  /usr/include/linux/stat.h /usr/include/bits/statx-generic.h \
  /usr/include/bits/types/struct_statx_timestamp.h \
- /usr/include/bits/types/struct_statx.h /usr/include/unistd.h \
+ /usr/include/bits/types/struct_statx.h /usr/include/sys/socket.h \
+ /usr/include/bits/types/struct_iovec.h /usr/include/bits/socket.h \
+ /usr/include/bits/socket_type.h /usr/include/bits/sockaddr.h \
+ /usr/include/asm/socket.h /usr/include/asm-generic/socket.h \
+ /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h \
+ /usr/include/bits/types/struct_osockaddr.h /usr/include/sys/un.h \
+ /usr/include/sys/mman.h /usr/include/bits/mman.h \
+ /usr/include/bits/mman-map-flags-generic.h \
+ /usr/include/bits/mman-linux.h /usr/include/bits/mman-shared.h \
+ /usr/include/bits/mman_ext.h /usr/include/netinet/in.h \
+ /usr/include/bits/in.h /usr/include/arpa/inet.h /usr/include/poll.h \
+ /usr/include/sys/poll.h /usr/include/bits/poll.h /usr/include/unistd.h \
  /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
  /usr/include/bits/confname.h /usr/include/bits/getopt_posix.h \
  /usr/include/bits/getopt_core.h /usr/include/bits/unistd_ext.h \
@@ -236,18 +248,21 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: \
  /usr/include/c++/16/bits/random.tcc /usr/include/c++/16/numeric \
  /usr/include/c++/16/bits/stl_numeric.h \
  /usr/include/c++/16/pstl/glue_numeric_defs.h \
- /usr/include/c++/16/pstl/execution_defs.h \
- /mnt/Lucy/30-source/lucille-core/include/bootloader.hpp \
- /mnt/Lucy/30-source/lucille-core/include/ipc_server.hpp \
- /usr/include/c++/16/functional /usr/include/c++/16/bits/std_function.h \
+ /usr/include/c++/16/pstl/execution_defs.h /usr/include/c++/16/functional \
+ /usr/include/c++/16/bits/std_function.h \
  /usr/include/c++/16/unordered_map \
  /usr/include/c++/16/bits/unordered_map.h \
  /usr/include/c++/16/bits/hashtable.h \
  /usr/include/c++/16/bits/hashtable_policy.h \
  /usr/include/c++/16/bits/node_handle.h \
- /usr/include/c++/16/bits/binders.h /usr/include/c++/16/mutex \
- /usr/include/c++/16/bits/std_mutex.h \
+ /usr/include/c++/16/bits/binders.h /usr/include/c++/16/algorithm \
+ /usr/include/c++/16/bits/ranges_algo.h \
+ /usr/include/c++/16/pstl/glue_algorithm_defs.h \
+ /mnt/Lucy/30-source/lucille-core/include/bootloader.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/ipc_server.hpp \
+ /usr/include/c++/16/mutex /usr/include/c++/16/bits/std_mutex.h \
  /usr/include/c++/16/bits/unique_lock.h \
+ /usr/include/c++/16/condition_variable \
  /mnt/Lucy/30-source/lucille-core/include/security_sandbox.hpp \
  /mnt/Lucy/30-source/lucille-core/include/error_interceptor.hpp \
  /mnt/Lucy/30-source/lucille-core/include/affinity_manager.hpp \
@@ -264,25 +279,23 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: \
  /usr/include/asm/ioctls.h /usr/include/asm-generic/ioctls.h \
  /usr/include/linux/ioctl.h /usr/include/asm/ioctl.h \
  /usr/include/asm-generic/ioctl.h /usr/include/linux/sockios.h \
- /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h \
  /usr/include/bits/ioctl-types.h /usr/include/sys/ttydefaults.h \
  /usr/include/bits/epoll.h \
  /mnt/Lucy/30-source/lucille-core/include/simd_quant.hpp \
  /mnt/Lucy/30-source/lucille-core/include/vector_memory.hpp \
  /usr/include/sqlite3.h \
  /mnt/Lucy/30-source/lucille-core/include/entropy_filter.hpp \
- /usr/include/c++/16/algorithm /usr/include/c++/16/bits/ranges_algo.h \
- /usr/include/c++/16/pstl/glue_algorithm_defs.h \
  /mnt/Lucy/30-source/lucille-core/include/safety_gate.hpp \
  /usr/include/c++/16/deque /usr/include/c++/16/bits/stl_deque.h \
  /usr/include/c++/16/bits/deque.tcc \
  /mnt/Lucy/30-source/lucille-core/include/checkpoint_journal.hpp \
  /mnt/Lucy/30-source/lucille-core/include/swarm_router.hpp \
  /mnt/Lucy/30-source/lucille-core/include/speculative_pipeline.hpp \
- /usr/include/c++/16/future /usr/include/c++/16/condition_variable \
- /usr/include/c++/16/bits/atomic_futex.h \
+ /usr/include/c++/16/future /usr/include/c++/16/bits/atomic_futex.h \
+ /mnt/Lucy/30-source/lucille-core/include/shm_telemetry.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/consensus_gate.hpp \
  /mnt/Lucy/30-source/lucille-core/include/hitl_security.hpp \
  /mnt/Lucy/30-source/lucille-core/include/mesh_sync.hpp \
  /mnt/Lucy/30-source/lucille-core/include/telemetry_daemon.hpp \
- /mnt/Lucy/30-source/lucille-core/include/shm_telemetry.hpp \
- /mnt/Lucy/30-source/lucille-core/include/engine.hpp
+ /mnt/Lucy/30-source/lucille-core/include/engine.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/openrouter_backends.hpp

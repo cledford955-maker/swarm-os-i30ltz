@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     std::cout << "=====================================================\n";
 
     lucille::EngineConfig config;
-    config.socket_path = "/tmp/lucille_ipc.sock";
+    config.socket_path = "/run/lucille/ipc.sock";
     config.soul_path = "SOUL.md";
     if (const char* tok = std::getenv("SWARM_AUTH_TOKEN")) config.mesh_auth_token = tok;
     if (const char* key = std::getenv("OPENROUTER_API_KEY")) config.openrouter_api_key = key;
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
             config.telemetry_port = static_cast<uint16_t>(std::stoi(argv[++i]));
         } else if (arg == "--help" || arg == "-h") {
             std::cout << "Usage: lucille-core [OPTIONS]\n"
-                      << "  --socket <path>     UNIX domain socket path (default: /tmp/lucille_ipc.sock)\n"
+                      << "  --socket <path>     UNIX domain socket path (default: /run/lucille/ipc.sock)\n"
                       << "  --soul <path>       SOUL.md prompt file path (default: SOUL.md)\n"
                       << "  --workspace <path>  Base workspace directory (default: .)\n"
                       << "  --telemetry-port N  Companion WebSocket port (default: 9091; needs SWARM_AUTH_TOKEN)\n";

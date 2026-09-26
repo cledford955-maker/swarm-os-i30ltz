@@ -99,6 +99,8 @@ test_engine: CMakeFiles/test_engine.dir/compiler_depend.ts
 test_engine: liblucille_engine_lib.a
 test_engine: /usr/lib/libcrypto.so
 test_engine: /usr/lib/libsqlite3.so
+test_engine: /usr/lib/libcurl.so
+test_engine: /usr/lib/libcurl.so
 test_engine: CMakeFiles/test_engine.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/Lucy/30-source/lucille-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable test_engine"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/test_engine.dir/link.txt --verbose=$(VERBOSE)

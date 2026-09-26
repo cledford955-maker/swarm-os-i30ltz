@@ -221,8 +221,10 @@ CMakeFiles/lucille_engine_lib.dir/src/swarm_router.cpp.o: \
  /mnt/Lucy/30-source/lucille-core/include/security_sandbox.hpp \
  /mnt/Lucy/30-source/lucille-core/include/speculative_pipeline.hpp \
  /usr/include/c++/16/future /usr/include/c++/16/condition_variable \
- /usr/include/c++/16/bits/atomic_futex.h /usr/include/c++/16/iostream \
- /usr/include/c++/16/random /usr/include/c++/16/cmath /usr/include/math.h \
+ /usr/include/c++/16/bits/atomic_futex.h \
+ /mnt/Lucy/30-source/lucille-core/include/shm_telemetry.hpp \
+ /mnt/Lucy/30-source/lucille-core/include/entropy_filter.hpp \
+ /usr/include/c++/16/cmath /usr/include/math.h \
  /usr/include/bits/math-vector.h /usr/include/bits/libm-simd-decl-stubs.h \
  /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
  /usr/include/bits/fp-fast.h /usr/include/bits/mathcalls-macros.h \
@@ -240,7 +242,13 @@ CMakeFiles/lucille_engine_lib.dir/src/swarm_router.cpp.o: \
  /usr/include/c++/16/tr1/modified_bessel_func.tcc \
  /usr/include/c++/16/tr1/poly_hermite.tcc \
  /usr/include/c++/16/tr1/poly_laguerre.tcc \
- /usr/include/c++/16/tr1/riemann_zeta.tcc \
+ /usr/include/c++/16/tr1/riemann_zeta.tcc /usr/include/c++/16/algorithm \
+ /usr/include/c++/16/bits/ranges_algo.h \
+ /usr/include/c++/16/pstl/glue_algorithm_defs.h \
+ /mnt/Lucy/30-source/lucille-core/include/consensus_gate.hpp \
+ /usr/include/c++/16/iostream /usr/include/sys/sysinfo.h \
+ /usr/include/linux/kernel.h /usr/include/linux/sysinfo.h \
+ /usr/include/linux/const.h /usr/include/c++/16/random \
  /usr/include/c++/16/bits/random.h \
  /usr/include/c++/16/x86_64-pc-linux-gnu/bits/opt_random.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/pmmintrin.h \
