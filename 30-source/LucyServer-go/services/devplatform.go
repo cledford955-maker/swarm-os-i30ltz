@@ -487,8 +487,10 @@ func OAuthLoginURL(provider string) string {
 	}
 }
 
-func OAuthHandleCallback(_ string, code string) bool {
-	return code != ""
+// OAuthHandleCallback is a stub — real token exchange not yet implemented.
+// Returns false to avoid silently authenticating any caller who supplies a code.
+func OAuthHandleCallback(_ string, _ string) bool {
+	return false
 }
 
 func AnalyticsDashboard() DeveloperAnalytics {
@@ -706,22 +708,15 @@ var (
 	wsOnce     sync.Once
 )
 
+// initWorkspaces starts the cloud workspace list empty.
+//
+// It previously pre-seeded three invented hostnames (cluster-east.swarm-os.cloud,
+// arm-eu.swarm-os.cloud, edge-node-01.local) with fabricated latency, memory and
+// CPU stats reported as "Connected" — no real SSH probe was ever performed.
+// Those were removed. Workspaces are now created only via WorkspaceCreate.
 func initWorkspaces() {
 	wsOnce.Do(func() {
-		workspaces = []CloudWorkspace{
-			{WorkspaceID: "cloud-us-east-gpu", Name: "NVIDIA Tensor Swarm Cluster (US-East)",
-				RemoteHost: "cluster-east.swarm-os.cloud", SSHPort: 2222, Username: "swarm-developer",
-				RemotePath: "/opt/swarm/ai-workspace", Status: "Connected",
-				LatencyMs: 24, MemoryUsedMB: 24576, MemoryTotalMB: 65536, CPUUsagePercent: 18.5},
-			{WorkspaceID: "cloud-eu-west-arm", Name: "Ampere Arm64 Enterprise Sandbox (Frankfurt)",
-				RemoteHost: "arm-eu.swarm-os.cloud", SSHPort: 22, Username: "i30ltz",
-				RemotePath: "/home/i30ltz/src/lucille", Status: "Connected",
-				LatencyMs: 68, MemoryUsedMB: 8192, MemoryTotalMB: 32768, CPUUsagePercent: 9.2},
-			{WorkspaceID: "cloud-edge-baremetal", Name: "Baremetal Microk8s Development Node",
-				RemoteHost: "edge-node-01.local", SSHPort: 22, Username: "root",
-				RemotePath: "/var/swarm/k8s", Status: "Disconnected",
-				LatencyMs: 3, MemoryUsedMB: 4096, MemoryTotalMB: 16384, CPUUsagePercent: 2.4},
-		}
+		workspaces = []CloudWorkspace{}
 	})
 }
 
@@ -736,10 +731,12 @@ func WorkspaceList() []CloudWorkspace {
 
 func WorkspaceCreate(name, host string, port int, username, remotePath string) CloudWorkspace {
 	initWorkspaces()
+	// Status "Pending" until an actual SSH probe confirms reachability.
+	// LatencyMs, MemoryTotalMB, MemoryUsedMB, CPUUsagePercent are zero until
+	// a real probe populates them; reporting fake numbers would mislead callers.
 	ws := CloudWorkspace{
 		WorkspaceID: newID(), Name: name, RemoteHost: host, SSHPort: port,
-		Username: username, RemotePath: remotePath, Status: "Connected",
-		LatencyMs: 15, MemoryTotalMB: 32768, MemoryUsedMB: 6144, CPUUsagePercent: 5.0,
+		Username: username, RemotePath: remotePath, Status: "Pending",
 	}
 	wsMu.Lock()
 	workspaces = append(workspaces, ws)
@@ -866,9 +863,12 @@ func MarketplaceGetAnalytics() MarketplaceAnalytics {
 	if len(recent) > 15 {
 		recent = recent[:15]
 	}
+	// ActivePaidSubs was previously hardcoded to 142 (ported unchanged from the
+	// .NET original). Without a real subscription registry there is no honest
+	// count, so report zero until a subscription table is implemented.
 	return MarketplaceAnalytics{
 		TotalGrossRevenue: round2(gross), TotalDeveloperPayouts: round2(dev),
-		TotalTransactions: len(billing), ActivePaidSubs: 142,
+		TotalTransactions: len(billing), ActivePaidSubs: 0,
 		RecentTransactions: recent,
 	}
 }

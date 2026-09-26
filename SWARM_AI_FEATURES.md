@@ -1,5 +1,112 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **DONE — Scheduled health-check audit + code fixes, 2026-09-26 (Sonnet 4.6, automated):**
+> Full cross-stack health audit run. Code fixes applied and pushed to `i30ltz/compassionate-carson-43kjv0`.
+>
+> **Findings by severity:**
+>
+> **CRITICAL (ongoing) — swarm-ui.service boot crash still only diagnostic-only (IN PROGRESS since 2026-09-22):**
+> Service dies within 1–3s of PAM session open on both hardware and QEMU VM across all builds ≥ v6.2.69.
+> Only `WLR_LOG_LEVEL=debug` and enhanced `ExecStopPost` logging were added; no root cause found yet.
+> Need: fresh ISO build + boot to capture the debug log. QEMU runs with `-display gtk,gl=off` / `virtio-vga` — worth revisiting if log points to GL failure.
+>
+> **HIGH (SECURITY, FIXED in part) — Rate limiting added to destructive routes in LucyServer-go:**
+> The following routes had no rate limiter despite accepting arbitrary shell/system commands behind auth:
+> - `/terminal/run` → now 30/min (same as `/run_command`, same handler)
+> - `/terminal/ws` → now 5 connections/min
+> - `/system/process/kill` → now 10/min
+> - `/packages/uninstall` → now 5/min
+> - `/clipboard/set` → now 20/min
+> - `/code/apply_upgrade`, `/recovery/mount` → now 5/min each
+> - `/code/save` → now 30/min
+> - `/install/ws` → now 3/min
+> Fixed in: `30-source/LucyServer-go/main.go`
+>
+> **HIGH (SECURITY, NOT YET FIXED) — "swarm-token-2026" hardcoded fallback in 7 places:**
+> When `SWARM_AUTH_TOKEN` env var is not set, all services fall back to the well-known literal `"swarm-token-2026"` — now public on GitHub. Any caller with source access can authenticate to all `/api/*` endpoints including `/run_command`, `/terminal/ws`, and `/lucy`.
+> Locations: `LucyServer-go/main.go:424`, `GamingAgent-go/main.go:208`, `LucyServer-go/memory/peer.go:192`,
+> `frontend/lib/services/swarm_config.dart:10`, `android_companion/.../SwarmConnection.kt:94`,
+> `lucille-core/src/telemetry_daemon.cpp:35`, `i30ltz-recovery.../src/main.rs:79`.
+> Fix needed: rotate to a new random string; installer already generates unique token on install, so only the source fallback is dangerous. User action required.
+>
+> **HIGH (SECURITY, FIXED) — OAuthHandleCallback was a false-positive no-op stub:**
+> `LucyServer-go/services/devplatform.go:490` returned `true` for ANY non-empty OAuth code — no real token exchange performed, yet the handler wrote `{"success":true}`. Any attacker could pass `code=x` and get a success response.
+> Fixed: now returns `false` unconditionally with a stub comment. OAuth is visibly broken until a real exchange is wired.
+>
+> **HIGH (SECURITY) — OAuthLoginURL placeholder client IDs:**
+> When `OAUTH_GITHUB_CLIENT_ID` / `OAUTH_GOOGLE_CLIENT_ID` env vars are absent, redirect URLs embed literal `"swarm_github_client_id"` / `"swarm_google_client_id"` strings. GitHub/Google OAuth will reject these. Not fixed in this pass (harmless until TTS/auth are properly wired); requires real OAuth app registration.
+>
+> **HIGH (FUNCTIONAL) — STEAM_API_KEY dead (ongoing since 2026-09-20):**
+> Steam API returns 403; blocks `/api/steam/library` and `/api/games/intersection` in GamingAgent-go.
+> Steam cache serves stale data as fallback ✅. Fix: user regenerates key at steamcommunity.com/dev/apikey and updates `.env`.
+>
+> **MEDIUM (FIXED) — Fabricated cloud workspaces removed from initWorkspaces:**
+> `LucyServer-go/services/devplatform.go` seeded 3 invented hostnames (`cluster-east.swarm-os.cloud`, `arm-eu.swarm-os.cloud`, `edge-node-01.local`) with fabricated latency/RAM/CPU stats presented as "Connected" — no SSH probe was ever performed.
+> Fixed: `initWorkspaces()` now starts empty. `WorkspaceCreate()` now sets `Status: "Pending"` and zero metrics instead of fake 15ms/32GB/5%.
+>
+> **MEDIUM (FIXED) — LucilleAssistant ideas path called retired NVIDIA model (HTTP 410):**
+> `LucilleAssistant/feeds.go:391` sent requests to `nvidia/llama-3.3-nemotron-super-49b-v1`, which NVIDIA retired (returns HTTP 410). The fallback curated list served instead, but the AI path was permanently broken.
+> Fixed: now calls OpenRouter `moonshotai/kimi-k2.5` via `OPENROUTER_API_KEY` (same provider/key already used by GamingAgent). `Config` struct gained `OpenRouterKey` field loaded from `OPENROUTER_API_KEY`.
+>
+> **MEDIUM — GetGfnGames() in LucyServer-go returns hardcoded 10-title list (STUB):**
+> `LucyServer-go/services/news.go:242` returns a hardcoded 10-game list for `/api/gfn/games` — not a 501, returns 200 with fake data. GamingAgent-go's `/api/gfn/catalog` has the real catalog fetcher.
+> Not fixed this pass (low user impact — most access goes through GamingAgent); logged for next port pass.
+>
+> **MEDIUM — AnalyticsDashboard() returns all-zero struct (STUB, wired as 200):**
+> `LucyServer-go/services/devplatform.go:494` — `/api/analytics/dashboard` returns `{}` zeros, not a 501. No real analytics pipeline exists.
+>
+> **MEDIUM — ArtifactStore() is never called — artifact list always empty:**
+> `LucyServer-go/services/devplatform.go:440` — `ArtifactStore()` is defined but no handler calls it. No upload route exists. `GET /api/artifacts/` always returns `[]`; `GET /api/artifacts/{id}/download` always 404.
+>
+> **MEDIUM — ISO release policy violation (ax2, carried from 2026-09-24 audit):**
+> `swarm-os-v6.2.72-9f142fdf-2026.09.24-x86_64.iso` is in `swarm_os_out/` — not on Ventoy. Violates policy (ISOs must go ONLY to `/mnt/ventoy/ISO/SWARM_OS/`). No SHA256 checksum alongside it (au7).
+>
+> **MEDIUM — Three companion trees, canonical undefined (ax3):**
+> `android_companion/swarm_os-companion/`, `android_companion(seperate-related-project)/swarm_os-companion/`, and `lucille-companion/` (v1.0.0, `com.swarm.lucille`) — CLAUDE.md names lucille-companion as canonical but the two android_companion trees are still present. Recommend archiving / deleting them.
+>
+> **LOW (FIXED) — Stale error message "nemotron response parse failed":**
+> `GamingAgent-go/services/lucille_service.go:375` still named "nemotron" after switching to OpenRouter.
+> Fixed: now says "chat provider response parse failed".
+>
+> **LOW (FIXED) — ActivePaidSubs hardcoded to 142:**
+> `LucyServer-go/services/devplatform.go:871` returned `ActivePaidSubs: 142` always (ported from .NET original).
+> Fixed: now returns 0 until a real subscription registry is implemented.
+>
+> **LOW — GitListRepos always reports "Initial commit" as last commit:**
+> `LucyServer-go/services/devplatform.go:342` reads dir mtimes but never runs `git log`. Every repo shows "Initial commit". Needs `exec.Command("git", "log", "-1", "--pretty=%s")` per repo.
+>
+> **LOW — OptimizeGfn() returns same 5 generic tips for any game (STUB):**
+> `LucyServer-go/services/news.go:252` — `/api/gfn/optimize` always returns "Enable RTX On", "Set resolution to 1080p", etc. No game-specific logic.
+>
+> **LOW — buildDate hardcoded to "2026-09-24" when ldflags not passed:**
+> `LucyServer-go/main.go:537` — health endpoint always shows this date when `SWARM_BUILD_DATE` unset. Use `-ldflags` in the Makefile or build script.
+>
+> **LOW — Mirror session PID=9999 sentinel misleads MirrorListActive:**
+> `LucyServer-go/services/virtualization.go:593` — when `scrcpy` fails to start, session is still inserted as `Status: "Active"` with `PID=9999`. MirrorStop handles the sentinel, but the active list is misleading.
+>
+> **LOW — profiledef.sh.bak-$(date +%s) unexpanded literal filename (ax1):**
+> `40-iso-profile/swarm_os_iso_profile/profiledef.sh.bak-$(date +%s)` exists as a literal filename.
+> Fix: `rm "/home/user/swarm-os-i30ltz/40-iso-profile/swarm_os_iso_profile/profiledef.sh.bak-\$(date +%s)"`
+>
+> **LOW — Auto-sync git every ~10min (av4):**
+> All auto-sync commits are `"auto-sync: <timestamp>"` with no semantic messages.
+> Recommend: add `gitleaks` pre-commit hook to scan for accidental secret commits.
+>
+> **CONFIRMED WORKING / NOT ISSUES:**
+> AiCoderDispatch: real OpenRouter calls ✅ | AiCoderSuggestFixes: real implementation ✅ |
+> Community marketplace: starts empty ✅ | Sudo password: no longer stored plaintext ✅ |
+> Rate limiting on /lucy, /tts, /run_command, /verify_login_password, /totp/check ✅ |
+> CORS + originGate on both servers ✅ | Ed25519 package signing ✅ | bcrypt login ✅ |
+> GFN catalog URL fixed ✅ | CheapShark User-Agent fixed ✅ | Cache stale-fallback fixed ✅ |
+> 4 mock desktop apps (Task Master, Code Sentry, Voice Bridge, SwarmCast) properly labeled `mock: true` ✅
+>
+> **5 Improvement Suggestions:**
+> 1. **Rotate the "swarm-token-2026" default** — generate a random 32-char hex string and update all 7 source locations. The installer already generates a unique token on real installs; only unset-env deployments and this dev repo are at risk.
+> 2. **Add `gitleaks` pre-commit hook** — closes av4 secrets-in-git risk. One-liner: `gitleaks protect --staged` as a git hook.
+> 3. **Auto-generate SHA256+GPG sigs in `build_swarm_iso.sh`** — one `sha256sum` + `gpg --detach-sign` call after `mkarchiso` completes closes au7 for every future build.
+> 4. **Declare `lucille-companion/` as the canonical Android companion** — archive the two `android_companion/` trees (or delete them) to eliminate the confusion that was flagged as ax3 in the 2026-09-24 audit.
+> 5. **Wire `ArtifactStore()` to an upload handler** — add `POST /api/artifacts/upload` calling `ArtifactStore()`; the CI pipeline (`CiTriggerPipeline`) should call it after each simulated build stage, making `/api/artifacts/` actually populated.
+
 > **DONE — Cross-stack engine wiring pass, 2026-09-25 (Opus 4.6, continued session):** Five disconnected components connected end-to-end:
 > 1. **Flutter LucilleEngineService provider** — new `lucille_engine_providers.dart` Riverpod provider polls `/api/lucille/status` every 10 seconds. The Lucille chat page now shows a live ENGINE status chip in the header (online/offline/active process count) via the `_EngineStatusChip` widget.
 > 2. **Google Workspace UI wired to settings page** — `GoogleWorkspaceService` was built with the OAuth proxy but never connected to any page. Settings page now has a Google Workspace section showing auth status (authenticated/credentials loaded/offline), connected email, and Sign In / Sign Out buttons. Sign In opens the OAuth consent URL via `xdg-open`.

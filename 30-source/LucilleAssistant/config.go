@@ -31,10 +31,11 @@ type Config struct {
 	NewsFeeds   []Feed    `json:"news_feeds"`
 	NewsBlock   []string  `json:"news_blocklist"`
 
-	Token     string `json:"-"`
-	SteamKey  string `json:"-"`
-	SteamID   string `json:"-"`
-	NvidiaKey string `json:"-"`
+	Token          string `json:"-"`
+	SteamKey       string `json:"-"`
+	SteamID        string `json:"-"`
+	NvidiaKey      string `json:"-"`
+	OpenRouterKey  string `json:"-"`
 }
 
 type Feed struct {
@@ -106,5 +107,6 @@ func loadConfig() Config {
 	cfg.SteamKey = os.Getenv("STEAM_API_KEY")
 	cfg.SteamID = envOr("STEAM_ID64", os.Getenv("STEAM_ID"))
 	cfg.NvidiaKey = os.Getenv("NVIDIA_API_KEY")
+	cfg.OpenRouterKey = os.Getenv("OPENROUTER_API_KEY")
 	return cfg
 }

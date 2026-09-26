@@ -364,7 +364,8 @@ var fallbackIdeas = []Idea{
 }
 
 func (a *App) ideas(ctx context.Context) ([]Idea, string, error) {
-	if a.cfg.NvidiaKey == "" {
+	openrouterKey := a.cfg.OpenRouterKey
+	if openrouterKey == "" {
 		return fallbackIdeas, "curated", nil
 	}
 	v, err := a.cache.get("ideas", 6*time.Hour, func() (any, error) {
@@ -387,14 +388,14 @@ func (a *App) ideas(ctx context.Context) ([]Idea, string, error) {
 			"Reply with ONLY a JSON array of objects {\"title\",\"pitch\",\"stack\",\"size\"} where size is evening, weekend or sprint. Context:\n" +
 			strings.Join(ctxLines, "\n")
 		body, _ := json.Marshal(map[string]any{
-			"model":       "nvidia/llama-3.3-nemotron-super-49b-v1",
-			"messages":    []map[string]string{{"role": "system", "content": "detailed thinking off"}, {"role": "user", "content": prompt}},
+			"model":       "moonshotai/kimi-k2.5",
+			"messages":    []map[string]string{{"role": "user", "content": prompt}},
 			"temperature": 0.8, "max_tokens": 1200,
 		})
 		c, cancel := context.WithTimeout(ctx, 45*time.Second)
 		defer cancel()
-		req, _ := http.NewRequestWithContext(c, "POST", "https://integrate.api.nvidia.com/v1/chat/completions", bytes.NewReader(body))
-		req.Header.Set("Authorization", "Bearer "+a.cfg.NvidiaKey)
+		req, _ := http.NewRequestWithContext(c, "POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+openrouterKey)
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := (&http.Client{Timeout: 50 * time.Second}).Do(req)
 		if err != nil {
@@ -405,18 +406,18 @@ func (a *App) ideas(ctx context.Context) ([]Idea, string, error) {
 			Choices []struct{ Message struct{ Content string } }
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&cr); err != nil || len(cr.Choices) == 0 {
-			return nil, fmt.Errorf("Nemotron returned HTTP %d with no answer", resp.StatusCode)
+			return nil, fmt.Errorf("ideas provider returned HTTP %d with no answer", resp.StatusCode)
 		}
 		txt := cr.Choices[0].Message.Content
 		i, j := strings.Index(txt, "["), strings.LastIndex(txt, "]")
 		var ideas []Idea
 		if i < 0 || j <= i || json.Unmarshal([]byte(txt[i:j+1]), &ideas) != nil || len(ideas) == 0 {
-			return nil, fmt.Errorf("Nemotron answer wasn't a JSON list")
+			return nil, fmt.Errorf("ideas provider answer wasn't a JSON list")
 		}
 		return ideas, nil
 	})
 	if err != nil {
-		return fallbackIdeas, "curated (Nemotron: " + err.Error() + ")", nil
+		return fallbackIdeas, "curated (AI: " + err.Error() + ")", nil
 	}
 	return v.([]Idea), "nemotron", nil
 }

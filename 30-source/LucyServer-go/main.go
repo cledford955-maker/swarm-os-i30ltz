@@ -101,31 +101,34 @@ func main() {
 		// run_command executes arbitrary shell. 30/min is fast enough for IDE
 		// use; a tight loop hitting this endpoint is almost certainly abuse.
 		api.With(rateLimiter(30, time.Minute)).Post("/run_command", sysH.RunCommand)
-		api.Post("/clipboard/set", sysH.SetClipboard)
+		api.With(rateLimiter(20, time.Minute)).Post("/clipboard/set", sysH.SetClipboard)
 		// /api/terminal/run maps to the SAME RunCommand as /api/run_command in
 		// the .NET original (both just call RunCommandAsync) — not a typo.
-		api.Post("/terminal/run", sysH.RunCommand)
-		api.Get("/terminal/ws", sysH.TerminalWebSocket)
+		api.With(rateLimiter(30, time.Minute)).Post("/terminal/run", sysH.RunCommand)
+		// WebSocket terminal: rate-limited to 5 new connections/min to prevent
+		// connection-flood abuse; each live shell session is bounded by the auth
+		// middleware regardless.
+		api.With(rateLimiter(5, time.Minute)).Get("/terminal/ws", sysH.TerminalWebSocket)
 
 		// Graphical installer — the Flutter "Install SWARM OS" flow. Disk
 		// listing is a plain GET; the actual install runs over a WebSocket so
 		// the UI gets live output the same way the terminal does.
 		api.Get("/install/disks", installH.Disks)
-		api.Get("/install/ws", installH.WebSocket)
+		api.With(rateLimiter(3, time.Minute)).Get("/install/ws", installH.WebSocket)
 		api.Get("/system/processes", sysH.Processes)
-		api.Post("/system/process/kill", sysH.KillProcess)
+		api.With(rateLimiter(10, time.Minute)).Post("/system/process/kill", sysH.KillProcess)
 		api.Get("/system/stats", sysH.Stats)
 		api.Get("/packages/list", sysH.ListPackages)
-		api.Post("/packages/uninstall", sysH.UninstallPackage)
+		api.With(rateLimiter(5, time.Minute)).Post("/packages/uninstall", sysH.UninstallPackage)
 
 		// Filesystem & code (task #17) — DONE
 		api.Get("/fs", fsH.ListDirectory)
 		api.Post("/fs/analyze", fsH.AnalyzeDirectory)
 		api.Get("/code/files", fsH.ListCodeFiles)
 		api.Post("/code/read", fsH.ReadFile)
-		api.Post("/code/save", fsH.SaveFile)
-		api.Post("/code/apply_upgrade", fsH.ApplyUpgrade)
-		api.Post("/recovery/mount", fsH.MountRecovery)
+		api.With(rateLimiter(30, time.Minute)).Post("/code/save", fsH.SaveFile)
+		api.With(rateLimiter(5, time.Minute)).Post("/code/apply_upgrade", fsH.ApplyUpgrade)
+		api.With(rateLimiter(5, time.Minute)).Post("/recovery/mount", fsH.MountRecovery)
 
 		// Chat history & session management (task #18) — DONE
 		api.Get("/chats", chatH.ListChats)
