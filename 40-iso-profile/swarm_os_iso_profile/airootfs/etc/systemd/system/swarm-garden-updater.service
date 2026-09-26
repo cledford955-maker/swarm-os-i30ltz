@@ -1,0 +1,17 @@
+[Unit]
+Description=SWARM OS — sync strain photos into /opt/swarm_os/garden
+Documentation=file:///usr/lib/swarm/garden-content-updater.sh
+# Only runs after local filesystems are mounted. Never depends on network —
+# this is deliberately an offline-only sync from a local mount (see the
+# script header for why).
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/swarm/garden-content-updater.sh
+# The script exits 0 when the source mount is absent, so a missing reference
+# drive doesn't get flagged as an error. Exit 2 for config sanity failures
+# stays visible.
+SuccessExitStatus=0
+Nice=10
+IOSchedulingClass=idle

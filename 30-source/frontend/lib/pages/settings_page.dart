@@ -591,7 +591,7 @@ class _CipherSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Lock Screen', style: SwarmTextStyles.sectionTitle),
+        Text('Lock Screen', style: SwarmTextStyles.h3),
         const SizedBox(height: 8),
         Text(
           'The stone cipher unlocks SWARM OS. The garden cipher is an optional '
@@ -659,7 +659,7 @@ class _CipherActionTile extends StatelessWidget {
                     Text(title, style: SwarmTextStyles.body.copyWith(
                         color: accent, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: SwarmTextStyles.small.copyWith(
+                    Text(subtitle, style: SwarmTextStyles.bodySmall.copyWith(
                         color: SwarmColors.textMuted)),
                   ],
                 ),
