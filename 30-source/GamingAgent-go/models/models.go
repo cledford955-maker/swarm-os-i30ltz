@@ -62,6 +62,7 @@ type FavoriteEntry struct {
 
 type CheapSharkDeal struct {
 	StoreId     string `json:"storeID"`
+	DealID      string `json:"dealID"`
 	Price       string `json:"price"`
 	RetailPrice string `json:"retailPrice"`
 	Savings     string `json:"savings"`

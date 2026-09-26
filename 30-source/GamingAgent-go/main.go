@@ -36,6 +36,12 @@ func main() {
 	lucilleSvc := services.NewLucilleService(gfnSvc, steamSvc, database).WithGamesService(gamesSvc)
 	mediaSvc := services.NewMediaService()
 
+	// Price-alert daemon: polls CheapShark on a 24h cadence, files rows into
+	// `price_alerts` and pushes to PRICE_ALERT_WEBHOOK_URL when configured.
+	// Idempotent Start(); silently no-ops when Steam creds are missing.
+	priceAlertDaemon := services.NewPriceAlertDaemon(steamSvc, gamesSvc, database)
+	priceAlertDaemon.Start()
+
 	// Warm GFN catalog in background
 	go gfnSvc.WarmCache()
 
@@ -46,6 +52,7 @@ func main() {
 	favH := handlers.NewFavoritesHandler(database)
 	lucilleH := handlers.NewLucilleHandler(lucilleSvc, database)
 	mediaH := handlers.NewMediaHandler(mediaSvc)
+	priceAlertH := handlers.NewPriceAlertHandler(database)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
@@ -74,6 +81,10 @@ func main() {
 		r.Get("/games/intersection", gamesH.Intersection)
 		r.Get("/games/genres", gfnH.Genres)
 		r.Get("/games/prices/{appId}", gamesH.Prices)
+		// Recent price-alert log. Read-only; the write path is the daemon
+		// running server-side, so leaving this in the open group matches the
+		// rest of the catalog surface (games/*/gfn/*).
+		r.Get("/price-alerts", priceAlertH.Recent)
 		// Now-playing is read-only status, same trust level as the catalog
 		// routes above; play/pause/skip/volume are mutating and sit in the
 		// protected group below next to /games/favorite.
