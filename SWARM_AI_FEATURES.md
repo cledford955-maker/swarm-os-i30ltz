@@ -1,5 +1,38 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **HEALTH CHECK — 2026-09-26 (Sonnet 4.6, scheduled audit):** Full codebase scan across GamingAgent-go, LucyServer-go, Flutter frontend, swarm-slint. Findings by severity:
+>
+> **BUGS FOUND (2):**
+> 1. `frontend/lib/coder/panels/apple_panel.dart:310` — "Clean" button calls `svc.build(AppleBuildTarget.iosDebug, ...)` instead of `svc.clean()`. This means tapping Clean triggers a debug build, not a clean. Real bug.
+> 2. `frontend/lib/agent/agent_chat.dart:378` — Stale model name in user-facing UI string: `'⚡️ Summarizing context with Nemotron Lightning...'`. Provider switched to OpenRouter/kimi-k2.5 weeks ago; this string was not updated. Cosmetic but misleading.
+>
+> **PANICS / HARD CRASHES:**
+> 3. `LucyServer-go/services/webauthn.go:66` — `panic("webauthn init: " + err.Error())` — server crashes at startup if RPID/origin env vars are absent or malformed. No graceful fallback: a missing `SWARM_WEBAUTHN_RPID` env var on a fresh deploy brings the whole LucyServer down. Should be converted to a logged warning + disabled-webauthn mode.
+>
+> **MOCKS / STUBS NEEDING WIRING (documented, tracked here):**
+> 4. `telemetry_service.dart:274` — `sendNotification()` always returns `false`. Comment says "placeholder — needs real push infrastructure." Mesh alert push is completely unimplemented; the UI shows it works but nothing is sent.
+> 5. `swarm_apps.dart` — 4 apps flagged `mock: true`: Task Master (`mock_taskmaster`), Code Sentry (`mock_codesentry`), Voice Bridge (`mock_voicebridge`), SwarmCast (`mock_swarmcast`). All properly badged "SOON" in the drawer. No backend exists for any of them.
+>
+> **STANDING OPEN ITEMS (re-confirmed still open):**
+> - ISO never verified to boot on real hardware (full install flow untested)
+> - Deployed binary at `/mnt/swarm/@/opt/swarm_os/swarm_flutter/` is still the stale pre-2026-09-15 bundle
+> - `vm_boot_gate.sh` blocked on `qemu-img` not installed
+> - No SHA256 checksum alongside ISOs (au7)
+> - Auto-sync git fires every ~10 min with no semantic commit messages (av4)
+> - `profiledef.sh.bak-$(date +%s)` stale literal-name backup file still present (ax1)
+> - 3 Android companion trees, canonical unclear (ax3)
+>
+> **IMPROVEMENTS SUGGESTED (ranked):**
+> 1. **Add `GET /api/health` to LucyServer-go** — single authoritative health endpoint; every fake-readout surface depends on guessing. Returns `{version, uptime, services, lucy_mount_gb}`. Fixes fabrication-fallback pattern across wallpaper stats, companion health tiles, Slint monitor.
+> 2. **Fix webauthn panic → graceful disable** — replace `panic("webauthn init: ...")` with `log.Warn + disabled flag`; LucyServer should boot without WebAuthn if env vars are missing.
+> 3. **Fix apple_panel Clean button** — change the `svc.build(AppleBuildTarget.iosDebug, ...)` placeholder to `svc.clean()`.
+> 4. **Update stale "Nemotron Lightning" UI string** — change to "Summarizing context…" or reflect current model.
+> 5. **ISO checksum post-build** — add `sha256sum > .sha256` after ISO write in `build_swarm_iso.sh`; without this a corrupted flash is undetectable (au7, open 2026-09-12).
+> 6. **Push notification infrastructure** — `sendNotification()` returning `false` silently means companion devices never receive mesh alerts. Wire via Firebase FCM or a Tailscale-local push relay.
+> 7. **Semantic git commits** — replace auto-sync "auto-sync: timestamp" pattern with meaningful messages so audit history is readable.
+>
+> *No new incidents found in monitoring services (no external monitoring connected to this session — findings are static code analysis only).*
+
 > **DONE — Cross-stack engine wiring pass, 2026-09-25 (Opus 4.6, continued session):** Five disconnected components connected end-to-end:
 > 1. **Flutter LucilleEngineService provider** — new `lucille_engine_providers.dart` Riverpod provider polls `/api/lucille/status` every 10 seconds. The Lucille chat page now shows a live ENGINE status chip in the header (online/offline/active process count) via the `_EngineStatusChip` widget.
 > 2. **Google Workspace UI wired to settings page** — `GoogleWorkspaceService` was built with the OAuth proxy but never connected to any page. Settings page now has a Google Workspace section showing auth status (authenticated/credentials loaded/offline), connected email, and Sign In / Sign Out buttons. Sign In opens the OAuth consent URL via `xdg-open`.
