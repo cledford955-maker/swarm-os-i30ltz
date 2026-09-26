@@ -214,7 +214,7 @@ class _ProfileManagerPanelState extends State<ProfileManagerPanel> {
           title: const Text('Soft Word Wrap', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
           subtitle: const Text('Wrap long code lines inside the viewport', style: TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
           value: active.wordWrap,
-          activeColor: SwarmColors.accent,
+          activeThumbColor: SwarmColors.accent,
           onChanged: (val) => _service.updateActiveProfile(active.copyWith(wordWrap: val)),
         ),
 
@@ -224,7 +224,7 @@ class _ProfileManagerPanelState extends State<ProfileManagerPanel> {
           contentPadding: EdgeInsets.zero,
           title: const Text('Line Numbers', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
           value: active.showLineNumbers,
-          activeColor: SwarmColors.accent,
+          activeThumbColor: SwarmColors.accent,
           onChanged: (val) => _service.updateActiveProfile(active.copyWith(showLineNumbers: val)),
         ),
 
@@ -235,7 +235,7 @@ class _ProfileManagerPanelState extends State<ProfileManagerPanel> {
           title: const Text('Format On Save', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
           subtitle: const Text('Auto format code using language formatter', style: TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
           value: active.formatOnSave,
-          activeColor: SwarmColors.accent,
+          activeThumbColor: SwarmColors.accent,
           onChanged: (val) => _service.updateActiveProfile(active.copyWith(formatOnSave: val)),
         ),
 
@@ -246,7 +246,7 @@ class _ProfileManagerPanelState extends State<ProfileManagerPanel> {
           title: const Text('GitLens In-Editor Blame Annotations', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
           subtitle: const Text('Show author and commit date inline beside active line', style: TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
           value: active.showGitBlame,
-          activeColor: SwarmColors.accent,
+          activeThumbColor: SwarmColors.accent,
           onChanged: (val) => _service.updateActiveProfile(active.copyWith(showGitBlame: val)),
         ),
 
@@ -257,7 +257,7 @@ class _ProfileManagerPanelState extends State<ProfileManagerPanel> {
           title: const Text('Offline / Local-First Mode', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
           subtitle: const Text('Prioritize zero-network disk caches and disable outbound telemetry', style: TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
           value: active.offlineLocalFirst,
-          activeColor: SwarmColors.accent,
+          activeThumbColor: SwarmColors.accent,
           onChanged: (val) => _service.updateActiveProfile(active.copyWith(offlineLocalFirst: val)),
         ),
       ],

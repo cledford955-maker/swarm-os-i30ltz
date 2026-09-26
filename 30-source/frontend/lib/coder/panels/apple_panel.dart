@@ -146,7 +146,7 @@ class _DevicesTabState extends State<_DevicesTab> {
       // Device list
       Expanded(
         child: _shown.isEmpty
-            ? _EmptyState(icon: Icons.phone_iphone_rounded, text: 'No devices found.\nConnect an iPhone/iPad or start a simulator.')
+            ? const _EmptyState(icon: Icons.phone_iphone_rounded, text: 'No devices found.\nConnect an iPhone/iPad or start a simulator.')
             : ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 itemCount: _shown.length,
@@ -424,7 +424,7 @@ class _SigningTabState extends State<_SigningTab> {
         // ── Code Signing Identity ──────────────────────────────────────────
         const _SLabel('CODE SIGNING IDENTITY'),
         if (svc.certificates.isEmpty)
-          _InfoCard(Icons.info_outline_rounded, 'No certificates found.\nConnect to a Mac via SSH or run on macOS.', _appleAmber)
+          const _InfoCard(Icons.info_outline_rounded, 'No certificates found.\nConnect to a Mac via SSH or run on macOS.', _appleAmber)
         else
           ...svc.certificates.map((cert) => _CertRow(cert: cert, isSelected: svc.codeSignIdentity == cert.sha1, onSelect: () {
             setState(() => svc.codeSignIdentity = cert.sha1);
@@ -442,7 +442,7 @@ class _SigningTabState extends State<_SigningTab> {
         // ── Provisioning Profile ───────────────────────────────────────────
         const _SLabel('PROVISIONING PROFILE'),
         if (svc.profiles.isEmpty)
-          _InfoCard(Icons.info_outline_rounded, 'No profiles found in ~/Library/MobileDevice/Provisioning Profiles', _appleAmber)
+          const _InfoCard(Icons.info_outline_rounded, 'No profiles found in ~/Library/MobileDevice/Provisioning Profiles', _appleAmber)
         else
           ...svc.profiles.map((p) => _ProfileRow(profile: p, isSelected: svc.selectedProfileUuid == p.uuid, onSelect: () {
             setState(() => svc.selectedProfileUuid = p.uuid);
@@ -711,7 +711,7 @@ class _AppStoreTabState extends State<_AppStoreTab> {
 
         // ── TestFlight ─────────────────────────────────────────────────────
         const _SLabel('TESTFLIGHT'),
-        _InfoCard(Icons.bug_report_rounded, 'After uploading, the build appears in App Store Connect → TestFlight within 15 min.\nAdd testers, set build notes, and send invitations from the web portal.', _appleBlue),
+        const _InfoCard(Icons.bug_report_rounded, 'After uploading, the build appears in App Store Connect → TestFlight within 15 min.\nAdd testers, set build notes, and send invitations from the web portal.', _appleBlue),
         const SizedBox(height: 10),
         Row(children: [
           _SmallBtn('Open App Store Connect', _appleBlue, () async {
@@ -724,7 +724,7 @@ class _AppStoreTabState extends State<_AppStoreTab> {
 
         // ── Notarization (macOS) ───────────────────────────────────────────
         const _SLabel('MACOS NOTARIZATION'),
-        _InfoCard(Icons.verified_user_rounded, 'For macOS apps, run notarytool after building:\n\nxcrun notarytool submit Runner.app.zip --apple-id \$APPLE_ID --password \$PASS --team-id \$TEAM_ID --wait', _appleGray),
+        const _InfoCard(Icons.verified_user_rounded, 'For macOS apps, run notarytool after building:\n\nxcrun notarytool submit Runner.app.zip --apple-id \$APPLE_ID --password \$PASS --team-id \$TEAM_ID --wait', _appleGray),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.all(10),

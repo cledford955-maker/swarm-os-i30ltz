@@ -327,7 +327,9 @@ class _SnippetEditorState extends State<_SnippetEditor> {
 
   @override
   void dispose() {
-    for (final c in [_trigger, _label, _body, _desc]) c.dispose();
+    for (final c in [_trigger, _label, _body, _desc]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -348,13 +350,13 @@ class _SnippetEditorState extends State<_SnippetEditor> {
             Text(widget.isNew ? 'New Snippet' : 'Edit Snippet', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SwarmColors.textPrimary)),
           ]),
           const SizedBox(height: 12),
-          _Label('Trigger (autocompletion keyword)'),
+          const _Label('Trigger (autocompletion keyword)'),
           _Input(_trigger, 'e.g. fetchJson'),
           const SizedBox(height: 8),
-          _Label('Label (display name)'),
+          const _Label('Label (display name)'),
           _Input(_label, 'e.g. Fetch JSON from URL'),
           const SizedBox(height: 8),
-          _Label('Language'),
+          const _Label('Language'),
           DropdownButtonHideUnderline(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -375,10 +377,10 @@ class _SnippetEditorState extends State<_SnippetEditor> {
             ),
           ),
           const SizedBox(height: 8),
-          _Label('Description (optional)'),
+          const _Label('Description (optional)'),
           _Input(_desc, 'Short description shown in completion popup'),
           const SizedBox(height: 8),
-          _Label('Body'),
+          const _Label('Body'),
           Container(
             height: 180,
             decoration: BoxDecoration(color: SwarmColors.bgElevated, borderRadius: BorderRadius.circular(4), border: Border.all(color: SwarmColors.border)),

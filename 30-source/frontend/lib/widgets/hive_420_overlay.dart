@@ -140,7 +140,7 @@ class _Hive420BudsOverlayState extends State<Hive420BudsOverlay> with SingleTick
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF0D140E),
-        shape: RoundedCornerShape(18),
+        shape: roundedCornerShape(18),
         insetPadding: const EdgeInsets.all(24),
         title: Row(
           children: [

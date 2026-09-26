@@ -132,8 +132,9 @@ class _AppStorePageState extends State<AppStorePage> {
       ),
     );
     if (confirmed != true) return;
+    if (!mounted) return;
 
-    if (!await _installer.ensureSudoAuthenticated(context)) return; // cancelled / wrong password
+    if (!await _installer.ensureSudoAuthenticated(context)) return;
     if (!mounted) return;
     setState(() => _busy[app.packageName] = 'Starting…');
     final ok = await _installer.uninstallAndCleanup(

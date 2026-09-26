@@ -173,16 +173,20 @@ class _TaskRunnerPanelState extends State<TaskRunnerPanel> with SingleTickerProv
 
       final code = await _process!.exitCode;
       HotReloadService.instance.unregisterActiveFlutterProcess();
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _isRunning = false;
         _exitCode = code;
         _output.add(_LogLine(code == 0 ? '✓ Completed (exit 0)' : '✗ Failed (exit $code)', code == 0 ? _LogKind.success : _LogKind.error));
       });
+      }
     } catch (e) {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _isRunning = false;
         _output.add(_LogLine('ERROR: $e', _LogKind.error));
       });
+      }
     }
   }
 
@@ -419,7 +423,9 @@ class _TaskDialogState extends State<_TaskDialog> {
 
   @override
   void dispose() {
-    for (final c in [_name, _cmd, _args, _workdir]) c.dispose();
+    for (final c in [_name, _cmd, _args, _workdir]) {
+      c.dispose();
+    }
     super.dispose();
   }
 

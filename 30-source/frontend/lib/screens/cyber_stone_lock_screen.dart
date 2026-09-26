@@ -163,7 +163,9 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     // Pick 2 non-adjacent stones to swap
     final a = _rng.nextInt(12);
     var b = _rng.nextInt(12);
-    while (b == a) b = _rng.nextInt(12);
+    while (b == a) {
+      b = _rng.nextInt(12);
+    }
 
     setState(() {
       _isShuffling = true;
@@ -171,8 +173,9 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
       _displayedStones[a] = _displayedStones[b];
       _displayedStones[b] = tmp;
       // Reset keyboard focus if it landed on a swapped slot
-      if (_focusedIndex == a) _focusedIndex = b;
-      else if (_focusedIndex == b) _focusedIndex = a;
+      if (_focusedIndex == a) {
+        _focusedIndex = b;
+      } else if (_focusedIndex == b) { _focusedIndex = a; }
       _lastSelectedIndex = null;
     });
 
@@ -337,8 +340,9 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     // bcrypt-verified login password from LucyServer and fails closed if
     // that service is unreachable or no password was ever configured.
     if (posIndex == 0) {
-      if (_adminBottomRightCount == 0) _adminTopLeftCount++;
-      else { _adminTopLeftCount = 1; _adminBottomRightCount = 0; }
+      if (_adminBottomRightCount == 0) {
+        _adminTopLeftCount++;
+      } else { _adminTopLeftCount = 1; _adminBottomRightCount = 0; }
     } else if (posIndex == 11 && _adminTopLeftCount >= 3) {
       _adminBottomRightCount++;
       if (_adminBottomRightCount >= 3) {
@@ -630,13 +634,15 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     _shakeController.forward(from: 0.0);
     _voice.speak('Cipher mismatch. Access denied.');
     Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _currentInput.clear();
         _lastSelectedIndex = null;
         _isAccessDenied = false;
         _adminTopLeftCount = 0;
         _adminBottomRightCount = 0;
       });
+      }
     });
   }
 
@@ -802,8 +808,9 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   }
 
   void _proceedToDesktop({bool gardenMode = false}) {
-    if (widget.onUnlocked != null) widget.onUnlocked!();
-    else if (context.mounted) context.go(gardenMode ? '/garden' : '/');
+    if (widget.onUnlocked != null) {
+      widget.onUnlocked!();
+    } else if (context.mounted) { context.go(gardenMode ? '/garden' : '/'); }
   }
 
   void _clearInput() {
@@ -959,10 +966,11 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
 
   void _handleKey(KeyEvent event) {
     if (event is! KeyDownEvent) return;
-    if (event.logicalKey == LogicalKeyboardKey.arrowRight) setState(() => _focusedIndex = (_focusedIndex + 1) % 12);
-    else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) setState(() => _focusedIndex = (_focusedIndex - 1 + 12) % 12);
-    else if (event.logicalKey == LogicalKeyboardKey.arrowDown)  setState(() => _focusedIndex = (_focusedIndex + 3) % 12);
-    else if (event.logicalKey == LogicalKeyboardKey.arrowUp)    setState(() => _focusedIndex = (_focusedIndex - 3 + 12) % 12);
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      setState(() => _focusedIndex = (_focusedIndex + 1) % 12);
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) { setState(() => _focusedIndex = (_focusedIndex - 1 + 12) % 12); }
+    else if (event.logicalKey == LogicalKeyboardKey.arrowDown)  { setState(() => _focusedIndex = (_focusedIndex + 3) % 12); }
+    else if (event.logicalKey == LogicalKeyboardKey.arrowUp)    { setState(() => _focusedIndex = (_focusedIndex - 3 + 12) % 12); }
     else if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.gameButtonA) {
       _onStoneTapped(_focusedIndex, _displayedStones[_focusedIndex]);
     } else if (event.logicalKey == LogicalKeyboardKey.backspace || event.logicalKey == LogicalKeyboardKey.delete) {
@@ -1472,17 +1480,17 @@ class _StoneColumnPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: isLeft ? Alignment.centerRight : Alignment.centerLeft,
         end: isLeft ? Alignment.centerLeft : Alignment.centerRight,
-        colors: [
-          const Color(0xFF141820),
-          const Color(0xFF0A0D14),
-          const Color(0xFF060810),
+        colors: const [
+          Color(0xFF141820),
+          Color(0xFF0A0D14),
+          Color(0xFF060810),
         ],
         stops: const [0.0, 0.5, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, w, h));
     canvas.drawRect(Rect.fromLTWH(0, 0, w, h), shaftPaint);
 
     // ── Fluted vertical channels ──────────────────────────────────
-    final fluteCount = 5;
+    const fluteCount = 5;
     final fluteW = w / fluteCount;
     final flutePaint = Paint()
       ..color = glowColor.withValues(alpha: 0.07)
@@ -1523,7 +1531,7 @@ class _StoneColumnPainter extends CustomPainter {
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
-    final numBolts = 5;
+    const numBolts = 5;
     for (int i = 0; i < numBolts; i++) {
       final sy = rng.nextDouble() * h;
       final ey = sy + 30 + rng.nextDouble() * 60;
@@ -1553,9 +1561,9 @@ class _StoneColumnPainter extends CustomPainter {
 
     // Abacus (top slab)
     final paint1 = Paint()
-      ..shader = LinearGradient(
+      ..shader = const LinearGradient(
         begin: Alignment.topCenter, end: Alignment.bottomCenter,
-        colors: [const Color(0xFF252C3A), const Color(0xFF151820)],
+        colors: [Color(0xFF252C3A), Color(0xFF151820)],
       ).createShader(Rect.fromLTWH(0, top ? y : y + 60, w, 20));
     canvas.drawRect(Rect.fromLTWH(0, top ? y : y + 60, w, 20), paint1);
 

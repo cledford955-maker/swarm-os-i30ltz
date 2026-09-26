@@ -191,9 +191,9 @@ class _GrubTerminalPageState extends State<GrubTerminalPage>
             borderRadius: BorderRadius.circular(4),
             border: Border.all(color: const Color(0xFF333368), width: 1),
           ),
-          child: Text(
+          child: const Text(
             '$_kVersion · $_kDate',
-            style: const TextStyle(
+            style: TextStyle(
               color: Color(0xFF555588),
               fontSize: 9,
               fontFamily: 'monospace',

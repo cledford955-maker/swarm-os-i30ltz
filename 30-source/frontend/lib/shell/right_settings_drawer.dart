@@ -431,7 +431,7 @@ class _RightSettingsDrawerState extends State<RightSettingsDrawer> {
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(color: SwarmColors.accent),
                                 padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedCornerShape(8),
+                                shape: roundedCornerShape(8),
                               ),
                             ),
                           ),

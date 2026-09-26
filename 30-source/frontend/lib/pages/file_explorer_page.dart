@@ -21,10 +21,10 @@ const _kDate    = '2026-09-15';
 // ─── Root bookmarks shown in the sidebar ────────────────────
 final _kBookmarks = [
   _Bookmark('Home',    Icons.home,           Platform.environment['HOME'] ?? '/home', SwarmColors.agentSky),
-  _Bookmark('Lucy',    Icons.storage,        '/mnt/Lucy',                            SwarmColors.accent),
-  _Bookmark('Root',    Icons.folder_special, '/',                                    SwarmColors.agentAmber),
+  const _Bookmark('Lucy',    Icons.storage,        '/mnt/Lucy',                            SwarmColors.accent),
+  const _Bookmark('Root',    Icons.folder_special, '/',                                    SwarmColors.agentAmber),
   _Bookmark('Desktop', Icons.desktop_windows,'${Platform.environment['HOME']}/Desktop', SwarmColors.agentPurple),
-  _Bookmark('Boltz',   Icons.memory,         '/mnt/boltz',                           SwarmColors.agentPink),
+  const _Bookmark('Boltz',   Icons.memory,         '/mnt/boltz',                           SwarmColors.agentPink),
 ];
 
 class _Bookmark {
@@ -195,8 +195,11 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     final ok = await _confirm('Delete "$name"?', 'This cannot be undone.');
     if (!ok) return;
     try {
-      if (e is Directory) await e.delete(recursive: true);
-      else await e.delete();
+      if (e is Directory) {
+        await e.delete(recursive: true);
+      } else {
+        await e.delete();
+      }
       _navigate(_cwd, push: false);
     } catch (ex) {
       _toast('Delete failed: $ex', SwarmColors.error);
@@ -996,8 +999,8 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           style: const TextStyle(color: SwarmColors.textDisabled, fontSize: 9.5),
         ),
         const Spacer(),
-        Text('SWARM OS  ·  File Explorer $_kVersion',
-          style: const TextStyle(color: SwarmColors.textDisabled, fontSize: 9, letterSpacing: 0.6)),
+        const Text('SWARM OS  ·  File Explorer $_kVersion',
+          style: TextStyle(color: SwarmColors.textDisabled, fontSize: 9, letterSpacing: 0.6)),
       ]),
     );
   }

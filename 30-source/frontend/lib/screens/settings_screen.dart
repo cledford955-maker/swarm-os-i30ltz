@@ -97,13 +97,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: ListTile(
               title: Text(model),
-              leading: Radio<String>(
-                value: model,
-                groupValue: _selectedModel,
-                onChanged: (value) {
-                  setState(() => _selectedModel = value!);
-                  Navigator.pop(context);
-                },
+              leading: Icon(
+                model == _selectedModel ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           );

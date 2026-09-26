@@ -158,10 +158,12 @@ storeFile=${_ksPathCtrl.text}
         for (final line in data.split('\n')) {
           if (line.trim().isEmpty) continue;
           lineCount++;
-          if (mounted) setState(() {
+          if (mounted) {
+            setState(() {
             _aabLog.add(line);
             _aabProgress = (lineCount / 120).clamp(0.05, 0.9);
           });
+          }
         }
       });
       process.stderr.transform(const SystemEncoding().decoder).listen((data) {
@@ -173,17 +175,19 @@ storeFile=${_ksPathCtrl.text}
       final candidates = [
         '${widget.projectPath}/build/app/outputs/bundle/release/app-release.aab',
         '${widget.projectPath}/build/app/outputs/bundle/debug/app-debug.aab',
-        '${widget.projectPath}/build/app/outputs/bundle/${_aabBuildType}/app-${_aabBuildType}.aab',
+        '${widget.projectPath}/build/app/outputs/bundle/$_aabBuildType/app-$_aabBuildType.aab',
       ];
       final found = candidates.firstWhere((p) => File(p).existsSync(), orElse: () => '');
 
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _aabBuilding = false;
         _aabProgress = exit == 0 ? 1.0 : _aabProgress;
         _aabOutputPath = found.isNotEmpty ? found : null;
         _aabLog.add(exit == 0 ? '\n✓ AAB BUILD SUCCESSFUL' : '\n✗ AAB BUILD FAILED (exit $exit)');
         if (found.isNotEmpty) _aabLog.add('Output: $found');
       });
+      }
     } catch (e) {
       if (mounted) setState(() { _aabBuilding = false; _aabLog.add('ERROR: $e'); });
     }
@@ -388,10 +392,10 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(color: SwarmColors.agentCyan.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(6), border: Border.all(color: SwarmColors.agentCyan.withValues(alpha: 0.2))),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [const Icon(Icons.info_outline, size: 13, color: SwarmColors.agentCyan), const SizedBox(width: 6), Text('key.properties', style: const TextStyle(fontSize: 11, color: SwarmColors.agentCyan, fontWeight: FontWeight.bold))]),
-          const SizedBox(height: 6),
-          const Text('After generating, add to android/app/build.gradle:\n\ndef keystoreProperties = new Properties()\nkeystoreProperties.load(new FileInputStream(\n  rootProject.file(\'key.properties\')))\n\nandroid { signingConfigs { release {\n  keyAlias keystoreProperties[\'keyAlias\']\n  keyPassword keystoreProperties[\'keyPassword\']\n  storeFile file(keystoreProperties[\'storeFile\'])\n  storePassword keystoreProperties[\'storePassword\']\n}}}', style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: SwarmColors.textMuted)),
+        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [Icon(Icons.info_outline, size: 13, color: SwarmColors.agentCyan), SizedBox(width: 6), Text('key.properties', style: TextStyle(fontSize: 11, color: SwarmColors.agentCyan, fontWeight: FontWeight.bold))]),
+          SizedBox(height: 6),
+          Text('After generating, add to android/app/build.gradle:\n\ndef keystoreProperties = new Properties()\nkeystoreProperties.load(new FileInputStream(\n  rootProject.file(\'key.properties\')))\n\nandroid { signingConfigs { release {\n  keyAlias keystoreProperties[\'keyAlias\']\n  keyPassword keystoreProperties[\'keyPassword\']\n  storeFile file(keystoreProperties[\'storeFile\'])\n  storePassword keystoreProperties[\'storePassword\']\n}}}', style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: SwarmColors.textMuted)),
         ]),
       );
 }
@@ -544,7 +548,7 @@ class _ValidateTab extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(color: SwarmColors.agentCyan.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4), border: Border.all(color: SwarmColors.agentCyan.withValues(alpha: 0.4))),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.folder_open, size: 13, color: SwarmColors.agentCyan), const SizedBox(width: 4), const Text('Browse', style: TextStyle(fontSize: 11, color: SwarmColors.agentCyan, fontWeight: FontWeight.bold))]),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.folder_open, size: 13, color: SwarmColors.agentCyan), SizedBox(width: 4), Text('Browse', style: TextStyle(fontSize: 11, color: SwarmColors.agentCyan, fontWeight: FontWeight.bold))]),
               ),
             ),
           ]),
@@ -563,10 +567,10 @@ class _ValidateTab extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(color: SwarmColors.bgElevated, borderRadius: BorderRadius.circular(6), border: Border.all(color: SwarmColors.border)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Row(children: [Icon(Icons.info_outline, size: 13, color: SwarmColors.agentCyan), SizedBox(width: 6), Text('bundletool', style: TextStyle(fontSize: 11, color: SwarmColors.agentCyan, fontWeight: FontWeight.bold))]),
-              const SizedBox(height: 6),
-              const Text('Validates the bundle structure, resources, and signing config.\n\nInstall bundletool:\n  brew install bundletool\n  — or —\n  Download bundletool.jar from github.com/google/bundletool\n  and place it in your HOME directory.', style: TextStyle(fontSize: 10.5, color: SwarmColors.textMuted)),
+            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [Icon(Icons.info_outline, size: 13, color: SwarmColors.agentCyan), SizedBox(width: 6), Text('bundletool', style: TextStyle(fontSize: 11, color: SwarmColors.agentCyan, fontWeight: FontWeight.bold))]),
+              SizedBox(height: 6),
+              Text('Validates the bundle structure, resources, and signing config.\n\nInstall bundletool:\n  brew install bundletool\n  — or —\n  Download bundletool.jar from github.com/google/bundletool\n  and place it in your HOME directory.', style: TextStyle(fontSize: 10.5, color: SwarmColors.textMuted)),
             ]),
           ),
         ]),

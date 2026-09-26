@@ -66,11 +66,11 @@ class AnsiParser {
       for (final code in (m.group(1) ?? '').split(';').map((s) => int.tryParse(s))) {
         if (code == null) continue;
         if (code == 0) { c = const Color(0xFFCCCCCC); bg = null; b = false; i = false; u = false; }
-        else if (code == 1) b = true;
-        else if (code == 3) i = true;
-        else if (code == 4) u = true;
-        else if (_fg.containsKey(code)) c = _fg[code]!;
-        else if (_bg.containsKey(code)) bg = _bg[code]!;
+        else if (code == 1) { b = true; }
+        else if (code == 3) { i = true; }
+        else if (code == 4) { u = true; }
+        else if (_fg.containsKey(code)) { c = _fg[code]!; }
+        else if (_bg.containsKey(code)) { bg = _bg[code]!; }
       }
       last = m.end;
     }
@@ -224,8 +224,8 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
   void _cycleLayout() => setState(() {
     if (_layout == 1 && _p.length >= 2) {
       _layout = 2;
-    } else if (_layout == 2 && _p.length >= 4) _layout = 4;
-    else _layout = 1;
+    } else if (_layout == 2 && _p.length >= 4) { _layout = 4; }
+    else { _layout = 1; }
   });
 
   // ─── Execute ───
@@ -337,9 +337,9 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
     String nd;
     if (target == '~') {
       nd = Platform.environment['HOME'] ?? '/';
-    } else if (target == '..') nd = Directory(pane.cwd).parent.path;
-    else if (target.startsWith('/')) nd = target;
-    else nd = '${pane.cwd}/$target';
+    } else if (target == '..') { nd = Directory(pane.cwd).parent.path; }
+    else if (target.startsWith('/')) { nd = target; }
+    else { nd = '${pane.cwd}/$target'; }
 
     final d = Directory(nd);
     if (d.existsSync()) {

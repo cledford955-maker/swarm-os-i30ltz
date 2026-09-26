@@ -112,7 +112,7 @@ class CompletionProvider {
   }
 
   List<CompletionItem> getCompletions(OpenFile file, String prefix, String fullText) {
-    if (prefix.isEmpty || prefix.length < 1) return [];
+    if (prefix.isEmpty) return [];
     final lower = prefix.toLowerCase();
     final items = <CompletionItem>[];
 

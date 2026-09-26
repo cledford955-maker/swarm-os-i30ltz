@@ -130,14 +130,14 @@ class _CannabisModeScreenState extends State<CannabisModeScreen>
         children: [
           // ── Deep space background ─────────────────────────────────
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: RadialGradient(
-                center: const Alignment(0.0, 0.3),
+                center: Alignment(0.0, 0.3),
                 radius: 1.4,
                 colors: [
-                  const Color(0xFF0D0520),
-                  const Color(0xFF060310),
-                  const Color(0xFF020108),
+                  Color(0xFF0D0520),
+                  Color(0xFF060310),
+                  Color(0xFF020108),
                 ],
               ),
             ),

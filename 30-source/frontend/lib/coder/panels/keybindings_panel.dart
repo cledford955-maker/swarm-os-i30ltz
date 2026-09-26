@@ -310,13 +310,13 @@ class _BindingRow extends StatelessWidget {
           InkWell(
             onTap: onRecord,
             borderRadius: BorderRadius.circular(3),
-            child: Tooltip(message: 'Change shortcut', child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.edit_rounded, size: 13, color: SwarmColors.agentCyan))),
+            child: const Tooltip(message: 'Change shortcut', child: Padding(padding: EdgeInsets.all(4), child: Icon(Icons.edit_rounded, size: 13, color: SwarmColors.agentCyan))),
           ),
           if (onReset != null)
             InkWell(
               onTap: onReset,
               borderRadius: BorderRadius.circular(3),
-              child: Tooltip(message: 'Reset to default', child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.restart_alt_rounded, size: 13, color: SwarmColors.agentAmber))),
+              child: const Tooltip(message: 'Reset to default', child: Padding(padding: EdgeInsets.all(4), child: Icon(Icons.restart_alt_rounded, size: 13, color: SwarmColors.agentAmber))),
             )
           else
             const SizedBox(width: 21),

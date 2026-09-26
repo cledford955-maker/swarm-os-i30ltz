@@ -155,7 +155,7 @@ class _Toggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: SwarmColors.accent,
+            activeThumbColor: SwarmColors.accent,
             trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? SwarmColors.accent.withValues(alpha: 0.3) : SwarmColors.bgElevated),
           ),
         ]),

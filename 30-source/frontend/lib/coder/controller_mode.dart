@@ -1,15 +1,14 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── Linux joystick event (js.h) ─────────────────────────────────────────────
 // struct js_event { uint32 time; int16 value; uint8 type; uint8 number; }
 // type 0x01 = button, 0x02 = axis, 0x80 = init flag
-const _JS_BUTTON = 0x01;
-const _JS_AXIS   = 0x02;
-const _JS_INIT   = 0x80;
+const _jsButton = 0x01;
+const _jsAxis   = 0x02;
+const _jsInit   = 0x80;
 
 class ControllerEvent {
   final ControllerEventType type;
@@ -185,17 +184,17 @@ class ControllerMode extends ChangeNotifier {
     // little-endian: [time:4][value:2][type:1][number:1]
     final bd = ByteData.sublistView(data);
     final value  = bd.getInt16(4, Endian.little);
-    final type   = bd.getUint8(6) & ~_JS_INIT;
+    final type   = bd.getUint8(6) & ~_jsInit;
     final number = bd.getUint8(7);
 
-    if (type == _JS_BUTTON) {
+    if (type == _jsButton) {
       final evt = ControllerEvent(type: ControllerEventType.button, index: number, value: value);
       _eventController.add(evt);
       if (_active && value == 1) {
         final action = _buttonMap[number] ?? ControllerAction.none;
         if (action != ControllerAction.none) _actionController.add(action);
       }
-    } else if (type == _JS_AXIS) {
+    } else if (type == _jsAxis) {
       _eventController.add(ControllerEvent(type: ControllerEventType.axis, index: number, value: value));
     }
   }

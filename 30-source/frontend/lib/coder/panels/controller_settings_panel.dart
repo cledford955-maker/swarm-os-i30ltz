@@ -71,7 +71,7 @@ class _ControllerSettingsPanelState extends State<ControllerSettingsPanel> {
           const Spacer(),
           // Enable toggle
           Row(children: [
-            Text('Enable', style: const TextStyle(fontSize: 11, color: SwarmColors.textMuted)),
+            const Text('Enable', style: TextStyle(fontSize: 11, color: SwarmColors.textMuted)),
             const SizedBox(width: 6),
             Switch(
               value: _ctrl.active,
@@ -114,13 +114,13 @@ class _ControllerSettingsPanelState extends State<ControllerSettingsPanel> {
           const SizedBox(height: 14),
           // Axis / sensitivity info
           const _SLabel('AXIS NAVIGATION'),
-          _InfoBox(
+          const _InfoBox(
             icon: Icons.gamepad_rounded,
             text: 'Left stick: scroll editor / navigate code\nRight stick X: switch tabs\nD-pad: navigate file explorer\nHold RB + stick: seek in file',
           ),
           const SizedBox(height: 10),
           const _SLabel('QUICK REFERENCE'),
-          _InfoBox(
+          const _InfoBox(
             icon: Icons.info_outline_rounded,
             text: 'Hold RB → radial action menu\nLB → on-screen virtual keyboard\nSelect + Start → toggle controller mode\nHold A+B (3s) → emergency disable',
           ),

@@ -654,7 +654,7 @@ class _ExtensionCardState extends State<_ExtensionCard> {
                           onTap: () => setState(() => _changelogOpen = !_changelogOpen),
                           child: Row(
                             children: [
-                              Text('Changelog', style: const TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
+                              const Text('Changelog', style: TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
                               const SizedBox(width: 2),
                               Icon(_changelogOpen ? Icons.expand_less : Icons.expand_more, size: 12, color: SwarmColors.textMuted),
                             ],

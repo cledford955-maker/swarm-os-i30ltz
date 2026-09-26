@@ -77,7 +77,7 @@ class FoldManager {
     // Strip placeholder from opening line
     var openLine = lines[displayLine];
     final phIdx = openLine.indexOf(' $_foldPlaceholder');
-    if (phIdx >= 0) openLine = openLine.substring(0, phIdx) + ' {';
+    if (phIdx >= 0) openLine = '${openLine.substring(0, phIdx)} {';
 
     final restored = [
       ...lines.sublist(0, displayLine),

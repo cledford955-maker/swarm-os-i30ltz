@@ -209,7 +209,7 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
   void _triggerCompletion(String before, int pos) {
     // Extract the current word prefix being typed
     final wordMatch = RegExp(r'[A-Za-z_$][A-Za-z0-9_$]*$').firstMatch(before);
-    if (wordMatch == null || wordMatch.group(0)!.length < 1) {
+    if (wordMatch == null || wordMatch.group(0)!.isEmpty) {
       _completionCtrl.dismiss();
       return;
     }
@@ -268,8 +268,12 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
     if (col < 0 || col >= lineText.length) { _clearHover(); return; }
     // Extract word at hover point
     int start = col, end = col;
-    while (start > 0 && _isWordChar(lineText[start - 1])) start--;
-    while (end < lineText.length && _isWordChar(lineText[end])) end++;
+    while (start > 0 && _isWordChar(lineText[start - 1])) {
+      start--;
+    }
+    while (end < lineText.length && _isWordChar(lineText[end])) {
+      end++;
+    }
     if (start == end) { _clearHover(); return; }
     final word = lineText.substring(start, end);
     final doc = HoverProvider.getHover(word);

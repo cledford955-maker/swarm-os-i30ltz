@@ -141,7 +141,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             TextButton(
               onPressed: onOpen,
-              child: Text('Open Folder', style: TextStyle(color: SwarmColors.accent, fontSize: 12)),
+              child: const Text('Open Folder', style: TextStyle(color: SwarmColors.accent, fontSize: 12)),
             ),
           ],
         ),

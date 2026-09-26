@@ -114,14 +114,18 @@ class _DartHighlighter implements _Highlighter {
       }
       if (_isDigit(src[i]) || (src[i] == '-' && i + 1 < src.length && _isDigit(src[i + 1]))) {
         int j = i + 1;
-        while (j < src.length && (_isDigit(src[j]) || src[j] == '.' || src[j] == 'x' || src[j] == 'e')) j++;
+        while (j < src.length && (_isDigit(src[j]) || src[j] == '.' || src[j] == 'x' || src[j] == 'e')) {
+          j++;
+        }
         spans.add(TextSpan(text: src.substring(i, j), style: const TextStyle(color: _C.number)));
         i = j;
         continue;
       }
       if (_isLetter(src[i]) || src[i] == '_') {
         int j = i + 1;
-        while (j < src.length && (_isLetter(src[j]) || _isDigit(src[j]) || src[j] == '_')) j++;
+        while (j < src.length && (_isLetter(src[j]) || _isDigit(src[j]) || src[j] == '_')) {
+          j++;
+        }
         final word = src.substring(i, j);
         Color c;
         if (kw_.contains(word)) {
@@ -325,10 +329,10 @@ class _HtmlHighlighter implements _Highlighter {
       if (matched.startsWith('<!--')) {
         spans.add(TextSpan(text: matched, style: const TextStyle(color: _C.comment, fontStyle: FontStyle.italic)));
       } else if (m.group(1) != null) {
-        spans.add(TextSpan(text: '<', style: const TextStyle(color: _C.punct)));
+        spans.add(const TextSpan(text: '<', style: TextStyle(color: _C.punct)));
         spans.add(TextSpan(text: m.group(1)!, style: const TextStyle(color: _C.tag)));
         if (m.group(2)!.isNotEmpty) spans.add(TextSpan(text: m.group(2)!, style: const TextStyle(color: _C.attr)));
-        spans.add(TextSpan(text: '>', style: const TextStyle(color: _C.punct)));
+        spans.add(const TextSpan(text: '>', style: TextStyle(color: _C.punct)));
       } else if (matched.startsWith('"')) {
         spans.add(TextSpan(text: matched, style: const TextStyle(color: _C.string)));
       } else {

@@ -235,12 +235,12 @@ class _PublisherPortalPanelState extends State<PublisherPortalPanel> {
           border: Border.all(color: _packagePath != null ? SwarmColors.accent : SwarmColors.border, style: BorderStyle.solid),
         ),
         child: _packagePath == null
-            ? Column(children: [
-                const Icon(Icons.upload_file_rounded, size: 36, color: SwarmColors.textDisabled),
-                const SizedBox(height: 8),
-                const Text('Click to select .vsix / .zip', style: TextStyle(fontSize: 12, color: SwarmColors.textMuted)),
-                const SizedBox(height: 4),
-                const Text('Max 50 MB', style: TextStyle(fontSize: 10, color: SwarmColors.textDisabled)),
+            ? const Column(children: [
+                Icon(Icons.upload_file_rounded, size: 36, color: SwarmColors.textDisabled),
+                SizedBox(height: 8),
+                Text('Click to select .vsix / .zip', style: TextStyle(fontSize: 12, color: SwarmColors.textMuted)),
+                SizedBox(height: 4),
+                Text('Max 50 MB', style: TextStyle(fontSize: 10, color: SwarmColors.textDisabled)),
               ])
             : Row(children: [
                 const Icon(Icons.inventory_2_rounded, size: 28, color: SwarmColors.agentEmerald),
@@ -327,10 +327,10 @@ class _PublisherPortalPanelState extends State<PublisherPortalPanel> {
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(color: SwarmColors.agentEmerald.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(6), border: Border.all(color: SwarmColors.agentEmerald.withValues(alpha: 0.3))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            const Icon(Icons.verified_rounded, size: 14, color: SwarmColors.agentEmerald),
-            const SizedBox(width: 6),
-            const Text('Package signed successfully', style: TextStyle(fontSize: 11, color: SwarmColors.agentEmerald, fontWeight: FontWeight.bold)),
+          const Row(children: [
+            Icon(Icons.verified_rounded, size: 14, color: SwarmColors.agentEmerald),
+            SizedBox(width: 6),
+            Text('Package signed successfully', style: TextStyle(fontSize: 11, color: SwarmColors.agentEmerald, fontWeight: FontWeight.bold)),
           ]),
           const SizedBox(height: 6),
           Text('Signature: $_signature', style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: SwarmColors.textMuted)),

@@ -80,10 +80,12 @@ class _AndroidPanelState extends State<AndroidPanel> with SingleTickerProviderSt
         for (final line in data.split('\n')) {
           if (line.trim().isEmpty) continue;
           lineCount++;
-          if (mounted) setState(() {
+          if (mounted) {
+            setState(() {
             _buildLog.add(line);
             _buildProgress = (lineCount / 100).clamp(0.1, 0.95);
           });
+          }
         }
       });
       process.stderr.transform(const SystemEncoding().decoder).listen((data) {
@@ -91,11 +93,13 @@ class _AndroidPanelState extends State<AndroidPanel> with SingleTickerProviderSt
       });
 
       final exitCode = await process.exitCode;
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _buildProgress = exitCode == 0 ? 1.0 : _buildProgress;
         _buildLog.add(exitCode == 0 ? '\n✓ BUILD SUCCESSFUL' : '\n✗ BUILD FAILED (exit $exitCode)');
         _building = false;
       });
+      }
     } catch (e) {
       if (mounted) setState(() { _buildLog.add('Error: $e'); _building = false; });
     }
@@ -125,11 +129,13 @@ class _AndroidPanelState extends State<AndroidPanel> with SingleTickerProviderSt
     setState(() { _logcatLines.clear(); _logcatRunning = true; });
     final process = await Process.start('adb', ['-s', deviceId, 'logcat', '-v', 'time']);
     _logcatSub = process.stdout.transform(const SystemEncoding().decoder).listen((data) {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         final newLines = data.split('\n').where((l) => l.trim().isNotEmpty);
         _logcatLines.addAll(newLines);
         if (_logcatLines.length > 2000) _logcatLines.removeRange(0, _logcatLines.length - 2000);
       });
+      }
     });
   }
 

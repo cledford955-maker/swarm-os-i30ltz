@@ -203,7 +203,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: SwarmColors.bgElevated,
-        shape: RoundedCornerShape(12),
+        shape: roundedCornerShape(12),
         title: const Row(
           children: [
             Icon(Icons.add_circle, color: SwarmColors.accent, size: 20),
@@ -639,7 +639,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
                     style: ElevatedButton.styleFrom(
                       backgroundColor: SwarmColors.accent,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedCornerShape(8),
+                      shape: roundedCornerShape(8),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -659,7 +659,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFF00E5FF)),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedCornerShape(8),
+                      shape: roundedCornerShape(8),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -692,7 +692,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: SwarmColors.accent),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedCornerShape(8),
+                      shape: roundedCornerShape(8),
                     ),
                   ),
                 ],
@@ -763,7 +763,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: _isServerRunning ? SwarmColors.statusCritical : SwarmColors.statusOnline),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      shape: RoundedCornerShape(8),
+                      shape: roundedCornerShape(8),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -782,7 +782,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: SwarmColors.agentGreen),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      shape: RoundedCornerShape(8),
+                      shape: roundedCornerShape(8),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -797,7 +797,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: SwarmColors.lucille),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      shape: RoundedCornerShape(8),
+                      shape: roundedCornerShape(8),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -812,7 +812,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: SwarmColors.agentCyan),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      shape: RoundedCornerShape(8),
+                      shape: roundedCornerShape(8),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -831,7 +831,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFF00E5FF)),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      shape: RoundedCornerShape(8),
+                      shape: roundedCornerShape(8),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -846,7 +846,7 @@ class _CompanionResourcePoolDialogState extends State<CompanionResourcePoolDialo
                     style: ElevatedButton.styleFrom(
                       backgroundColor: SwarmColors.accent,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedCornerShape(8),
+                      shape: roundedCornerShape(8),
                     ),
                   ),
                 ],

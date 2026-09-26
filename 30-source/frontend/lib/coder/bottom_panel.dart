@@ -231,13 +231,13 @@ class _OutputPaneState extends State<_OutputPane> {
 // ─── Logcat hint (directs user to Android panel) ───────────────────────────
 class _LogcatHint extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Center(
+  Widget build(BuildContext context) => const Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.phone_android, size: 32, color: SwarmColors.textDisabled),
-          const SizedBox(height: 8),
-          const Text('Open the Android panel to start Logcat', style: TextStyle(color: SwarmColors.textMuted, fontSize: 12)),
-          const SizedBox(height: 4),
-          const Text('(Activity Bar → Android icon)', style: TextStyle(color: SwarmColors.textDisabled, fontSize: 11)),
+          Icon(Icons.phone_android, size: 32, color: SwarmColors.textDisabled),
+          SizedBox(height: 8),
+          Text('Open the Android panel to start Logcat', style: TextStyle(color: SwarmColors.textMuted, fontSize: 12)),
+          SizedBox(height: 4),
+          Text('(Activity Bar → Android icon)', style: TextStyle(color: SwarmColors.textDisabled, fontSize: 11)),
         ]),
       );
 }

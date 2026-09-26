@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/swarm_colors.dart';
@@ -151,7 +150,7 @@ class AppInstallerService {
     // Wrong password — retry with an error message.
     return _promptSudoPassword(
       context,
-      errorText: 'Incorrect password (${attempt}/3) — try again:',
+      errorText: 'Incorrect password ($attempt/3) — try again:',
       attempt: attempt + 1,
     );
   }

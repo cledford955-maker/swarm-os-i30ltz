@@ -11,6 +11,7 @@ pub struct ChatMsg {
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
+#[allow(dead_code)]
 pub struct LucilleEngineStatus {
     pub status: String,
     #[serde(default)] pub user: String,
@@ -30,6 +31,7 @@ impl LucilleEngineStatus {
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
+#[allow(dead_code)]
 pub struct PipelineResult {
     #[serde(default)] pub success: bool,
     #[serde(default)] pub blocks: i32,
@@ -67,6 +69,7 @@ pub struct ProcessInfo {
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
+#[allow(dead_code)]
 pub struct HealthStatus {
     #[serde(default)] pub status: String,
     #[serde(default)] pub version: String,
@@ -80,12 +83,14 @@ impl HealthStatus {
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
+#[allow(dead_code)]
 pub struct CompanionStatus {
     #[serde(default)] pub connected: i32,
     #[serde(default)] pub companions: Vec<CompanionDevice>,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
+#[allow(dead_code)]
 pub struct CompanionDevice {
     #[serde(default)] pub device_id: String,
     #[serde(default)] pub device_name: String,
@@ -119,6 +124,7 @@ impl LucyClient {
             .json::<LucilleEngineStatus>().await
     }
 
+    #[allow(dead_code)]
     pub async fn lucille_pipeline(&self, task_id: &str, instruction: &str, target_file: &str, content: &str, language: &str, workspace: &str) -> reqwest::Result<PipelineResult> {
         #[derive(Serialize)]
         struct Body {

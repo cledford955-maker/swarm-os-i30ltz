@@ -75,5 +75,5 @@ class SwarmColors {
 }
 
 /// Helper for rounded shape borders
-OutlinedBorder RoundedCornerShape(double radius) =>
+OutlinedBorder roundedCornerShape(double radius) =>
     RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius));

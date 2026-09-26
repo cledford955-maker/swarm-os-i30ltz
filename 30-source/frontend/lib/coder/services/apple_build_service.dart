@@ -433,8 +433,12 @@ class AppleBuildService extends ChangeNotifier {
       final cmd = ['xcrun', 'altool', '--upload-app', '-t', 'ios', '-f', ipaFilePath, '-u', appleId, '-p', appSpecificPassword, '--output-format', 'xml'];
       _log('Running: xcrun altool --upload-app ...');
       final process = await Process.start(cmd.first, cmd.sublist(1));
-      process.stdout.transform(utf8.decoder).listen((d) { for (final l in d.split('\n')) if (l.isNotEmpty) _log(l); });
-      process.stderr.transform(utf8.decoder).listen((d) { for (final l in d.split('\n')) if (l.isNotEmpty) _log('⚠ $l'); });
+      process.stdout.transform(utf8.decoder).listen((d) { for (final l in d.split('\n')) {
+        if (l.isNotEmpty) _log(l);
+      } });
+      process.stderr.transform(utf8.decoder).listen((d) { for (final l in d.split('\n')) {
+        if (l.isNotEmpty) _log('⚠ $l');
+      } });
       final code = await process.exitCode;
       _buildStatus = code == 0 ? AppleBuildStatus.succeeded : AppleBuildStatus.failed;
       _log(code == 0 ? '[${_ts()}] ✓ Upload succeeded!' : '[${_ts()}] ✗ Upload failed.');

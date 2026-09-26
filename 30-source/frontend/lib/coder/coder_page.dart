@@ -74,8 +74,8 @@ class _CoderPageState extends State<CoderPage> {
 
   // ── Status ──────────────────────────────────────────────────
   int _cursorLine = 1, _cursorCol = 1;
-  List<String> _outputLines = [];
-  List<DiagnosticItem> _diagnostics = [];
+  final List<String> _outputLines = [];
+  final List<DiagnosticItem> _diagnostics = [];
   GitBlameInfo? _currentBlame;
   String? _gitBranch;
 
@@ -143,7 +143,9 @@ class _CoderPageState extends State<CoderPage> {
   @override
   void dispose() {
     _controllerSub?.cancel();
-    for (final f in _openFiles) f.dispose();
+    for (final f in _openFiles) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -957,20 +959,20 @@ class _SettingsPane extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const _SectionHeader('Appearance'),
-          _SettingRow('Theme', 'Cyber Dark (default)'),
-          _SettingRow('Font Size', '13.5px'),
-          _SettingRow('Font Family', 'monospace'),
-          _SettingRow('Line Height', '20px'),
+          const _SettingRow('Theme', 'Cyber Dark (default)'),
+          const _SettingRow('Font Size', '13.5px'),
+          const _SettingRow('Font Family', 'monospace'),
+          const _SettingRow('Line Height', '20px'),
           const SizedBox(height: 16),
           const _SectionHeader('Editor'),
-          _SettingRow('Word Wrap', 'Off'),
-          _SettingRow('Tab Size', '2 spaces'),
-          _SettingRow('Auto Save', 'Off'),
-          _SettingRow('Format on Save', 'Off'),
+          const _SettingRow('Word Wrap', 'Off'),
+          const _SettingRow('Tab Size', '2 spaces'),
+          const _SettingRow('Auto Save', 'Off'),
+          const _SettingRow('Format on Save', 'Off'),
           const SizedBox(height: 16),
           const _SectionHeader('Terminal'),
           _SettingRow('Shell', Platform.environment['SHELL'] ?? '/bin/bash'),
-          _SettingRow('Font Size', '12px'),
+          const _SettingRow('Font Size', '12px'),
           const SizedBox(height: 16),
           const _SectionHeader('Android SDK'),
           _SettingRow('ANDROID_HOME', Platform.environment['ANDROID_HOME'] ?? 'Not set'),
@@ -1077,7 +1079,7 @@ class _ShortcutOverlay extends StatelessWidget {
             child: Row(children: [
               const Icon(Icons.keyboard_rounded, size: 16, color: SwarmColors.accent),
               const SizedBox(width: 10),
-              Text('Keyboard Shortcuts', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SwarmColors.textPrimary, letterSpacing: 0.5)),
+              const Text('Keyboard Shortcuts', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SwarmColors.textPrimary, letterSpacing: 0.5)),
               const Spacer(),
               InkWell(
                 onTap: () => Navigator.pop(context),
@@ -1275,9 +1277,9 @@ class _StatusBar extends StatelessWidget {
           const SizedBox(width: 14),
           Text('Ln $cursorLine, Col $cursorCol', style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: SwarmColors.textMuted)),
           const SizedBox(width: 14),
-          Text('UTF-8', style: const TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
+          const Text('UTF-8', style: TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
           const SizedBox(width: 14),
-          Text('LF', style: const TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
+          const Text('LF', style: TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
           const SizedBox(width: 14),
           Text(activeFile!.isDirty ? '● Unsaved' : '✓ Saved', style: TextStyle(fontSize: 10, color: activeFile!.isDirty ? SwarmColors.agentAmber : SwarmColors.agentEmerald)),
         ],

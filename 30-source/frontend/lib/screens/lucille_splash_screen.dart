@@ -163,7 +163,7 @@ class _LucilleSplashScreenState extends State<LucilleSplashScreen>
                   child: Video(
                     controller: _videoController,
                     fit: BoxFit.cover,
-                    controls: NoVideoControls,
+                    controls: noVideoControls,
                   ),
                 )
               else if (_videoFailed)
@@ -345,4 +345,4 @@ class _LucilleSplashScreenState extends State<LucilleSplashScreen>
 }
 
 /// Empty controls — we don't want play/pause/seek UI on the splash.
-Widget NoVideoControls(VideoState state) => const SizedBox.shrink();
+Widget noVideoControls(VideoState state) => const SizedBox.shrink();

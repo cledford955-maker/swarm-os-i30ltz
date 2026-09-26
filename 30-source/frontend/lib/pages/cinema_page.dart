@@ -310,7 +310,7 @@ class _CinemaPageState extends State<CinemaPage> with SingleTickerProviderStateM
                       child: Center(
                         child: Video(
                           controller: _videoController,
-                          controls: NoVideoControls,
+                          controls: (_) => const SizedBox.shrink(),
                         ),
                       ),
                     ),

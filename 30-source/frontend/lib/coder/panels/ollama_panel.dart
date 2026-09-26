@@ -258,10 +258,10 @@ class _OllamaPanelState extends State<OllamaPanel> with SingleTickerProviderStat
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         color: const Color(0xFF1A0A00),
-        child: Row(children: [
-          const Icon(Icons.memory_rounded, size: 11, color: Color(0xFFFF9800)),
-          const SizedBox(width: 6),
-          const Expanded(child: Text('Integrated GPU detected — running CPU-only. Safe models: ≤7B (needs ~5 GB free RAM each).', style: TextStyle(fontSize: 10, color: Color(0xFFFF9800)))),
+        child: const Row(children: [
+          Icon(Icons.memory_rounded, size: 11, color: Color(0xFFFF9800)),
+          SizedBox(width: 6),
+          Expanded(child: Text('Integrated GPU detected — running CPU-only. Safe models: ≤7B (needs ~5 GB free RAM each).', style: TextStyle(fontSize: 10, color: Color(0xFFFF9800)))),
         ]),
       ),
       // Tabs
