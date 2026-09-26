@@ -108,13 +108,13 @@
   - `test_ipc_epoll_multi_client()` in `tests/test_engine.cpp`: two concurrent AF_UNIX clients send PING_A/PING_B simultaneously and receive correct PONG replies; shutdown + unlink verified, all 4 assertions pass
 
 ### 2.4 Multi-Model Swarm Routing
-- [~] **Pipelined asynchronous speculative execution** — Claude Code (Opus 5.5), landed in lucille-core 2026-09-25
+- [x] **Pipelined asynchronous speculative execution** — Claude Code (Opus 5.5), landed in lucille-core 2026-09-25
   - `SwarmRouter::set_pipeline_backends()` injects real Kimi/DeepSeek/GLM clients; unconfigured router falls back to simulated models and sets `PipelineResult::used_mock_backends` so mock output can't pass as real
   - `StreamingBlockBuffer` rewritten: literal/comment-aware brace lexer (state survives chunk splits); Python mode fixed (was emitting every line as a block) — splits at top-level def/class, decorators stay with their def
   - Fail-closed: throwing auditor rejects its block; throwing stream → `pipeline_complete=false` + error, in-flight audits still drained
   - Tests: `test_speculative_pipeline_entropy_and_pruning()` (21 assertions) pass; ThreadSanitizer clean for pipeline code
   - **Engine wiring landed 2026-09-25 (Opus 4.6):** `LucilleEngine` now owns `SwarmRouter`; `start()` creates the router and injects the HITL approver from `request_human_approval()`. IPC commands `route_task` and `run_pipeline` (JSON over the Unix socket) forward to the router. `engine.route_task()` and `engine.run_pipeline()` are the public C++ API.
-  - Remaining: real HTTP/SSE clients for Kimi/DeepSeek/GLM (lucille-core has no HTTP client)
+  - **Real HTTP/SSE model clients landed 2026-09-25 (Opus 4.6):** `http_client.hpp/.cpp` (libcurl wrapper: `post_json()` + `post_sse()` with SSE line parser surviving chunk splits); `openrouter_backends.hpp/.cpp` (5 backends: Kimi streaming via `post_sse()`, DeepSeek audit + GLM triage via `post_json()`, 2 consensus voters). Thread-safe (each call creates its own HTTP request). `OpenRouterBackends` constructed from `OpenRouterConfig` (API key, model IDs); injected into `SwarmRouter` via `set_pipeline_backends()` + `set_consensus_backends()`. Engine auto-wires when `OPENROUTER_API_KEY` env var is set. 180 tests pass / 0 fail
 - [x] **Concurrent safety audit while patch streams** — Claude Code (Opus 4.6) 2026-09-25
   - New `SwarmRouter::route_pipeline_full()` runs the complete streaming pipeline end-to-end: Kimi streams → DeepSeek audits each block concurrently → assemble approved blocks → 2-of-2 consensus gate on the assembled patch → HITL phone approval for high-risk targets → checkpoint/apply with auto-rollback
   - Bridges the gap between the streaming pipeline (which only audited blocks) and the safety chain (which only ran in the legacy sequential path)
@@ -134,7 +134,7 @@
   - Security fix: `ConsensusGate::classify_high_risk()` lowercased the diff but not the patterns, so `ExecStart=`, `CAP_SYS_ADMIN`, `INPUT DROP` etc. never matched — a capability grant in a non-obvious path bypassed the gate. Now case-insensitive; removed lines are checked too (deleting a DROP policy is flagged)
   - `consensus_gate.cpp` was missing from CMakeLists (never compiled) — added
   - Wired into `SwarmRouter::route_and_execute()` after the DeepSeek audit, before checkpoint/apply; classifies `target_file` as well as the diff. Response carries `high_risk`, `consensus_approved`, `consensus_triggers`
-  - Fail closed: no voters configured → high-risk diffs blocked; throwing voter = reject. Real voters via `SwarmRouter::set_consensus_backends()` (needs the same real HTTP clients as 2.4 pipeline)
+  - Fail closed: no voters configured → high-risk diffs blocked; throwing voter = reject. Real voters via `SwarmRouter::set_consensus_backends()` — now wired to OpenRouter Kimi/DeepSeek via `openrouter_backends.cpp`
   - Tests: `test_consensus_gate_high_risk_diffs()` 13 assertions pass; suite 129 pass / 2 pre-existing fail
 
 ### 2.5 Companion App & Tailscale Mesh
@@ -179,8 +179,8 @@
 2. ~~Wire Git-diff checkpoint journaling into `SwarmRouter::route_and_execute()`~~ **DONE (2026-09-24)**
 3. ~~POSIX shared memory telemetry ring buffer~~ **DONE (2026-09-24)**
 4. ~~Multi-client epoll IPC broker~~ **DONE (2026-09-24)**
-5. ~~Speculative pipeline + semantic entropy filtering + dynamic context pruning~~ **DONE (2026-09-25)** — engine IPC entry point wired (2026-09-25 Opus 4.6); real model HTTP clients still open
-6. ~~Dual-model 2-of-2 consensus gating~~ **DONE (2026-09-25)** — real voter clients pending with 2.4
+5. ~~Speculative pipeline + semantic entropy filtering + dynamic context pruning~~ **DONE (2026-09-25)** — engine IPC entry point wired; real HTTP/SSE model clients landed (2026-09-25 Opus 4.6); libcurl-backed OpenRouter backends for all 5 model functions
+6. ~~Dual-model 2-of-2 consensus gating~~ **DONE (2026-09-25)** — real voter clients landed with 2.4 HTTP/SSE clients (Opus 4.6)
 7. **Companion** — heartbeats DONE (lucille-core :9091 + LucyServer :5000/api/companion/ws); HITL approvals built end to end (foreground service, 2026-09-25) — phone install + launching lucille-core on SWARM pending; parity/integrity staged (other agent); GitHub subtree-sync hazard needs decision
 8. ~~TCP MSS clamping + EPP power script~~ **DONE (2026-09-21/24 — boot verification pending)**
 9. ~~NVIDIA blueprints & skills~~ **DONE (4.1–4.8 confirmed 2026-09-24); 4.9–4.10 open**
