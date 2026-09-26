@@ -157,6 +157,18 @@ class SyncTests(unittest.TestCase):
         self.assertIn('claude/*', self.run_hook().stderr)
         self.assertEqual(before, self.g(self.peer, 'rev-parse', 'HEAD'))
 
+    def test_cloud_checkpoint_retries_failed_push_without_new_edits(self):
+        self.prepare_hook()
+        (self.peer / 'source.txt').write_text('work\n')
+        reject = self.remote / 'hooks/pre-receive'
+        reject.write_text('#!/bin/sh\nexit 1\n'); reject.chmod(0o755)
+        self.assertIn('Git push failed', self.run_hook().stderr)
+        checkpoint = self.g(self.peer, 'rev-parse', 'HEAD')
+        self.assertEqual(self.g(self.peer, 'status', '--porcelain'), '')
+        reject.unlink()
+        self.assertEqual(self.run_hook().returncode, 0)
+        self.assertEqual(self.g(self.remote, 'rev-parse', 'claude/test'), checkpoint)
+
     def test_hook_rejects_embedded_credential(self):
         self.prepare_hook()
         (self.peer / 'a.txt').write_text('token = "ghp_' + 'x' * 36 + '"\n')

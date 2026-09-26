@@ -33,7 +33,7 @@ unfinished tasks are not automatically merged into main.
 Both project repos include `.claude/settings.json`, `.claude/cloud_checkpoint.py`,
 and `CLAUDE.md`. In a single-repository Claude cloud session, command hooks save
 eligible work after Write/Edit/MultiEdit/Bash, at startup/resume, before compaction,
-and when Claude stops. The helper only runs when `CLAUDE_CODE_REMOTE=true` and the
+when Claude stops, and on StopFailure (including API rate-limit errors). The helper only runs when `CLAUDE_CODE_REMOTE=true` and the
 checkout is the standalone project on a `claude/*` branch. It does not call an AI
 model, change main, or merge work. Common credential filenames, generated outputs,
 and common embedded key formats are excluded or rejected. Staged work is left
@@ -62,3 +62,6 @@ The tests use disposable local bare repos and cover imports, exports, two-sided
 merges, conflict preservation, missing baselines, dirty work, push retry, history
 isolation, cloud branch checkpoints, credential exclusions and staged-work guards.
 Actual Claude mobile hook execution still requires a cloud session to verify.
+
+Claude hook references: https://code.claude.com/docs/en/hooks#stopfailure and
+https://code.claude.com/docs/en/cloud-environments#setup-scripts-vs-sessionstart-hooks
