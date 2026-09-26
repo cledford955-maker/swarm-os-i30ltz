@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../theme/swarm_colors.dart';
-import '../../theme/swarm_text_styles.dart';
 import '../editor_model.dart';
 import '../../services/extension_runtime_service.dart';
 import '../dialogs/developer_publishing_dialog.dart';

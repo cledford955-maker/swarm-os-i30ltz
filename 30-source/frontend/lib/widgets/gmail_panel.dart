@@ -19,7 +19,7 @@ class _GmailPanelState extends State<GmailPanel> {
   List<Map<String, dynamic>> _messages = [];
   Map<String, dynamic>? _selectedMessage;
   bool _loading = true;
-  bool _composing = false;
+  bool _composing = false; // ignore: unused_field — set in compose flow
   bool _authenticated = false;
   int _unreadCount = 0;
   String _currentView = 'inbox'; // inbox, message, compose, search
@@ -29,7 +29,7 @@ class _GmailPanelState extends State<GmailPanel> {
   final _subjectCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
   String? _replyToId;
-  String? _replyThreadId;
+  String? _replyThreadId; // ignore: unused_field — set in reply flow
 
   @override
   void initState() {

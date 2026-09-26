@@ -540,8 +540,6 @@ class _FileRowState extends State<_FileRow> {
 
   String _formatDate(DateTime? dt) {
     if (dt == null) return '—';
-    final now = DateTime.now();
-    final diff = now.difference(dt);
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];

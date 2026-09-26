@@ -196,8 +196,6 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
     super.dispose();
   }
 
-  TPane get _ap => _p[_active];
-
   void _addPane() {
     if (_p.length >= 4) return;
     final idx = _p.length;

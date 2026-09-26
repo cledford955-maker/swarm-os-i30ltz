@@ -15,8 +15,8 @@ class GoogleAgentsHome extends StatefulWidget {
 
 class _GoogleAgentsHomeState extends State<GoogleAgentsHome> {
   final GoogleHubService _hub = GoogleHubService();
-  Map<String, dynamic>? _dashboard;
-  bool _loading = true;
+  Map<String, dynamic>? _dashboard; // ignore: unused_field — set by hub fetch
+  bool _loading = true; // ignore: unused_field — set by hub fetch
   int _selectedTab = 0;
 
   final List<_AgentTab> _tabs = [

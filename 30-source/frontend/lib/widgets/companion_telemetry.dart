@@ -19,7 +19,7 @@ class CompanionTelemetryPanel extends StatefulWidget {
 
 class _CompanionTelemetryPanelState extends State<CompanionTelemetryPanel> with SingleTickerProviderStateMixin {
   final TelemetryService _tel = TelemetryService();
-  Map<String, dynamic> _mesh = {};
+  Map<String, dynamic> _mesh = {}; // ignore: unused_field — set by telemetry fetch
   List<dynamic> _devices = [];
   String? _selectedDeviceId;
   Map<String, dynamic>? _selectedDetail;

@@ -399,21 +399,6 @@ class GoogleHubService {
     throw Exception('POST $path failed: ${resp.statusCode}');
   }
 
-  Future<Map<String, dynamic>> _put(
-    String path,
-    Map<String, dynamic> body,
-  ) async {
-    final resp = await _client.put(
-      Uri.parse('$apiHost$path'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(body),
-    );
-    if (resp.statusCode == 200) {
-      return jsonDecode(resp.body);
-    }
-    throw Exception('PUT $path failed: ${resp.statusCode}');
-  }
-
   Future<Map<String, dynamic>> _delete(
     String path, {
     Map<String, String>? params,

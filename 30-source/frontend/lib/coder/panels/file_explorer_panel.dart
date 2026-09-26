@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../theme/swarm_colors.dart';
 import '../../theme/swarm_text_styles.dart';
@@ -25,7 +24,6 @@ class FileExplorerPanel extends StatefulWidget {
 class _FileExplorerPanelState extends State<FileExplorerPanel> {
   FileNode? _root;
   bool _loading = false;
-  String? _contextPath;
 
   @override
   void initState() {

@@ -25,7 +25,6 @@ class _ForgeWorkstationState extends ConsumerState<ForgeWorkstation> {
   bool _bottomPanelOpen = true;
   double _sidebarWidth = 280.0;
   double _aiPanelWidth = 320.0;
-  final double _bottomPanelHeight = 250.0;
 
   @override
   Widget build(BuildContext context) {

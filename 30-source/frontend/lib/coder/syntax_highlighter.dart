@@ -59,7 +59,7 @@ class _PlainHighlighter implements _Highlighter {
 
 // ─── Dart ───────────────────────────────────────────────────────────────────
 class _DartHighlighter implements _Highlighter {
-  static const _kw = {
+  static const _dartKw = {
     'abstract', 'as', 'assert', 'async', 'await', 'base', 'break', 'case',
     'catch', 'class', 'const', 'continue', 'covariant', 'default', 'deferred',
     'do', 'dynamic', 'else', 'enum', 'export', 'extends', 'extension',
@@ -70,19 +70,23 @@ class _DartHighlighter implements _Highlighter {
     'super', 'switch', 'sync', 'this', 'throw', 'true', 'try', 'typedef',
     'var', 'void', 'when', 'while', 'with', 'yield',
   };
-  static const _types = {
+  static const _dartTypes = {
     'bool', 'double', 'int', 'List', 'Map', 'Never', 'Null', 'num',
     'Object', 'Set', 'String', 'Symbol', 'Type',
   };
+
+  Set<String> get kw => _dartKw;
+  Set<String> get types => _dartTypes;
 
   @override
   List<TextSpan> highlight(String text) => _tokenize(text);
 
   List<TextSpan> _tokenize(String src) {
+    final kw_ = kw;
+    final types_ = types;
     final spans = <TextSpan>[];
     int i = 0;
     while (i < src.length) {
-      // Single-line comment
       if (i + 1 < src.length && src[i] == '/' && src[i + 1] == '/') {
         final end = src.indexOf('\n', i);
         final comment = end == -1 ? src.substring(i) : src.substring(i, end);
@@ -90,7 +94,6 @@ class _DartHighlighter implements _Highlighter {
         i = end == -1 ? src.length : end;
         continue;
       }
-      // Multi-line comment
       if (i + 1 < src.length && src[i] == '/' && src[i + 1] == '*') {
         final end = src.indexOf('*/', i + 2);
         final comment = end == -1 ? src.substring(i) : src.substring(i, end + 2);
@@ -98,7 +101,6 @@ class _DartHighlighter implements _Highlighter {
         i = end == -1 ? src.length : end + 2;
         continue;
       }
-      // String literals
       if (src[i] == '"' || src[i] == "'") {
         final q = src[i];
         int j = i + 1;
@@ -110,7 +112,6 @@ class _DartHighlighter implements _Highlighter {
         i = j + 1 > src.length ? src.length : j + 1;
         continue;
       }
-      // Number
       if (_isDigit(src[i]) || (src[i] == '-' && i + 1 < src.length && _isDigit(src[i + 1]))) {
         int j = i + 1;
         while (j < src.length && (_isDigit(src[j]) || src[j] == '.' || src[j] == 'x' || src[j] == 'e')) j++;
@@ -118,26 +119,24 @@ class _DartHighlighter implements _Highlighter {
         i = j;
         continue;
       }
-      // Word (keyword / type / identifier)
       if (_isLetter(src[i]) || src[i] == '_') {
         int j = i + 1;
         while (j < src.length && (_isLetter(src[j]) || _isDigit(src[j]) || src[j] == '_')) j++;
         final word = src.substring(i, j);
         Color c;
-        if (_kw.contains(word)) {
+        if (kw_.contains(word)) {
           c = _C.keyword;
-        } else if (_types.contains(word)) {
+        } else if (types_.contains(word)) {
           c = _C.type;
         } else if (j < src.length && src[j] == '(') {
           c = _C.func;
         } else {
           c = _C.plain;
         }
-        spans.add(TextSpan(text: word, style: TextStyle(color: c, fontWeight: _kw.contains(word) ? FontWeight.bold : null)));
+        spans.add(TextSpan(text: word, style: TextStyle(color: c, fontWeight: kw_.contains(word) ? FontWeight.bold : null)));
         i = j;
         continue;
       }
-      // Operator / punct
       final ch = src[i];
       final opColor = '+-*/%=<>&|^~!?:'.contains(ch) ? _C.operator : _C.punct;
       spans.add(TextSpan(text: ch, style: TextStyle(color: opColor)));
@@ -155,19 +154,21 @@ class _DartHighlighter implements _Highlighter {
 
 // ─── Python ─────────────────────────────────────────────────────────────────
 class _PythonHighlighter extends _DartHighlighter {
-  static const _kw = {
+  static const _pyKw = {
     'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
     'def', 'del', 'elif', 'else', 'except', 'False', 'finally', 'for',
     'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None',
     'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'True', 'try',
     'while', 'with', 'yield',
   };
-  static const _types = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'set', 'str', 'tuple'};
+  static const _pyTypes = {'bool', 'bytes', 'dict', 'float', 'int', 'list', 'set', 'str', 'tuple'};
+  @override Set<String> get kw => _pyKw;
+  @override Set<String> get types => _pyTypes;
 }
 
 // ─── JS/TS ──────────────────────────────────────────────────────────────────
 class _JsHighlighter extends _DartHighlighter {
-  static const _kw = {
+  static const _jsKw = {
     'abstract', 'arguments', 'async', 'await', 'break', 'case', 'catch',
     'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do',
     'else', 'enum', 'export', 'extends', 'false', 'finally', 'for',
@@ -177,11 +178,12 @@ class _JsHighlighter extends _DartHighlighter {
     'throw', 'true', 'try', 'type', 'typeof', 'undefined', 'var', 'void',
     'while', 'with', 'yield',
   };
+  @override Set<String> get kw => _jsKw;
 }
 
 // ─── Kotlin ─────────────────────────────────────────────────────────────────
 class _KotlinHighlighter extends _DartHighlighter {
-  static const _kw = {
+  static const _ktKw = {
     'abstract', 'actual', 'as', 'break', 'by', 'catch', 'class', 'companion',
     'const', 'constructor', 'continue', 'crossinline', 'data', 'do', 'dynamic',
     'else', 'enum', 'expect', 'external', 'false', 'final', 'finally', 'for',
@@ -192,11 +194,12 @@ class _KotlinHighlighter extends _DartHighlighter {
     'suspend', 'tailrec', 'this', 'throw', 'true', 'try', 'typealias',
     'typeof', 'val', 'var', 'vararg', 'when', 'where', 'while',
   };
+  @override Set<String> get kw => _ktKw;
 }
 
 // ─── Java ───────────────────────────────────────────────────────────────────
 class _JavaHighlighter extends _DartHighlighter {
-  static const _kw = {
+  static const _javaKw = {
     'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char',
     'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum',
     'extends', 'false', 'final', 'finally', 'float', 'for', 'goto', 'if',
@@ -205,11 +208,12 @@ class _JavaHighlighter extends _DartHighlighter {
     'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this',
     'throw', 'throws', 'transient', 'true', 'try', 'var', 'void', 'volatile', 'while',
   };
+  @override Set<String> get kw => _javaKw;
 }
 
 // ─── C# ─────────────────────────────────────────────────────────────────────
 class _CsharpHighlighter extends _DartHighlighter {
-  static const _kw = {
+  static const _csKw = {
     'abstract', 'as', 'async', 'await', 'base', 'bool', 'break', 'byte',
     'case', 'catch', 'char', 'checked', 'class', 'const', 'continue',
     'decimal', 'default', 'delegate', 'do', 'double', 'else', 'enum',
@@ -222,6 +226,7 @@ class _CsharpHighlighter extends _DartHighlighter {
     'true', 'try', 'typeof', 'uint', 'ulong', 'unchecked', 'unsafe', 'ushort',
     'using', 'virtual', 'void', 'volatile', 'while', 'var', 'dynamic',
   };
+  @override Set<String> get kw => _csKw;
 }
 
 // ─── JSON ───────────────────────────────────────────────────────────────────

@@ -7,7 +7,6 @@ import 'completion_provider.dart';
 class CompletionController {
   final OverlayState overlay;
   OverlayEntry? _entry;
-  final _provider = CompletionProvider();
 
   CompletionController(this.overlay);
 

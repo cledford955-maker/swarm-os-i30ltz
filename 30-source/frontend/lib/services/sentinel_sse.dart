@@ -29,11 +29,7 @@ class SentinelSseClient {
       final client = http.Client();
       final response = await client.send(request);
 
-      if (response.statusCode != 200) { return; // Ignore 404s
-        _controller.addError(
-            Exception('SSE connection failed: ${response.statusCode}'));
-        return;
-      }
+      if (response.statusCode != 200) return;
 
       _connected = true;
       _subscription = response.stream

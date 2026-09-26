@@ -25,7 +25,6 @@ class _AgentMemoryPanelState extends State<AgentMemoryPanel> {
   bool _loading = true;
   bool _composing = false;
   bool _keepConnected = false;
-  final bool _showConnectDialog = false;
   String? _editingId;
   String _selectedColor = 'white';
 

@@ -327,7 +327,7 @@ class _AgentChatPanelState extends ConsumerState<AgentChatPanel> {
               'Keep responses concise and helpful.$projectContext'
           : 'You are a helpful SWARM OS assistant.$projectContext';
 
-      final previousMessages = notifier.state
+      final previousMessages = ref.read(_chatProvider(widget.agentId))
           .where((m) => m.text.isNotEmpty && m.id != placeholderId)
           .map((m) =>
               {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})
@@ -363,7 +363,7 @@ class _AgentChatPanelState extends ConsumerState<AgentChatPanel> {
     if (_streaming) return;
 
     final notifier = ref.read(_chatProvider(widget.agentId).notifier);
-    final history = notifier.state
+    final history = ref.read(_chatProvider(widget.agentId))
         .where((m) => m.text.isNotEmpty)
         .map(
             (m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})

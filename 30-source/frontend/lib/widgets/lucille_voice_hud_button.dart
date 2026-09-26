@@ -13,9 +13,8 @@ class LucilleVoiceHudButton extends StatefulWidget {
 
 class _LucilleVoiceHudButtonState extends State<LucilleVoiceHudButton> with SingleTickerProviderStateMixin {
   final LucilleVoiceService _voice = LucilleVoiceService();
-  Offset _position = const Offset(24, 70); // Default top-left floating below topbar
-  bool _isDragging = false;
-  final bool _isExpanded = true;
+  Offset _position = const Offset(24, 70);
+  bool _isDragging = false; // ignore: unused_field — assigned in pan callbacks for future visual state
   late AnimationController _pulseAnim;
 
   @override
