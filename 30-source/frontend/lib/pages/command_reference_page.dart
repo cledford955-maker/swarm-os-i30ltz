@@ -71,6 +71,11 @@ const _steps = <_Step>[
   _Step('Test LucyServer chat', '', [
     _Cmd('curl -s -X POST http://127.0.0.1:5000/lucy -H "Content-Type: application/json" -d \'{"messages":[{"role":"user","content":"Hello Lucille"}],"modelId":"groq"}\' | head -5'),
   ]),
+  _Step('Lucille Core engine (C++ pipeline)', 'Port 5000 proxies to the Unix socket at /run/lucille/ipc.sock. Needs lucille-core.service running.', [
+    _Cmd('curl -s http://127.0.0.1:5000/api/lucille/status -H "X-Swarm-Auth: \$SWARM_AUTH_TOKEN" | python3 -m json.tool', 'Engine status'),
+    _Cmd('curl -s -X POST http://127.0.0.1:5000/api/lucille/pipeline -H "X-Swarm-Auth: \$SWARM_AUTH_TOKEN" -H "Content-Type: application/json" -d \'{"task_id":"test-1","instruction":"Add error handling","target_file":"main.cpp","content":"int main(){}","language":"cpp"}\' | python3 -m json.tool', 'Run pipeline'),
+    _Cmd('curl -s -X POST http://127.0.0.1:5000/api/lucille/route -H "X-Swarm-Auth: \$SWARM_AUTH_TOKEN" -H "Content-Type: application/json" -d \'{"task_id":"test-1","instruction":"Fix memory leak"}\' | python3 -m json.tool', 'Route task'),
+  ]),
   _Step('Install Ollama', 'Needed for /api/rag/* endpoints.', [
     _Cmd('curl -fsSL https://ollama.ai/install.sh | sh\nsudo systemctl enable --now ollama\nollama pull nomic-embed-text'),
   ], 'optional'),
