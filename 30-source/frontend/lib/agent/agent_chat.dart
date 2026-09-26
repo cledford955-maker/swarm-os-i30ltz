@@ -375,7 +375,7 @@ class _AgentChatPanelState extends ConsumerState<AgentChatPanel> {
 
     final placeholderId = notifier.addPlaceholder();
     notifier.updateStreaming(
-        placeholderId, '⚡️ Summarizing context with Nemotron Lightning...');
+        placeholderId, '⚡️ Summarizing context...');
     _scrollToBottom();
 
     try {

@@ -307,7 +307,7 @@ class _BuildTabState extends State<_BuildTab> {
             _ActionBtn('Build', _appleGreen, Icons.play_circle_rounded, () => svc.build(_selected, projectPath: widget.projectPath)),
           const SizedBox(width: 6),
           _IconBtn(Icons.cleaning_services_rounded, 'Clean', () async {
-            svc.build(AppleBuildTarget.iosDebug, projectPath: widget.projectPath); // placeholder
+            svc.clean(projectPath: widget.projectPath);
           }),
         ]),
       ),

@@ -385,6 +385,31 @@ class AppleBuildService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> clean({String? projectPath}) async {
+    if (isBuilding) return;
+    _buildStatus = AppleBuildStatus.running;
+    _buildLog = ['[${_ts()}] Running flutter clean...'];
+    notifyListeners();
+    try {
+      final result = await Process.run(
+        'flutter', ['clean'],
+        workingDirectory: projectPath,
+      );
+      for (final line in result.stdout.toString().split('\n')) {
+        if (line.isNotEmpty) _log(line);
+      }
+      for (final line in result.stderr.toString().split('\n')) {
+        if (line.isNotEmpty) _log('⚠ $line');
+      }
+      _buildStatus = result.exitCode == 0 ? AppleBuildStatus.succeeded : AppleBuildStatus.failed;
+      _log(result.exitCode == 0 ? '[${_ts()}] ✓ Clean complete.' : '[${_ts()}] ✗ Clean failed (exit ${result.exitCode}).');
+    } catch (e) {
+      _buildStatus = AppleBuildStatus.failed;
+      _log('[${_ts()}] ✗ Error: $e');
+    }
+    notifyListeners();
+  }
+
   List<String> _buildCommand(AppleBuildTarget target, String? projectPath) {
     switch (target) {
       case AppleBuildTarget.iosDebug:

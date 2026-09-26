@@ -21,6 +21,7 @@ var (
 	waRegSession   *wa.SessionData
 	waLoginSession *wa.SessionData
 	waCredentials  []storedWACredential
+	waInitErr      error // set when init fails; WebAuthn endpoints return 503 instead of crashing
 )
 
 type storedWACredential struct {
@@ -63,7 +64,8 @@ func getWA() *wa.WebAuthn {
 			RPOrigins:     origins,
 		})
 		if err != nil {
-			panic("webauthn init: " + err.Error())
+			waInitErr = fmt.Errorf("webauthn disabled (init failed: %w)", err)
+			return
 		}
 		loadWACredentials()
 	})
@@ -96,6 +98,9 @@ func currentWAUser() *waUser {
 // WAGetRegisterOptions returns credential creation options for the browser.
 func WAGetRegisterOptions() (any, error) {
 	instance := getWA()
+	if instance == nil {
+		return nil, waInitErr
+	}
 	waMu.Lock()
 	defer waMu.Unlock()
 
@@ -110,6 +115,9 @@ func WAGetRegisterOptions() (any, error) {
 // WAVerifyRegister parses and verifies the attestation from the browser, stores the credential.
 func WAVerifyRegister(r *http.Request) (any, error) {
 	instance := getWA()
+	if instance == nil {
+		return nil, waInitErr
+	}
 	waMu.Lock()
 	defer waMu.Unlock()
 
@@ -133,6 +141,9 @@ func WAVerifyRegister(r *http.Request) (any, error) {
 // WAGetLoginOptions returns assertion options for the browser.
 func WAGetLoginOptions() (any, error) {
 	instance := getWA()
+	if instance == nil {
+		return nil, waInitErr
+	}
 	waMu.Lock()
 	defer waMu.Unlock()
 
@@ -147,6 +158,9 @@ func WAGetLoginOptions() (any, error) {
 // WAVerifyLogin parses and verifies the assertion from the browser.
 func WAVerifyLogin(r *http.Request) (any, error) {
 	instance := getWA()
+	if instance == nil {
+		return nil, waInitErr
+	}
 	waMu.Lock()
 	defer waMu.Unlock()
 
