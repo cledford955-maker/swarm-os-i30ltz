@@ -47,12 +47,22 @@ const List<StoneGlyph> kAllCyberStoneGlyphs = [
 ];
 
 class CyberStoneLockScreen extends StatefulWidget {
+  /// When true, the screen restarts the main-cipher setup flow. The main
+  /// pattern (and the garden pattern) get wiped and the user is walked
+  /// through both steps again.
   final bool isReconfiguring;
+
+  /// When true, ONLY the garden cipher is reset. The main pattern is left
+  /// untouched — the user has to enter it once to prove ownership, then
+  /// picks a new garden pattern (or skips). Wired from Settings → "Change
+  /// garden cipher".
+  final bool isReconfiguringGarden;
   final VoidCallback? onUnlocked;
 
   const CyberStoneLockScreen({
     super.key,
     this.isReconfiguring = false,
+    this.isReconfiguringGarden = false,
     this.onUnlocked,
   });
 
@@ -575,6 +585,24 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     final bool mainMatch = _patternMatches(_currentInput, _storedPattern);
     final bool gardenMatch = _gardenPattern != null && _patternMatches(_currentInput, _gardenPattern);
 
+    // Garden-cipher-only reset flow: user must prove ownership with the MAIN
+    // cipher (garden match doesn't count — otherwise anyone with garden
+    // access could rotate the garden without the owner's consent), then we
+    // wipe only the garden pattern and enter garden-setup phase in place.
+    if (widget.isReconfiguringGarden && mainMatch) {
+      if (_totpEnabled) {
+        _voice.speak('Cipher accepted. Enter your phone code.');
+        final totpOk = await _showTotpChallenge();
+        if (!mounted) return;
+        if (!totpOk) {
+          _onAccessDenied();
+          return;
+        }
+      }
+      await _startGardenOnlyReset();
+      return;
+    }
+
     if (mainMatch || gardenMatch) {
       // Cipher accepted. If TOTP is enrolled, require a phone code before
       // proceeding — cipher alone is not enough when 2FA is active.
@@ -802,6 +830,23 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
       _isSettingUpGardenPattern = false;
     });
     _voice.speak('Cipher erased. Select a new stone pattern.');
+  }
+
+  /// Called from the garden-only reconfigure flow after the main cipher is
+  /// verified. Erases only the garden pattern and switches the UI into the
+  /// garden-setup phase; the main pattern is left untouched.
+  Future<void> _startGardenOnlyReset() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKeyGarden);
+    if (!mounted) return;
+    setState(() {
+      _gardenPattern = null;
+      _currentInput.clear();
+      _lastSelectedIndex = null;
+      _isSettingUpGardenPattern = true;
+      _isSettingUpNewPattern = false;
+    });
+    _voice.speak('Main cipher confirmed. Select a new secret garden cipher, or press skip.');
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────

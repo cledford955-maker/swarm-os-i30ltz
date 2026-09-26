@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/google_workspace_service.dart';
@@ -223,6 +224,10 @@ class _SettingsPageState extends State<SettingsPage> {
             const Divider(color: SwarmColors.border),
             const SizedBox(height: 20),
             const AgentVoicePromptSettings(),
+            const SizedBox(height: 20),
+            const Divider(color: SwarmColors.border),
+            const SizedBox(height: 20),
+            const _CipherSection(),
           ],
         ),
       ),
@@ -568,6 +573,101 @@ class _WebAuthnSectionState extends State<_WebAuthnSection> {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Cipher management section — main and garden pattern reset entrypoints.
+/// The two flows are separate on purpose:
+///  * /auth wipes both patterns and walks the user through fresh setup
+///  * /auth/garden verifies the current main pattern, then lets the user
+///    change ONLY the garden pattern.
+class _CipherSection extends StatelessWidget {
+  const _CipherSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Lock Screen', style: SwarmTextStyles.sectionTitle),
+        const SizedBox(height: 8),
+        Text(
+          'The stone cipher unlocks SWARM OS. The garden cipher is an optional '
+          'second pattern that unlocks a private garden mode instead of the '
+          'main desktop.',
+          style: SwarmTextStyles.body.copyWith(color: SwarmColors.textMuted),
+        ),
+        const SizedBox(height: 16),
+        _CipherActionTile(
+          icon: Icons.lock_reset,
+          title: 'Change stone cipher',
+          subtitle: 'Wipes both patterns and walks through fresh setup.',
+          onTap: () => context.go('/auth'),
+          accent: SwarmColors.accent,
+        ),
+        const SizedBox(height: 10),
+        _CipherActionTile(
+          icon: Icons.local_florist_outlined,
+          title: 'Change garden cipher',
+          subtitle: 'Prompts for your main cipher, then picks a new garden pattern.',
+          onTap: () => context.go('/auth/garden'),
+          accent: const Color(0xFF4CAF50),
+        ),
+      ],
+    );
+  }
+}
+
+class _CipherActionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Color accent;
+  const _CipherActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: accent.withValues(alpha: 0.5)),
+            color: accent.withValues(alpha: 0.06),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: accent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: SwarmTextStyles.body.copyWith(
+                        color: accent, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: SwarmTextStyles.small.copyWith(
+                        color: SwarmColors.textMuted)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: SwarmColors.textMuted),
+            ],
+          ),
+        ),
       ),
     );
   }

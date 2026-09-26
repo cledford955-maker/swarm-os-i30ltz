@@ -87,6 +87,9 @@ final goRouter = GoRouter(
         GoRoute(path: '/sysopt', builder: (_, __) => const SysOptPage()),
         GoRoute(path: '/telemetry', builder: (_, __) => const TelemetryPage()),
         GoRoute(path: '/auth', builder: (_, __) => const CyberStoneLockScreen(isReconfiguring: true)),
+        // Garden-cipher-only reset. Prompts for the main cipher, then walks
+        // the user through picking a new garden pattern (skippable).
+        GoRoute(path: '/auth/garden', builder: (_, __) => const CyberStoneLockScreen(isReconfiguringGarden: true)),
         GoRoute(path: '/vital', builder: (_, __) => const VitalPage()),
         GoRoute(path: '/ui_tandem', builder: (_, __) => const UiTandemStudio()),
         GoRoute(path: '/tandem', builder: (_, __) => const UiTandemStudio()),
