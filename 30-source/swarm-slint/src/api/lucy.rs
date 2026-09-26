@@ -82,7 +82,7 @@ impl HealthStatus {
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct CompanionStatus {
     #[serde(default)] pub connected: i32,
-    #[serde(default)] pub devices: Vec<CompanionDevice>,
+    #[serde(default)] pub companions: Vec<CompanionDevice>,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]

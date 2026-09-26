@@ -173,6 +173,18 @@ class SwarmAppRegistry {
     SwarmApp(id: 'backend', name: 'Backend', icon: Icons.dns,
       color: Color(0xFF90A4AE), categories: {SwarmAppCategory.gamingMedia},
       routePath: '/backend'),
+    SwarmApp(id: 'models', name: 'Models', icon: Icons.model_training,
+      color: Color(0xFF26C6DA), categories: {SwarmAppCategory.system},
+      description: 'AI model catalog, NIM dashboard and swarm configuration',
+      routePath: '/models'),
+    SwarmApp(id: 'nvidia', name: 'GPU', icon: Icons.memory,
+      color: Color(0xFF76B900), categories: {SwarmAppCategory.system},
+      description: 'GPU telemetry, VRAM, clocks, power and quantization tuning',
+      routePath: '/nvidia'),
+    SwarmApp(id: 'swarm', name: 'Swarm', icon: Icons.device_hub,
+      color: Color(0xFF0088FF), categories: {SwarmAppCategory.system},
+      description: 'Swarm fleet overview, agent assignment and routing config',
+      routePath: '/swarm'),
 
     // ───────────── DROID ─────────────
     SwarmApp(id: 'droid_market', name: 'Droid Market',

@@ -146,7 +146,7 @@ class _OllamaPanelState extends State<OllamaPanel> with SingleTickerProviderStat
 
   Future<void> _startOllama() async {
     await Process.run('systemctl', ['--user', 'start', 'ollama']).catchError((_) async {
-      await Process.run('bash', ['-c', 'ollama serve &']);
+      return Process.run('bash', ['-c', 'ollama serve &']);
     });
     await Future.delayed(const Duration(seconds: 2));
     _refresh();
