@@ -11,11 +11,13 @@ add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-parameter -pthread -O3 
 find_package(OpenSSL REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(CURL REQUIRED)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${OPENSSL_INCLUDE_DIR}
     ${SQLITE3_INCLUDE_DIRS}
+    ${CURL_INCLUDE_DIRS}
 )
 
 # Core engine library
@@ -38,6 +40,8 @@ add_library(lucille_engine_lib STATIC
     src/entropy_filter.cpp
     src/speculative_pipeline.cpp
     src/consensus_gate.cpp
+    src/http_client.cpp
+    src/openrouter_backends.cpp
     src/engine.cpp
 )
 
@@ -45,6 +49,7 @@ target_link_libraries(lucille_engine_lib PUBLIC
     OpenSSL::Crypto
     SQLite3::SQLite3
     Threads::Threads
+    CURL::libcurl
     stdc++fs
     m
     rt

@@ -26,6 +26,7 @@ int main(int argc, char* argv[]) {
     config.socket_path = "/tmp/lucille_ipc.sock";
     config.soul_path = "SOUL.md";
     if (const char* tok = std::getenv("SWARM_AUTH_TOKEN")) config.mesh_auth_token = tok;
+    if (const char* key = std::getenv("OPENROUTER_API_KEY")) config.openrouter_api_key = key;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];

@@ -493,10 +493,7 @@ func OAuthHandleCallback(_ string, code string) bool {
 
 func AnalyticsDashboard() DeveloperAnalytics {
 	return DeveloperAnalytics{
-		TotalInstalls: 14280, ActiveUsers: 3840, DailyDownloads: 312,
-		CrashRate: 0.02, RevenueUSD: 1250.00,
-		InstallsPerChannel: map[string]int{"Stable": 11200, "Beta": 2450, "Alpha": 630},
-		TopExtensions:      []string{"Kotlin LSP", "Flutter Live Preview", "Cyber Theme", "ADB Wireless Explorer"},
+		InstallsPerChannel: map[string]int{},
 	}
 }
 
@@ -589,37 +586,100 @@ func AiCoderDispatch(title, prompt, filePath, language, role string) (AiCodingTa
 }
 
 func AiCoderSuggestFixes(filePath, fileContent, compilerOutput string) []SuggestedFix {
+	apiKey := os.Getenv("OPENROUTER_API_KEY")
+	if apiKey == "" {
+		return nil
+	}
+	model := os.Getenv("SWARM_CODER_MODEL")
+	if model == "" {
+		model = "openrouter/auto"
+	}
+
+	snippet := fileContent
+	if len(snippet) > 4000 {
+		snippet = snippet[:4000]
+	}
+	diagSnippet := compilerOutput
+	if len(diagSnippet) > 2000 {
+		diagSnippet = diagSnippet[:2000]
+	}
+
+	system := "You are Forge, an enterprise code-fix engine. Given a source file and compiler/linter output, return ONLY a JSON array of fix objects. Each object has keys: diagnostic_code (string), message (string), line_number (int, 1-indexed), original_code (string, the offending line), replacement_code (string, the corrected line), explanation (string, why), confidence (float 0-1). Return an empty array [] if no fixes apply. Never fabricate issues — only suggest fixes for real diagnostics present in the compiler output."
+	user := fmt.Sprintf("File: %s\n\nSource:\n```\n%s\n```\n\nCompiler/linter output:\n```\n%s\n```", filePath, snippet, diagSnippet)
+
+	body, _ := json.Marshal(map[string]any{
+		"model":           model,
+		"messages":        []map[string]string{{"role": "system", "content": system}, {"role": "user", "content": user}},
+		"temperature":     0.1,
+		"response_format": map[string]string{"type": "json_object"},
+	})
+	req, err := http.NewRequest(http.MethodPost, "https://openrouter.ai/api/v1/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return nil
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("HTTP-Referer", "https://lucy.local")
+	req.Header.Set("X-Title", "SWARM Forge")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil
+	}
+
+	var completion struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&completion); err != nil || len(completion.Choices) == 0 {
+		return nil
+	}
+
+	content := strings.TrimSpace(completion.Choices[0].Message.Content)
+	var rawFixes []struct {
+		DiagnosticCode  string  `json:"diagnostic_code"`
+		Message         string  `json:"message"`
+		LineNumber      int     `json:"line_number"`
+		OriginalCode    string  `json:"original_code"`
+		ReplacementCode string  `json:"replacement_code"`
+		Explanation     string  `json:"explanation"`
+		Confidence      float64 `json:"confidence"`
+	}
+
+	if err := json.Unmarshal([]byte(content), &rawFixes); err != nil {
+		var wrapper struct {
+			Fixes json.RawMessage `json:"fixes"`
+		}
+		if err2 := json.Unmarshal([]byte(content), &wrapper); err2 != nil {
+			return nil
+		}
+		if err3 := json.Unmarshal(wrapper.Fixes, &rawFixes); err3 != nil {
+			return nil
+		}
+	}
+
 	var fixes []SuggestedFix
-	if strings.Contains(compilerOutput, "unused_import") {
-		fixes = append(fixes, SuggestedFix{
-			DiagnosticCode: "unused_import", Message: "Unused import statement detected.",
-			FilePath: filePath, LineNumber: 4,
-			OriginalCode:    "import 'auth/authentication_grid.dart';",
-			ReplacementCode: "// Removed unused import",
-			Explanation:     "Cleaned redundant import to improve compilation speed and minimize binary size.",
-			Confidence:      0.99,
-		})
-	}
-	if strings.Contains(compilerOutput, "CS8618") {
-		fixes = append(fixes, SuggestedFix{
-			DiagnosticCode: "CS8618", Message: "Non-nullable property must contain a non-null value.",
-			FilePath: filePath, LineNumber: 12,
-			OriginalCode:    "public string Name { get; set; }",
-			ReplacementCode: "public string Name { get; set; } = string.Empty;",
-			Explanation:     "Initialized non-nullable reference type with string.Empty to guarantee runtime safety.",
-			Confidence:      0.98,
-		})
-	}
-	if len(fixes) == 0 {
-		firstLine := fileContent
-		if i := strings.Index(fileContent, "\n"); i >= 0 {
-			firstLine = fileContent[:i]
+	for _, r := range rawFixes {
+		if r.DiagnosticCode == "" && r.Message == "" {
+			continue
 		}
 		fixes = append(fixes, SuggestedFix{
-			DiagnosticCode: "optimize_async", Message: "Method can be converted to async/await syntax.",
-			FilePath: filePath, LineNumber: 1, OriginalCode: firstLine,
-			ReplacementCode: "// AI Linter: Code validated against SWARM OS style guidelines",
-			Explanation:     "Verified syntax tree and memory allocation patterns.", Confidence: 0.92,
+			DiagnosticCode:  r.DiagnosticCode,
+			Message:         r.Message,
+			FilePath:        filePath,
+			LineNumber:      r.LineNumber,
+			OriginalCode:    r.OriginalCode,
+			ReplacementCode: r.ReplacementCode,
+			Explanation:     r.Explanation,
+			Confidence:      r.Confidence,
 		})
 	}
 	return fixes

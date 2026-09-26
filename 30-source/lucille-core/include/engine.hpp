@@ -13,6 +13,7 @@
 #include "hitl_security.hpp"
 #include "telemetry_daemon.hpp"
 #include "swarm_router.hpp"
+#include "openrouter_backends.hpp"
 
 namespace lucille {
 
@@ -30,6 +31,9 @@ struct EngineConfig {
     uint16_t telemetry_port{9091};
     std::string mesh_interface{"tailscale0"};
     std::string mesh_auth_token;
+    // OpenRouter API key for real model backends (pipeline + consensus).
+    // When empty, the router uses simulated models and flags mock output.
+    std::string openrouter_api_key;
 };
 
 class LucilleEngine {

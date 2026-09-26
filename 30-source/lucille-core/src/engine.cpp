@@ -129,6 +129,23 @@ bool LucilleEngine::start() {
             return request_human_approval(summary);
         });
     }
+    // Wire real OpenRouter backends when the API key is available
+    if (!config_.openrouter_api_key.empty()) {
+        OpenRouterConfig or_cfg;
+        or_cfg.api_key = config_.openrouter_api_key;
+        OpenRouterBackends backends(or_cfg);
+        router_->set_pipeline_backends(
+            backends.kimi_stream_fn(),
+            backends.deepseek_audit_fn(),
+            backends.glm_triage_fn());
+        router_->set_consensus_backends(
+            backends.kimi_syntax_voter(),
+            backends.deepseek_risk_voter());
+        std::cout << "[LucilleEngine] [OK] Real model backends configured (OpenRouter)\n";
+    } else {
+        std::cout << "[LucilleEngine] OPENROUTER_API_KEY unset — router uses simulated models\n";
+    }
+
     std::cout << "[LucilleEngine] [OK] SwarmRouter wired"
               << (telemetry_ && telemetry_->is_running() ? " (HITL connected)" : " (HITL offline)")
               << "\n";
