@@ -83,6 +83,7 @@
 ### 2.1 System Reliability
 - [~] **Verify systemd hardware watchdog on installed SWARM OS**
   - File already staged; needs a real boot test and `systemctl show | grep -i watchdog`
+  - **ISO staging audit 2026-09-25 (Opus 4.6):** `50-watchdog.conf` verified in `airootfs/etc/systemd/system.conf.d/` with correct `RuntimeWatchdogSec=30s`, `RebootWatchdogSec=5min`, `KExecWatchdogSec=5min`. `lucille-core` binary re-staged with HTTP/SSE client code (1.3 MiB, linked against libcurl). All 19 systemd units in `multi-user.target.wants` verified (incl. lucille-core.service). 4 timers in `timers.target.wants`. No dangerous symlinks to lucy-master. `swarm_os.env.gpg` absent (expected — generated at seal time, not in repo). Runtime deps (libcurl, libcrypto, libssl, libsqlite3) satisfied via transitive deps of `curl` in `packages.x86_64`. All 4 Go/Flutter/Slint/Rust binaries present in `/opt/swarm_os/`. GRUB theme, fstab (6 mounts), nftables, AppArmor profiles, containers config, sudoers, labwc autostart all present. Remaining: `sudo mkarchiso` + physical boot
 
 - [~] **Gamescope dynamic FSR upscaling**
   - `airootfs/usr/bin/swarm-session` created 2026-09-24; **rewritten 2026-09-25** — Gamescope is now opt-in (`SWARM_GAMESCOPE=1`), not auto-enabled when present. Original flags (`--width`, `--nested`) are invalid in gamescope 3.16.25; replaced with real flags (`--nested-width`, `--expose-wayland`). Default path runs labwc directly — no Gamescope wrapper by default.
@@ -166,8 +167,8 @@
 - [~] **EPP dynamic power script** (`/usr/lib/swarm/epp-tune.sh`) — implemented and wired to boot-enabled `swarm-epp.timer` (2026-09-21). AC/battery policy, advertised-value validation, readback, existing power-manager precedence, configuration and status mode complete. Nine fixture tests and systemd unit validation pass; CachyOS read-only status correctly yields to power-profiles-daemon. Fresh SWARM boot/hardware write verification pending. See `70-scripts/EPP_POWER_POLICY.md`.
 
 ### 2.7 Developer Grants
-- [>] **AMD AI Developer Program** ($100 credits) — CLAIMED by Claude Code (Opus 4.6) 2026-09-25 21:00
-- [>] **NVIDIA Inception Startup Program** (cloud credits, GPU pricing, training) — CLAIMED by Claude Code (Opus 4.6) 2026-09-25 21:00
+- [~] **AMD AI Developer Program** ($100 credits) — drafted 2026-09-25 (Opus 4.6). Application at `90-grants/AMD_AI_DEVELOPER_PROGRAM.md`. Covers ROCm benchmarking for speculative pipeline latency, AVX2→HIP migration path, and CI on Instinct hardware. Remaining: user review, submit via AMD portal
+- [~] **NVIDIA Inception Startup Program** (cloud credits, GPU pricing, training) — drafted 2026-09-25 (Opus 4.6). Application at `90-grants/NVIDIA_INCEPTION_STARTUP_PROGRAM.md`. Highlights 8 NIM skills already integrated, consensus pipeline, Landlock sandboxing, companion ecosystem. Covers DGX Cloud credits, preferred GPU pricing, NIM early access, co-marketing. Remaining: user review, submit via NVIDIA Inception portal
 
 ---
 
