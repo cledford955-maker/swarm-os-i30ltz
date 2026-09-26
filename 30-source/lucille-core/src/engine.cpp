@@ -374,6 +374,49 @@ std::string LucilleEngine::handle_ipc_command(const std::string& raw_request) {
                 return ss.str();
             }
         }
+        if (cmd == "checkpoint_confirm") {
+            std::string workspace = json_str(req, "workspace");
+            std::string cpid = json_str(req, "checkpoint_id");
+            if (workspace.empty() || cpid.empty())
+                return "{\"status\":\"error\",\"message\":\"checkpoint_confirm requires workspace and checkpoint_id\"}\n";
+            std::string err;
+            bool ok = CheckpointJournal::confirm_checkpoint(workspace, cpid, err);
+            return ok ? "{\"status\":\"ok\",\"confirmed\":\"" + cpid + "\"}\n"
+                      : "{\"status\":\"error\",\"message\":\"" + err + "\"}\n";
+        }
+
+        if (cmd == "checkpoint_rollback") {
+            std::string workspace = json_str(req, "workspace");
+            std::string cpid = json_str(req, "checkpoint_id");
+            if (workspace.empty() || cpid.empty())
+                return "{\"status\":\"error\",\"message\":\"checkpoint_rollback requires workspace and checkpoint_id\"}\n";
+            auto rb = CheckpointJournal::rollback_to_checkpoint(workspace, cpid);
+            std::stringstream ss;
+            ss << "{\"status\":\"" << (rb.ok ? "ok" : "error") << "\""
+               << ",\"checkpoint_id\":\"" << rb.checkpoint_id << "\""
+               << ",\"message\":\"" << rb.status_msg << "\"}\n";
+            return ss.str();
+        }
+
+        if (cmd == "dispatch") {
+            std::string agent = json_str(req, "agent_name");
+            if (agent.empty())
+                return "{\"status\":\"error\",\"message\":\"dispatch requires agent_name\"}\n";
+            std::vector<std::string> argv;
+            std::string args_raw = json_str(req, "args");
+            if (!args_raw.empty()) {
+                std::istringstream iss(args_raw);
+                std::string tok;
+                while (iss >> tok) argv.push_back(tok);
+            }
+            bool overlay = json_bool(req, "ephemeral_overlay", true);
+            pid_t pid = dispatch_subagent(agent, argv, overlay);
+            if (pid > 0) {
+                return "{\"status\":\"ok\",\"pid\":" + std::to_string(pid) + ",\"agent\":\"" + agent + "\"}\n";
+            }
+            return "{\"status\":\"error\",\"message\":\"dispatch failed for " + agent + "\"}\n";
+        }
+
         return "{\"status\":\"error\",\"message\":\"unknown JSON command: " + cmd + "\"}\n";
     }
 

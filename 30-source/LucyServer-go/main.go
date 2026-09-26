@@ -177,8 +177,25 @@ func main() {
 		api.With(rateLimiter(5, time.Minute)).Post("/settings/totp/check", handlers.TOTPCheck)
 		api.Delete("/settings/totp", handlers.TOTPDisable)
 
+		// Lucille Core engine bridge — proxies JSON to /run/lucille/ipc.sock
+		api.Get("/lucille/status", handlers.LucilleStatus)
+		api.With(rateLimiter(15, time.Minute)).Post("/lucille/pipeline", handlers.LucillePipeline)
+		api.With(rateLimiter(15, time.Minute)).Post("/lucille/route", handlers.LucilleRouteTask)
+		api.Post("/lucille/checkpoint", handlers.LucilleCheckpoint)
+
 		// Search & daily brief (task #20)
 		api.Get("/google/brief", handlers.GoogleBrief)
+
+		// Google Workspace OAuth — proxied to the .NET service on :8402 so
+		// the Flutter shell and Companion have a single origin. Auth token
+		// gate still applies (we're under /api/).
+		api.Route("/google/auth", func(g chi.Router) {
+			g.Get("/status", handlers.GoogleAuthStatus)
+			g.Get("/url", handlers.GoogleAuthURL)
+			g.Post("/upload_credentials", handlers.GoogleAuthUploadCredentials)
+			g.Post("/exchange", handlers.GoogleAuthExchange)
+			g.Post("/logout", handlers.GoogleAuthLogout)
+		})
 		api.Get("/search", handlers.WebSearch)
 
 		// RAG ingestion (task #19) — DONE
@@ -529,6 +546,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		"lucy_server":      "ok", // we are lucy_server
 		"gaming_agent":     probeHTTP("http://127.0.0.1:8401/health", 500*time.Millisecond),
 		"google_workspace": probeHTTP("http://127.0.0.1:8402/health", 500*time.Millisecond),
+		"lucille_core":     probeUnix("/run/lucille/ipc.sock", "ping", 500*time.Millisecond),
 	}
 
 	// overall status: degraded if any service is unreachable
@@ -597,6 +615,27 @@ func probeHTTP(url string, timeout time.Duration) string {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 500 {
+		return "ok"
+	}
+	return "unreachable"
+}
+
+func probeUnix(socket, command string, timeout time.Duration) string {
+	conn, err := net.DialTimeout("unix", socket, timeout)
+	if err != nil {
+		return "unreachable"
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(timeout))
+	if _, err := conn.Write([]byte(command)); err != nil {
+		return "unreachable"
+	}
+	buf := make([]byte, 256)
+	n, err := conn.Read(buf)
+	if err != nil || n == 0 {
+		return "unreachable"
+	}
+	if strings.Contains(string(buf[:n]), "pong") || strings.Contains(string(buf[:n]), "running") {
 		return "ok"
 	}
 	return "unreachable"

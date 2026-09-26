@@ -50,6 +50,7 @@ class _HudStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool backendLive = !health.isStale();
     final bool gamingOk = health.serviceOk('gaming_agent');
+    final bool lucilleOk = health.serviceOk('lucille_core');
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -81,6 +82,16 @@ class _HudStrip extends StatelessWidget {
               : SwarmColors.statusOffline,
           pulse: backendLive && gamingOk,
           label: (backendLive && gamingOk) ? 'GAME' : 'GAME ✗',
+        ),
+        const SizedBox(width: 8),
+
+        // Lucille Core engine (C++ pipeline on :9091)
+        _HudIndicator(
+          color: (backendLive && lucilleOk)
+              ? SwarmColors.accentCyan
+              : SwarmColors.statusOffline,
+          pulse: backendLive && lucilleOk,
+          label: (backendLive && lucilleOk) ? 'ENGINE' : 'ENGINE ✗',
         ),
         const SizedBox(width: 8),
 

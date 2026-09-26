@@ -1214,6 +1214,73 @@ void test_engine_full_wiring() {
     }
 }
 
+void test_ipc_checkpoint_and_dispatch() {
+    std::cout << "\n--- 14. Testing IPC Checkpoint & Dispatch Commands ---\n";
+
+    // Start an engine with IPC
+    lucille::EngineConfig cfg;
+    std::string sock = "/tmp/lucille_test_cp_" + std::to_string(getpid()) + ".sock";
+    cfg.socket_path = sock;
+    std::ofstream("/tmp/test_soul_cp.md") << "# Soul";
+    cfg.soul_path = "/tmp/test_soul_cp.md";
+
+    lucille::LucilleEngine engine(cfg);
+    TEST_ASSERT(engine.start(), "Engine starts for checkpoint/dispatch test");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    auto send_json = [&](const std::string& json) -> std::string {
+        int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+        struct sockaddr_un addr{};
+        addr.sun_family = AF_UNIX;
+        strncpy(addr.sun_path, sock.c_str(), sizeof(addr.sun_path) - 1);
+        connect(fd, (struct sockaddr*)&addr, sizeof(addr));
+        write(fd, json.c_str(), json.size());
+        char buf[4096]{};
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        ssize_t n = read(fd, buf, sizeof(buf) - 1);
+        close(fd);
+        return (n > 0) ? std::string(buf, n) : "";
+    };
+
+    // checkpoint_confirm with missing params
+    {
+        auto r = send_json("{\"command\":\"checkpoint_confirm\"}");
+        TEST_ASSERT(r.find("\"error\"") != std::string::npos,
+                    "checkpoint_confirm without params returns error");
+    }
+
+    // checkpoint_rollback with missing params
+    {
+        auto r = send_json("{\"command\":\"checkpoint_rollback\"}");
+        TEST_ASSERT(r.find("\"error\"") != std::string::npos,
+                    "checkpoint_rollback without params returns error");
+    }
+
+    // checkpoint_confirm with non-existent workspace returns ok (already past checkpoint)
+    {
+        auto r = send_json("{\"command\":\"checkpoint_confirm\",\"workspace\":\"/nonexistent\",\"checkpoint_id\":\"abc123\"}");
+        TEST_ASSERT(r.find("\"confirmed\"") != std::string::npos || r.find("\"ok\"") != std::string::npos,
+                    "checkpoint_confirm with unknown checkpoint returns ok (idempotent)");
+    }
+
+    // dispatch with missing agent_name
+    {
+        auto r = send_json("{\"command\":\"dispatch\"}");
+        TEST_ASSERT(r.find("\"error\"") != std::string::npos,
+                    "dispatch without agent_name returns error");
+    }
+
+    // dispatch with a nonexistent agent (will fail but exercises the path)
+    {
+        auto r = send_json("{\"command\":\"dispatch\",\"agent_name\":\"test-noop\"}");
+        // Either succeeds (pid > 0) or returns error — both are valid as long as it doesn't crash
+        TEST_ASSERT(!r.empty(), "dispatch command returns a response");
+    }
+
+    engine.stop();
+    fs::remove(cfg.soul_path);
+}
+
 int main() {
     std::cout << "=====================================================\n";
     std::cout << "        LUCILLE CORE ENGINE — FULL TEST SUITE        \n";
@@ -1236,6 +1303,7 @@ int main() {
     test_telemetry_daemon();
     test_engine_full_wiring();
     test_openrouter_backends();
+    test_ipc_checkpoint_and_dispatch();
 
     std::cout << "\n=====================================================\n";
     std::cout << "Test Summary: " << g_tests_passed << " passed, " << g_tests_failed << " failed.\n";

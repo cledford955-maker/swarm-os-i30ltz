@@ -56,13 +56,13 @@ class _BackendPageState extends ConsumerState<BackendPage> {
   final List<BackendServiceItem> _services = [
     BackendServiceItem(
       id: 'lucille_core',
-      name: 'Lucille Core C++20 Daemon',
-      role: 'Hardware bootloader, epoll supervisor, sandboxing & SIMD vector store',
+      name: 'Lucille Core C++20 Engine',
+      role: 'Speculative pipeline (Kimi→DeepSeek→GLM), 2-of-2 consensus gate, HITL approval, checkpoint journal, epoll IPC, SHM telemetry',
       port: 9091,
-      socketPath: '/tmp/lucille_ipc.sock',
-      startCommand: '/usr/bin/lucille-core || /run/media/i30ltz/lucy-master/Luccile-v+/lucille-core/build/lucille-core',
-      stopCommand: 'pkill -f lucille-core',
-      healthUrl: 'http://127.0.0.1:9091/health',
+      socketPath: '/run/lucille/ipc.sock',
+      startCommand: 'systemctl start lucille-core || /usr/bin/lucille-core',
+      stopCommand: 'systemctl stop lucille-core',
+      healthUrl: 'http://127.0.0.1:5000/api/lucille/status',
       status: ServiceStatus.offline,
     ),
     BackendServiceItem(

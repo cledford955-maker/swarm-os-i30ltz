@@ -52,8 +52,12 @@ func GetNews() ([]models.NewsItem, error) {
 		return newsCache.data, nil
 	}
 	items, err := fetchRSSFeeds(map[string]string{
-		"GameSpot":     "https://www.gamespot.com/feeds/news/",
-		"Boiling Steam": "https://boilingsteam.com/feed/",
+		"GameSpot":         "https://www.gamespot.com/feeds/news/",
+		"Boiling Steam":    "https://boilingsteam.com/feed/",
+		// GamingOnLinux + Phoronix — the two feeds Linux gamers actually read.
+		// (SWARM_AI_FEATURES.md 2026-09-15 backlog item; both feeds public, no key.)
+		"GamingOnLinux":    "https://www.gamingonlinux.com/article_rss.php",
+		"Phoronix":         "https://www.phoronix.com/rss.php",
 	}, "gaming")
 	if err == nil {
 		newsCache = cacheEntry[[]models.NewsItem]{data: items, updatedAt: time.Now()}
@@ -112,6 +116,8 @@ func GetNewsFeed() ([]models.NewsItem, error) {
 		"GameSpot":         "https://www.gamespot.com/feeds/news/",
 		"Boiling Steam":    "https://boilingsteam.com/feed/",
 		"Linux Gaming News": "https://linuxgaming.life/feed/",
+		"GamingOnLinux":    "https://www.gamingonlinux.com/article_rss.php",
+		"Phoronix":         "https://www.phoronix.com/rss.php",
 	}, "gaming")
 	if err == nil {
 		feedCache = cacheEntry[[]models.NewsItem]{data: items, updatedAt: time.Now()}

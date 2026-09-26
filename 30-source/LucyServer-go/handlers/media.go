@@ -73,7 +73,11 @@ func GetDevNews(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetSteamLibrary(w http.ResponseWriter, r *http.Request) {
-	result, _ := services.GetSteamLibrary()
+	// Cached wrapper: on Steam API key expiry (2026-09-20 incident) the
+	// dashboard now serves the last-known library with cached=true instead
+	// of an empty grid, so favorites/pinned tiles keep working while the
+	// user regenerates their Steam key.
+	result, _ := services.GetSteamLibraryCached()
 	writeJSON(w, result)
 }
 
