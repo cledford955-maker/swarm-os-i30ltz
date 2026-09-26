@@ -106,7 +106,7 @@ fun ErrorPane(msg: String, onRetry: () -> Unit) {
 
 /** Plasma action button */
 @Composable
-fun PlasmaButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun PlasmaButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = modifier,

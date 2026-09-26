@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Lucille SWARM OS theme  v1.0.0 · 2026-09-26 -->
 <resources>
-    <style name="Theme.Lucille" parent="android:Theme.Material.NoTitleBar.Fullscreen">
+    <style name="Theme.Lucille" parent="android:Theme.Material.NoActionBar.Fullscreen">
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>

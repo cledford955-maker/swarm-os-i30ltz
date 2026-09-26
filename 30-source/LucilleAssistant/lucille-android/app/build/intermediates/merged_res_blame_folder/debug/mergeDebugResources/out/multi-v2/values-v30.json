@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "os.swarm.lucille.app-mergeDebugResources-52:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "/home/i30ltz/.gradle/caches/transforms-4/6dc15d142d4752b2e57f8a7c52dbb075/transformed/material3-release/res/values-v30/values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}
