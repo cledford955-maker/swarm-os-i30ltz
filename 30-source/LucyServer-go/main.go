@@ -201,6 +201,11 @@ func main() {
 			rel.Get("/{appId}", handlers.ReleaseGet)
 			rel.Post("/{id}/promote", handlers.ReleasePromote)
 		})
+
+		// OTA update check — reads the Ventoy release store and reports whether
+		// a newer ISO than the running version has been published. Read-only:
+		// installing the ISO stays a Ventoy-boot user action, never automatic.
+		api.Get("/updates/check", handlers.UpdatesCheck)
 		api.Route("/git", func(git chi.Router) {
 			git.Get("/repos", handlers.GitListRepos)
 			git.Post("/repos/create", handlers.GitCreateRepo)

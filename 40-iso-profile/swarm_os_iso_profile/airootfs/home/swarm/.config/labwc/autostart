@@ -20,6 +20,14 @@ if command -v wlr-randr >/dev/null 2>&1; then
 fi
 # ────────────────────────────────────────────────────────────────────────────
 
+# Taskbar / window switcher — labwc has no built-in panel. Waybar reads
+# /etc/xdg/waybar/{config,style.css}; the strip lives at the bottom so it
+# doesn't collide with the Flutter shell's own top bar. Runs before the
+# shell so a slow Flutter boot doesn't leave the user with no taskbar.
+if command -v waybar >/dev/null 2>&1; then
+  waybar &
+fi
+
 # Flutter shell — full desktop: wallpaper, app drawer, floating window manager,
 # voice HUD, overlays. Runs as a GTK3 Wayland client.
 /opt/swarm_os/swarm_flutter/swarm_flutter &

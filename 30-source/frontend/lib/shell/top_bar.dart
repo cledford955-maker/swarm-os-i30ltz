@@ -91,6 +91,40 @@ class SwarmTopBar extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
+                    // OTA update-available pill — populated only when
+                    // /api/updates/check reports a newer ISO than the running
+                    // version. Silent otherwise; never fabricated.
+                    Consumer(builder: (context, ref, _) {
+                      final async = ref.watch(swarmUpdateProvider);
+                      final snap = async.asData?.value;
+                      if (snap == null || !snap.updateAvailable) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Tooltip(
+                          message:
+                              'New ISO available: v${snap.latestVersion} · ${snap.latestIso?.sizeGb.toStringAsFixed(1)} GiB · reboot into Ventoy to install.',
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: SwarmColors.accent.withValues(alpha: 0.22),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: SwarmColors.accent, width: 0.8),
+                            ),
+                            child: Text(
+                              '↑ v${snap.latestVersion}',
+                              style: SwarmTextStyles.codeSmall.copyWith(
+                                color: SwarmColors.accent,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(

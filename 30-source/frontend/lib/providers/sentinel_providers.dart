@@ -4,6 +4,7 @@ import '../services/sentinel_sse.dart';
 import '../services/ai_client.dart';
 import '../services/telemetry_service.dart';
 import '../services/swarm_health_service.dart';
+import '../services/swarm_update_service.dart';
 
 /// Singleton providers for backend services.
 // Defaults to the Flutter shell's own project root — the app Lucille/Forge/
@@ -64,5 +65,21 @@ final swarmHealthServiceProvider = Provider<SwarmHealthService>((ref) {
 /// is unreachable — never stale data.
 final swarmHealthProvider = StreamProvider<SwarmHealthSnapshot>((ref) {
   final svc = ref.watch(swarmHealthServiceProvider);
+  return svc.snapshots;
+});
+
+// ─── OTA Update Check (LucyServer /api/updates/check) ─────────────────────────
+
+final swarmUpdateServiceProvider = Provider<SwarmUpdateService>((ref) {
+  final svc = SwarmUpdateService();
+  svc.start();
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+/// Emits an [SwarmUpdateSnapshot] every 15 minutes (and once at startup).
+/// The banner in the top bar reads from this to show "Update v6.2.75 available".
+final swarmUpdateProvider = StreamProvider<SwarmUpdateSnapshot>((ref) {
+  final svc = ref.watch(swarmUpdateServiceProvider);
   return svc.snapshots;
 });

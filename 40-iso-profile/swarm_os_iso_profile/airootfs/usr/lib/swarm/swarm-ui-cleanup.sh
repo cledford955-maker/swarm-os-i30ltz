@@ -30,7 +30,7 @@ DESKTOP_VT="1"
 GRACE_SECONDS="${SWARM_CLEANUP_GRACE:-3}"
 # Fallback only, for when logind cannot be asked. Programs that only the
 # kiosk runs; never broad names a user might run in another session.
-DESKTOP_PROGRAMS=(labwc swarm_flutter swarm-slint)
+DESKTOP_PROGRAMS=(labwc swarm_flutter swarm-slint waybar)
 
 log() { echo "[swarm-ui-cleanup] $*" >&2; }
 

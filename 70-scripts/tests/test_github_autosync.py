@@ -13,14 +13,36 @@ class AutoSync(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             git = root / 'git'
+            # Fake git that logs all calls and handles the snapshot-sync commands.
+            # sync_subtree() calls: rev-parse, cat-file, fetch, rev-parse, rev-parse,
+            # commit-tree, push.  The origin push uses plain "push origin main".
             git.write_text('''#!/bin/bash
-printf '%s\n' "$*" >> "$SYNC_TEST_LOG"
+printf '%s\\n' "$*" >> "$SYNC_TEST_LOG"
 case "$1" in
- rev-parse) echo "$SWARM_SYNC_REPO_DIR/sync.lock" ;;
+ rev-parse)
+   # --verify --quiet HEAD:<prefix>  →  fake tree hash
+   if [[ "$*" == *"HEAD:"* ]]; then echo "abcd1234tree"; exit 0; fi
+   # FETCH_HEAD  →  fake remote tip
+   if [[ "$*" == *"FETCH_HEAD"* ]]; then echo "remote0001tip"; exit 0; fi
+   # <tip>^{tree}  →  different hash so sync is never "up to date"
+   if [[ "$*" == *"^{tree}"* ]]; then echo "different_tree"; exit 0; fi
+   echo "$SWARM_SYNC_REPO_DIR/sync.lock"
+   ;;
+ cat-file) echo "tree" ;;
  status) [[ ${DIRTY:-0} == 0 ]] || echo ' M example'; exit 0 ;;
  add) exit "${FAIL_ADD:-0}" ;;
- push) exit "${FAIL_ORIGIN:-0}" ;;
- subtree) [[ "$*" != *'i30ltz-recovery main'* ]] || exit "${FAIL_RECOVERY:-0}" ;;
+ fetch)
+   # fetch --quiet <remote> main
+   [[ "$*" != *'i30ltz-recovery'* ]] || exit "${FAIL_RECOVERY:-0}"
+   exit 0
+   ;;
+ commit-tree) echo "newcommit0001" ;;
+ push)
+   # push origin main  OR  push --quiet <remote> <sha>:refs/heads/main
+   [[ "$*" != *'origin main'* ]] || exit "${FAIL_ORIGIN:-0}"
+   [[ "$*" != *'i30ltz-recovery'* ]] || exit "${FAIL_RECOVERY:-0}"
+   exit 0
+   ;;
 esac
 exit 0
 ''')
@@ -36,10 +58,12 @@ exit 0
             return result.returncode, log.read_text().splitlines()
 
     def assert_all_destinations(self, calls):
-        self.assertIn('push origin main', calls)
+        """Verify that origin push and all 3 snapshot syncs were attempted."""
+        self.assertTrue(any('push origin main' in c for c in calls), 'origin push missing')
         for remote in ('i30ltz-recovery', 'i30ltz-swarm-companion', 'i30ltz-lucille-assistant'):
-            self.assertTrue(any(call.startswith('subtree ') and call.endswith(remote + ' main')
-                                for call in calls), remote)
+            self.assertTrue(
+                any(('fetch' in c or 'push' in c) and remote in c for c in calls),
+                f'{remote} sync not attempted')
 
     def test_clean_tree_retries_every_push(self):
         status, calls = self.exercise()

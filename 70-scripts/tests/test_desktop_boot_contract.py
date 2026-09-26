@@ -151,11 +151,22 @@ class DesktopTeardownContract(unittest.TestCase):
     def test_fallback_covers_every_autostarted_program(self):
         _, pkills, _ = self.run_cleanup({})
         autostart = (PROFILE / 'airootfs/home/swarm/.config/labwc/autostart').read_text()
-        for program in ('labwc', 'swarm_flutter', 'swarm-slint'):
+        for program in ('labwc', 'swarm_flutter', 'swarm-slint', 'waybar'):
             with self.subTest(program=program):
                 self.assertTrue(any(call.endswith('-x ' + program) for call in pkills))
         self.assertIn('swarm_flutter', autostart)
         self.assertIn('swarm-slint', autostart)
+        # Waybar provides the taskbar for labwc (b6 — 2026-09-25). If it drops
+        # out of autostart the desktop boots with no window switcher.
+        self.assertIn('waybar', autostart)
+
+    def test_waybar_package_and_config_shipped(self):
+        # Without the package in packages.x86_64 the autostart line is a silent no-op.
+        pkgs = (PROFILE / 'packages.x86_64').read_text()
+        self.assertRegex(pkgs, r'(?m)^waybar\b')
+        # Config files must exist so waybar has something to render.
+        self.assertTrue((PROFILE / 'airootfs/etc/xdg/waybar/config').exists())
+        self.assertTrue((PROFILE / 'airootfs/etc/xdg/waybar/style.css').exists())
 
     def test_unit_runs_cleanup_before_start_and_before_tty_reset(self):
         helper = '+/usr/lib/swarm/swarm-ui-cleanup.sh'

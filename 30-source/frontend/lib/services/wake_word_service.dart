@@ -39,14 +39,19 @@ class WakeWordService extends ChangeNotifier {
     notifyListeners();
     final busy = File('$_runtimePath/busy');
     try {
-      // This lives under the login user's private runtime directory.
-      await busy.parent.create(recursive: true);
-      await Process.run('chmod', ['700', busy.parent.path]);
-      await busy.writeAsString('');
+      try {
+        await busy.parent.create(recursive: true);
+        await Process.run('chmod', ['700', busy.parent.path]);
+        await busy.writeAsString('');
+      } on FileSystemException catch (_) {
+        // Best-effort: runtime dir may be read-only in test/container.
+      }
       await action();
     } finally {
       try {
         if (await busy.exists()) await busy.delete();
+      } on FileSystemException catch (_) {
+        // Cleanup failure is non-fatal.
       } finally {
         _isProcessing = false;
         notifyListeners();

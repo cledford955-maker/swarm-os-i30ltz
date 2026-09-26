@@ -49,6 +49,10 @@ openvpn
 labwc
 # provides libseat.so — used via LIBSEAT_BACKEND=logind
 seatd
+# window-switcher / status strip for labwc — no built-in panel, so waybar
+# provides the taskbar (workspaces, active-window title, system tray, clock,
+# battery, network). Config at /etc/xdg/waybar/. (b6 — 2026-09-25)
+waybar
 libxkbcommon
 # XWayland keyboard handling — safety net if Flutter's GTK embedder needs
 # the X11 fallback path (see swarm-ui.service)
