@@ -1,20 +1,22 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Coder Droid Editor</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1e1e; }
   #editor-container { width: 100%; height: 100%; }
 </style>
-
-<link rel="stylesheet" href="vs/editor/editor.main.css"/>
-</head>
+<link href="vs/editor/editor.main.css" rel="stylesheet"/>
+<meta content="website" property="og:type"/><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "WebPage"
+}</script></head>
 <body>
 <div id="editor-container"></div>
-
 <script src="vs/loader.js"></script>
 <script>
 require.config({ paths: { vs: 'vs' } });

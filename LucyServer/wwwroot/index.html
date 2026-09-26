@@ -1,10 +1,11 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LucyServer Test Client</title>
-    <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LucyServer Test Client</title>
+<style>
         body { font-family: sans-serif; margin: 20px; max-width: 800px; margin: 0 auto; padding: 20px; }
         #chatbox { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: auto; margin-bottom: 10px; background: #f9f9f9; }
         .message { margin-bottom: 10px; padding: 10px; border-radius: 5px; }
@@ -13,19 +14,18 @@
         input[type="text"] { width: 80%; padding: 10px; }
         button { padding: 10px; }
     </style>
-</head>
+<meta content="website" property="og:type"/><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "WebPage"
+}</script></head>
 <body>
-
-    <h1>Lucy Server Test</h1>
-    
-    <div id="chatbox"></div>
-    
-    <div>
-        <input type="text" id="userInput" placeholder="Say something to Lucy...">
-        <button id="sendBtn">Send</button>
-    </div>
-
-    <script>
+<h1>Lucy Server Test</h1>
+<div id="chatbox"></div>
+<div>
+<input id="userInput" placeholder="Say something to Lucy..." type="text"/>
+<button id="sendBtn">Send</button>
+</div>
+<script>
         const chatbox = document.getElementById("chatbox");
         const userInput = document.getElementById("userInput");
         const sendBtn = document.getElementById("sendBtn");

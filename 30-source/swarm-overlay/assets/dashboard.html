@@ -1,7 +1,8 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html>
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"/>
 <title>SWARM Overlay</title>
 <style>
   :root {
@@ -102,55 +103,53 @@
   @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
   #chat-input:disabled, #chat-form button:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
-</head>
+<meta content="website" property="og:type"/><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "WebPage"
+}</script></head>
 <body>
-  <h1>SWARM Overlay</h1>
-
-  <div class="panel">
-    <h2>Now Playing</h2>
-    <div id="media-empty">Nothing playing.</div>
-    <div id="media-body">
-      <div class="media-track">
-        <div class="media-art" id="media-art"></div>
-        <div>
-          <div class="media-title" id="media-title"></div>
-          <div class="media-artist" id="media-artist"></div>
-        </div>
-      </div>
-      <div class="media-controls">
-        <button id="btn-prev" title="Previous">&#9198;</button>
-        <button id="btn-playpause" title="Play/Pause">&#9199;</button>
-        <button id="btn-next" title="Next">&#9197;</button>
-        <input type="range" id="vol" min="0" max="1" step="0.01">
-      </div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h2>Lucille</h2>
-    <div id="chat-log"></div>
-    <form id="chat-form">
-      <input id="chat-input" type="text" placeholder="Ask Lucille..." autocomplete="off">
-      <button type="submit">Send</button>
-    </form>
-  </div>
-
-  <div class="panel">
-    <h2>Walkthrough / Web</h2>
-    <form id="browser-form">
-      <input id="browser-input" type="text" placeholder="Search or paste a URL..." autocomplete="off">
-      <button type="submit">Open</button>
-    </form>
-  </div>
-
-  <div class="panel">
-    <h2>Apps</h2>
-    <div class="app-buttons">
-      <button type="button" id="btn-chrome">Chrome</button>
-      <button type="button" id="btn-opera-gx">Opera GX</button>
-    </div>
-  </div>
-
+<h1>SWARM Overlay</h1>
+<div class="panel">
+<h2>Now Playing</h2>
+<div id="media-empty">Nothing playing.</div>
+<div id="media-body">
+<div class="media-track">
+<div class="media-art" id="media-art"></div>
+<div>
+<div class="media-title" id="media-title"></div>
+<div class="media-artist" id="media-artist"></div>
+</div>
+</div>
+<div class="media-controls">
+<button id="btn-prev" title="Previous">⏮</button>
+<button id="btn-playpause" title="Play/Pause">⏯</button>
+<button id="btn-next" title="Next">⏭</button>
+<input id="vol" max="1" min="0" step="0.01" type="range"/>
+</div>
+</div>
+</div>
+<div class="panel">
+<h2>Lucille</h2>
+<div id="chat-log"></div>
+<form id="chat-form">
+<input autocomplete="off" id="chat-input" placeholder="Ask Lucille..." type="text"/>
+<button type="submit">Send</button>
+</form>
+</div>
+<div class="panel">
+<h2>Walkthrough / Web</h2>
+<form id="browser-form">
+<input autocomplete="off" id="browser-input" placeholder="Search or paste a URL..." type="text"/>
+<button type="submit">Open</button>
+</form>
+</div>
+<div class="panel">
+<h2>Apps</h2>
+<div class="app-buttons">
+<button id="btn-chrome" type="button">Chrome</button>
+<button id="btn-opera-gx" type="button">Opera GX</button>
+</div>
+</div>
 <script>
 const API = "http://127.0.0.1:8401";
 
