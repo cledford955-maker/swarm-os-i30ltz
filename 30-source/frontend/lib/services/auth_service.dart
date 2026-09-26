@@ -2,25 +2,84 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'swarm_config.dart';
 
+class PasskeyCredential {
+  final String id;
+  final String name;
+  final String createdAt;
+
+  const PasskeyCredential({
+    required this.id,
+    this.name = '',
+    this.createdAt = '',
+  });
+
+  factory PasskeyCredential.fromJson(Map<String, dynamic> json) {
+    return PasskeyCredential(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? json['id']?.toString() ?? '',
+      createdAt: json['created_at']?.toString() ?? '',
+    );
+  }
+}
+
 class AuthService {
   static String get baseUrl => SwarmConfig.httpBase;
 
-  // 1. Get Login Options from Backend
-  Future<Map<String, dynamic>> getWebAuthnLoginOptions() async {
-    final response = await http.get(Uri.parse('$baseUrl/webauthn/login/options'), headers: SwarmConfig.authHeaders);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to get login options');
-    }
+  Future<Map<String, dynamic>> getRegisterOptions() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/webauthn/register/options'),
+      headers: SwarmConfig.authHeaders,
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to get register options');
   }
 
-  // 2. Verify Login with Backend (Placeholder for when companion app/passkey signs it)
-  Future<bool> verifyWebAuthnLogin(Map<String, dynamic> authResponse) async {
+  Future<bool> verifyRegister(Map<String, dynamic> attestation) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/webauthn/register/verify'),
+      headers: {...SwarmConfig.authHeaders, 'Content-Type': 'application/json'},
+      body: jsonEncode(attestation),
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<Map<String, dynamic>> getLoginOptions() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/webauthn/login/options'),
+      headers: SwarmConfig.authHeaders,
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to get login options');
+  }
+
+  Future<bool> verifyLogin(Map<String, dynamic> assertion) async {
     final response = await http.post(
       Uri.parse('$baseUrl/webauthn/login/verify'),
+      headers: {...SwarmConfig.authHeaders, 'Content-Type': 'application/json'},
+      body: jsonEncode(assertion),
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<List<PasskeyCredential>> listCredentials() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/webauthn/list'),
       headers: SwarmConfig.authHeaders,
-      body: jsonEncode(authResponse),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is List) {
+        return data.map((e) => PasskeyCredential.fromJson(e as Map<String, dynamic>)).toList();
+      }
+      return [];
+    }
+    throw Exception('Failed to list credentials');
+  }
+
+  Future<bool> clearCredentials() async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/webauthn/clear'),
+      headers: SwarmConfig.authHeaders,
     );
     return response.statusCode == 200;
   }

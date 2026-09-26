@@ -30,6 +30,26 @@ class CompanionHeartbeat(private val conn: SwarmConnection) {
     private val _serverCompanions = MutableStateFlow(0)
     val serverCompanions: StateFlow<Int> = _serverCompanions
 
+    /**
+     * Latest OTA update notice pushed from LucyServer, or null if none in this
+     * session. Populated when the desktop's /api/updates/check sees a newer
+     * SWARM ISO than the running system. UI consumers show a banner and
+     * (optionally) trigger a system notification.
+     */
+    data class UpdateNotice(
+        val currentVersion: String,
+        val latestVersion: String,
+        val filename: String,
+        val sizeBytes: Long,
+        val sha256: String,
+        val at: String,
+    )
+    private val _pendingUpdate = MutableStateFlow<UpdateNotice?>(null)
+    val pendingUpdate: StateFlow<UpdateNotice?> = _pendingUpdate
+
+    /** Call after the user has acknowledged/dismissed the update banner. */
+    fun clearPendingUpdate() { _pendingUpdate.value = null }
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.SECONDS)
@@ -97,6 +117,20 @@ class CompanionHeartbeat(private val conn: SwarmConnection) {
                     _serverCompanions.value = msg.optInt("companions", 0)
                 }
                 "ack" -> {} // status acknowledgement, no action needed
+                "swarm_os_update_available" -> {
+                    // Desktop OTA push — a newer SWARM ISO is on Ventoy. UI
+                    // consumers show this on the Remote PC screen; install
+                    // is still a deliberate Ventoy-reboot action on the PC,
+                    // never triggered from the phone.
+                    _pendingUpdate.value = UpdateNotice(
+                        currentVersion = msg.optString("current_version"),
+                        latestVersion  = msg.optString("latest_version"),
+                        filename       = msg.optString("filename"),
+                        sizeBytes      = msg.optLong("size_bytes"),
+                        sha256         = msg.optString("sha256"),
+                        at             = msg.optString("at"),
+                    )
+                }
             }
         }
 

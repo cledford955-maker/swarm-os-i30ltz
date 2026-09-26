@@ -5,12 +5,14 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /mnt/Lucy/30-source/lucille-core/include/affinity_manager.hpp \
   /mnt/Lucy/30-source/lucille-core/include/bootloader.hpp \
   /mnt/Lucy/30-source/lucille-core/include/checkpoint_journal.hpp \
+  /mnt/Lucy/30-source/lucille-core/include/consensus_gate.hpp \
   /mnt/Lucy/30-source/lucille-core/include/engine.hpp \
   /mnt/Lucy/30-source/lucille-core/include/entropy_filter.hpp \
   /mnt/Lucy/30-source/lucille-core/include/error_interceptor.hpp \
   /mnt/Lucy/30-source/lucille-core/include/hitl_security.hpp \
   /mnt/Lucy/30-source/lucille-core/include/ipc_server.hpp \
   /mnt/Lucy/30-source/lucille-core/include/mesh_sync.hpp \
+  /mnt/Lucy/30-source/lucille-core/include/openrouter_backends.hpp \
   /mnt/Lucy/30-source/lucille-core/include/process_manager.hpp \
   /mnt/Lucy/30-source/lucille-core/include/safety_gate.hpp \
   /mnt/Lucy/30-source/lucille-core/include/security_sandbox.hpp \
@@ -21,6 +23,7 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /mnt/Lucy/30-source/lucille-core/include/telemetry_daemon.hpp \
   /mnt/Lucy/30-source/lucille-core/include/vector_memory.hpp \
   /usr/include/alloca.h \
+  /usr/include/arpa/inet.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -28,6 +31,7 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /usr/include/asm-generic/ioctl.h \
   /usr/include/asm-generic/ioctls.h \
   /usr/include/asm-generic/posix_types.h \
+  /usr/include/asm-generic/socket.h \
   /usr/include/asm-generic/sockios.h \
   /usr/include/asm-generic/types.h \
   /usr/include/asm/bitsperlong.h \
@@ -36,6 +40,7 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /usr/include/asm/ioctls.h \
   /usr/include/asm/posix_types.h \
   /usr/include/asm/posix_types_64.h \
+  /usr/include/asm/socket.h \
   /usr/include/asm/sockios.h \
   /usr/include/asm/types.h \
   /usr/include/assert.h \
@@ -55,6 +60,7 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /usr/include/bits/fp-logb.h \
   /usr/include/bits/getopt_core.h \
   /usr/include/bits/getopt_posix.h \
+  /usr/include/bits/in.h \
   /usr/include/bits/ioctl-types.h \
   /usr/include/bits/ioctls.h \
   /usr/include/bits/iscanonical.h \
@@ -67,6 +73,12 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /usr/include/bits/mathcalls-macros.h \
   /usr/include/bits/mathcalls-narrow.h \
   /usr/include/bits/mathcalls.h \
+  /usr/include/bits/mman-linux.h \
+  /usr/include/bits/mman-map-flags-generic.h \
+  /usr/include/bits/mman-shared.h \
+  /usr/include/bits/mman.h \
+  /usr/include/bits/mman_ext.h \
+  /usr/include/bits/poll.h \
   /usr/include/bits/posix_opt.h \
   /usr/include/bits/pthread_stack_min-dynamic.h \
   /usr/include/bits/pthreadtypes-arch.h \
@@ -74,6 +86,9 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /usr/include/bits/sched.h \
   /usr/include/bits/select.h \
   /usr/include/bits/setjmp.h \
+  /usr/include/bits/sockaddr.h \
+  /usr/include/bits/socket.h \
+  /usr/include/bits/socket_type.h \
   /usr/include/bits/stat.h \
   /usr/include/bits/statx-generic.h \
   /usr/include/bits/statx.h \
@@ -109,7 +124,9 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /usr/include/bits/types/sigset_t.h \
   /usr/include/bits/types/struct_FILE.h \
   /usr/include/bits/types/struct___jmp_buf_tag.h \
+  /usr/include/bits/types/struct_iovec.h \
   /usr/include/bits/types/struct_itimerspec.h \
+  /usr/include/bits/types/struct_osockaddr.h \
   /usr/include/bits/types/struct_sched_param.h \
   /usr/include/bits/types/struct_statx.h \
   /usr/include/bits/types/struct_statx_timestamp.h \
@@ -279,6 +296,7 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /usr/include/c++/16/cstdint \
   /usr/include/c++/16/cstdio \
   /usr/include/c++/16/cstdlib \
+  /usr/include/c++/16/cstring \
   /usr/include/c++/16/ctime \
   /usr/include/c++/16/cwchar \
   /usr/include/c++/16/cwctype \
@@ -384,6 +402,8 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /usr/include/linux/types.h \
   /usr/include/locale.h \
   /usr/include/math.h \
+  /usr/include/netinet/in.h \
+  /usr/include/poll.h \
   /usr/include/pthread.h \
   /usr/include/sched.h \
   /usr/include/sqlite3.h \
@@ -391,15 +411,21 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o: /mnt/Lucy/30-source/lucille-
   /usr/include/stdint.h \
   /usr/include/stdio.h \
   /usr/include/stdlib.h \
+  /usr/include/string.h \
+  /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
   /usr/include/sys/epoll.h \
   /usr/include/sys/ioctl.h \
+  /usr/include/sys/mman.h \
+  /usr/include/sys/poll.h \
   /usr/include/sys/select.h \
   /usr/include/sys/single_threaded.h \
+  /usr/include/sys/socket.h \
   /usr/include/sys/stat.h \
   /usr/include/sys/time.h \
   /usr/include/sys/ttydefaults.h \
   /usr/include/sys/types.h \
+  /usr/include/sys/un.h \
   /usr/include/time.h \
   /usr/include/unistd.h \
   /usr/include/wchar.h \
@@ -435,15 +461,48 @@ test_engine: /usr/lib/Scrt1.o \
   /usr/lib/libbrotlienc.so.1 \
   /usr/lib/libc.so.6 \
   /usr/lib/libc_nonshared.a \
+  /usr/lib/libcom_err.so.2 \
   /usr/lib/libcrypto.so \
+  /usr/lib/libcurl.so \
+  /usr/lib/libgssapi_krb5.so.2 \
+  /usr/lib/libidn2.so.0 \
+  /usr/lib/libk5crypto.so.3 \
+  /usr/lib/libkeyutils.so.1 \
+  /usr/lib/libkrb5.so.3 \
+  /usr/lib/libkrb5support.so.0 \
   /usr/lib/libm.so.6 \
   /usr/lib/libmvec.so.1 \
+  /usr/lib/libnghttp2.so.14 \
+  /usr/lib/libnghttp3.so.9 \
+  /usr/lib/libngtcp2.so.16 \
+  /usr/lib/libngtcp2_crypto_ossl.so.0 \
+  /usr/lib/libpsl.so.5 \
+  /usr/lib/libresolv.so.2 \
   /usr/lib/libsqlite3.so \
+  /usr/lib/libssh2.so.1 \
+  /usr/lib/libssl.so.3 \
+  /usr/lib/libunistring.so.5 \
   /usr/lib/libz.so.1 \
   /usr/lib/libzstd.so.1 \
   /usr/lib32/libbrotlicommon.so.1 \
   /usr/lib32/libbrotlidec.so.1 \
   /usr/lib32/libbrotlienc.so.1 \
+  /usr/lib32/libcom_err.so.2 \
+  /usr/lib32/libgssapi_krb5.so.2 \
+  /usr/lib32/libidn2.so.0 \
+  /usr/lib32/libk5crypto.so.3 \
+  /usr/lib32/libkeyutils.so.1 \
+  /usr/lib32/libkrb5.so.3 \
+  /usr/lib32/libkrb5support.so.0 \
+  /usr/lib32/libnghttp2.so.14 \
+  /usr/lib32/libnghttp3.so.9 \
+  /usr/lib32/libngtcp2.so.16 \
+  /usr/lib32/libngtcp2_crypto_ossl.so.0 \
+  /usr/lib32/libpsl.so.5 \
+  /usr/lib32/libresolv.so.2 \
+  /usr/lib32/libssh2.so.1 \
+  /usr/lib32/libssl.so.3 \
+  /usr/lib32/libunistring.so.5 \
   /usr/lib32/libz.so.1 \
   /usr/lib32/libzstd.so.1 \
   CMakeFiles/test_engine.dir/tests/test_engine.cpp.o \
@@ -454,13 +513,43 @@ liblucille_engine_lib.a:
 
 /usr/lib32/libzstd.so.1:
 
+/usr/lib32/libssl.so.3:
+
+/usr/lib32/libpsl.so.5:
+
+/usr/lib32/libngtcp2.so.16:
+
+/usr/lib32/libkrb5.so.3:
+
+/usr/lib32/libkeyutils.so.1:
+
+/usr/lib32/libngtcp2_crypto_ossl.so.0:
+
+/usr/lib32/libidn2.so.0:
+
+/usr/lib32/libkrb5support.so.0:
+
+/usr/lib32/libgssapi_krb5.so.2:
+
+/usr/lib32/libcom_err.so.2:
+
 /usr/lib32/libbrotlienc.so.1:
 
 /usr/lib/libzstd.so.1:
 
+/usr/lib/libssl.so.3:
+
+/usr/lib/libresolv.so.2:
+
 /usr/lib/libmvec.so.1:
 
 /usr/lib/libm.so.6:
+
+/usr/lib/libk5crypto.so.3:
+
+/usr/lib/libidn2.so.0:
+
+/usr/lib/libgssapi_krb5.so.2:
 
 /usr/lib/libc_nonshared.a:
 
@@ -488,6 +577,8 @@ liblucille_engine_lib.a:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/pmmintrin.h:
 
+/usr/lib/libnghttp2.so.14:
+
 /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/mmintrin.h:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/emmintrin.h:
@@ -504,6 +595,12 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/sys/time.h:
 
+/usr/include/sys/poll.h:
+
+/usr/include/sys/mman.h:
+
+/usr/lib32/libresolv.so.2:
+
 /usr/include/sys/ioctl.h:
 
 /usr/include/sys/epoll.h:
@@ -511,6 +608,10 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /usr/include/sys/cdefs.h:
 
 /usr/include/stdlib.h:
+
+/usr/include/poll.h:
+
+/usr/include/netinet/in.h:
 
 /usr/include/math.h:
 
@@ -536,7 +637,7 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/x86_64-pc-linux-gnu/bits/error_constants.h:
 
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/cpu_defines.h:
+/usr/lib/libcom_err.so.2:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic_asneeded.so:
 
@@ -556,11 +657,15 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/tr1/special_function_util.h:
 
+/usr/lib32/libssh2.so.1:
+
 /usr/lib/crtn.o:
 
 /usr/include/c++/16/tr1/legendre_function.tcc:
 
 /usr/include/c++/16/tr1/beta_function.tcc:
+
+/usr/include/strings.h:
 
 /usr/include/c++/16/system_error:
 
@@ -583,6 +688,8 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /usr/include/c++/16/numeric:
 
 /usr/include/c++/16/numbers:
+
+/usr/lib32/libnghttp2.so.14:
 
 /usr/include/c++/16/locale:
 
@@ -622,6 +729,8 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/cwchar:
 
+/usr/include/c++/16/cstring:
+
 /usr/include/c++/16/cstdio:
 
 /usr/include/c++/16/format:
@@ -646,7 +755,7 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/cerrno:
 
-/usr/include/c++/16/cctype:
+/usr/lib/libssh2.so.1:
 
 /usr/include/c++/16/cassert:
 
@@ -656,41 +765,47 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/utility.h:
 
-/usr/include/c++/16/bits/uses_allocator_args.h:
+/usr/lib/libngtcp2_crypto_ossl.so.0:
 
 /usr/include/c++/16/ext/alloc_traits.h:
 
 /usr/include/c++/16/bits/unordered_map.h:
 
-/usr/include/c++/16/algorithm:
-
-/usr/include/stdio.h:
-
-/usr/include/c++/16/stdexcept:
-
-/usr/include/bits/wordsize.h:
-
-/usr/include/bits/wctype-wchar.h:
+/usr/include/c++/16/bits/unique_ptr.h:
 
 /usr/include/c++/16/bits/unique_lock.h:
 
-/usr/include/bits/timesize.h:
+/usr/include/c++/16/bits/uniform_int_dist.h:
 
-/usr/include/bits/types/struct_timespec.h:
+/usr/include/c++/16/bits/unicode.h:
 
-/usr/include/bits/types/struct_statx_timestamp.h:
+/usr/include/c++/16/bits/string_view.tcc:
 
-/usr/include/bits/types/struct_sched_param.h:
+/usr/include/c++/16/bits/streambuf.tcc:
 
-/usr/include/c++/16/cwctype:
+/usr/include/c++/16/bits/stl_uninitialized.h:
 
-/usr/include/c++/16/bits/cxxabi_forced.h:
+/usr/include/c++/16/bits/stl_tree.h:
+
+/usr/include/ctype.h:
+
+/usr/include/c++/16/bits/stl_tempbuf.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/mm_malloc.h:
+
+/usr/include/c++/16/tr1/poly_laguerre.tcc:
+
+/usr/include/c++/16/bits/stl_numeric.h:
 
 /usr/include/bits/types/struct_itimerspec.h:
 
 /usr/include/c++/16/iomanip:
 
 /usr/include/bits/struct_rwlock.h:
+
+/usr/include/c++/16/cctype:
+
+/usr/include/bits/types/struct_iovec.h:
 
 /usr/include/bits/types/sigset_t.h:
 
@@ -700,12 +815,6 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /mnt/Lucy/30-source/lucille-core/tests/test_engine.cpp:
 
-/usr/include/bits/types/locale_t.h:
-
-/usr/include/ctype.h:
-
-/usr/include/c++/16/bits/stl_tempbuf.h:
-
 /usr/include/bits/types/__mbstate_t.h:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16/crtendS.o:
@@ -713,10 +822,6 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /usr/include/bits/stdio_lim.h:
 
 /usr/include/bits/types/__locale_t.h:
-
-/usr/include/linux/posix_types.h:
-
-/usr/include/bits/types/FILE.h:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16/libstdc++.so:
 
@@ -738,27 +843,11 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/allocator.h:
 
-/usr/include/bits/struct_stat.h:
-
-/usr/include/bits/types/time_t.h:
-
-/usr/include/c++/16/unordered_map:
-
-/usr/include/c++/16/bits/localefwd.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/crtbeginS.o:
-
-/usr/include/c++/16/bits/ostream.tcc:
-
-/usr/include/c++/16/bits/shared_ptr_atomic.h:
-
 /mnt/Lucy/30-source/lucille-core/include/swarm_router.hpp:
 
+/usr/lib/libkrb5.so.3:
+
 /usr/include/bits/stdlib-bsearch.h:
-
-/usr/include/c++/16/bits/locale_classes.tcc:
-
-/usr/include/bits/unistd_ext.h:
 
 /usr/include/bits/stdio.h:
 
@@ -768,25 +857,35 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /mnt/Lucy/30-source/lucille-core/include/entropy_filter.hpp:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/mwaitintrin.h:
-
-/usr/include/c++/16/tr1/poly_hermite.tcc:
-
-/usr/include/bits/types/error_t.h:
-
 /usr/include/bits/types/clock_t.h:
-
-/usr/include/bits/mathcalls.h:
 
 /usr/include/bits/ioctls.h:
 
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++config.h:
+/usr/include/bits/mathcalls.h:
 
-/usr/include/bits/setjmp.h:
+/usr/include/c++/16/bits/this_thread_sleep.h:
+
+/usr/include/bits/statx-generic.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/cpu_defines.h:
+
+/usr/include/bits/in.h:
+
+/usr/include/c++/16/algorithm:
+
+/usr/include/bits/sockaddr.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_base.h:
+
+/usr/include/c++/16/tr1/ell_integral.tcc:
+
+/mnt/Lucy/30-source/lucille-core/include/hitl_security.hpp:
 
 /usr/include/bits/select.h:
 
 /usr/include/bits/types/cookie_io_functions_t.h:
+
+/usr/include/bits/socket.h:
 
 /usr/include/asm-generic/ioctl.h:
 
@@ -798,9 +897,35 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/bits/pthreadtypes.h:
 
-/usr/include/bits/types/timer_t.h:
+/usr/include/wctype.h:
 
-/usr/include/c++/16/bits/ostream_insert.h:
+/usr/include/sched.h:
+
+/usr/include/c++/16/tr1/hypergeometric.tcc:
+
+/usr/include/bits/fp-fast.h:
+
+/usr/include/c++/16/bits/basic_string.tcc:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/mwaitintrin.h:
+
+/usr/include/c++/16/tr1/poly_hermite.tcc:
+
+/usr/include/bits/types/error_t.h:
+
+/usr/include/c++/16/bits/locale_facets_nonio.h:
+
+/usr/include/bits/mman.h:
+
+/usr/include/bits/types/locale_t.h:
+
+/usr/include/bits/mman-shared.h:
+
+/usr/include/linux/posix_types.h:
+
+/usr/include/bits/types/FILE.h:
+
+/usr/include/bits/mman-map-flags-generic.h:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic.so:
 
@@ -810,55 +935,97 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/asm-generic/int-ll64.h:
 
-/usr/include/c++/16/bits/ptr_traits.h:
+/usr/lib/libcurl.so:
 
 /usr/include/bits/math-vector.h:
 
 /usr/include/bits/long-double.h:
 
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_inline.h:
+/usr/include/c++/16/bits/stl_pair.h:
 
-/usr/include/bits/statx.h:
-
-/usr/include/c++/16/new:
-
-/usr/include/bits/types/wint_t.h:
-
-/usr/include/c++/16/mutex:
-
-/usr/include/asm/ioctl.h:
-
-/usr/include/bits/waitstatus.h:
-
-/usr/include/bits/types/struct___jmp_buf_tag.h:
-
-/usr/include/bits/wchar.h:
-
-/usr/include/alloca.h:
-
-/usr/include/c++/16/bits/hashtable.h:
-
-/usr/include/linux/ioctl.h:
-
-/usr/include/bits/fp-logb.h:
-
-/usr/include/c++/16/clocale:
-
-/usr/include/asm-generic/errno-base.h:
-
-/usr/include/c++/16/memory:
-
-/mnt/Lucy/30-source/lucille-core/include/affinity_manager.hpp:
-
-/usr/include/bits/iscanonical.h:
-
-/usr/include/c++/16/bits/ios_base.h:
+/usr/include/bits/locale.h:
 
 /usr/include/bits/libc-header-start.h:
 
 /usr/include/features-time64.h:
 
 /mnt/Lucy/30-source/lucille-core/include/security_sandbox.hpp:
+
+/usr/include/c++/16/ext/type_traits.h:
+
+/usr/include/bits/thread-shared-types.h:
+
+/usr/include/bits/ioctl-types.h:
+
+/usr/include/bits/types/struct_sched_param.h:
+
+/usr/include/c++/16/cwctype:
+
+/usr/include/c++/16/bits/cxxabi_forced.h:
+
+/usr/include/bits/mman-linux.h:
+
+/usr/include/alloca.h:
+
+/usr/include/c++/16/bits/hashtable.h:
+
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_inline.h:
+
+/usr/include/bits/statx.h:
+
+/usr/include/c++/16/mutex:
+
+/usr/include/asm/ioctl.h:
+
+/usr/include/c++/16/bits/streambuf_iterator.h:
+
+/usr/include/arpa/inet.h:
+
+/usr/include/errno.h:
+
+/usr/include/bits/getopt_posix.h:
+
+/usr/include/bits/types/struct_osockaddr.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h:
+
+/usr/include/bits/stdint-uintn.h:
+
+/usr/include/asm/errno.h:
+
+/usr/include/string.h:
+
+/usr/include/bits/socket_type.h:
+
+/usr/lib/libnghttp3.so.9:
+
+/usr/include/linux/ioctl.h:
+
+/usr/include/bits/fp-logb.h:
+
+/usr/include/features.h:
+
+/usr/include/bits/sched.h:
+
+/usr/include/bits/types/__FILE.h:
+
+/usr/include/c++/16/bits/istream.tcc:
+
+/usr/lib32/libunistring.so.5:
+
+/mnt/Lucy/30-source/lucille-core/include/simd_quant.hpp:
+
+/usr/include/bits/posix_opt.h:
+
+/usr/include/c++/16/memory:
+
+/usr/include/bits/poll.h:
+
+/mnt/Lucy/30-source/lucille-core/include/affinity_manager.hpp:
+
+/usr/include/bits/iscanonical.h:
+
+/usr/include/c++/16/bits/ios_base.h:
 
 /usr/include/c++/16/string_view:
 
@@ -867,6 +1034,8 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /mnt/Lucy/30-source/lucille-core/include/checkpoint_journal.hpp:
 
 /usr/include/c++/16/tr1/gamma.tcc:
+
+/mnt/Lucy/30-source/lucille-core/include/consensus_gate.hpp:
 
 /usr/include/c++/16/bits/erase_if.h:
 
@@ -878,11 +1047,11 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /mnt/Lucy/30-source/lucille-core/include/error_interceptor.hpp:
 
+/mnt/Lucy/30-source/lucille-core/include/bootloader.hpp:
+
 /usr/lib32/libz.so.1:
 
 /mnt/Lucy/30-source/lucille-core/include/vector_memory.hpp:
-
-/mnt/Lucy/30-source/lucille-core/include/bootloader.hpp:
 
 /usr/lib/libsqlite3.so:
 
@@ -890,21 +1059,9 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/asm/ioctls.h:
 
-/usr/include/c++/16/debug/debug.h:
-
-/usr/include/asm-generic/bitsperlong.h:
-
-/usr/include/asm-generic/types.h:
-
-/usr/include/c++/16/bits/stl_bvector.h:
-
 /usr/include/libintl.h:
 
 /usr/include/bits/endianness.h:
-
-/usr/include/sys/stat.h:
-
-/usr/include/bits/epoll.h:
 
 /usr/lib/libcrypto.so:
 
@@ -913,20 +1070,6 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /mnt/Lucy/30-source/lucille-core/include/speculative_pipeline.hpp:
 
 /usr/include/c++/16/bits/new_except.h:
-
-/usr/include/features.h:
-
-/usr/include/bits/sched.h:
-
-/usr/include/bits/types/__FILE.h:
-
-/usr/include/c++/16/bits/istream.tcc:
-
-/usr/include/c++/16/bits/stl_tree.h:
-
-/mnt/Lucy/30-source/lucille-core/include/simd_quant.hpp:
-
-/usr/include/bits/posix_opt.h:
 
 /usr/include/stdc-predef.h:
 
@@ -942,35 +1085,43 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/requires_hosted.h:
 
-/usr/include/errno.h:
+/usr/include/bits/struct_stat.h:
 
-/usr/include/bits/getopt_posix.h:
+/usr/include/bits/types/time_t.h:
 
-/usr/include/c++/16/x86_64-pc-linux-gnu/bits/ctype_base.h:
+/usr/include/c++/16/unordered_map:
 
-/usr/include/c++/16/tr1/ell_integral.tcc:
+/usr/include/c++/16/bits/localefwd.h:
 
-/mnt/Lucy/30-source/lucille-core/include/hitl_security.hpp:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/crtbeginS.o:
 
-/usr/include/bits/types/struct_tm.h:
+/usr/include/c++/16/bits/ostream.tcc:
 
-/usr/include/c++/16/bits/quoted_string.h:
+/usr/lib/libkeyutils.so.1:
 
-/usr/include/c++/16/bits/stl_map.h:
+/usr/include/c++/16/bits/shared_ptr_atomic.h:
 
-/usr/include/c++/16/bits/uses_allocator.h:
+/usr/include/bits/struct_mutex.h:
 
-/usr/include/asm-generic/posix_types.h:
+/usr/include/c++/16/bits/locale_facets.h:
 
-/usr/include/bits/types/struct_statx.h:
+/usr/include/c++/16/clocale:
+
+/usr/include/asm-generic/errno-base.h:
+
+/usr/include/c++/16/debug/debug.h:
+
+/usr/include/asm-generic/bitsperlong.h:
+
+/usr/include/c++/16/bits/stl_bvector.h:
+
+/usr/include/asm-generic/types.h:
+
+/mnt/Lucy/30-source/lucille-core/include/ipc_server.hpp:
 
 /usr/lib/libz.so.1:
 
 /usr/include/bits/uintn-identity.h:
-
-/mnt/Lucy/30-source/lucille-core/include/ipc_server.hpp:
-
-/usr/include/bits/typesizes.h:
 
 /usr/include/bits/cpu-set.h:
 
@@ -988,6 +1139,28 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/random.h:
 
+/usr/include/c++/16/iosfwd:
+
+/usr/include/c++/16/bits/fs_dir.h:
+
+/usr/include/bits/types/__sigset_t.h:
+
+/usr/include/c++/16/bits/quoted_string.h:
+
+/usr/include/c++/16/bits/stl_map.h:
+
+/usr/include/c++/16/bits/uses_allocator.h:
+
+/usr/include/asm-generic/posix_types.h:
+
+/usr/include/c++/16/bits/ptr_traits.h:
+
+/usr/include/asm-generic/socket.h:
+
+/usr/include/sys/stat.h:
+
+/usr/include/bits/epoll.h:
+
 /usr/include/c++/16/semaphore:
 
 /usr/include/asm/bitsperlong.h:
@@ -1002,21 +1175,21 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/asm/posix_types.h:
 
+/usr/include/c++/16/x86_64-pc-linux-gnu/bits/c++config.h:
+
+/usr/include/bits/setjmp.h:
+
+/usr/include/c++/16/bits/uses_allocator_args.h:
+
+/usr/include/asm/socket.h:
+
+/usr/include/c++/16/bits/range_access.h:
+
 /usr/include/bits/pthread_stack_min-dynamic.h:
 
 /usr/include/asm/sockios.h:
 
 /usr/include/c++/16/bits/fstream.tcc:
-
-/usr/include/wctype.h:
-
-/usr/include/sched.h:
-
-/usr/include/c++/16/tr1/hypergeometric.tcc:
-
-/usr/include/bits/fp-fast.h:
-
-/usr/include/c++/16/bits/basic_string.tcc:
 
 /usr/include/c++/16/bits/stdexcept_except.h:
 
@@ -1040,15 +1213,25 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/predefined_ops.h:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h:
+/usr/include/bits/timesize.h:
 
-/usr/include/bits/stdint-uintn.h:
+/usr/include/bits/wchar.h:
 
-/usr/include/asm/errno.h:
+/usr/include/bits/types/struct___jmp_buf_tag.h:
+
+/usr/include/bits/waitstatus.h:
+
+/usr/lib/libngtcp2.so.16:
+
+/usr/include/c++/16/bits/unicode-data.h:
+
+/usr/include/bits/endian.h:
 
 /usr/include/bits/types/struct_FILE.h:
 
 /usr/include/bits/environments.h:
+
+/usr/lib32/libk5crypto.so.3:
 
 /usr/include/c++/16/tr1/exp_integral.tcc:
 
@@ -1060,17 +1243,47 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/bits/floatn.h:
 
-/usr/include/c++/16/ext/type_traits.h:
-
-/usr/include/bits/thread-shared-types.h:
-
-/usr/include/bits/ioctl-types.h:
-
 /usr/include/bits/types.h:
 
 /mnt/Lucy/30-source/lucille-core/include/shm_telemetry.hpp:
 
 /usr/include/bits/getopt_core.h:
+
+/usr/include/bits/types/struct_statx.h:
+
+/usr/include/bits/types/struct_statx_timestamp.h:
+
+/usr/include/bits/types/struct_timespec.h:
+
+/usr/include/c++/16/bits/locale_classes.tcc:
+
+/usr/include/bits/types/struct_tm.h:
+
+/usr/include/bits/types/timer_t.h:
+
+/usr/include/c++/16/bits/ostream_insert.h:
+
+/usr/include/c++/16/new:
+
+/usr/include/bits/types/wint_t.h:
+
+/usr/include/sys/un.h:
+
+/usr/include/bits/typesizes.h:
+
+/usr/include/bits/unistd_ext.h:
+
+/usr/include/bits/wctype-wchar.h:
+
+/usr/include/c++/16/bits/stringfwd.h:
+
+/usr/include/c++/16/bits/shared_ptr.h:
+
+/usr/include/stdio.h:
+
+/usr/include/c++/16/stdexcept:
+
+/usr/include/bits/wordsize.h:
 
 /usr/include/c++/16/x86_64-pc-linux-gnu/bits/atomic_word.h:
 
@@ -1083,6 +1296,8 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /usr/include/sys/single_threaded.h:
 
 /usr/include/c++/16/atomic:
+
+/usr/lib/libkrb5support.so.0:
 
 /usr/include/c++/16/backward/auto_ptr.h:
 
@@ -1104,8 +1319,6 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/algorithmfwd.h:
 
-/usr/include/c++/16/bits/unicode.h:
-
 /usr/include/c++/16/cmath:
 
 /usr/include/c++/16/bits/align.h:
@@ -1126,10 +1339,6 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/atomic_futex.h:
 
-/usr/include/c++/16/bits/stl_uninitialized.h:
-
-/usr/include/c++/16/bits/string_view.tcc:
-
 /usr/include/c++/16/bits/basic_ios.h:
 
 /usr/include/c++/16/cstdint:
@@ -1146,13 +1355,11 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/nested_exception.h:
 
-/usr/include/bits/statx-generic.h:
-
-/usr/include/c++/16/bits/this_thread_sleep.h:
-
 /usr/include/c++/16/ext/string_conversions.h:
 
 /usr/include/bits/atomic_wide_counter.h:
+
+/mnt/Lucy/30-source/lucille-core/include/openrouter_backends.hpp:
 
 /usr/include/c++/16/bits/charconv.h:
 
@@ -1184,15 +1391,11 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/deque.tcc:
 
+/usr/lib/libunistring.so.5:
+
 /usr/include/c++/16/bits/exception_defines.h:
 
 /usr/include/c++/16/bits/formatfwd.h:
-
-/usr/include/c++/16/iosfwd:
-
-/usr/include/bits/types/__sigset_t.h:
-
-/usr/include/c++/16/bits/fs_dir.h:
 
 /usr/include/c++/16/thread:
 
@@ -1203,10 +1406,6 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /usr/include/bits/mathcalls-narrow.h:
 
 /usr/include/c++/16/bits/refwrap.h:
-
-/usr/include/c++/16/bits/shared_ptr.h:
-
-/usr/include/c++/16/bits/stringfwd.h:
 
 /usr/include/c++/16/bits/stdexcept_throwfwd.h:
 
@@ -1220,19 +1419,13 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/locale_conv.h:
 
-/usr/include/c++/16/bits/streambuf.tcc:
-
-/usr/include/bits/struct_mutex.h:
-
-/usr/include/c++/16/bits/locale_facets.h:
-
 /usr/include/c++/16/bits/locale_facets.tcc:
-
-/usr/include/c++/16/bits/locale_facets_nonio.h:
 
 /usr/include/sys/ttydefaults.h:
 
 /usr/include/c++/16/bits/monostate.h:
+
+/usr/lib/libpsl.so.5:
 
 /usr/include/c++/16/bits/move.h:
 
@@ -1254,8 +1447,6 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/random.tcc:
 
-/usr/include/c++/16/bits/range_access.h:
-
 /usr/include/c++/16/bits/ranges_algo.h:
 
 /usr/include/c++/16/bits/ranges_base.h:
@@ -1265,12 +1456,6 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /usr/include/sqlite3.h:
 
 /usr/include/c++/16/bits/ranges_algobase.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/mm_malloc.h:
-
-/usr/include/c++/16/tr1/poly_laguerre.tcc:
-
-/usr/include/c++/16/bits/stl_numeric.h:
 
 /usr/include/c++/16/bits/ranges_cmp.h:
 
@@ -1284,15 +1469,19 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 
 /usr/include/c++/16/bits/ranges_util.h:
 
-/usr/include/asm-generic/errno.h:
-
 /usr/include/c++/16/bits/stl_vector.h:
 
+/usr/include/asm-generic/errno.h:
+
 /usr/include/c++/16/bits/semaphore_base.h:
+
+/usr/include/bits/mman_ext.h:
 
 /usr/include/bits/stdint-least.h:
 
 /usr/include/c++/16/bits/shared_ptr_base.h:
+
+/usr/include/sys/socket.h:
 
 /usr/include/bits/mathcalls-helper-functions.h:
 
@@ -1305,6 +1494,8 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /usr/include/c++/16/bits/std_mutex.h:
 
 /usr/include/c++/16/bits/stdexcept_throw.h:
+
+/usr/lib32/libnghttp3.so.9:
 
 /usr/include/c++/16/optional:
 
@@ -1327,17 +1518,3 @@ CMakeFiles/test_engine.dir/tests/test_engine.cpp.o:
 /usr/include/c++/16/x86_64-pc-linux-gnu/bits/basic_file.h:
 
 /usr/include/c++/16/bits/stl_iterator_base_types.h:
-
-/usr/include/bits/locale.h:
-
-/usr/include/c++/16/bits/stl_pair.h:
-
-/usr/include/c++/16/bits/streambuf_iterator.h:
-
-/usr/include/bits/endian.h:
-
-/usr/include/c++/16/bits/unicode-data.h:
-
-/usr/include/c++/16/bits/uniform_int_dist.h:
-
-/usr/include/c++/16/bits/unique_ptr.h:

@@ -62,6 +62,33 @@ func (h *CompanionHub) Count() int {
 	return len(h.conns)
 }
 
+// Broadcast fans a JSON-serialisable payload out to every connected companion.
+// Best-effort: a slow or dropped client is skipped (no cross-client blocking),
+// never returns an error to the caller. Used for OTA update pushes so all
+// phones learn about a new ISO the moment lucy-server sees one, instead of
+// waiting for their next /api/updates/check poll.
+func (h *CompanionHub) Broadcast(payload any) {
+	blob, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	// Snapshot the conns under RLock so a slow send can't hold up new
+	// connect/disconnect activity.
+	h.mu.RLock()
+	targets := make([]*websocket.Conn, 0, len(h.conns))
+	for c := range h.conns {
+		targets = append(targets, c)
+	}
+	h.mu.RUnlock()
+
+	for _, c := range targets {
+		c.SetWriteDeadline(time.Now().Add(companionWriteWait))
+		// Non-fatal: if this write fails the client's read loop will detect
+		// it and clean up via defer companionHub.remove().
+		_ = c.WriteMessage(websocket.TextMessage, blob)
+	}
+}
+
 // HandleCompanionHeartbeat manages a single companion WebSocket connection.
 // The client sends a JSON hello on connect: {"device_id":"...", "device_name":"..."}.
 // After that the server sends Ping frames every 5s; the client's WebSocket

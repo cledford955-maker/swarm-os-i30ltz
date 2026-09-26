@@ -223,6 +223,13 @@ func main() {
 		// a newer ISO than the running version has been published. Read-only:
 		// installing the ISO stays a Ventoy-boot user action, never automatic.
 		api.Get("/updates/check", handlers.UpdatesCheck)
+
+		// Inbound webhooks — external services POST arbitrary JSON to
+		// /api/webhooks/{source}; the event is appended to a per-source JSONL
+		// log and fanned out to companion phones. Same auth token gate as the
+		// rest of /api/*.
+		api.Post("/webhooks/{source}", handlers.WebhookReceive)
+		api.Get("/webhooks", handlers.WebhookList)
 		api.Route("/git", func(git chi.Router) {
 			git.Get("/repos", handlers.GitListRepos)
 			git.Post("/repos/create", handlers.GitCreateRepo)

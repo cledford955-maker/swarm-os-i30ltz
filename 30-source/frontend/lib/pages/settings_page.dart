@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/auth_service.dart';
 import '../services/google_workspace_service.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
@@ -217,6 +218,10 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 20),
             const Divider(color: SwarmColors.border),
             const SizedBox(height: 20),
+            const _WebAuthnSection(),
+            const SizedBox(height: 20),
+            const Divider(color: SwarmColors.border),
+            const SizedBox(height: 20),
             const AgentVoicePromptSettings(),
           ],
         ),
@@ -374,6 +379,190 @@ class _GoogleWorkspaceSectionState extends State<_GoogleWorkspaceSection> {
                   icon: const Icon(Icons.refresh, size: 16),
                   color: SwarmColors.textMuted,
                   tooltip: 'Refresh status',
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _WebAuthnSection extends StatefulWidget {
+  const _WebAuthnSection();
+
+  @override
+  State<_WebAuthnSection> createState() => _WebAuthnSectionState();
+}
+
+class _WebAuthnSectionState extends State<_WebAuthnSection> {
+  final _auth = AuthService();
+  List<PasskeyCredential>? _credentials;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final creds = await _auth.listCredentials();
+      if (mounted) setState(() { _credentials = creds; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = '$e'; _loading = false; });
+    }
+  }
+
+  Future<void> _clearAll() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SwarmColors.bgElevated,
+        title: const Text('Clear All Passkeys?',
+            style: TextStyle(color: SwarmColors.textPrimary)),
+        content: const Text(
+          'This removes all registered WebAuthn credentials. You will need to re-register passkeys on each device.',
+          style: TextStyle(color: SwarmColors.textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+                foregroundColor: SwarmColors.statusCritical),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await _auth.clearCredentials();
+      await _refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          backgroundColor: SwarmColors.bgElevated,
+          content: Text('All passkeys cleared',
+              style: TextStyle(color: SwarmColors.textPrimary)),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: SwarmColors.bgElevated,
+          content: Text('Failed: $e',
+              style: const TextStyle(color: SwarmColors.statusCritical)),
+        ));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SwarmColors.bgElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: SwarmColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.fingerprint,
+                  color: SwarmColors.accent, size: 18),
+              const SizedBox(width: 8),
+              Text('Passkeys / WebAuthn',
+                  style: SwarmTextStyles.label
+                      .copyWith(color: SwarmColors.textPrimary, fontSize: 13)),
+              const Spacer(),
+              if (_credentials != null)
+                Text('${_credentials!.length} registered',
+                    style: SwarmTextStyles.codeSmall.copyWith(
+                        color: _credentials!.isEmpty
+                            ? SwarmColors.statusOffline
+                            : SwarmColors.statusOnline,
+                        fontSize: 11)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Passkeys let your companion phone authenticate against SWARM OS without a password. '
+            'Register from the companion app or a browser on the same network.',
+            style: TextStyle(
+                color: SwarmColors.textMuted, fontSize: 11.5, height: 1.3),
+          ),
+          const SizedBox(height: 12),
+          if (_loading)
+            const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: SwarmColors.accent),
+              ),
+            )
+          else if (_error != null)
+            const Text('Service unreachable',
+                style: TextStyle(
+                    color: SwarmColors.statusOffline, fontSize: 12))
+          else ...[
+            if (_credentials != null && _credentials!.isNotEmpty)
+              ...(_credentials!.map((c) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.key, size: 14,
+                            color: SwarmColors.textMuted),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            c.name.isNotEmpty ? c.name : c.id,
+                            style: const TextStyle(
+                                color: SwarmColors.textPrimary, fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (c.createdAt.isNotEmpty)
+                          Text(c.createdAt,
+                              style: SwarmTextStyles.codeSmall.copyWith(
+                                  color: SwarmColors.textMuted, fontSize: 10)),
+                      ],
+                    ),
+                  ))),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (_credentials != null && _credentials!.isNotEmpty)
+                  ElevatedButton.icon(
+                    onPressed: _clearAll,
+                    icon: const Icon(Icons.delete_forever, size: 14),
+                    label: const Text('Clear All Passkeys'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          SwarmColors.statusCritical.withValues(alpha: 0.15),
+                      foregroundColor: SwarmColors.statusCritical,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _refresh,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  color: SwarmColors.textMuted,
+                  tooltip: 'Refresh',
                 ),
               ],
             ),

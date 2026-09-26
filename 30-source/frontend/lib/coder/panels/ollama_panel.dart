@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../services/rag_service.dart';
 import '../../theme/swarm_colors.dart';
 import '../../theme/swarm_text_styles.dart';
 
@@ -105,7 +106,7 @@ class _OllamaPanelState extends State<OllamaPanel> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
+    _tab = TabController(length: 3, vsync: this);
     _refresh();
   }
 
@@ -276,6 +277,7 @@ class _OllamaPanelState extends State<OllamaPanel> with SingleTickerProviderStat
           tabs: [
             Tab(text: 'INSTALLED (${_installed.length})', height: 30),
             const Tab(text: 'PULL CATALOG', height: 30),
+            const Tab(text: 'RAG KNOWLEDGE', height: 30),
           ],
         ),
       ),
@@ -301,6 +303,7 @@ class _OllamaPanelState extends State<OllamaPanel> with SingleTickerProviderStat
                       pulling: _pulling,
                       onPull: _pull,
                     ),
+                    const _RagTab(),
                   ]),
       ),
     ]);
@@ -564,6 +567,232 @@ class _OfflineState extends StatelessWidget {
           const Text('Or run:  ollama serve', style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: SwarmColors.textDisabled)),
         ]),
       );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RAG KNOWLEDGE BASE TAB
+// ══════════════════════════════════════════════════════════════════════════════
+class _RagTab extends StatefulWidget {
+  const _RagTab();
+
+  @override
+  State<_RagTab> createState() => _RagTabState();
+}
+
+class _RagTabState extends State<_RagTab> {
+  final _rag = RagService();
+  final _textCtrl = TextEditingController();
+  final _fileCtrl = TextEditingController();
+  List<RagDocument> _docs = [];
+  bool _loading = true;
+  bool _ingesting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  @override
+  void dispose() {
+    _textCtrl.dispose();
+    _fileCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final docs = await _rag.listDocuments();
+      if (mounted) setState(() { _docs = docs; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  Future<void> _ingestText() async {
+    final text = _textCtrl.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _ingesting = true);
+    try {
+      await _rag.ingestText(text);
+      _textCtrl.clear();
+      await _refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Ingest failed: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _ingesting = false);
+    }
+  }
+
+  Future<void> _ingestFile() async {
+    final path = _fileCtrl.text.trim();
+    if (path.isEmpty) return;
+    setState(() => _ingesting = true);
+    try {
+      await _rag.ingestFile(path);
+      _fileCtrl.clear();
+      await _refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('File ingest failed: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _ingesting = false);
+    }
+  }
+
+  Future<void> _deleteDoc(String source) async {
+    await _rag.deleteDocument(source);
+    _refresh();
+  }
+
+  Future<void> _clearAll() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SwarmColors.bgElevated,
+        title: const Text('Clear RAG Store?', style: TextStyle(color: SwarmColors.textPrimary)),
+        content: const Text('This permanently removes all ingested documents.', style: TextStyle(color: SwarmColors.textMuted)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFEF4444)),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await _rag.clearAll();
+      _refresh();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      Container(
+        padding: const EdgeInsets.all(10),
+        color: const Color(0xFF0A0818),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Ingest text or a file into Lucille\'s local knowledge base (Ollama embeddings).',
+              style: TextStyle(fontSize: 10, color: SwarmColors.textMuted)),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _textCtrl,
+                style: const TextStyle(fontSize: 11, color: SwarmColors.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Paste text to ingest...',
+                  hintStyle: const TextStyle(color: SwarmColors.textDisabled, fontSize: 11),
+                  filled: true,
+                  fillColor: SwarmColors.bgElevated,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: SwarmColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: SwarmColors.border)),
+                ),
+                maxLines: 2,
+                minLines: 1,
+              ),
+            ),
+            const SizedBox(width: 6),
+            _Btn(_ingesting ? '...' : 'Ingest', const Color(0xFF0A84FF), _ingesting ? () {} : _ingestText),
+          ]),
+          const SizedBox(height: 6),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _fileCtrl,
+                style: const TextStyle(fontSize: 11, color: SwarmColors.textPrimary, fontFamily: 'monospace'),
+                decoration: InputDecoration(
+                  hintText: '/path/to/document.txt',
+                  hintStyle: const TextStyle(color: SwarmColors.textDisabled, fontSize: 11),
+                  filled: true,
+                  fillColor: SwarmColors.bgElevated,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: SwarmColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: SwarmColors.border)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            _Btn(_ingesting ? '...' : 'Ingest File', const Color(0xFF78909C), _ingesting ? () {} : _ingestFile),
+          ]),
+        ]),
+      ),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SwarmColors.border))),
+        child: Row(children: [
+          Text('${_docs.length} documents', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: SwarmColors.textMuted)),
+          const Spacer(),
+          if (_docs.isNotEmpty)
+            GestureDetector(
+              onTap: _clearAll,
+              child: const Text('Clear All', style: TextStyle(fontSize: 9, color: Color(0xFFEF4444))),
+            ),
+          const SizedBox(width: 8),
+          GestureDetector(onTap: _refresh, child: const Icon(Icons.refresh_rounded, size: 14, color: SwarmColors.textMuted)),
+        ]),
+      ),
+      Expanded(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0A84FF)))
+            : _error != null
+                ? Center(child: Text('LucyServer unreachable\n$_error', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: SwarmColors.statusOffline)))
+                : _docs.isEmpty
+                    ? const Center(child: Text('No documents ingested yet.\nPaste text or a file path above.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: SwarmColors.textMuted, height: 1.5)))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        itemCount: _docs.length,
+                        itemBuilder: (_, i) {
+                          final d = _docs[i];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: SwarmColors.bgElevated,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: SwarmColors.border),
+                            ),
+                            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              const Icon(Icons.article_outlined, size: 14, color: SwarmColors.textMuted),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  if (d.source.isNotEmpty)
+                                    Text(d.source, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: SwarmColors.textPrimary, fontFamily: 'monospace')),
+                                  Text(
+                                    d.text.length > 120 ? '${d.text.substring(0, 120)}...' : d.text,
+                                    style: const TextStyle(fontSize: 10, color: SwarmColors.textMuted, height: 1.3),
+                                  ),
+                                ]),
+                              ),
+                              GestureDetector(
+                                onTap: () => _deleteDoc(d.source),
+                                child: const Icon(Icons.close_rounded, size: 12, color: SwarmColors.textDisabled),
+                              ),
+                            ]),
+                          );
+                        },
+                      ),
+      ),
+    ]);
+  }
 }
 
 // ── Shared micro widgets ───────────────────────────────────────────────────────

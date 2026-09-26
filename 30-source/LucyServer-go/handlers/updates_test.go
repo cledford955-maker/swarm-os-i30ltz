@@ -221,6 +221,45 @@ func TestUpdatesCheck_UnknownRunningVersion(t *testing.T) {
 	}
 }
 
+func TestMaybeBroadcastUpdate_DedupesSameVersion(t *testing.T) {
+	// Reset dedup state so this test doesn't depend on order.
+	lastBroadcastMu.Lock()
+	lastBroadcastVersion = ""
+	lastBroadcastMu.Unlock()
+
+	release := isoRelease{Version: "6.2.75", Filename: "swarm-os-v6.2.75.iso", SizeBytes: 100}
+
+	// First call: should update the recorded version.
+	maybeBroadcastUpdate("6.2.72", release)
+	lastBroadcastMu.Lock()
+	v1 := lastBroadcastVersion
+	lastBroadcastMu.Unlock()
+	if v1 != "6.2.75" {
+		t.Errorf("first call: lastBroadcastVersion = %q, want 6.2.75", v1)
+	}
+
+	// Second call with same release: state should NOT advance (no reset). We
+	// can't easily observe "no broadcast" without a hub mock, but we can
+	// verify the version field is unchanged, which is the dedup invariant.
+	maybeBroadcastUpdate("6.2.72", release)
+	lastBroadcastMu.Lock()
+	v2 := lastBroadcastVersion
+	lastBroadcastMu.Unlock()
+	if v2 != v1 {
+		t.Errorf("dedup: lastBroadcastVersion mutated between identical calls (%q → %q)", v1, v2)
+	}
+
+	// Third call with a newer release: state should advance.
+	release2 := isoRelease{Version: "6.2.80", Filename: "swarm-os-v6.2.80.iso"}
+	maybeBroadcastUpdate("6.2.72", release2)
+	lastBroadcastMu.Lock()
+	v3 := lastBroadcastVersion
+	lastBroadcastMu.Unlock()
+	if v3 != "6.2.80" {
+		t.Errorf("newer release: lastBroadcastVersion = %q, want 6.2.80", v3)
+	}
+}
+
 func TestReadSidecarSHA256(t *testing.T) {
 	dir := t.TempDir()
 	iso := filepath.Join(dir, "a.iso")

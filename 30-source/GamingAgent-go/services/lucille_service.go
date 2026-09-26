@@ -249,6 +249,12 @@ func (s *LucilleService) buildContextMessages() []models.ChatMessage {
 		messages = append(messages, models.ChatMessage{Role: "system", Content: cal})
 	}
 
+	// Local weather via wttr.in — no API key, no rate-limit gate (fair-use
+	// public service). Cached ~15 min so a chatty Lucille doesn't hammer it.
+	if wx := fetchWeatherSummary(); wx != "" {
+		messages = append(messages, models.ChatMessage{Role: "system", Content: wx})
+	}
+
 	messages = append(messages, models.ChatMessage{Role: "system", Content: lucilleActionProtocol})
 	return messages
 }

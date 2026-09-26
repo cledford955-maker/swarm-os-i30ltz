@@ -38,6 +38,8 @@ impl MonitorController {
                 let stats = client.get_system_stats().await.ok();
                 let processes = client.get_processes().await.unwrap_or_default();
                 let engine = client.lucille_status().await.ok();
+                let health = client.health().await.ok();
+                let companion = client.companion_status().await.ok();
 
                 let handle = handle.clone();
                 let _ = slint::invoke_from_event_loop(move || {
@@ -64,6 +66,37 @@ impl MonitorController {
                         _ => {
                             state.set_engine_label("ENGINE  offline".into());
                             state.set_engine_online(false);
+                        }
+                    }
+
+                    match &health {
+                        Some(h) if h.is_ok() => {
+                            let label = if h.version.is_empty() {
+                                "LUCY  ok".to_string()
+                            } else {
+                                format!("LUCY  v{}", h.version)
+                            };
+                            state.set_lucy_label(label.into());
+                            state.set_lucy_online(true);
+                        }
+                        _ => {
+                            state.set_lucy_label("LUCY  offline".into());
+                            state.set_lucy_online(false);
+                        }
+                    }
+
+                    match &companion {
+                        Some(c) if c.connected > 0 => {
+                            state.set_phone_label(format!("PHONE  ×{}", c.connected).into());
+                            state.set_phone_online(true);
+                        }
+                        Some(_) => {
+                            state.set_phone_label("PHONE  none".into());
+                            state.set_phone_online(false);
+                        }
+                        _ => {
+                            state.set_phone_label("PHONE  --".into());
+                            state.set_phone_online(false);
                         }
                     }
 

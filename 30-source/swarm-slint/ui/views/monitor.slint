@@ -115,6 +115,32 @@ export component MonitorView inherits Rectangle {
                     vertical-alignment: center;
                 }
             }
+            Rectangle {
+                background: SwarmTheme.card;
+                border-radius: SwarmTheme.radius;
+                border-width: 1px;
+                border-color: MonitorState.lucy-online ? SwarmTheme.accent : SwarmTheme.border;
+                Text {
+                    text: MonitorState.lucy-label;
+                    color: MonitorState.lucy-online ? SwarmTheme.accent : SwarmTheme.text-dim;
+                    font-size: 15px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+            Rectangle {
+                background: SwarmTheme.card;
+                border-radius: SwarmTheme.radius;
+                border-width: 1px;
+                border-color: MonitorState.phone-online ? SwarmTheme.accent : SwarmTheme.border;
+                Text {
+                    text: MonitorState.phone-label;
+                    color: MonitorState.phone-online ? SwarmTheme.accent : SwarmTheme.text-dim;
+                    font-size: 15px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
         }
 
         // ── Process list ─────────────────────────────────────────────────────

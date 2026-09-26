@@ -14,7 +14,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"swarm-os/lucy-server/services"
 )
 
 // releaseStorePaths lists candidate roots for published ISOs. Checked in
@@ -258,8 +261,40 @@ func UpdatesCheck(w http.ResponseWriter, r *http.Request) {
 	// update_available only when we can parse both sides.
 	curVer, curOK := parseSemver(current)
 	newVer, newOK := parseSemver(release.Version)
-	if curOK && newOK && curVer.less(newVer) {
+	updateAvail := curOK && newOK && curVer.less(newVer)
+	if updateAvail {
 		resp["update_available"] = true
+		// Push to any connected companion phones — de-duped so repeat polls
+		// don't spam a phone with the same notification. See broadcast helper.
+		maybeBroadcastUpdate(current, release)
 	}
 	json.NewEncoder(w).Encode(resp)
+}
+
+// lastBroadcastMu / lastBroadcastVersion de-duplicate OTA push notifications.
+// The first time /api/updates/check sees a newer ISO than the running system,
+// we push to companions; subsequent checks for the same version stay silent
+// until the ISO changes or the LucyServer process restarts.
+var (
+	lastBroadcastMu      sync.Mutex
+	lastBroadcastVersion string
+)
+
+func maybeBroadcastUpdate(currentVersion string, release isoRelease) {
+	lastBroadcastMu.Lock()
+	defer lastBroadcastMu.Unlock()
+	if lastBroadcastVersion == release.Version {
+		return
+	}
+	lastBroadcastVersion = release.Version
+
+	services.GetCompanionHub().Broadcast(map[string]any{
+		"type":            "swarm_os_update_available",
+		"current_version": currentVersion,
+		"latest_version":  release.Version,
+		"filename":        release.Filename,
+		"size_bytes":      release.SizeBytes,
+		"sha256":          release.SHA256,
+		"at":              time.Now().UTC().Format(time.RFC3339),
+	})
 }

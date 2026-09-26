@@ -750,7 +750,7 @@ everywhere at once the moment `mock` flips.
 - [ ] Price alert: poll CheapShark daily, write to gaming.db when a game drops below threshold, surface in dashboard
 - [ ] Add IGDB or SteamSpy API for richer genre/description data (GFN catalog has sparse genres)
 - [x] **Steam library persistent cache** (2026-09-25 Opus 4.7) — `services/steam_cache.go` writes atomic JSON to `BaseDir()/steam_library.json` on success; when the Steam key is dead (2026-09-20 incident) the cached payload is served with `cached=true, cached_at, upstream_error` so the dashboard keeps rendering. 7 Go tests. (No SQLite dep added — matches LucyServer's existing flat-file pattern.)
-- [ ] Webhook endpoint so external services can push events to the dashboard
+- [x] **Webhook endpoint for external services** (2026-09-25 Opus 4.7) — POST `/api/webhooks/{source}` accepts JSON or raw text (256 KiB cap), persists to `BaseDir()/webhooks/<source>.jsonl`, and broadcasts a `{type:"webhook",source,at}` notice to companion phones. GET `/api/webhooks` lists sources. Source name gated to `[A-Za-z0-9_-]{1,64}` (no traversal). Same LucyServer auth-token gate as the rest of `/api/*`. 6 Go tests.
 
 ### Gaming Dashboard (Artifact — no language changes needed)
 - [ ] Drag-and-drop reorder pinned cards
@@ -823,7 +823,8 @@ everywhere at once the moment `mock` flips.
 - [x] SQLite chat history — persists all Lucille conversations to `gaming.db` (chat_history table)
 - [x] "Ask Lucille" free-text — `POST /api/lucille/chat` takes arbitrary message history
 - [x] **Lucille aware of current deals** (2026-09-25 Opus 4.7) — `GamesService.GetTopDeals(n)` feeds current CheapShark Steam deals into `buildContextMessages` when `LucilleService.WithGamesService()` is wired (main.go does this). System prompt updated to reference specific prices from the deal block.
-- [x] **Lucille cross-agent: calendar context** (2026-09-25 Opus 4.7) — `buildContextMessages` now hits GoogleWorkspaceService `/cal/events?maxResults=6&daysAhead=7` and appends an "Upcoming calendar events" system message so Lucille avoids suggesting a long gaming session before something scheduled. Best-effort: service down / not authenticated / no events / malformed JSON all silently skip the block (no chat blocking). 5 unit tests. Weather context still open (no weather API wired yet).
+- [x] **Lucille cross-agent: calendar context** (2026-09-25 Opus 4.7) — `buildContextMessages` now hits GoogleWorkspaceService `/cal/events?maxResults=6&daysAhead=7` and appends an "Upcoming calendar events" system message so Lucille avoids suggesting a long gaming session before something scheduled. Best-effort: service down / not authenticated / no events / malformed JSON all silently skip the block (no chat blocking). 5 unit tests.
+- [x] **Lucille cross-agent: weather context** (2026-09-25 Opus 4.7) — `services/weather.go` fetches wttr.in `?format=j1` (no API key, IP-geolocated; `WEATHER_LOCATION` env override). 15-min TTL cache. Lucille's context block includes description, temp/feels-like, wind, humidity, place — with a nudge toward indoor/outdoor session recommendations. 6 unit tests. All failure paths silently skip.
 
 ---
 

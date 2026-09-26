@@ -66,6 +66,31 @@ pub struct ProcessInfo {
     #[serde(rename = "memoryUsageMb")] pub memory_usage_mb: f64,
 }
 
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct HealthStatus {
+    #[serde(default)] pub status: String,
+    #[serde(default)] pub version: String,
+    #[serde(default)] pub companions_connected: i32,
+}
+
+impl HealthStatus {
+    pub fn is_ok(&self) -> bool {
+        self.status == "ok"
+    }
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct CompanionStatus {
+    #[serde(default)] pub connected: i32,
+    #[serde(default)] pub devices: Vec<CompanionDevice>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct CompanionDevice {
+    #[serde(default)] pub device_id: String,
+    #[serde(default)] pub device_name: String,
+}
+
 #[derive(Clone)]
 pub struct LucyClient {
     client: Client,
@@ -74,6 +99,18 @@ pub struct LucyClient {
 impl LucyClient {
     pub fn new() -> Self {
         Self { client: Client::new() }
+    }
+
+    pub async fn health(&self) -> reqwest::Result<HealthStatus> {
+        self.client.get(format!("{BASE}/health"))
+            .send().await?
+            .json::<HealthStatus>().await
+    }
+
+    pub async fn companion_status(&self) -> reqwest::Result<CompanionStatus> {
+        self.client.get(format!("{BASE}/api/companion/status"))
+            .send().await?
+            .json::<CompanionStatus>().await
     }
 
     pub async fn lucille_status(&self) -> reqwest::Result<LucilleEngineStatus> {
