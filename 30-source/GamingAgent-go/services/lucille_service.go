@@ -242,7 +242,7 @@ func (s *LucilleService) buildContextMessages() []models.ChatMessage {
 		}
 	}
 
-	// Calendar context from GoogleWorkspaceService (8402). Silently skipped if
+	// Calendar context from GoogleWorkspaceService (8399). Silently skipped if
 	// the service is down or not authenticated — Lucille just answers without
 	// scheduling awareness. Never blocks chat.
 	if cal := fetchUpcomingCalendarSummary(); cal != "" {
@@ -264,7 +264,7 @@ var googleWorkspaceCalendarBase = func() string {
 	if v := os.Getenv("GOOGLE_WORKSPACE_URL"); v != "" {
 		return v
 	}
-	return "http://127.0.0.1:8402"
+	return "http://127.0.0.1:8399"
 }
 
 var calendarHTTPClient = &http.Client{Timeout: 3 * time.Second}
@@ -372,7 +372,7 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 			} `json:"choices"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || len(raw.Choices) == 0 {
-			return "", fmt.Errorf("nemotron response parse failed")
+			return "", fmt.Errorf("chat response parse failed")
 		}
 		return raw.Choices[0].Message.Content, nil
 	}

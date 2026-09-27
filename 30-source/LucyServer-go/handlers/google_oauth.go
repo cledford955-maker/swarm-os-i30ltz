@@ -1,11 +1,11 @@
 // Package handlers — proxy for the GoogleWorkspaceService OAuth flow.
 //
-// The GoogleWorkspaceService (.NET, port 8402) already implements the full
+// The GoogleWorkspaceService (.NET, port 8399) already implements the full
 // OAuth handshake: upload credentials.json → get auth URL → user approves in
 // browser → callback exchanges the code → refresh token stored in tokens
 // data-dir. LucyServer just proxies the auth endpoints so:
 //   1. Flutter/Companion only need to know one origin (LucyServer :5000)
-//      instead of adding CORS to 8402.
+//      instead of adding CORS to 8399.
 //   2. The proxy carries LucyServer's own auth token (X-Swarm-Auth); nothing
 //      else on the network can start an OAuth flow.
 //   3. Endpoints stay symmetric with the rest of the /api/* surface.
@@ -21,12 +21,12 @@ import (
 )
 
 // googleWorkspaceBase points at the .NET service. Loopback by default; the
-// AppArmor + nftables rules already keep :8402 loopback-only.
+// AppArmor + nftables rules already keep :8399 loopback-only.
 func googleWorkspaceBase() string {
 	if v := os.Getenv("GOOGLE_WORKSPACE_URL"); v != "" {
 		return v
 	}
-	return "http://127.0.0.1:8402"
+	return "http://127.0.0.1:8399"
 }
 
 var googleClient = &http.Client{Timeout: 10 * time.Second}

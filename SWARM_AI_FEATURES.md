@@ -1,40 +1,55 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
-> **HEALTH CHECK — 2026-09-27 (Sonnet 4.6, scheduled run):** Automated code audit across GamingAgent-go, LucyServer-go, Flutter shell, and ISO profile. Full findings below.
+> **HEALTH CHECK — 2026-09-27 (Sonnet 4.6, scheduled run):** Automated code audit across GamingAgent-go, LucyServer-go, Flutter shell, and ISO profile. Full findings and fixes below.
 >
-> **Recently verified CLEAN (not re-broken):** AiCoderDispatch/SuggestFixes → real OpenRouter calls ✓ | SetSudoPassword → no plaintext storage ✓ | Lock-screen bypass → fixed ✓ | Rate limiting on auth endpoints ✓ | GFN catalog URL → fixed ✓ | CheapShark UA → fixed ✓ | Cache stale fallback bug → fixed ✓ | Boot cleanup script → wired ✓
+> **FIXED THIS RUN:**
+> - **[CRITICAL] Google Workspace port mismatch** — All three proxy targets were 8402 (memory sync LAN port) instead of 8399 (the actual .NET Google Workspace service). All `/api/google/auth/*` routes were silently routing to the wrong service. Health check was also a false positive (8402 is LucyServer's own memory listener, which is always up). Fixed in: `LucyServer-go/handlers/google_oauth.go:29`, `LucyServer-go/main.go:555`, `GamingAgent-go/services/lucille_service.go:267`. Both services rebuild clean.
+> - **[MODERATE] Stale "nemotron response parse failed" error string** — `GamingAgent-go/services/lucille_service.go:375` still said "nemotron" even though the provider is now OpenRouter/Kimi. Changed to "chat response parse failed".
+> - **[MODERATE] Build date permanently showed "2026-09-24"** — `buildDate` was a local var; ldflags can only stamp package-level vars. Added `var buildDate = ""` at package level in `LucyServer-go/main.go:29`. Updated `build_swarm_iso.sh:187` to pass `-ldflags "-X main.buildDate=$(date -u +%Y-%m-%d)"`. Falls back to `SWARM_BUILD_DATE` env var, then "unknown" (no more stale hardcoded date).
 >
-> **OPEN ISSUES (by severity):**
+> **Recently verified CLEAN (not re-broken):** AiCoderDispatch/SuggestFixes → real OpenRouter calls ✓ | SetSudoPassword → no plaintext storage ✓ | Lock-screen bypass → fixed ✓ | Rate limiting on auth endpoints ✓ | GFN catalog URL → fixed ✓ | CheapShark UA → fixed ✓ | Cache stale fallback bug → fixed ✓ | Boot cleanup script → wired ✓ | Marketplace billing/reviews → starts empty (no fake data) ✓ | VM management → real QEMU commands ✓ | Auth middleware wired on both servers ✓
 >
-> **[CRITICAL]** `swarm-ui.service` silent crash recurrence — still IN PROGRESS, root cause not yet captured. WLR_LOG_LEVEL=debug diagnostic added but no fresh ISO rebuild/boot done to collect it. Every boot falls through to Safe Mode getty. See entry dated 2026-09-22 below. **Action: rebuild ISO and boot to collect logs.**
+> **REMAINING OPEN ISSUES (by severity):**
+>
+> **[CRITICAL]** `swarm-ui.service` silent crash recurrence — still IN PROGRESS, root cause not yet captured. WLR_LOG_LEVEL=debug diagnostic added but no fresh ISO rebuild/boot done to collect it. Every boot falls through to Safe Mode getty. **Leading uninvestigated hardware-reproducing lead:** `70-scripts/launch_swarm_vm.sh` uses `-display gtk,gl=off` which disables OpenGL in the GTK display backend — `swarm-ui.service` comments explicitly warn that softpipe (what `gl=off` forces) only supports OpenGL 3.3 while Flutter needs ES 3.2+. This may explain why the crash reproduces on the VM. **Action: rebuild ISO, test with `gl=on` in VM first, then real hardware.**
 >
 > **[HIGH]** Hardcoded `"swarm-token-2026"` fallback auth token still live in `LucyServer-go/main.go:424`, `memory/peer.go:192`, and `GamingAgent-go/main.go:208`. String is publicly known via git history. Any device where `SWARM_AUTH_TOKEN` env var is unset is trivially authenticated. **Action: generate + enforce a unique token at first boot if env var is absent; at minimum log a startup warning when falling back.**
 >
-> **[HIGH]** `verifyPackage()` in `PackageSigningService` has zero production callers. Extension install flow (`developer_publishing_dialog.dart`) signs packages correctly (Ed25519), but installation never calls `verifyPackage()` — so any extension installs without signature verification. Tracked as bo80. **Action: wire `PackageSigningService.instance.verifyPackage()` at extension install time.**
+> **[HIGH]** `verifyPackage()` in `PackageSigningService` has zero production callers. Extension install flow (`developer_publishing_dialog.dart`) signs packages correctly (Ed25519), but installation never calls `verifyPackage()` — so extensions install without signature verification. Tracked as bo80. **Action: wire `PackageSigningService.instance.verifyPackage()` at extension install time.**
 >
-> **[HIGH]** Forge Workstation quick actions use dead paths. `forge_workstation.dart:511,536,580,585,590,595` all reference `/run/media/i30ltz/lucy-master/Swarm-Flutter-beta/…` — the read-only mirror at an old project name. All 5 quick actions (QEMU VM, Custom QEMU, Flutter Linux build, C++ build, Archiso build) will fail silently with "No such file or directory". **Action: update to `/mnt/Lucy/70-scripts/` paths.**
+> **[HIGH]** Forge Workstation quick actions use dead paths. `forge_workstation.dart:511,536,580,585,590,595` all reference `/run/media/i30ltz/lucy-master/Swarm-Flutter-beta/…` — the read-only mirror at an old project name. All 5 quick actions (QEMU VM, Custom QEMU, Flutter Linux build, C++ build, Archiso build) will fail silently. **Action: update to `/mnt/Lucy/70-scripts/` canonical paths.**
 >
 > **[HIGH]** `companion_bridge_dialog.dart:375,380,385,791` — 4 commands reference dead `lucy-master/Swarm-Flutter-beta/` and `Luccile-v+/` paths. **Action: update to canonical `/mnt/Lucy/` paths.**
 >
+> **[MODERATE]** 3 fake "Connected" cloud workspaces with fabricated hostnames/latency/CPU in `LucyServer-go/services/devplatform.go:709–726` presented as live data via `GET /api/workspaces/cloud`. Also `ActivePaidSubs: 142` hardcoded in marketplace analytics at line 871. **Action: remove seeded fake workspaces; start empty like billing does.**
+>
+> **[MODERATE]** OAuth callback handler is a stub (`devplatform.go:490`) — `OAuthHandleCallback()` always returns `code != ""` without exchanging the code for tokens. OAuth login URL builder falls back to literal strings `"swarm_github_client_id"` / `"swarm_google_client_id"` when env vars unset (neither documented in CLAUDE.md). **Action: either wire real OAuth exchange or document this as mock-only.**
+>
+> **[MODERATE]** CI pipeline simulation always reports passing (`devplatform.go:370–408`) — `CiTriggerPipeline()` sleeps 3.2s then returns hardcoded "24 tests passed, 0 failed" regardless of actual repo. **Action: document as mock/demo or stub with honest 501 response.**
+>
 > **[MEDIUM]** Steam API key dead — `/api/steam/library` and `/api/games/intersection` return errors. Needs user to regenerate at steamcommunity.com/dev/apikey and update `20-runtime/.env`. Documented repeatedly; not a code fix.
 >
-> **[MEDIUM]** Tailscale not in `packages.x86_64` (removed 2026-09-11) but `lucille-core.service` declares `After=tailscaled.service` and nftables.conf has extensive `tailscale0` rules. The ISO will boot with firewall rules referencing an interface that doesn't exist (interface-name matching so no hard failure) and lucille-core.service will start without its Tailscale dependency. A first-boot `tailscale` install script is mentioned but not guaranteed. **Action: add a documented first-boot Tailscale enrollment step to the installer and/or README.**
+> **[MEDIUM]** Tailscale not in `packages.x86_64` (removed 2026-09-11) but `lucille-core.service` declares `After=tailscaled.service` and nftables.conf has extensive `tailscale0` rules. **Action: add a documented first-boot Tailscale enrollment step to the installer.**
 >
-> **[MEDIUM]** `screenshot_service.dart:19` primary screenshot dir is `/run/media/i30ltz/lucy-master/screenshots` — always fails (read-only mount, wrong host), generating a silent error before falling back to `~/Pictures/Screenshots`. No user impact but noisy. **Action: change `_primaryDir` to `/home/swarm/Pictures/Screenshots` or `/mnt/Lucy/screenshots`.**
+> **[MEDIUM]** `screenshot_service.dart:19` primary screenshot dir is `/run/media/i30ltz/lucy-master/screenshots` — always fails then falls back to `~/Pictures/Screenshots`. No user impact but noisy. **Action: change `_primaryDir` to `/home/swarm/Pictures/Screenshots`.**
 >
-> **[MEDIUM]** `publisher_portal_panel.dart` still uses HMAC-based signing, not the new Ed25519 `PackageSigningService` path. Two separate signing paths now exist. **Action: unify under `PackageSigningService` as a follow-up to bo62.**
+> **[MEDIUM]** `publisher_portal_panel.dart` still uses HMAC-based signing, not the new Ed25519 `PackageSigningService`. **Action: unify under `PackageSigningService` (follow-up to bo62).**
 >
-> **[LOW]** `.env` lookup fallback chains in `wake_word_service.dart:438`, `openrouter_balance_service.dart:69,78`, `lucille_voice_service.dart:542`, `ui_tandem_studio.dart:287`, `right_settings_drawer.dart:94` all include `/run/media/i30ltz/lucy-master/.env` in the search path. These have working fallbacks so not fatal, but generate unnecessary filesystem errors on every API key load. **Action: remove dead-mount entries from lookup chains.**
+> **[LOW]** `SWARM_CODER_MODEL` env var used in `AiCoderDispatch`/`AiCoderSuggestFixes` but not documented in CLAUDE.md or `.env`. Falls back to `openrouter/auto` (may pick expensive model). **Action: add to CLAUDE.md API keys section.**
 >
-> **[LOW]** `AppAnalytics` endpoint returns zeroes for DAU/MAU/session-length (documented in code comment) because no usage-telemetry pipeline exists. Previously hardcoded fake numbers (2150 DAU etc.) were removed — current behavior is honest but the Flutter analytics dashboard shows empty data. **Note: documented as intended until a real pipeline exists.**
+> **[LOW]** `https://lucy.local` as `HTTP-Referer` in OpenRouter calls from `devplatform.go:531,622`. GamingAgent correctly uses `https://github.com/i30ltz/swarm-os`. **Action: change to match GamingAgent's value.**
+>
+> **[LOW]** `.env` lookup fallback chains in `wake_word_service.dart:438`, `openrouter_balance_service.dart:69,78`, `lucille_voice_service.dart:542`, `ui_tandem_studio.dart:287`, `right_settings_drawer.dart:94` all include `/run/media/i30ltz/lucy-master/.env`. These have working fallbacks but generate filesystem errors on every API key load. **Action: remove dead-mount entries.**
+>
+> **[LOW]** `json.Marshal`/`http.NewRequest` errors silently discarded in `GamingAgent-go/services/lucille_service.go:116–117`. Low actual risk (static types won't fail) but inconsistent with project's `set -euo pipefail` hygiene.
 >
 > **IMPROVEMENT SUGGESTIONS:**
-> 1. **First-boot token hardening** — generate a cryptographically random `SWARM_AUTH_TOKEN` at SWARM first boot (e.g. in `swarm-secrets.service`) if the env var is absent, write it to `/etc/swarm_os.env`, and refuse to start LucyServer/GamingAgent without it. Eliminates the `swarm-token-2026` fallback entirely.
-> 2. **Tailscale first-boot wizard** — add a `swarm-tailscale-enroll.service` (oneshot, WantedBy=network-online.target) that checks if Tailscale is installed/enrolled and if not, prints a QR code / URL to the tty1 console or sets a Flutter notification. Users currently have no guided path to get on the tailnet from a fresh install.
-> 3. **Deep health endpoint** — add `/api/health/deep` to both GamingAgent and LucyServer that checks all configured API keys (Steam, OpenRouter, Groq, Anthropic, ElevenLabs) with a lightweight validation call and returns their individual status. The Flutter dashboard can show live key health instead of failing silently mid-use.
-> 4. **Forge quick-action self-test** — have `forge_workstation.dart` check at render time whether each command's target path exists and gray out + tooltip any dead actions instead of letting users click into silent failures.
-> 5. **Nightly build CI** (au12) — a scheduled GitHub Actions workflow that runs `go test ./...` on GamingAgent-go and LucyServer-go, `dart analyze` + `flutter test` on the frontend, and posts a status badge. Currently no automated test gate catches regressions between sessions.
-> 6. **Extension install trust gate** — wire `verifyPackage()` at install time with a UX that shows the publisher name, verification status (official/community/unverified), and asks for confirmation before installing unverified extensions. This is the missing second half of the Ed25519 signing work.
+> 1. **First-boot token hardening** — generate a cryptographically random `SWARM_AUTH_TOKEN` in `swarm-secrets.service` if unset, write to `/etc/swarm_os.env`, refuse to start servers without it.
+> 2. **Tailscale first-boot wizard** — `swarm-tailscale-enroll.service` (oneshot) that checks enrollment status and prints instructions to tty1 if not enrolled.
+> 3. **Deep health endpoint** — `/api/health/deep` that validates all API keys (Steam, OpenRouter, Groq, Anthropic, ElevenLabs) and returns per-key status. Show live key health in Flutter dashboard.
+> 4. **Forge quick-action self-test** — check at render time whether each command's target path exists; gray out dead actions with tooltip instead of silent failures.
+> 5. **Nightly build CI** (au12) — GitHub Actions: `go test ./...` on both Go services, `dart analyze` + `flutter test` on frontend, status badge. No automated test gate currently catches regressions between sessions.
+> 6. **Extension install trust gate** — wire `verifyPackage()` with UX showing publisher/verification status before installing unverified extensions (bo80).
 >
 > _Last updated: 2026-09-27 by scheduled health-check run._
 

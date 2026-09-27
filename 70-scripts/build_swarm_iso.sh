@@ -184,7 +184,7 @@ echo -e "  ${GREEN}✓ swarm-overlay compiled.${NC}"
 # Step 3: Build LucyServer Subsystem (Go — task #23, ported from .NET LucyServer)
 # -----------------------------------------------------------------------------
 echo -e "\n${CYAN}[3/8] Compiling LucyServer Subsystem (Go)...${NC}"
-(cd "$LUCY_SERVER_GO_DIR" && go build -o lucy-server .)
+(cd "$LUCY_SERVER_GO_DIR" && go build -ldflags "-X main.buildDate=$(date -u +%Y-%m-%d)" -o lucy-server .)
 # Shared memory (2026-09-16): the log format is shared by every OS and phone,
 # so its tests gate the build — a broken merge rule must never ship.
 (cd "$LUCY_SERVER_GO_DIR" && go test ./memory/ && go build -o swarm-memory ./cmd/swarm-memory)

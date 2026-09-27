@@ -24,6 +24,10 @@ import (
 // serverStartTime records when this process started so /health can report uptime.
 var serverStartTime = time.Now()
 
+// buildDate is stamped at compile time via -ldflags "-X main.buildDate=YYYY-MM-DD".
+// Falls back to SWARM_BUILD_DATE env var, then the hardcoded date below.
+var buildDate = ""
+
 func main() {
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
@@ -186,7 +190,7 @@ func main() {
 		// Search & daily brief (task #20)
 		api.Get("/google/brief", handlers.GoogleBrief)
 
-		// Google Workspace OAuth — proxied to the .NET service on :8402 so
+		// Google Workspace OAuth — proxied to the .NET service on :8399 so
 		// the Flutter shell and Companion have a single origin. Auth token
 		// gate still applies (we're under /api/).
 		api.Route("/google/auth", func(g chi.Router) {
@@ -532,9 +536,12 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	buildDate := os.Getenv("SWARM_BUILD_DATE")
-	if buildDate == "" {
-		buildDate = "2026-09-24" // stamped at build time via ldflags in production
+	effectiveBuildDate := buildDate
+	if effectiveBuildDate == "" {
+		effectiveBuildDate = os.Getenv("SWARM_BUILD_DATE")
+	}
+	if effectiveBuildDate == "" {
+		effectiveBuildDate = "unknown"
 	}
 
 	// --- uptime ---
@@ -552,7 +559,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	services := map[string]string{
 		"lucy_server":      "ok", // we are lucy_server
 		"gaming_agent":     probeHTTP("http://127.0.0.1:8401/health", 500*time.Millisecond),
-		"google_workspace": probeHTTP("http://127.0.0.1:8402/health", 500*time.Millisecond),
+		"google_workspace": probeHTTP("http://127.0.0.1:8399/health", 500*time.Millisecond),
 		"lucille_core":     probeUnix("/run/lucille/ipc.sock", "ping", 500*time.Millisecond),
 	}
 
@@ -568,7 +575,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{
 		"status":              status,
 		"version":             version,
-		"build_date":          buildDate,
+		"build_date":          effectiveBuildDate,
 		"uptime_seconds":      uptimeSecs,
 		"lucy_mount_gb_used":  math.Round(lucyUsedGB*10) / 10,
 		"lucy_mount_gb_total": math.Round(lucyTotalGB*10) / 10,
