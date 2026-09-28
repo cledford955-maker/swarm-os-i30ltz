@@ -1,5 +1,33 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **Health-check audit — 2026-09-28 (scheduled run):** Full codebase scan for bugs, stale mocks, wiring gaps, and open incidents. One code fix applied; findings and improvement suggestions recorded below.
+>
+> **Fixed this pass:**
+> - `GamingAgent-go/services/lucille_service.go:375` — stale error string `"nemotron response parse failed"` changed to `"chat model response parse failed"`. Provider has been OpenRouter since 2026-09-20; the old string misdirects any log search.
+>
+> **Active incidents (ranked by severity):**
+> 1. **CRITICAL — swarm-ui.service silent crash (IN PROGRESS since 2026-09-22):** labwc/Flutter desktop silently exits within 1-3s across multiple boots, handing tty1 back to getty. Diagnostics (WLR_LOG_LEVEL=debug, systemctl status snapshot in ExecStopPost) were staged but a fresh ISO boot has not yet confirmed the root cause. This is the highest-priority live blocker — every new ISO is unverified until this is root-caused and fixed.
+> 2. **MAJOR — STEAM_API_KEY dead:** `/api/steam/library` and `/api/games/intersection` fail silently. Regenerate at steamcommunity.com/dev/apikey and update `/mnt/Lucy/20-runtime/.env`. No code fix possible from here.
+> 3. **MAJOR — ax2: ISO may not be on Ventoy:** last known build (`swarm-os-v6.2.72`) landed in `swarm_os_out/` with Ventoy unmounted (confirmed 2026-09-24). ISO release policy requires Ventoy mount to be present; build script must abort if Ventoy is absent, not fall back locally.
+> 4. **MAJOR — ax3: Three Android companion trees:** `30-source/android_companion/`, `30-source/android_companion(seperate-related-project)/`, and `lucille-companion/` (v1.0.0, applicationId `com.swarm.lucille`) all exist with no canonical declaration. Declare `lucille-companion/` canonical and move the two legacy trees to `99-archive/`.
+> 5. **MEDIUM — 4 open draft PRs:** PRs #1 (Codex integration), #2 (health audit), #3 (security fixes), #4 (port mismatch + health) — all open/unmerged as of 2026-09-28. Review or close stale ones.
+> 6. **MINOR — ax1: profiledef.sh.bak-$(date +%s) literal filename still present:** `40-iso-profile/swarm_os_iso_profile/profiledef.sh.bak-$(date +%s)` exists as a literal unexpanded filename. Fix: `rm "40-iso-profile/swarm_os_iso_profile/profiledef.sh.bak-\$(date +%s)"`.
+> 7. **MINOR — av4: auto-sync commits every ~10 min with generic messages:** all recent commits are `auto-sync: <timestamp>`. Semantic commit messages and a gitleaks pre-commit hook are both still open.
+>
+> **Code holes and documented mocks:**
+> - `LucyServer-go/services/devplatform.go:710-726` — `WorkspaceList()` seeds three **fabricated** cloud workspace records at startup (cluster-east.swarm-os.cloud, arm-eu.swarm-os.cloud, edge-node-01.local) shown as "Connected"/"Disconnected". `WorkspaceCreate()` returns hardcoded latency/memory stats. These are in-memory only with no real SSH connections. Either empty the seed list or clearly label these as demo placeholders — a user connecting a real remote host would not be able to distinguish them from real entries.
+> - `GamingAgent-go/handlers/health.go` — minimal; returns only `{"status":"ok"}`. LucyServer's `/health` probes this endpoint so basic liveness works, but GamingAgent exposes no version, uptime, or per-dependency status. Worth expanding to match LucyServer's health response shape.
+> - `AiCoderDispatch` and `AiCoderSuggestFixes` — previously 100% fabricated stubs (per 2026-09-19 entry). Confirmed now wired to real OpenRouter calls. ✅
+> - `Marketplace` fabricated seed data — confirmed removed (initMarketplace starts empty). ✅
+> - `AppAnalytics` DAU/MAU fabrication — confirmed removed (reports real zeros). ✅
+>
+> **5 improvements ranked by impact:**
+> 1. **Root-cause swarm-ui.service crash (CRITICAL):** Build a fresh ISO with the staged WLR_LOG_LEVEL=debug diagnostics and boot it — real hardware or VM. Every other feature is unverifiable until the desktop loads reliably.
+> 2. **Add SHA256 checksum to every ISO build (HIGH — au7 open since 2026-09-12):** One line in `build_swarm_iso.sh` after the ISO write: `sha256sum "$ISO_PATH" > "${ISO_PATH}.sha256"`. Lets you tell a corrupt flash from a bad build.
+> 3. **Declare `lucille-companion/` canonical, archive legacy android_companion trees (HIGH — ax3):** One `mv` to `99-archive/` per tree, one CLAUDE.md line. Stops the next APK build from accidentally using the wrong applicationId.
+> 4. **Add gitleaks pre-commit hook to auto-sync (MEDIUM — closes av4):** `pacman -S gitleaks`; add `.git/hooks/pre-commit` guard. Catches any credential accidentally added to a tracked file before the 10-min auto-commit fires.
+> 5. **Expand GamingAgent `/health` to match LucyServer's response shape (LOW):** Add version string, uptime seconds, and a Steam API key validity flag. Lets the LucyServer health roll-up show more than "ok"/"unreachable" for the gaming service.
+
 > **DONE — Cross-stack engine wiring pass, 2026-09-25 (Opus 4.6, continued session):** Five disconnected components connected end-to-end:
 > 1. **Flutter LucilleEngineService provider** — new `lucille_engine_providers.dart` Riverpod provider polls `/api/lucille/status` every 10 seconds. The Lucille chat page now shows a live ENGINE status chip in the header (online/offline/active process count) via the `_EngineStatusChip` widget.
 > 2. **Google Workspace UI wired to settings page** — `GoogleWorkspaceService` was built with the OAuth proxy but never connected to any page. Settings page now has a Google Workspace section showing auth status (authenticated/credentials loaded/offline), connected email, and Sign In / Sign Out buttons. Sign In opens the OAuth consent URL via `xdg-open`.

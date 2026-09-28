@@ -372,7 +372,7 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 			} `json:"choices"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || len(raw.Choices) == 0 {
-			return "", fmt.Errorf("nemotron response parse failed")
+			return "", fmt.Errorf("chat model response parse failed")
 		}
 		return raw.Choices[0].Message.Content, nil
 	}
