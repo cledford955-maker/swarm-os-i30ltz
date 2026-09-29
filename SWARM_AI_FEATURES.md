@@ -1,5 +1,41 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **HEALTH CHECK — 2026-09-29 (Sonnet 4.6, scheduled audit):**
+>
+> **CRITICAL (service-breaking now):**
+> 1. **OpenRouter API key dead** — `.env`'s `OPENROUTER_API_KEY` returns 401 "User not found" (logged in shared memory `project_openrouter_key_dead.md`). Blocks GamingAgent Lucille chat/eval (kimi-k2.5), LucyServer-go AiCoderDispatch/AiSuggestFixes, the Flutter live model catalog, and the balance widget. Regenerate at openrouter.ai and update `.env`.
+> 2. **Steam API key status unconfirmed** — user applied 2026-09-22 (logged in memory `project_steam_api_key_dead.md`); no confirmation it was updated in `.env`. Still blocks `/api/steam/library` and `/api/games/intersection`. Verify the `.env` value and do a live `curl` test against Steam's API.
+>
+> **HIGH (security/systemic):**
+> 3. **Hardcoded fallback token "swarm-token-2026" is now public** — `LucyServer-go/main.go:424` and `GamingAgent-go/main.go:208` fall back to this literal when `SWARM_AUTH_TOKEN` is unset. The string is in the public git history. Any unconfigured dev instance or companion device uses it. Fix: generate a random token at ISO build time and bake it into `airootfs/etc/swarm_os.env`; existing installer already generates a per-install token (line 574) but the live ISO default is still exposed.
+> 4. **swarm-ui.service silent crash — IN PROGRESS, no fix yet** — labwc/Flutter desktop falls through to getty@tty1 text shell on both real hardware and QEMU VM. Diagnostic pass complete (2026-09-22), no new ISO built. Root cause still unknown. Until a new ISO is built and booted, the live system cannot run the desktop. Priority: build ISO, boot, read the new diagnostic log.
+>
+> **MEDIUM (wiring gaps / mocks that need to ship):**
+> 5. **LucilleAssistant (:8403) not staged in ISO** — service exists at `30-source/LucilleAssistant/` and runs in dev, but has no systemd unit in `airootfs/etc/systemd/system/` and is not compiled/copied by `70-scripts/build_swarm_iso.sh`. Users booting the ISO get no personal-assistant service.
+> 6. **publisher_portal_panel.dart still uses HMAC-SHA256** (`lib/coder/panels/publisher_portal_panel.dart:98-99`) — symmetric signing not migrated to the Ed25519 `PackageSigningService` path built 2026-09-19 (bo62, still open).
+> 7. **verifyPackage() has zero callers in extension install** (bo80) — Ed25519 trust verification built but never called when installing an extension. Extensions can be installed with no signature check.
+> 8. **lucille-core TelemetryDaemon (:9091) not launched by LucilleEngine** — memory log says "Daemon is not launched by LucilleEngine yet" (2026-09-25). HITL approval push requires this socket.
+> 9. **lucille-core speculative pipeline uses mock backends** — `SwarmRouter::set_pipeline_backends()` must be called with real HTTP clients; without it, every pipeline run uses mocks (logged in memory `lucille-core-context-pruning`). Engine IPC command also still open.
+> 10. **`swarm-droid-companion` binary referenced but does not exist** — `frontend/lib/shell/companion_bridge_dialog.dart:151,183` runs `swarm-droid-companion --optimize` and `swarm-droid-companion --server` but no such binary is staged anywhere in the project.
+>
+> **STANDING OPEN FROM PRIOR AUDITS (unresolved):**
+> - **ax2** (MAJOR, 2026-09-24): ISO built to `swarm_os_out/` with Ventoy absent — policy violation, settle by grepping build script for fallback.
+> - **au7** (MINOR): No SHA256/GPG sig alongside ISO — add `sha256sum` call to `build_swarm_iso.sh` post-ISO step.
+> - **av4**: Auto-sync commits every ~10 min with no semantic messages — semantic commits still needed for meaningful history.
+> - **bo32**: `install_swarm_os.sh` never run end-to-end — still open.
+> - **bo36**: LUCILLE drive mount at /mnt/Lucy on installed system — still open.
+> - **bo55**: Two wait-online units — network-online.target race — still open.
+> - **bo63**: No root Ed25519 signing UI — key exists, nothing calls it for official packages.
+>
+> **5 IMPROVEMENT SUGGESTIONS:**
+> 1. **Auto-rotate expired API keys** — add a `/api/health/keys` endpoint that validates each env key with a cheap live call (GamingAgent already does this in a test harness). Surface failures in the OSD HUD so a dead key is visible immediately, not diagnosed a week later.
+> 2. **Wire LucilleAssistant into the ISO** — add build step in `build_swarm_iso.sh` alongside GamingAgent: `(cd 30-source/LucilleAssistant && go build -o lucille-assistant .)` → copy to `/opt/swarm_os/LucilleAssistant/` → add `lucille-assistant.service` to airootfs.
+> 3. **Checksum generation in build script** — one line after ISO is written: `sha256sum "$ISO_PATH" > "${ISO_PATH}.sha256"` — closes au7, enables verification on corrupted flashes.
+> 4. **gitleaks pre-commit hook** — `pacman -S gitleaks` + add to `.git/hooks/pre-commit` (see 2026-09-24 audit upgrade #5) — closes av4's secret-exposure risk permanently.
+> 5. **Upgrade the OSD HUD staleness gate** — add a 60-second `lastFetchedAt` gate in the Flutter stats widget; show `— / offline` tiles if the health response is older than 60s. Zero new endpoints needed, pure frontend.
+>
+> Last updated: 2026-09-29 by scheduled health check.
+
 > **DONE — Cross-stack engine wiring pass, 2026-09-25 (Opus 4.6, continued session):** Five disconnected components connected end-to-end:
 > 1. **Flutter LucilleEngineService provider** — new `lucille_engine_providers.dart` Riverpod provider polls `/api/lucille/status` every 10 seconds. The Lucille chat page now shows a live ENGINE status chip in the header (online/offline/active process count) via the `_EngineStatusChip` widget.
 > 2. **Google Workspace UI wired to settings page** — `GoogleWorkspaceService` was built with the OAuth proxy but never connected to any page. Settings page now has a Google Workspace section showing auth status (authenticated/credentials loaded/offline), connected email, and Sign In / Sign Out buttons. Sign In opens the OAuth consent URL via `xdg-open`.
