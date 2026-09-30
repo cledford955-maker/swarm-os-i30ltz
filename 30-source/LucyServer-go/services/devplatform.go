@@ -868,7 +868,7 @@ func MarketplaceGetAnalytics() MarketplaceAnalytics {
 	}
 	return MarketplaceAnalytics{
 		TotalGrossRevenue: round2(gross), TotalDeveloperPayouts: round2(dev),
-		TotalTransactions: len(billing), ActivePaidSubs: 142,
+		TotalTransactions: len(billing), ActivePaidSubs: 0,
 		RecentTransactions: recent,
 	}
 }

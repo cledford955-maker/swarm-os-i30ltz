@@ -1,5 +1,42 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **SCHEDULED HEALTH CHECK — 2026-09-30 (Sonnet 4.6, automated):** Full code + wiring audit across GamingAgent-go, LucyServer-go, and cross-stack deployment status. Findings by severity:
+>
+> **CRITICAL — swarm-token-2026 now public in GitHub repo.** `LucyServer-go/main.go:424`, `memory/peer.go:192`, and `GamingAgent-go/main.go:208` all fall back to the hardcoded literal `"swarm-token-2026"` when `SWARM_AUTH_TOKEN` is unset. This string is committed and publicly visible in `cledford955-maker/swarm-os-i30ltz`. Any SWARM instance running without an explicit token in the env is authenticated to anyone who reads the repo. The companion app and install scripts share the same string. **Fix: boot-time check that refuses to start (or at minimum logs a loud `[WARNING] SWARM_AUTH_TOKEN not set — using public default, set a real token`) when the env var is missing. Ideally fail-start on production builds.**
+>
+> **HIGH — Stale error string in `GamingAgent-go/services/lucille_service.go:375`.** `callChat()` returns `fmt.Errorf("nemotron response parse failed")` but the provider has been OpenRouter kimi-k2.5 since 2026-09-20. Misleading during debugging. **Fix: change to `"chat model response parse failed"` to match the provider-agnostic naming used everywhere else in that file.**
+>
+> **HIGH — Fake cloud workspaces served as real data (`LucyServer-go/services/devplatform.go:712-722`).** `WorkspaceList()` returns three hardcoded workspaces (`cluster-east.swarm-os.cloud`, `arm-eu.swarm-os.cloud`, `edge-node-01.local`) as if they are live connected instances with real latency/memory figures. Unlike the marketplace fake-data purge (which was found + fixed), these are still unlabeled. A developer hitting `/api/devplatform/workspaces` sees fictional infrastructure. **Fix: seed with an empty list (same pattern as `initMarketplace()`) and let real workspaces be added by the user, OR label them clearly as demo/mock in the API response.**
+>
+> **HIGH — `ActivePaidSubs: 142` hardcoded in `MarketplaceGetAnalytics()` (`devplatform.go:871`).** All other analytics now sum real data — only this one magic number survived the fake-data purge. **Fix: return `0` or compute from `billing` records with a `SubscriptionRecord` type.**
+>
+> **HIGH — `CiTriggerPipeline` always succeeds with fake stages (`devplatform.go:383-403`).** Triggers a goroutine that logs LINT/"0 errors", TEST/"24 tests passed", BUILD, PACKAGE with hardcoded 800ms sleeps — no real commands run. The API response gives no indication this is simulated. **Document as mock in API response OR wire to real `go test ./... && go vet ./...` on the linked repo's path.**
+>
+> **HIGH (Deployment blocker) — Tailscale absent from `packages.x86_64`.** The Tailscale MSS firewall rules are implemented and tested, but Tailscale itself is not in the package manifest. A live boot cannot join the tailnet. Add `tailscale` to `40-iso-profile/swarm_os_iso_profile/packages.x86_64`.
+>
+> **HIGH (Deployment blocker) — STEAM_API_KEY confirmed dead.** Blocks `/api/steam/library` and `/api/games/intersection`. Must be regenerated at steamcommunity.com/dev/apikey and updated in `.env` / `/etc/swarm_os.env`.
+>
+> **MEDIUM — `swarm-ui.service` silent-crash recurrence still IN PROGRESS (since 2026-09-22).** Desktop falls to getty on both real hardware and QEMU. Diagnostics (WLR_LOG_LEVEL=debug, extended ExecStopPost journal dump) added but no fresh ISO boot yet. Root cause unverified. **This is the single highest-impact unfinished item for real-hardware users.**
+>
+> **MEDIUM — `verifyPackage` has zero callers.** Ed25519 signing is cryptographically real (2026-09-19 bo63/bo64), but no code path in the extension install flow ever calls `verifyPackage()`. Extensions can be installed without signature verification. Tracked as bo80.
+>
+> **MEDIUM — ForgeWorkstation Quick Actions still reference dead mount paths** (`/run/media/i30ltz/lucy-master/Swarm-Flutter-beta/...`). Will fail on any fresh boot. Noted since 2026-09-19 but not yet fixed.
+>
+> **LOW — `profiledef.sh.bak-$(date +%s)` literal filename** still present in `40-iso-profile/swarm_os_iso_profile/`. Has been open since 2026-09-19 audit. Fix: `rm "40-iso-profile/swarm_os_iso_profile/profiledef.sh.bak-\$(date +%s)"`.
+>
+> **LOW — Three Android companion trees, canonical not formally marked.** `android_companion/`, `android_companion(seperate-related-project)/`, and `lucille-companion/`. `lucille-companion` is the replacement per 2026-09-16 work, but no CANONICAL file or README update makes this explicit.
+>
+> **PENDING VERIFICATION (not bugs, but unverified):** Companion WebSocket heartbeat (APK never on real device), workspace parity checker (lucy-master unmounted), GRUB dual theme (needs sudo), desktop teardown cleanup script, wake word acoustic accuracy on real mic.
+>
+> **5 IMPROVEMENT SUGGESTIONS:**
+> 1. **Startup env-var health probe:** Add a `GET /api/health/config` endpoint that reports which required env vars are absent/defaulted without exposing their values. Saves hours of silent failures.
+> 2. **Semantic git commits:** Auto-sync commits are all `auto-sync: <timestamp>`. Add a `--message` option to `auto_sync_github.sh` that includes the changed-file summary so git history is debuggable.
+> 3. **ISO pre-flight validation script:** A fast `70-scripts/preflight_check.sh` that verifies binary modes, required services, and env baking before mkarchiso runs would catch the 2026-09-24 Flutter 0644 class of bug without needing a boot.
+> 4. **Mock labeling middleware:** For all devplatform endpoints backed by fake/simulated data (workspaces, CI), add an `X-Swarm-Mock: true` response header so clients can distinguish real from demo data without reading source.
+> 5. **Model health watchdog:** A lightweight goroutine in GamingAgent that calls `chatEndpoint` with a 5-token echo prompt on startup, logs latency, and exposes the result at `/api/lucille/model-health`. Prevents silent 410-style failures going undetected for weeks (as happened with Nemotron in 2026-08-26 → 2026-09-20).
+>
+> **Last checked:** 2026-09-30 UTC (automated run).
+
 > **DONE — Cross-stack engine wiring pass, 2026-09-25 (Opus 4.6, continued session):** Five disconnected components connected end-to-end:
 > 1. **Flutter LucilleEngineService provider** — new `lucille_engine_providers.dart` Riverpod provider polls `/api/lucille/status` every 10 seconds. The Lucille chat page now shows a live ENGINE status chip in the header (online/offline/active process count) via the `_EngineStatusChip` widget.
 > 2. **Google Workspace UI wired to settings page** — `GoogleWorkspaceService` was built with the OAuth proxy but never connected to any page. Settings page now has a Google Workspace section showing auth status (authenticated/credentials loaded/offline), connected email, and Sign In / Sign Out buttons. Sign In opens the OAuth consent URL via `xdg-open`.
