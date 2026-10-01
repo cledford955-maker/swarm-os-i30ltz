@@ -1,5 +1,34 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **HEALTH CHECK — 2026-10-01 (Sonnet 4.6, scheduled run):** Full codebase health audit across Go, Dart, and shell layers. No active incidents detected (no running services to monitor in this environment). Findings by severity:
+>
+> **HIGH — Security / Data Integrity:**
+> 1. **`"swarm-token-2026"` hardcoded fallback token is public** (`LucyServer-go/main.go:424`, `GamingAgent-go/main.go:208`, `memory/peer.go:192`). When `SWARM_AUTH_TOKEN` is unset, all three services accept this known string. It's now in the public repo so any unconfigured dev or companion accepts authentication from anyone with the source. Fix: refuse to start (or refuse all auth) when no real token is configured, rather than silently accepting the public default.
+> 2. **`swarm-ui.service` silent-crash regression still open** (IN PROGRESS since 2026-09-22). Multiple boot logs show the unit starts, opens a PAM session, then exits in 1-3s with zero diagnostic output captured. Desktop falls back to getty@tty1. Diagnostics were added (`WLR_LOG_LEVEL=debug`, `systemctl status` snapshot in ExecStopPost) but a fresh ISO boot with those diagnostics has not been captured yet. **Blocking every user boot.**
+> 3. **`STEAM_API_KEY` confirmed dead** (403 from Steam). Blocks `/api/steam/library` and `/api/games/intersection` in GamingAgent-go. Needs manual regeneration at steamcommunity.com/dev/apikey and `.env` update.
+>
+> **MEDIUM — Fake/Simulated data presented as real:**
+> 4. **`CiTriggerPipeline` is fully simulated** (`LucyServer-go/services/devplatform.go:370-407`). It spawns a goroutine that sleeps 800ms between stages and always logs "24 tests passed, 0 failed." No real build or test runs. The Coder page's CI panel shows these fake results as if CI passed.
+> 5. **`ActivePaidSubs: 142` hardcoded fake value** (`devplatform.go:871`). Marketplace analytics was cleaned of fabricated billing records but this one integer remains hardcoded. Shows as real data in the developer analytics dashboard.
+> 6. **`WorkspaceList()` returns hardcoded demo cloud workspaces** (`devplatform.go:709-726`). Three fake workspaces (`cluster-east.swarm-os.cloud`, `arm-eu.swarm-os.cloud`, `edge-node-01.local`) with fabricated latency/memory stats seed every startup. New workspaces created via `WorkspaceCreate()` always report `Status: "Connected"`, `LatencyMs: 15` regardless of reality.
+> 7. **`OAuthHandleCallback` is a no-op** (`devplatform.go:490`). Accepts any non-empty `code` string as OAuth success — no actual token exchange with GitHub/Google occurs.
+>
+> **LOW — Unimplemented / Unwired features:**
+> 8. **4 mock apps visible in hex grid but not wired** (`frontend/lib/models/swarm_apps.dart:227-243`): `mock_taskmaster`, `mock_codesentry`, `mock_voicebridge`, `mock_swarmcast`. Marked `mock: true` and shown dimmed, but still clickable and open a generic placeholder. Expected to stay as-is until implemented, but documented here so they're not forgotten.
+> 9. **`sendMeshAlert` is a placeholder** (`frontend/lib/services/telemetry_service.dart:274`). No real push infrastructure. Mesh alerts never actually reach companion phones.
+> 10. **`apple_panel.dart:310` build call is a placeholder** (`lib/coder/panels/apple_panel.dart`). The `svc.build(AppleBuildTarget.iosDebug, …)` line is commented as a placeholder — button press does nothing meaningful.
+> 11. **18 agent wallpapers (`bg_7.jpg`–`bg_24.jpg`) still missing on disk** (`frontend/assets/wallpapers/`). Silently renders no background for those agents.
+> 12. **`verifyPackage` has zero callers** (`frontend/lib/services/package_signing_service.dart`). Ed25519 signing is implemented but extension install never calls verification — extension trust check is a no-op.
+> 13. **LucilleAssistant not ISO-staged** (`30-source/LucilleAssistant/`). Med config placeholders, no staging into airootfs, no service unit in ISO. Companion APK not installed on physical devices.
+>
+> **Improvement Suggestions:**
+> A. **Boot self-test watchdog**: add a systemd `ExecStartPost` script to `swarm-ui.service` that polls for the labwc/flutter processes for up to 15s and writes a pass/fail status to `/run/swarm-boot-status`. Current silent exit is undetectable without reading journals. This would have caught the regression weeks earlier.
+> B. **Replace `"swarm-token-2026"` fallback with startup abort**: make `SWARM_AUTH_TOKEN` required; log a clear error and refuse to bind auth middleware when it's missing. Zero-config dev starts are less convenient but security posture improves.
+> C. **Wire `sendMeshAlert` to companion WebSocket hub**: companions are already connected via `/api/companion/ws` WebSocket heartbeat. Push alert payloads over that channel instead of no-op. `CompanionHub` already tracks connected devices.
+> D. **Replace simulated CI with real `go test`**: `CiTriggerPipeline` should exec `go test ./...` in the named repo's directory and capture real stdout/stderr/exit code — or mark the endpoint clearly as a demo that returns simulated output, not real test results.
+> E. **Persist voice/settings across restarts**: `currentVoice` and other in-memory settings (`services/settings.go`) reset on every process restart. Write settings to the same `lucyStateDir()` pattern used for `login_password.txt`.
+> F. **Add OpenTelemetry spans or Prometheus metrics**: the system has a telemetry service but no structured observability. Even lightweight `/metrics` endpoint (Prometheus counters for request counts/errors per route) would make future health checks substantially easier.
+
 > **DONE — Cross-stack engine wiring pass, 2026-09-25 (Opus 4.6, continued session):** Five disconnected components connected end-to-end:
 > 1. **Flutter LucilleEngineService provider** — new `lucille_engine_providers.dart` Riverpod provider polls `/api/lucille/status` every 10 seconds. The Lucille chat page now shows a live ENGINE status chip in the header (online/offline/active process count) via the `_EngineStatusChip` widget.
 > 2. **Google Workspace UI wired to settings page** — `GoogleWorkspaceService` was built with the OAuth proxy but never connected to any page. Settings page now has a Google Workspace section showing auth status (authenticated/credentials loaded/offline), connected email, and Sign In / Sign Out buttons. Sign In opens the OAuth consent URL via `xdg-open`.
