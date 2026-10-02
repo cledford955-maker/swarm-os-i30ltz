@@ -1,6 +1,6 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
-> **HEALTH CHECK — 2026-10-02 (scheduled automated audit):** Full cross-service health scan. Summary of findings by severity:
+> **HEALTH CHECK — 2026-10-02 (scheduled automated audit, updated with deep code scan):** Full cross-service health scan. Summary of findings by severity. **6 bugs fixed in this pass** (see FIXED section below):
 >
 > **ACTIVE / UNRESOLVED INCIDENTS:**
 > 1. **swarm-ui.service silent-crash recurrence (IN PROGRESS, HIGH)** — Service starts, PAM session opens, exits within 1–3s, falls back to `getty@tty1` text mode instead of labwc/Flutter desktop. Affects all boots since v6.2.69+. Root cause still unknown; only diagnostics (WLR_LOG_LEVEL=debug, enhanced ExecStopPost journal dump) were added on 2026-09-22. Status: needs a fresh ISO build + real boot to collect the new logs. See `70-scripts/DESKTOP_BOOT_REPAIR.md`.
@@ -42,6 +42,23 @@
 > 3. **Rust Slint panel lucille-core bridge** — `LucyClient` gained `lucille_status()` and `lucille_pipeline()` methods calling the LucyServer bridge endpoints. `MonitorState` extended with `engine-label` and `engine-online` properties. Monitor poll loop now fetches engine status alongside system stats. Monitor view shows an ENGINE tile with color-coded status.
 > 4. **All binaries restaged** — Flutter Linux build (with engine chip), Rust Slint panel (with monitor engine tile), both rebuilt release and rsync'd to airootfs.
 > 5. **Full test verification** — Flutter 34/34 pass, Go LucyServer handlers+services+memory pass, GamingAgent services pass, Rust panel `cargo check` clean (3 unused warnings for unreferenced pipeline API). `dart analyze` clean on all changed files.
+
+> **FIXED IN 2026-10-02 HEALTH CHECK PASS (6 bugs, all `go build` verified):**
+> - **[HIGH] Google OAuth port wrong** (`LucyServer-go/handlers/google_oauth.go:29`, `GamingAgent-go/services/lucille_service.go:267`) — Both `googleWorkspaceBase()`/`googleWorkspaceCalendarBase()` returned `127.0.0.1:8402` (LucyServer's own memory-sync LAN port) instead of `:8399` (GoogleWorkspaceService). Every `/api/google/auth/*` call and Lucille calendar context injection was getting connection refused. Fixed: both changed to `:8399`.
+> - **[HIGH] Shell injection in UninstallPackage** (`LucyServer-go/services/system.go:176`) — `packageName` was interpolated into a bash `-c` shell string without sanitization, allowing `foo; rm -rf /` style command injection. Fixed: package name validated (alphanumeric + `-_. +` only) and `exec.Command` called directly without shell interpolation.
+> - **[MEDIUM] Nil pointer panic in GamingAgent eval/chat** (`GamingAgent-go/services/lucille_service.go:117,356`) — `http.NewRequest` errors were silently ignored with `_`; a non-nil error returns a nil `*http.Request`, and the subsequent `req.Header.Set()` would panic. Fixed: both call sites now check `err` and return early with a descriptive error.
+> - **[MEDIUM] WebAuthn credentials world-readable** (`LucyServer-go/services/webauthn.go:85`) — `webauthn_credentials.json` was written `0o644`. Fixed: `0o600`.
+> - **[MEDIUM] API keys env file world-readable** (`LucyServer-go/services/settings.go:153`) — `SaveApiKeys()` wrote to `/etc/swarm_os.env` with `0o644`. The ISO uses a GPG-sealed env and tmpfs, so this only affects the LAN-reachable dev host, but `0o600` is correct. Fixed.
+>
+> **STILL OPEN from 2026-10-02 deep scan (not fixed this pass — need user decision or are larger scope):**
+> - **[HIGH] Fake CI pipeline** (`LucyServer-go/services/devplatform.go:370`) — always reports success after 800ms sleep; never runs real build/test. Should either invoke a real build or return 501.
+> - **[HIGH] OAuth callback stub** (`LucyServer-go/services/devplatform.go:490`) — accepts any non-empty code with no real token exchange. Should return 501 until implemented.
+> - **[MEDIUM] Hardcoded fabricated `ActivePaidSubs: 142`** (`devplatform.go:871`) — one fake constant mixed into otherwise real analytics.
+> - **[MEDIUM] Fake cloud workspaces pre-seeded as Connected** (`devplatform.go:709`) — three invented hosts (`cluster-east.swarm-os.cloud` etc.) always show "Connected" with fabricated latency/memory.
+> - **[MEDIUM] OAuth login uses fake client ID fallbacks** (`devplatform.go:476`) — falls back to `"swarm_github_client_id"` / `"swarm_google_client_id"` strings; every OAuth flow fails at the provider with "invalid client" unless env vars set.
+> - **[LOW] ArtifactDownload returns HTTP 200 with JSON error body on missing file** (`handlers/devplatform.go:157`).
+> - **[LOW] GitListRepos error silently swallowed** (`handlers/devplatform.go:102`).
+> - **[LOW] VM metadata written world-readable** (`services/virtualization.go:134`, `0o644` → needs `0o600`).
 
 > **DONE — Real HTTP/SSE model clients + ISO staging audit + grant drafts, 2026-09-25 (Opus 4.6, continued session):** Three items completed in one pass:
 > 1. **HTTP/SSE model clients**: `http_client.hpp/.cpp` — thin libcurl wrapper with `post_json()` and `post_sse()` (SSE line parser accumulates partial chunks across curl write callbacks, fires on complete `data:` lines). `openrouter_backends.hpp/.cpp` — 5 thread-safe backends: Kimi streaming (`post_sse()` → `StreamingBlockBuffer`), DeepSeek audit (`post_json()` → `[APPROVE]`/`[REJECT]` marker extraction), GLM triage (compiler log → model triage report), Kimi syntax voter and DeepSeek risk voter (targeted security-audit prompts). Each backend captures `OpenRouterConfig` by value and creates its own HTTP request per call. Engine auto-wires all 5 when `OPENROUTER_API_KEY` env var is set. `CMakeLists.txt` updated: `find_package(CURL REQUIRED)` + link `CURL::libcurl`. Test suite: 180 pass / 0 fail (8 new assertions for backend construction + router injection + type compatibility).

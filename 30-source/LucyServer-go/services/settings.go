@@ -150,7 +150,7 @@ func SaveApiKeys(keys map[string]string) (bool, string) {
 	if len(lines) > 0 {
 		content += "\n"
 	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		return false, err.Error()
 	}
 	return true, "API keys saved and loaded successfully."

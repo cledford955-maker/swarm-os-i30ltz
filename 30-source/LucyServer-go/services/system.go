@@ -174,11 +174,38 @@ func ListPackages() []string {
 }
 
 func UninstallPackage(packageName string) models.CommandResult {
+	// Reject anything that isn't a valid package name to prevent shell injection.
+	// apt/pacman names are alphanumeric plus - _ . +
+	for _, c := range packageName {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '+') {
+			return models.CommandResult{ExitCode: -1, StandardError: "invalid package name: contains disallowed characters"}
+		}
+	}
+	if packageName == "" {
+		return models.CommandResult{ExitCode: -1, StandardError: "package name must not be empty"}
+	}
+	runDirect := func(args ...string) models.CommandResult {
+		var stdout, stderr bytes.Buffer
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		exitCode := 0
+		if err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				exitCode = exitErr.ExitCode()
+			} else {
+				exitCode = -1
+			}
+		}
+		return models.CommandResult{ExitCode: exitCode, StandardOutput: stdout.String(), StandardError: stderr.String()}
+	}
 	if r := RunCommand("which apt", ""); r.ExitCode == 0 {
-		return RunCommand(fmt.Sprintf("sudo apt remove -y %s", packageName), "")
+		return runDirect("sudo", "apt", "remove", "-y", packageName)
 	}
 	if r := RunCommand("which pacman", ""); r.ExitCode == 0 {
-		return RunCommand(fmt.Sprintf("sudo pacman -Rns --noconfirm %s", packageName), "")
+		return runDirect("sudo", "pacman", "-Rns", "--noconfirm", packageName)
 	}
 	return models.CommandResult{ExitCode: -1, StandardError: "No supported package manager found."}
 }

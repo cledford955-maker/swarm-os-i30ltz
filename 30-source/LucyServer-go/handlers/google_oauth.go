@@ -20,13 +20,13 @@ import (
 	"time"
 )
 
-// googleWorkspaceBase points at the .NET service. Loopback by default; the
-// AppArmor + nftables rules already keep :8402 loopback-only.
+// googleWorkspaceBase points at GoogleWorkspaceService on :8399.
+// :8402 is LucyServer's own memory-sync LAN port — do not confuse them.
 func googleWorkspaceBase() string {
 	if v := os.Getenv("GOOGLE_WORKSPACE_URL"); v != "" {
 		return v
 	}
-	return "http://127.0.0.1:8402"
+	return "http://127.0.0.1:8399"
 }
 
 var googleClient = &http.Client{Timeout: 10 * time.Second}

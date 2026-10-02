@@ -114,7 +114,10 @@ There are no tools to call. Do not use snake_case field names or wrap this objec
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	req, err := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	if err != nil {
+		return &models.LucilleEvalResult{Error: "failed to build eval request: " + err.Error()}, nil
+	}
 	req.Header.Set("Authorization", "Bearer "+os.Getenv(chatAPIKeyEnv))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("HTTP-Referer", "https://github.com/i30ltz/swarm-os")
@@ -260,11 +263,12 @@ func (s *LucilleService) buildContextMessages() []models.ChatMessage {
 }
 
 // googleWorkspaceCalendarBase is overridable in tests.
+// :8399 is GoogleWorkspaceService; :8402 is LucyServer's memory-sync port.
 var googleWorkspaceCalendarBase = func() string {
 	if v := os.Getenv("GOOGLE_WORKSPACE_URL"); v != "" {
 		return v
 	}
-	return "http://127.0.0.1:8402"
+	return "http://127.0.0.1:8399"
 }
 
 var calendarHTTPClient = &http.Client{Timeout: 3 * time.Second}
@@ -353,7 +357,10 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	req, err := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	if err != nil {
+		return "", fmt.Errorf("failed to build chat request: %w", err)
+	}
 	req.Header.Set("Authorization", "Bearer "+os.Getenv(chatAPIKeyEnv))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("HTTP-Referer", "https://github.com/i30ltz/swarm-os")

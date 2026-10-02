@@ -82,7 +82,7 @@ func saveWACredentials() {
 	path := waCredPath()
 	os.MkdirAll(filepath.Dir(path), 0o755)
 	b, _ := json.Marshal(waCredentials)
-	os.WriteFile(path, b, 0o644)
+	os.WriteFile(path, b, 0o600)
 }
 
 func currentWAUser() *waUser {
