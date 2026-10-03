@@ -1,5 +1,37 @@
 # SWARM OS — Living Feature Tracker. Next view https://claude.ai/artifact/4zN956tFapn3nC2AHiusqD
 
+> **HEALTH CHECK PASS — 2026-10-03 (Sonnet 4.6, scheduled):** Full codebase audit — active incidents, code bugs, wiring gaps, and suggestions. Five fixes applied.
+>
+> **Active Incidents (unresolved, need action):**
+> 1. **swarm-ui.service silent-crash recurrence** *(IN PROGRESS since 2026-09-22)* — Live Kiosk boot repeatedly falls through to getty/safe-mode on both real hardware (Ventoy) and QEMU VM. Diagnostics added (`WLR_LOG_LEVEL=debug`, `systemctl status` snapshot, drm/seat journal grep), but root cause not yet captured. Needs a fresh ISO boot to collect the debug output. Severity: **CRITICAL** — primary desktop surface is broken on live boot.
+> 2. **STEAM_API_KEY dead** *(known since 2026-09-20)* — Steam returns 403 on every call. Blocks `/api/steam/library` and `/api/games/intersection`. Needs user to regenerate at steamcommunity.com/dev/apikey and update `.env`. Code is fine.
+> 3. **Companion APK not installed on phones** *(noted 2026-09-25)* — WebSocket heartbeat `/api/companion/ws` built and tested in Go, but the Android companion APK install on all three phones has not been done. `PHONE ✗` in the Flutter OSD HUD at all times until this is completed.
+> 4. **No fresh ISO has been booted** — Dozens of code changes since last verified boot. Every `(not yet on real hardware)` annotation across boot/security/desktop/lock-screen sections remains open.
+>
+> **Bugs Found and Fixed (this pass):**
+> 1. **`GamingAgent-go/services/lucille_service.go:375`** — stale `"nemotron response parse failed"` error message leaked the old provider name after the provider-agnostic refactor. Fixed to `"chat model response parse failed"`.
+> 2. **`LucyServer-go/services/devplatform.go` — fake cloud workspaces** — `initWorkspaces()` seeded 3 fabricated "Connected" cloud hosts (`cluster-east.swarm-os.cloud`, `arm-eu.swarm-os.cloud`, `edge-node-01.local`) with invented latency/memory figures, same class as the 2026-09-12 fake-data purge. Removed; workspace list starts empty now.
+> 3. **`LucyServer-go/services/devplatform.go:871` — hardcoded `ActivePaidSubs: 142`** — marketplace analytics returned a fabricated subscriber count even after the fake billing records were cleared. Fixed to `0` (computed from real data: no subs until a real purchase is made).
+> 4. **`LucyServer-go/services/devplatform.go` — `OAuthHandleCallback` always returned `true`** — the `/api/oauth/{provider}/callback` handler called this stub which checked only `code != ""` (never doing the token exchange) and then the handler sent a `200 OAuth login successful` response to the browser. Changed to return `false` and added a clear doc comment that the real token exchange is not implemented; callers now get an honest 500 "OAuth exchange not completed."
+> 5. **`lucille-core/src/hitl_security.cpp:162` — silent mock rollback** — if `swarm-snapshot.sh` wasn't found, code fell through to `execlp("bash", ..., "echo '[Mock Rollback] Snapshot default set successfully'")` — a silent echo that returned exit 0, making the HITL approval gate believe a rollback succeeded when nothing happened. Removed the mock fallback; now exits 127 so the parent gets a real failure signal.
+>
+> **Mocks / Stubs Still Present (documented, not fixed this pass):**
+> - `LucyServer-go/services/devplatform.go: CiTriggerPipeline` — spawns a goroutine that sleeps and logs `"24 tests passed, 0 failed"` hardcoded every time, regardless of the actual repo. Every CI run "succeeds." Needs a real build runner or at minimum a `501 Not Implemented` response. **Document as mock in the handler response.**
+> - `LucyServer-go/services/devplatform.go: OAuthHandleCallback` — now returns false (see fix #4 above) but the real token exchange is still missing.
+> - `lucille-core/src/consensus_gate.cpp` + `speculative_pipeline.cpp` — `use_mock_backends()` with simulated Kimi/DeepSeek/GLM responses. Documented in headers (`used_mock_backends` flag). These are test-only paths, properly gated — no action needed.
+> - `lucille-core/src/hitl_security.cpp` — mock rollback removed (fix #5 above). One remaining potential gap: if `snbtrfs` is not installed, the pre-snapshot and snapshot logic itself may fall through silently — worth auditing that path next boot.
+> - `swarm-token-2026` default in `LucyServer-go/main.go:424` and `memory/peer.go:192` — public in this codebase. Installer generates a unique token on install, so production installs are fine. Dev instances and companion devices that haven't been reconfigured still use the default. **Rotate the dev `.env` token.**
+>
+> **Improvement Suggestions:**
+> 1. **Add a health status page / `/api/diagnostics` endpoint** — aggregate `STEAM_API_KEY` validity, `OPENROUTER_API_KEY` balance, lucille-core socket reachability, companion count, and swarm-ui.service uptime into a single JSON response. Flutter can show it as a system tray status instead of per-service silent failures.
+> 2. **Resolve the swarm-ui.service boot crash urgently** — schedule a fresh ISO build + VM boot specifically to capture the `WLR_LOG_LEVEL=debug` output. The diagnostics were added 2026-09-22 but never collected because no new ISO was booted. This has been open 11 days.
+> 3. **Replace `swarm-token-2026` fallback with a startup warning** — instead of silently accepting the public default token, log a `WARN: SWARM_AUTH_TOKEN not set, using insecure default` at server startup. Makes misconfigured instances obvious.
+> 4. **Phase out `.NET` runtime packages** — `dotnet-runtime-10.0`/`aspnet-runtime-10.0` were explicitly flagged for removal since task #23 (LucyServer Go flip). They add ~200MB to every ISO. Can safely remove now.
+> 5. **CiTriggerPipeline mock** — replace the hardcoded success logs with a `501 {"error":"CI pipeline execution not implemented","track":"ci-runner-wiring"}` so the dev platform UI shows an honest state instead of fake green builds.
+> 6. **STEAM_API_KEY rotation reminder** — dead since 2026-09-20. Add a first-boot check in `swarm-diagnostics.py` that warns when Steam returns 403, so it surfaces in the diagnostic bundle rather than appearing as a silent API miss.
+>
+> *Last checked: 2026-10-03 by Sonnet 4.6 scheduled run*
+
 > **DONE — Cross-stack engine wiring pass, 2026-09-25 (Opus 4.6, continued session):** Five disconnected components connected end-to-end:
 > 1. **Flutter LucilleEngineService provider** — new `lucille_engine_providers.dart` Riverpod provider polls `/api/lucille/status` every 10 seconds. The Lucille chat page now shows a live ENGINE status chip in the header (online/offline/active process count) via the `_EngineStatusChip` widget.
 > 2. **Google Workspace UI wired to settings page** — `GoogleWorkspaceService` was built with the OAuth proxy but never connected to any page. Settings page now has a Google Workspace section showing auth status (authenticated/credentials loaded/offline), connected email, and Sign In / Sign Out buttons. Sign In opens the OAuth consent URL via `xdg-open`.

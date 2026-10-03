@@ -487,8 +487,15 @@ func OAuthLoginURL(provider string) string {
 	}
 }
 
-func OAuthHandleCallback(_ string, code string) bool {
-	return code != ""
+// OAuthHandleCallback is a stub — it acknowledges that a code was received but
+// never performs the actual token exchange with the provider. The OAuth flow
+// surfaces a login URL and receives the code, but the code is discarded here.
+// Wire a real token exchange (POST to provider's token endpoint with
+// OAUTH_GITHUB_CLIENT_ID / OAUTH_GITHUB_CLIENT_SECRET etc.) when developer
+// OAuth is needed in production. Returning false until then so callers know
+// the exchange didn't succeed.
+func OAuthHandleCallback(_ string, _ string) bool {
+	return false
 }
 
 func AnalyticsDashboard() DeveloperAnalytics {
@@ -706,22 +713,14 @@ var (
 	wsOnce     sync.Once
 )
 
+// initWorkspaces starts the workspace list empty. The previous version seeded
+// three fabricated "Connected" cloud hosts (cluster-east.swarm-os.cloud etc.)
+// presenting invented latency and memory figures as real measurements — same
+// class as the marketplace fake-data purge (2026-09-12). No such infrastructure
+// exists; starting empty so WorkspaceCreate is the only path to entries.
 func initWorkspaces() {
 	wsOnce.Do(func() {
-		workspaces = []CloudWorkspace{
-			{WorkspaceID: "cloud-us-east-gpu", Name: "NVIDIA Tensor Swarm Cluster (US-East)",
-				RemoteHost: "cluster-east.swarm-os.cloud", SSHPort: 2222, Username: "swarm-developer",
-				RemotePath: "/opt/swarm/ai-workspace", Status: "Connected",
-				LatencyMs: 24, MemoryUsedMB: 24576, MemoryTotalMB: 65536, CPUUsagePercent: 18.5},
-			{WorkspaceID: "cloud-eu-west-arm", Name: "Ampere Arm64 Enterprise Sandbox (Frankfurt)",
-				RemoteHost: "arm-eu.swarm-os.cloud", SSHPort: 22, Username: "i30ltz",
-				RemotePath: "/home/i30ltz/src/lucille", Status: "Connected",
-				LatencyMs: 68, MemoryUsedMB: 8192, MemoryTotalMB: 32768, CPUUsagePercent: 9.2},
-			{WorkspaceID: "cloud-edge-baremetal", Name: "Baremetal Microk8s Development Node",
-				RemoteHost: "edge-node-01.local", SSHPort: 22, Username: "root",
-				RemotePath: "/var/swarm/k8s", Status: "Disconnected",
-				LatencyMs: 3, MemoryUsedMB: 4096, MemoryTotalMB: 16384, CPUUsagePercent: 2.4},
-		}
+		workspaces = []CloudWorkspace{}
 	})
 }
 
@@ -868,7 +867,7 @@ func MarketplaceGetAnalytics() MarketplaceAnalytics {
 	}
 	return MarketplaceAnalytics{
 		TotalGrossRevenue: round2(gross), TotalDeveloperPayouts: round2(dev),
-		TotalTransactions: len(billing), ActivePaidSubs: 142,
+		TotalTransactions: len(billing), ActivePaidSubs: 0,
 		RecentTransactions: recent,
 	}
 }
