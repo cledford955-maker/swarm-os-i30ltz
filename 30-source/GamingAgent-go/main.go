@@ -53,6 +53,7 @@ func main() {
 	lucilleH := handlers.NewLucilleHandler(lucilleSvc, database)
 	mediaH := handlers.NewMediaHandler(mediaSvc)
 	priceAlertH := handlers.NewPriceAlertHandler(database)
+	healthH := handlers.NewHealthHandler(database)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
@@ -69,7 +70,7 @@ func main() {
 		AllowedHeaders: []string{"Content-Type", "X-Swarm-Auth", "Authorization"},
 	}).Handler)
 
-	r.Get("/health", handlers.Health)
+	r.Get("/health", healthH.Health)
 
 	r.Route("/api", func(r chi.Router) {
 		// Read-only game-catalog data — no API-key cost beyond the shared 12h

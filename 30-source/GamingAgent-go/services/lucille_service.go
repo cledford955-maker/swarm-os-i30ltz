@@ -126,6 +126,12 @@ There are no tools to call. Do not use snake_case field names or wrap this objec
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		errBody := make([]byte, 512)
+		n, _ := resp.Body.Read(errBody)
+		return &models.LucilleEvalResult{Error: fmt.Sprintf("chat API HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody[:n])))}, nil
+	}
+
 	var raw struct {
 		Choices []struct {
 			Message struct{ Content string } `json:"message"`
@@ -365,6 +371,12 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		errBody := make([]byte, 512)
+		n, _ := resp.Body.Read(errBody)
+		return "", fmt.Errorf("chat API HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody[:n])))
+	}
+
 	if !stream {
 		var raw struct {
 			Choices []struct {
@@ -372,7 +384,7 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 			} `json:"choices"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || len(raw.Choices) == 0 {
-			return "", fmt.Errorf("nemotron response parse failed")
+			return "", fmt.Errorf("chat model response parse failed")
 		}
 		return raw.Choices[0].Message.Content, nil
 	}
