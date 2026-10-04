@@ -16,7 +16,7 @@ This applies to all operating systems, not just SWARM. It supersedes the older
 - Boltz must be the mounted ext4 filesystem UUID
   `689e6547-b439-4e7f-93c9-a6dcfabed46b`. Never write into the empty mountpoint or
   redirect an archive onto the project/system disk when Boltz is unavailable.
-- Ventoy must be mounted at `/mnt/ventoy` with UUID `4E21-0000`. Missing or wrong
+- Ventoy must be mounted at `/mnt/ventoy` with UUID `5ABB-83DF`. Missing or wrong
   media aborts release operations before version stamping.
 - Use only `70-scripts/build_swarm_iso.sh` as the normal user. It creates one
   in-progress ISO directly in Ventoy `.incoming/`, publishes it on the same

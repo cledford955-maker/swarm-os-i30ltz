@@ -53,7 +53,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-[ -n "$ISO_PATH" ] || ISO_PATH="$(python "$LUCY/70-scripts/swarm_iso_manager.py" latest)"
+[ -n "$ISO_PATH" ] || ISO_PATH="$(python3 "$LUCY/70-scripts/swarm_iso_manager.py" latest)"
 [ -f "$ISO_PATH" ] || { bad "ISO not found: $ISO_PATH"; exit 2; }
 
 command -v qemu-system-x86_64 >/dev/null 2>&1 || { bad "qemu-system-x86_64 not installed (pacman -S qemu-full)"; exit 2; }

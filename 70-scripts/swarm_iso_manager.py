@@ -46,7 +46,7 @@ def all_isos(root):
 
 def require_store():
     mount = json.loads(subprocess.check_output(['findmnt','--json','--mountpoint',str(MOUNT),'-o','TARGET,UUID,FSTYPE'],text=True))['filesystems'][0]
-    if mount['uuid'].upper() != '4E21-0000' or mount['fstype'] != 'exfat':
+    if mount['uuid'].upper() != '5ABB-83DF' or mount['fstype'] != 'exfat':
         raise RuntimeError('Expected Ventoy data partition is not mounted at /mnt/ventoy.')
     if STORE.resolve() != STORE:
         raise RuntimeError('ISO directory must not redirect through a symlink.')

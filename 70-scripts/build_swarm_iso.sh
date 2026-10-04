@@ -50,7 +50,7 @@ WORK_DIR="$LUCY/swarm_os_build_work"
 RELEASE_DIR="/mnt/ventoy/ISO/SWARM_OS"
 ISO_MANAGER="$LUCY/70-scripts/swarm_iso_manager.py"
 # Fail before bumping VERSION if the real Ventoy drive is absent.
-python "$ISO_MANAGER" check
+python3 "$ISO_MANAGER" check
 exec 8>"$LUCY/70-scripts/.swarm-build.lock"
 flock -n 8 || { echo 'A SWARM ISO build is already running.' >&2; exit 1; }
 # Fail before version stamping or privileged work if tty ownership or runtime
@@ -450,7 +450,12 @@ mkdir -p "$WORK_DIR"
 # Bake build identity into installed system
 printf 'SWARM_VERSION=%s\nSWARM_COMMIT=%s\nSWARM_DATE=%s\n' "$NEW_VER" "$COMMIT" "$(date +%Y%m%d)" > "$AIROOTFS/etc/swarm-release"
 
-sudo SYSTEMD_LOG_LEVEL=err mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
+if command -v mkarchiso &>/dev/null; then
+    sudo SYSTEMD_LOG_LEVEL=err mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
+else
+    echo -e "  ${YELLOW}mkarchiso not found (non-Arch host) — using Docker container${NC}"
+    sudo SYSTEMD_LOG_LEVEL=err "$LUCY/70-scripts/mkarchiso-docker.sh" -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
+fi
 
 # Step 6: only accept an ISO produced in this run's unique Ventoy directory.
 mapfile -d '' BUILT_IMAGES < <(find "$OUT_DIR" -maxdepth 1 -type f -name '*.iso' -print0)
@@ -468,7 +473,7 @@ else
  fi
 fi
 # exFAT uses latest.txt, not symlinks or duplicate multi-GB latest/fallback ISOs.
-sudo python "$ISO_MANAGER" publish "$TARGET_ISO" "swarm-os-v${NEW_VER}-${COMMIT}.iso" --result "$RESULT"
+sudo python3 "$ISO_MANAGER" publish "$TARGET_ISO" "swarm-os-v${NEW_VER}-${COMMIT}.iso" --result "$RESULT"
 echo "ISO stored ONLY in $RELEASE_DIR; ten newest ISOs total retained across Ventoy."
 if [[ $RESULT == failed ]]; then
  echo 'Boot gate failed. The previous latest pointer was not promoted to this build.' >&2
