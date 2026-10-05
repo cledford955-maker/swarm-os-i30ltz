@@ -155,7 +155,10 @@ func (d *PriceAlertDaemon) CheckOnce() error {
 	}
 
 	alerts := 0
-	for _, g := range library {
+	for i, g := range library {
+		if i > 0 {
+			time.Sleep(150 * time.Millisecond)
+		}
 		if triggered, ok := d.checkGame(g); ok {
 			alerts++
 			d.recordAlert(triggered)
