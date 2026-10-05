@@ -22,7 +22,7 @@ public class TTSService : ITTSService
 
         if (IsFishAudioVoice(voiceName))
         {
-            var apiKey = _configuration["FISH_AUDIO_KEY"] ?? Environment.GetEnvironmentVariable("FISH_AUDIO_KEY");
+            var apiKey = SwarmSecrets.Lookup(_configuration, "FISH_AUDIO_KEY", "FishAudioKey");
             if (!string.IsNullOrEmpty(apiKey))
             {
                 try

@@ -17,12 +17,18 @@ namespace LucyServer.Services.Llm;
 public class OpenRouterLlmProvider : ILlmProvider
 {
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey;
+    private readonly string? _apiKey;
 
     public OpenRouterLlmProvider(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
-        _apiKey = configuration["OpenRouterApiKey"] ?? throw new ArgumentNullException("OpenRouterApiKey is missing from configuration.");
+        // Accepts both spellings. The settings panel writes "OPENROUTER_API_KEY";
+        // this provider previously read only "OpenRouterApiKey", and .NET does not
+        // map one to the other (only "__" is special in env var names), so a
+        // key saved through the UI was invisible here. Missing is no longer
+        // fatal at construction either: throwing here took down provider
+        // enumeration for every model because ONE key was absent.
+        _apiKey = SwarmSecrets.Lookup(configuration, "OpenRouterApiKey", "OPENROUTER_API_KEY");
         _httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
     }
 
@@ -45,6 +51,7 @@ public class OpenRouterLlmProvider : ILlmProvider
         {
             Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
         };
+        RequireKey();
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
         // Optionally add headers for OpenRouter rankings
@@ -93,6 +100,19 @@ public class OpenRouterLlmProvider : ILlmProvider
                     }
                 }
             }
+        }
+    }
+
+    /// <summary>Fail with a clear, actionable message at call time
+    /// rather than at construction.</summary>
+    private void RequireKey()
+    {
+        if (string.IsNullOrWhiteSpace(_apiKey))
+        {
+            throw new InvalidOperationException(
+                "No OpenRouter API key. Add OPENROUTER_API_KEY=<key> to "
+                + SwarmSecrets.EnvFilePath
+                + " (or save it in Settings), then restart LucyServer.");
         }
     }
 }

@@ -6,6 +6,71 @@ using LucyServer.Services.Sandboxing;
 using LucyServer.Services.DeveloperPlatform;
 using LucyServer.Services.Ecosystem;
 
+// ── Secrets: load the one env file before anything reads configuration ──────
+// Added 2026-10-05. There is exactly one secrets file
+// (/mnt/Lucy/20-runtime/.env, override with SWARM_ENV_FILE) and this is the
+// only thing that loads it. It runs BEFORE the token check below, because
+// SWARM_AUTH_TOKEN lives in that file too — otherwise `dotnet run` outside
+// systemd would refuse to start even with the token correctly saved.
+// Values already exported by systemd or the shell are left alone.
+LucyServer.Services.SwarmSecrets.LoadIntoProcess();
+
+// Clear secret files left in the old build-output locations, and any stored
+// sudo password. Runs every startup so the cleanup needs no action.
+LucyServer.Services.SwarmSecrets.PurgeLegacySecretFiles();
+
+// ── SWARM auth token: fail closed before anything else starts ───────────────
+// Hardening applied 2026-10-05.
+//
+// The previous code read:
+//     Environment.GetEnvironmentVariable("SWARM_AUTH_TOKEN") ?? "swarm-token-2026"
+// so every copy of this source shipped a working credential for
+// /api/run_command and /api/terminal/ws — remote code execution for anyone who
+// could reach the port. That literal is published in this repository's history
+// and in 90-docs. There is deliberately no default now: an unset token is a
+// startup failure, not a silent fallback.
+const string RetiredSwarmToken = "swarm-token-2026";
+const int MinSwarmTokenLength = 16;
+
+var swarmAuthToken = Environment.GetEnvironmentVariable("SWARM_AUTH_TOKEN");
+
+if (string.IsNullOrWhiteSpace(swarmAuthToken))
+{
+    throw new InvalidOperationException(
+        "SWARM_AUTH_TOKEN is not set. LucyServer will not start without it: "
+        + "/api/run_command and /api/terminal/ws are remote-code-execution surface. "
+        + "Generate one with:  head -c 32 /dev/urandom | base64 | tr -d '/+=' | head -c 32");
+}
+
+if (string.Equals(swarmAuthToken, RetiredSwarmToken, StringComparison.Ordinal))
+{
+    throw new InvalidOperationException(
+        "SWARM_AUTH_TOKEN is still the retired default token. That value is public. "
+        + "Set a fresh random token.");
+}
+
+if (swarmAuthToken.Length < MinSwarmTokenLength)
+{
+    throw new InvalidOperationException(
+        $"SWARM_AUTH_TOKEN is {swarmAuthToken.Length} characters; "
+        + $"minimum is {MinSwarmTokenLength}.");
+}
+
+// Encoded once at startup so the per-request path does no token parsing.
+var swarmTokenBytes = System.Text.Encoding.UTF8.GetBytes(swarmAuthToken);
+
+// Constant-time comparison. The old middleware used `!=` on strings and
+// `.Contains()`; both short-circuit on first mismatch and leak timing, and
+// `.Contains()` additionally accepted ANY header value that merely embedded
+// the token rather than equalling it.
+static bool SwarmTokenMatches(string? presented, byte[] expected)
+{
+    if (string.IsNullOrEmpty(presented)) return false;
+    var presentedBytes = System.Text.Encoding.UTF8.GetBytes(presented);
+    return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+        presentedBytes, expected);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -65,6 +130,11 @@ builder.Services.AddSingleton<SecurityAndComplianceService>();
 
 var app = builder.Build();
 
+// Resolve the filesystem service now, so a misconfigured SWARM_PROJECT_ROOTS
+// fails at startup rather than on the first /api/fs call. Its constructor
+// logs the roots the file API is clamped to.
+_ = app.Services.GetRequiredService<IFileSystemService>();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -80,16 +150,39 @@ app.Use(async (context, next) =>
     var path = context.Request.Path.Value ?? "";
     if (path.StartsWith("/api/") && !path.StartsWith("/api/tts"))
     {
-        var authHeader = context.Request.Headers["X-Swarm-Auth"].ToString();
-        var bearerHeader = context.Request.Headers["Authorization"].ToString();
-        var expectedToken = Environment.GetEnvironmentVariable("SWARM_AUTH_TOKEN") ?? "swarm-token-2026";
-        var isLoopback = context.Connection.RemoteIpAddress != null && System.Net.IPAddress.IsLoopback(context.Connection.RemoteIpAddress);
+        var isLoopback = context.Connection.RemoteIpAddress != null
+            && System.Net.IPAddress.IsLoopback(context.Connection.RemoteIpAddress);
 
-        if (!isLoopback && authHeader != expectedToken && !bearerHeader.Contains(expectedToken))
+        // Loopback still bypasses the header so the local Flutter shell and the
+        // on-box web UI are unaffected.
+        if (!isLoopback)
         {
-            context.Response.StatusCode = 401;
-            await context.Response.WriteAsJsonAsync(new { error = "Unauthorized SWARM access. Missing or invalid X-Swarm-Auth header." });
-            return;
+            // X-Swarm-Auth carries the bare token. This is what
+            // 70-scripts/serve_project_to_companion_*.sh prints and what the
+            // companion's SwarmConnection sends — keep supporting it.
+            var presented = context.Request.Headers["X-Swarm-Auth"].ToString();
+
+            // Authorization must be an exact "Bearer <token>".
+            if (string.IsNullOrEmpty(presented))
+            {
+                var authorization = context.Request.Headers["Authorization"].ToString();
+                const string bearerPrefix = "Bearer ";
+                if (authorization.StartsWith(bearerPrefix, StringComparison.Ordinal))
+                {
+                    presented = authorization.Substring(bearerPrefix.Length).Trim();
+                }
+            }
+
+            if (!SwarmTokenMatches(presented, swarmTokenBytes))
+            {
+                context.Response.StatusCode = 401;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    error = "Unauthorized SWARM access. Send 'X-Swarm-Auth: <token>' "
+                          + "or 'Authorization: Bearer <token>'."
+                });
+                return;
+            }
         }
     }
     await next();
@@ -203,7 +296,9 @@ app.MapPost("/api/packages/uninstall", async (LucyServer.Models.UninstallPackage
 // File System & Code Endpoints
 app.MapGet("/api/fs", async (string? path, IFileSystemService fs) => 
 {
-    var res = await fs.ListDirectoryAsync(path ?? "/");
+    // Was `path ?? "/"`, which listed the filesystem root. An empty path now
+    // means "the service's first configured root".
+    var res = await fs.ListDirectoryAsync(path ?? "");
     return Results.Ok(res);
 });
 
@@ -215,7 +310,8 @@ app.MapPost("/api/fs/analyze", async (LucyServer.Models.FsAnalyzeRequest req, IF
 
 app.MapGet("/api/code/files", async (string? path, IFileSystemService fs) => 
 {
-    var res = await fs.ListCodeFilesAsync(path ?? "/");
+    // Was `path ?? "/"` — see /api/fs above.
+    var res = await fs.ListCodeFilesAsync(path ?? "");
     return Results.Ok(res);
 });
 

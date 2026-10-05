@@ -1,7 +1,6 @@
-// Components.kt — shared UI primitives  v1.0.0 · 2026-09-26
+// Components.kt — shared UI primitives with Sakura Cyberpunk theme  v2.0.0 · 2026
 package os.swarm.lucille.ui
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -18,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Dark frosted panel card */
+/** Glowing Sakura frosted panel card */
 @Composable
 fun SwarmCard(
     modifier: Modifier = Modifier,
@@ -27,9 +26,9 @@ fun SwarmCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(PanelFill)
-            .border(1.dp, SmokeDim.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .border(1.dp, SakuraPink.copy(alpha = 0.45f), RoundedCornerShape(16.dp))
             .padding(16.dp),
         content = content
     )
@@ -53,8 +52,8 @@ fun SectionLabel(text: String) {
     Text(
         text      = text.uppercase(),
         fontSize  = 10.sp,
-        color     = SmokeDim,
-        fontWeight = FontWeight.Medium,
+        color     = SakuraSoft,
+        fontWeight = FontWeight.Bold,
         letterSpacing = 1.5.sp,
         modifier  = Modifier.padding(bottom = 6.dp)
     )
@@ -62,12 +61,12 @@ fun SectionLabel(text: String) {
 
 /** Mono value chip */
 @Composable
-fun MonoChip(text: String, color: Color = Arc) {
+fun MonoChip(text: String, color: Color = SakuraGlow) {
     Box(
         Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(color.copy(alpha = 0.12f))
-            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+            .background(color.copy(alpha = 0.15f))
+            .border(1.dp, color.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = color)
@@ -79,7 +78,7 @@ fun MonoChip(text: String, color: Color = Arc) {
 fun LoadingPane(label: String = "Loading…") {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CircularProgressIndicator(color = Plasma, strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
+            CircularProgressIndicator(color = SakuraPink, strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
             Text(label, color = Smoke, fontSize = 13.sp)
         }
     }
@@ -94,11 +93,11 @@ fun ErrorPane(msg: String, onRetry: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(24.dp)
         ) {
-            Text("⚠", fontSize = 32.sp)
+            Text("🌸", fontSize = 32.sp)
             Text(msg, color = Smoke, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Button(
                 onClick = onRetry,
-                colors  = ButtonDefaults.buttonColors(containerColor = Plasma)
+                colors  = ButtonDefaults.buttonColors(containerColor = SakuraPink)
             ) { Text("Retry", color = Filament) }
         }
     }
@@ -110,9 +109,9 @@ fun PlasmaButton(label: String, modifier: Modifier = Modifier, onClick: () -> Un
     Button(
         onClick = onClick,
         modifier = modifier,
-        colors   = ButtonDefaults.buttonColors(containerColor = Plasma),
-        shape    = RoundedCornerShape(8.dp)
-    ) { Text(label, color = Filament, fontWeight = FontWeight.Medium) }
+        colors   = ButtonDefaults.buttonColors(containerColor = SakuraPink),
+        shape    = RoundedCornerShape(10.dp)
+    ) { Text(label, color = Filament, fontWeight = FontWeight.SemiBold) }
 }
 
 /** Gradient header bar */
@@ -122,12 +121,12 @@ fun GradientHeader(title: String, subtitle: String = "") {
         Modifier
             .fillMaxWidth()
             .background(
-                Brush.horizontalGradient(listOf(Plasma.copy(alpha = 0.18f), Color.Transparent))
+                Brush.horizontalGradient(listOf(SakuraPink.copy(alpha = 0.25f), Color.Transparent))
             )
             .border(
                 width = 1.dp,
-                brush = Brush.horizontalGradient(listOf(Plasma.copy(alpha = 0.5f), Color.Transparent)),
-                shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                brush = Brush.horizontalGradient(listOf(SakuraPink.copy(alpha = 0.6f), Color.Transparent)),
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             )
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
@@ -138,7 +137,7 @@ fun GradientHeader(title: String, subtitle: String = "") {
     }
 }
 
-/** Divider in SWARM style */
+/** Divider in SWARM Sakura style */
 @Composable
 fun SwarmDivider() =
-    HorizontalDivider(color = SmokeDim.copy(alpha = 0.3f), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+    HorizontalDivider(color = SakuraPink.copy(alpha = 0.25f), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))

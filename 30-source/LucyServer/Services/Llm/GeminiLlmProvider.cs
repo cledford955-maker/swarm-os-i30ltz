@@ -16,12 +16,18 @@ namespace LucyServer.Services.Llm;
 public class GeminiLlmProvider : ILlmProvider
 {
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey;
+    private readonly string? _apiKey;
 
     public GeminiLlmProvider(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
-        _apiKey = configuration["GeminiApiKey"] ?? throw new ArgumentNullException("GeminiApiKey is missing from configuration.");
+        // Accepts both spellings. The settings panel writes "GEMINI_API_KEY";
+        // this provider previously read only "GeminiApiKey", and .NET does not
+        // map one to the other (only "__" is special in env var names), so a
+        // key saved through the UI was invisible here. Missing is no longer
+        // fatal at construction either: throwing here took down provider
+        // enumeration for every model because ONE key was absent.
+        _apiKey = SwarmSecrets.Lookup(configuration, "GeminiApiKey", "GEMINI_API_KEY");
         _httpClient.BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/models/");
     }
 
@@ -54,6 +60,7 @@ public class GeminiLlmProvider : ILlmProvider
             contents = geminiContents
         };
 
+        RequireKey();
         var requestUri = $"{actualModelId}:streamGenerateContent?key={_apiKey}";
         var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
         {
@@ -94,6 +101,19 @@ public class GeminiLlmProvider : ILlmProvider
                     }
                 }
             }
+        }
+    }
+
+    /// <summary>Fail with a clear, actionable message at call time
+    /// rather than at construction.</summary>
+    private void RequireKey()
+    {
+        if (string.IsNullOrWhiteSpace(_apiKey))
+        {
+            throw new InvalidOperationException(
+                "No Gemini API key. Add GEMINI_API_KEY=<key> to "
+                + SwarmSecrets.EnvFilePath
+                + " (or save it in Settings), then restart LucyServer.");
         }
     }
 }

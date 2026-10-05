@@ -1,4 +1,4 @@
-// Theme.kt — SWARM OS blue × black design tokens  v1.0.0 · 2026-09-26
+// Theme.kt — Sakura Cyberpunk / Lucille Signature design tokens  v2.0.0 · 2026
 package os.swarm.lucille.ui
 
 import androidx.compose.material3.*
@@ -9,26 +9,30 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// — Palette —
-val Void      = Color(0xFF000814)
-val Void2     = Color(0xFF010D24)
-val Plasma    = Color(0xFF1A7FFF)
-val PlasmaHi  = Color(0xFF60B8FF)
-val Arc       = Color(0xFF00D4FF)
-val Filament  = Color(0xFFDDF0FF)
-val Smoke     = Color(0xFF7AABCC)
-val SmokeDim  = Color(0xFF3D6080)
-val PanelFill = Color(0xD5000814)   // 84 % opacity
-val Ok        = Color(0xFF32D998)
-val Warn      = Color(0xFFFFc04D)
-val Crit      = Color(0xFFFF3355)
+// — Palette (Sakura Cyberpunk / Lucille Signature) —
+val SakuraPink  = Color(0xFFFF2E88)
+val SakuraGlow  = Color(0xFFFF66B2)
+val SakuraSoft  = Color(0xFFFF99CC)
+val VoidDeep    = Color(0xFF0F050C)
+val Void2       = Color(0xFF1A0A17)
+val VoidPanel   = Color(0xE01F0A1B)
+val Plasma      = Color(0xFFFF2E88)
+val PlasmaHi    = Color(0xFFFF66B2)
+val Arc         = Color(0xFFFF99CC)
+val Filament    = Color(0xFFFFE6F2)
+val Smoke       = Color(0xFFD9A3C7)
+val SmokeDim    = Color(0xFF804D70)
+val PanelFill   = Color(0xE01F0A1B)   // 88 % opacity cyberpunk panel
+val Ok          = Color(0xFF32D998)
+val Warn        = Color(0xFFFFC04D)
+val Crit        = Color(0xFFFF3355)
 
 val darkScheme = darkColorScheme(
-    primary          = Plasma,
+    primary          = SakuraPink,
     onPrimary        = Filament,
-    secondary        = Arc,
-    onSecondary      = Void,
-    background       = Void,
+    secondary        = SakuraGlow,
+    onSecondary      = VoidDeep,
+    background       = VoidDeep,
     onBackground     = Filament,
     surface          = Void2,
     onSurface        = Filament,

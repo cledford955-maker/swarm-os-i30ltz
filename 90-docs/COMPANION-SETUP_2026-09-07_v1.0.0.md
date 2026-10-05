@@ -33,9 +33,19 @@ phone and push back. Receive-and-send means a phone can overwrite your source.
 
 ## 2. Start the server for the terminal screens
 
-    ./00-CURRENT/serve-to-companion.sh
+    /mnt/Lucy/70-scripts/serve_project_to_companion_v1.0.0_2026-09-07.sh
 
-Prints host, port and the auth token. Then in the Companion:
+Prints host, port and the auth token.
+
+> Corrected 2026-10-05: this previously read
+> `./00-CURRENT/serve-to-companion.sh`, which does not exist —
+> `00-CURRENT/` holds only symlinks. The token itself is generated on
+> first run and kept at `~/Documents/.swarm_auth_token` (mode 600).
+> The script exports it as `SWARM_AUTH_TOKEN`.
+> Note the Lucille Assistant (Go, port 8403) is a *different* service and
+> reads `SWARM_AUTH_TOKEN` from `/mnt/Lucy/20-runtime/.env` instead.
+
+Then in the Companion:
 Remote PC -> expand the node config -> set the IP, paste the token, SAVE.
 
 ## Companion changes made 2026-09-07

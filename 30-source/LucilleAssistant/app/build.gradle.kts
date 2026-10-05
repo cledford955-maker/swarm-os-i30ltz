@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.Lucille.app"
+    namespace = "com.lucille.app"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.Lucille.app"
+        applicationId = "com.lucille.app"
         minSdk = 24
         targetSdk = 37
         versionCode = 1

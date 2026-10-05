@@ -17,19 +17,28 @@ public class SettingsService : ISettingsService
 {
     private static string _currentVoice = "en-GB-SoniaNeural";
 
-    private static readonly string BaseDir = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory)
-        ?? Directory.GetCurrentDirectory();
-
-    private string LoginPassFile => Path.Combine(BaseDir, "AI", "login_password.txt");
-    private string SudoPassFile => Path.Combine(BaseDir, "AI", "sudo_password.txt");
-    private string EnvFile => Path.Combine(BaseDir, ".env");
-
-    private static readonly string[] AllowedKeys =
+    // Hardened 2026-10-05. These three paths were all
+    //     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ...)
+    // which is the directory the BINARY runs from — bin/Debug/net10.0 under
+    // `dotnet run`, publish/ after a publish, /mnt/Lucy/LucyServer for the
+    // deployed copy. Secrets therefore landed inside the source tree, where
+    // git, Syncthing, tarballs and ISO builds all picked them up, and the
+    // location changed with the launch method, so they kept reappearing
+    // somewhere new. All three now resolve to one fixed place outside the
+    // source tree.
+    private static string SecretsDir
     {
-        "OPENROUTER_API_KEY", "NVIDIA_API_KEY", "GEMINI_API_KEY",
-        "CLAUDE_API_KEY", "ANTHROPIC_API_KEY", "GROQ_API_KEY",
-        "STEAM_API_KEY", "STEAM_ID64"
-    };
+        get
+        {
+            var dir = Path.GetDirectoryName(SwarmSecrets.EnvFilePath);
+            return string.IsNullOrEmpty(dir) ? "/mnt/Lucy/20-runtime" : dir;
+        }
+    }
+
+    private string LoginPassFile => Path.Combine(SecretsDir, "secrets", "login_password.txt");
+    private string SudoPassFile  => Path.Combine(SecretsDir, "secrets", "sudo_password.txt");
+
+    private static readonly string[] AllowedKeys = SwarmSecrets.KnownKeys;
 
     public string GetVoice() => _currentVoice;
 
@@ -53,83 +62,78 @@ public class SettingsService : ISettingsService
         }
     }
 
-    public async Task<(bool Success, string Message)> SetSudoPasswordAsync(string? newPassword)
+    /// <summary>
+    /// The sudo password is NO LONGER STORED. Changed 2026-10-05.
+    ///
+    /// It used to be written in plaintext to
+    /// bin/Debug/net10.0/AI/sudo_password.txt — inside the build output,
+    /// inside the synced source tree. Checking the codebase showed nothing
+    /// ever read it back: it was written once and never used, so storing it
+    /// bought nothing and risked root on the machine.
+    ///
+    /// It cannot usefully be encrypted either. `sudo -S` needs the literal
+    /// password, so a hash cannot be replayed, and encryption needs a key
+    /// the server can read unattended — which then sits on the same disk as
+    /// the ciphertext. That is obfuscation, not protection.
+    ///
+    /// The endpoint is kept so the existing API and UI do not break. It now
+    /// deletes any stored copy and reports that nothing is kept. If a future
+    /// feature genuinely needs root, give the service account a sudoers rule
+    /// scoped to those exact commands instead of storing a password.
+    /// </summary>
+    public Task<(bool Success, string Message)> SetSudoPasswordAsync(string? newPassword)
     {
-        if (string.IsNullOrEmpty(newPassword))
-        {
-            try
-            {
-                if (File.Exists(SudoPassFile)) File.Delete(SudoPassFile);
-                return (true, "Sudo password cleared successfully");
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Failed to clear sudo password: {ex.Message}");
-            }
-        }
-
-        // Validate the password actually works
+        var removed = false;
         try
         {
-            var psi = new ProcessStartInfo("sudo")
+            if (File.Exists(SudoPassFile))
             {
-                ArgumentList = { "-S", "-k", "true" },
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            };
-
-            using var proc = new Process { StartInfo = psi };
-            proc.Start();
-            await proc.StandardInput.WriteLineAsync(newPassword);
-            proc.StandardInput.Close();
-            await proc.WaitForExitAsync();
-
-            if (proc.ExitCode != 0)
-                return (false, "Invalid sudo password: authentication failed");
-
-            Directory.CreateDirectory(Path.GetDirectoryName(SudoPassFile)!);
-            await File.WriteAllTextAsync(SudoPassFile, newPassword);
-            return (true, "Sudo password updated successfully");
+                File.Delete(SudoPassFile);
+                removed = true;
+            }
         }
         catch (Exception ex)
         {
-            return (false, $"Failed to save sudo password: {ex.Message}");
+            return Task.FromResult((false,
+                $"Could not remove the old stored sudo password: {ex.Message}"));
         }
+
+        return Task.FromResult((true,
+            removed
+                ? "Your sudo password is no longer stored, and the old saved copy has been deleted."
+                : "Nothing to do — your sudo password is not stored anywhere."));
     }
 
-    public async Task<(bool Success, string Message)> SaveApiKeysAsync(Dictionary<string, string> keys)
+    public Task<(bool Success, string Message)> SaveApiKeysAsync(Dictionary<string, string> keys)
     {
         try
         {
-            // Load existing .env entries
-            var envLines = File.Exists(EnvFile)
-                ? (await File.ReadAllLinesAsync(EnvFile)).ToList()
-                : new List<string>();
+            var accepted = new Dictionary<string, string>();
 
             foreach (var kvp in keys)
             {
                 if (!AllowedKeys.Contains(kvp.Key)) continue;
 
-                // Update env var in process
+                // Make it live for this process immediately, so the key works
+                // without a restart.
                 Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
-
-                // Update or add in file
-                var idx = envLines.FindIndex(l => l.StartsWith(kvp.Key + "="));
-                var line = $"{kvp.Key}={kvp.Value}";
-                if (idx >= 0)
-                    envLines[idx] = line;
-                else
-                    envLines.Add(line);
+                accepted[kvp.Key] = kvp.Value;
             }
 
-            await File.WriteAllLinesAsync(EnvFile, envLines);
-            return (true, "API keys saved and loaded successfully.");
+            if (accepted.Count == 0)
+            {
+                return Task.FromResult((false,
+                    "No recognised key names. Allowed: " + string.Join(", ", AllowedKeys)));
+            }
+
+            SwarmSecrets.Save(accepted);
+
+            return Task.FromResult((true,
+                $"Saved {accepted.Count} key(s) to {SwarmSecrets.EnvFilePath}"));
         }
         catch (Exception ex)
         {
-            return (false, ex.Message);
+            return Task.FromResult((false, ex.Message));
         }
     }
 

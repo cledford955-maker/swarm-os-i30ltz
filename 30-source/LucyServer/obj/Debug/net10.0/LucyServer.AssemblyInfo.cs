@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LucyServer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3ece0be19c43ad0ec62aacc1f7558c7fc01a3023")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+401812bec58e28f89b98a519f76ad45ab638e513")]
 [assembly: System.Reflection.AssemblyProductAttribute("LucyServer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LucyServer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
