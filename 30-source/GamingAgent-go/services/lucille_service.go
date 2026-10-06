@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -125,6 +126,11 @@ There are no tools to call. Do not use snake_case field names or wrap this objec
 		return &models.LucilleEvalResult{Error: err.Error()}, nil
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return &models.LucilleEvalResult{Error: fmt.Sprintf("chat provider returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))}, nil
+	}
 
 	var raw struct {
 		Choices []struct {
@@ -365,6 +371,11 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return "", fmt.Errorf("chat provider returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+	}
+
 	if !stream {
 		var raw struct {
 			Choices []struct {
@@ -372,7 +383,7 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 			} `json:"choices"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || len(raw.Choices) == 0 {
-			return "", fmt.Errorf("nemotron response parse failed")
+			return "", fmt.Errorf("chat provider response parse failed")
 		}
 		return raw.Choices[0].Message.Content, nil
 	}
