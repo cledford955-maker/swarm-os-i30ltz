@@ -4,7 +4,7 @@ The existing user timer `swarm-lucy-sync.timer` runs every ten minutes while thi
 computer is running and `/mnt/Lucy` is available. No AI subscription is used.
 
 - `lucille-companion` ↔ `cledford955-maker/i30ltz-lucille-assistant` main
-- `30-source/i30ltz-recovery(seperate-related-project)` ↔ `cledford955-maker/i30ltz-recovery` main
+- (Recovery OS projects moved to `/mnt/recoverybuild` on 2026-10-06 and sync from there on their own.)
 
 The wrapper also preserves its existing SWARM main and companion destinations.
 A failed destination does not skip the remaining projects. SWARM main currently

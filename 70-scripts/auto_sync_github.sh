@@ -3,8 +3,6 @@
 # devices sees recent work. Runs on a timer (swarm-lucy-sync.timer), no-ops
 # when there's nothing to commit.
 #   origin                  -> cledford955-maker/swarm-os-i30ltz (whole project)
-#   i30ltz-recovery         -> cledford955-maker/i30ltz-recovery (30-source/i30ltz-recovery(seperate-related-project)/ subtree)
-#   i30ltz-swarm-companion  -> cledford955-maker/i30ltz-swarm-companion (30-source/android_companion/swarm_os-companion/ subtree)
 #   i30ltz-lucille-assistant -> cledford955-maker/i30ltz-lucille-assistant (lucille-companion/ subtree)
 set -euo pipefail
 
@@ -76,9 +74,8 @@ sync_subtree() {
     status=1
   fi
 }
-sync_subtree "30-source/i30ltz-recovery(seperate-related-project)" i30ltz-recovery
-sync_subtree "30-source/android_companion/swarm_os-companion" i30ltz-swarm-companion
 sync_subtree "lucille-companion" i30ltz-lucille-assistant
+# Recovery OS projects moved to /mnt/recoverybuild (own git repos, 2026-10-06); not synced here.
 # Always retry origin: an earlier failed push can leave a clean but unpushed tree.
 if git push origin main; then
   echo 'SYNC OK: swarm-os-i30ltz'

@@ -1,6 +1,0 @@
-{
-  "name": "SWARM_OS Companion",
-  "description": "SWARM_OS Companion app powered by DR. Boltz AI. Features PC Sync, System Monitor, and Remote PC access.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

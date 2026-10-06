@@ -1,12 +1,10 @@
 # Project repositories and automatic sync
 
-All four repositories are private under `cledford955-maker`.
+All repositories are private under `cledford955-maker`.
 
 | Project | GitHub repository | Source on LUCILLE |
 | --- | --- | --- |
 | SWARM OS | `swarm-os-i30ltz` | `/mnt/Lucy` |
-| I30LTZ Recovery OS | `i30ltz-recovery` | `/mnt/Lucy/30-source/i30ltz-recovery(seperate-related-project)` |
-| I30LTZ Companion | `i30ltz-swarm-companion` | `/mnt/Lucy/30-source/android_companion/swarm_os-companion` |
 | Lucille Assistant | `i30ltz-lucille-assistant` | `/mnt/Lucy/lucille-companion` |
 
 `swarm-lucy-sync.timer` runs `70-scripts/auto_sync_github.sh` every ten minutes
@@ -43,3 +41,5 @@ installer archives in unpublished history. Those archives were removed only
 from unpublished commits, with the prior history preserved at
 `refs/checkpoints/pre-autosync-history-repair-20260924`; the final source tree
 was identical. GitHub main advanced normally without a force push.
+
+**Moved 2026-10-06:** all Recovery OS projects now live on `/mnt/recoverybuild` with their own git repos and are no longer synced from `/mnt/Lucy`: `i30ltz-recovery` → `/mnt/recoverybuild/30-source/i30ltz-recovery`, `i30ltz-swarm-companion` → `/mnt/recoverybuild/I30LTZ-Recover`, build tree → `i30ltz-recovery-os`.

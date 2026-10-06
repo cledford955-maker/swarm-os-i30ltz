@@ -99,3 +99,7 @@ grub_themes/backups/
 
 # Local diagnostic archives may contain identifying system details.
 10-releases/diagnostics/
+
+# Recovery OS lives on /mnt/recoverybuild (own repos)
+30-source/android_companion/
+30-source/i30ltz-recovery*/
