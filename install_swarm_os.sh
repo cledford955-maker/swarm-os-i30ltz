@@ -522,6 +522,15 @@ grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=SWARM
 cat > /etc/grub.d/40_custom <<'CUSTOMEOF'
 #!/bin/sh
 exec tail -n +3 \$0
+### SWARM-DEBIAN-CHAINLOAD-BEGIN ###
+menuentry "Debian GNU/Linux" --class debian --class gnu-linux --class os {
+  insmod part_gpt
+  insmod fat
+  insmod chain
+  search --no-floppy --fs-uuid --set=root 362A-E48F
+  chainloader /EFI/debian/shimx64.efi
+}
+### SWARM-DEBIAN-CHAINLOAD-END ###
 menuentry "CachyOS (chainload)" --class cachyos --class gnu-linux --class os {
   search --no-floppy --fs-uuid --set=root A367-87E3
   chainloader /EFI/cachyos/grubx64.efi
