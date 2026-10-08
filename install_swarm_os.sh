@@ -531,24 +531,6 @@ menuentry "Debian GNU/Linux" --class debian --class gnu-linux --class os {
   chainloader /EFI/debian/shimx64.efi
 }
 ### SWARM-DEBIAN-CHAINLOAD-END ###
-menuentry "CachyOS (chainload)" --class cachyos --class gnu-linux --class os {
-  search --no-floppy --fs-uuid --set=root A367-87E3
-  chainloader /EFI/cachyos/grubx64.efi
-}
-    menuentry "EndeavourOS" --class endeavouros {
-        insmod btrfs
-        search --no-floppy --fs-uuid --set=other_os 0ac123f1-bbd1-4ea6-8fdd-930bd0d45e18
-        configfile (\$other_os)/@/boot/grub/grub.cfg
-    }
-    menuentry "Ventoy" --class ventoy {
-        insmod fat
-        insmod chain
-        search --no-floppy --fs-uuid --set=ventoy_efi E039-AD96
-        chainloader (\$ventoy_efi)/EFI/BOOT/BOOTX64.EFI
-    }
-menuentry "UEFI Firmware Settings" --class firmware {
-    fwsetup
-}
 menuentry "Reboot" --class reboot {
     reboot
 }
@@ -560,9 +542,21 @@ chmod +x /etc/grub.d/40_custom
 
 echo 'GRUB_FONT="/boot/grub/themes/swarm_os/menu.pf2"' >> /etc/default/grub
 
+# Menu says "SWARM OS", not "Arch Linux". 10_linux builds the title as
+# "<GRUB_DISTRIBUTOR> Linux", so the suffix is dropped too; the first word also
+# picks the theme icon class (swarm). A grub package upgrade can restore the
+# stock 10_linux (title then reads "SWARM OS Linux"): re-run
+# 70-scripts/tidy_swarm_grub_menu.sh.
+sed -i 's|^GRUB_DISTRIBUTOR=.*|GRUB_DISTRIBUTOR="SWARM OS"|' /etc/default/grub
+grep -q '^GRUB_DISTRIBUTOR=' /etc/default/grub || echo 'GRUB_DISTRIBUTOR="SWARM OS"' >> /etc/default/grub
+sed -i 's|OS="\${GRUB_DISTRIBUTOR} Linux"|OS="\${GRUB_DISTRIBUTOR}"|' /etc/grub.d/10_linux
+
 # Install snap-pac & grub-btrfs for automated rollback snapshots
 pacman -S --noconfirm --needed snap-pac grub-btrfs inotify-tools btrfs-progs || true
 systemctl enable grub-btrfsd || true
+if [ -f /etc/default/grub-btrfs/config ]; then
+  sed -i 's|^#\?GRUB_BTRFS_SUBMENUNAME=.*|GRUB_BTRFS_SUBMENUNAME="SWARM OS snapshots"|' /etc/default/grub-btrfs/config
+fi
 
 # Patch GRUB default with direct root UUID, theme, and HD resolution
 sed -i 's|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX="root=UUID='"${ROOT_UUID}"' rootflags=subvol=@ rw quiet loglevel=3 apparmor=1 security=apparmor"|' /etc/default/grub || \

@@ -180,7 +180,11 @@ func TestCareEndpoints(t *testing.T) {
 	}
 
 	// Test POST /api/care/sleep
-	sleepBody := []byte(`{"bed": "2026-10-06T23:30:00Z", "wake": "2026-10-07T07:30:00Z"}`)
+	now := time.Now()
+	sleepBody, _ := json.Marshal(map[string]any{
+		"bed":  now.Add(-8 * time.Hour).Format(time.RFC3339),
+		"wake": now.Format(time.RFC3339),
+	})
 	req = httptest.NewRequest("POST", "/api/care/sleep", bytes.NewReader(sleepBody))
 	rr = httptest.NewRecorder()
 	app.handleCareSleep(rr, req)
@@ -315,5 +319,41 @@ func TestHeadlineGeneration(t *testing.T) {
 	}
 	if !strings.Contains(headline, "swarmbuild has 5 uncommitted changes.") {
 		t.Errorf("expected headline to mention git changes, got: %s", headline)
+	}
+}
+
+func TestChatEndpoint(t *testing.T) {
+	app, tmpDir := setupTestApp(t)
+	defer os.RemoveAll(tmpDir)
+
+	// Bad request (empty message)
+	req := httptest.NewRequest("POST", "/api/chat", bytes.NewReader([]byte(`{"message": ""}`)))
+	rr := httptest.NewRecorder()
+	app.handleChat(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for empty message, got %d", rr.Code)
+	}
+
+	// Valid chat request (will use fallback when API keys are not provided in test)
+	chatBody := []byte(`{"message": "Hello Lucille, I need a drink of water"}`)
+	req = httptest.NewRequest("POST", "/api/chat", bytes.NewReader(chatBody))
+	rr = httptest.NewRecorder()
+	app.handleChat(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var chatRes ChatResponse
+	if err := json.Unmarshal(rr.Body.Bytes(), &chatRes); err != nil {
+		t.Fatalf("failed to decode chat response: %v", err)
+	}
+	if !chatRes.OK {
+		t.Fatalf("chat response ok is false")
+	}
+	if chatRes.Text == "" {
+		t.Fatalf("chat response text is empty")
+	}
+	if !strings.Contains(chatRes.Text, "water") {
+		t.Logf("got reply: %s", chatRes.Text)
 	}
 }

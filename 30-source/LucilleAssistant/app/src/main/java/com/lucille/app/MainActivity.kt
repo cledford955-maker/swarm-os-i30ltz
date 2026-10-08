@@ -1,9 +1,13 @@
 package com.lucille.app
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
@@ -40,6 +44,16 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlin.random.Random
+import android.media.MediaPlayer
+import android.util.Base64
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 // ─── Seductive Companion Persona & Theme Palettes ────────────────────────────
 data class DashboardPalette(
@@ -84,13 +98,18 @@ val NightMoonPalette = DashboardPalette(
     isNight = true
 )
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme(darkTheme = true) {
-                ExactLucilleDashboardApp()
+                var isUnlocked by rememberSaveable { mutableStateOf(false) }
+                if (isUnlocked) {
+                    ExactLucilleDashboardApp()
+                } else {
+                    LucilleAuthGateScreen(onUnlock = { isUnlocked = true })
+                }
             }
         }
     }
@@ -99,6 +118,9 @@ class MainActivity : ComponentActivity() {
 @PreviewScreenSizes
 @Composable
 fun ExactLucilleDashboardApp() {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     // Auto-detect night time based on timezone / device clock (Night: 7 PM to 6 AM)
     val defaultIsNight = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -106,6 +128,9 @@ fun ExactLucilleDashboardApp() {
     }
 
     var isNightMode by rememberSaveable { mutableStateOf(defaultIsNight) }
+    var voiceEnabled by rememberSaveable { mutableStateOf(true) }
+    var serverHost by rememberSaveable { mutableStateOf("http://127.0.0.1:8403") }
+    var isThinking by remember { mutableStateOf(false) }
     val palette = if (isNightMode) NightMoonPalette else DayDashboardPalette
     var currentTab by rememberSaveable { mutableStateOf("chat") }
     var showFullAvatarModal by remember { mutableStateOf(false) }
@@ -114,6 +139,19 @@ fun ExactLucilleDashboardApp() {
         mutableStateListOf(
             ChatMessage("Lucille", "Hey there 💕\nHow are you feeling today? I'm here to listen, help, or just keep you company. Whatever you need. 🌸", true)
         )
+    }
+
+    val onSendMessage: (String) -> Unit = { text ->
+        chatMessages.add(ChatMessage("You", text, false))
+        isThinking = true
+        coroutineScope.launch {
+            val (reply, audioB64) = queryLucilleChatApi(serverHost, text, voiceEnabled)
+            isThinking = false
+            chatMessages.add(ChatMessage("Lucille", reply, true))
+            if (voiceEnabled && !audioB64.isNullOrBlank()) {
+                playBase64Audio(context, audioB64)
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -210,17 +248,25 @@ fun ExactLucilleDashboardApp() {
                     "chat", "home" -> ChatDashboardPanel(
                         palette = palette,
                         messages = chatMessages,
-                        onSend = { text ->
-                            chatMessages.add(ChatMessage("You", text, false))
-                            chatMessages.add(ChatMessage("Lucille", getSeductiveLucilleResponse(text), true))
-                        }
+                        isThinking = isThinking,
+                        voiceEnabled = voiceEnabled,
+                        onToggleVoice = { voiceEnabled = !voiceEnabled },
+                        onSend = onSendMessage
                     )
                     "wellness" -> WellnessPanel(palette = palette)
                     "productivity" -> ProductivityPanel(palette = palette)
                     "system" -> SystemPanel(palette = palette)
                     "creativity" -> IdeasPanel(palette = palette)
                     "entertainment" -> EntertainmentPanel(palette = palette)
-                    "settings" -> SettingsPanel(palette = palette, isNightMode = isNightMode, onToggleNight = { isNightMode = it })
+                    "settings" -> SettingsPanel(
+                        palette = palette,
+                        isNightMode = isNightMode,
+                        onToggleNight = { isNightMode = it },
+                        voiceEnabled = voiceEnabled,
+                        onToggleVoice = { voiceEnabled = it },
+                        serverHost = serverHost,
+                        onServerHostChange = { serverHost = it }
+                    )
                 }
             }
 
@@ -414,6 +460,9 @@ fun LucilleAvatarModal(palette: DashboardPalette, onDismiss: () -> Unit) {
 fun ChatDashboardPanel(
     palette: DashboardPalette,
     messages: List<ChatMessage>,
+    isThinking: Boolean = false,
+    voiceEnabled: Boolean = true,
+    onToggleVoice: () -> Unit = {},
     onSend: (String) -> Unit
 ) {
     var textInput by remember { mutableStateOf("") }
@@ -429,14 +478,37 @@ fun ChatDashboardPanel(
             modifier = Modifier.fillMaxWidth(),
             border = BorderStroke(1.dp, palette.pink.copy(alpha = 0.4f))
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text("Hey there 💕", color = palette.glow, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    "How are you feeling today? I'm here to listen, help, or just keep you company. Whatever you need. 🌸",
-                    color = palette.text,
-                    fontSize = 12.sp
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Hey there 💕", color = palette.glow, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "How are you feeling today? I'm here to listen, help, or just keep you company. Whatever you need. 🌸",
+                        color = palette.text,
+                        fontSize = 12.sp
+                    )
+                }
+                Surface(
+                    onClick = onToggleVoice,
+                    color = if (voiceEnabled) palette.pink.copy(alpha = 0.25f) else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, if (voiceEnabled) palette.pink else palette.smoke.copy(alpha = 0.4f)),
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Text(
+                        if (voiceEnabled) "🔊 Voice ON" else "🔈 Muted",
+                        color = if (voiceEnabled) palette.glow else palette.smoke,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
 
@@ -454,6 +526,27 @@ fun ChatDashboardPanel(
                     Text(msg.sender, color = palette.smoke, fontSize = 9.sp)
                     Card(colors = CardDefaults.cardColors(containerColor = bg), shape = RoundedCornerShape(10.dp)) {
                         Text(msg.text, color = palette.text, fontSize = 12.sp, modifier = Modifier.padding(10.dp))
+                    }
+                }
+            }
+            if (isThinking) {
+                item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(12.dp),
+                            color = palette.pink,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "Lucille is answering... 🌸",
+                            color = palette.glow,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
@@ -901,7 +994,15 @@ fun EntertainmentPanel(palette: DashboardPalette) {
 }
 
 @Composable
-fun SettingsPanel(palette: DashboardPalette, isNightMode: Boolean, onToggleNight: (Boolean) -> Unit) {
+fun SettingsPanel(
+    palette: DashboardPalette,
+    isNightMode: Boolean,
+    onToggleNight: (Boolean) -> Unit,
+    voiceEnabled: Boolean,
+    onToggleVoice: (Boolean) -> Unit,
+    serverHost: String,
+    onServerHostChange: (String) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -909,20 +1010,67 @@ fun SettingsPanel(palette: DashboardPalette, isNightMode: Boolean, onToggleNight
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Card(colors = CardDefaults.cardColors(containerColor = palette.panel), shape = RoundedCornerShape(16.dp)) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text("⚙️ COMPANION CONFIGURATION", color = palette.pink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(12.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🌙 Night Moonlit Scene Mode", color = palette.text)
+                    Column {
+                        Text("🌙 Night Moonlit Scene Mode", color = palette.text, fontSize = 13.sp)
+                        Text("Midnight theme and blue stardust", color = palette.smoke, fontSize = 10.sp)
+                    }
                     Switch(
                         checked = isNightMode,
                         onCheckedChange = onToggleNight,
                         colors = SwitchDefaults.colors(checkedThumbColor = palette.pink)
                     )
+                }
+
+                HorizontalDivider(color = palette.pink.copy(alpha = 0.2f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("🔊 Lucille AI Voice (ElevenLabs)", color = palette.text, fontSize = 13.sp)
+                        Text("Speak responses aloud via ElevenLabs TTS", color = palette.smoke, fontSize = 10.sp)
+                    }
+                    Switch(
+                        checked = voiceEnabled,
+                        onCheckedChange = onToggleVoice,
+                        colors = SwitchDefaults.colors(checkedThumbColor = palette.pink)
+                    )
+                }
+
+                HorizontalDivider(color = palette.pink.copy(alpha = 0.2f))
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("📡 Lucille Assistant PC Server", color = palette.text, fontSize = 13.sp)
+                    Text("Loopback / USB reverse port (:8403)", color = palette.smoke, fontSize = 10.sp)
+                    OutlinedTextField(
+                        value = serverHost,
+                        onValueChange = onServerHostChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = palette.pink,
+                            unfocusedBorderColor = palette.smoke,
+                            focusedTextColor = palette.text,
+                            unfocusedTextColor = palette.text
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                }
+
+                HorizontalDivider(color = palette.pink.copy(alpha = 0.2f))
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("🔒 Security Gate", color = palette.text, fontSize = 13.sp)
+                    Text("Biometric Fingerprint & PIN protected (1307). No auth token required.", color = palette.glow, fontSize = 10.sp)
                 }
             }
         }
@@ -961,3 +1109,311 @@ fun getSeductiveLucilleResponse(input: String): String {
             "I love when you talk to me like that... Tell me more, I'm hanging on your every word, darling. Let's make this moment unforgettable. 🌸"
     }
 }
+
+// ─── ElevenLabs Audio Playback & Network Chat Engine ─────────────────────────
+fun playBase64Audio(context: android.content.Context, base64Audio: String) {
+    try {
+        val audioBytes = Base64.decode(base64Audio, Base64.DEFAULT)
+        val tempFile = File.createTempFile("lucille_voice_", ".mp3", context.cacheDir)
+        tempFile.writeBytes(audioBytes)
+        MediaPlayer().apply {
+            setDataSource(tempFile.absolutePath)
+            setOnCompletionListener { mp ->
+                try {
+                    mp.release()
+                    tempFile.delete()
+                } catch (_: Exception) {}
+            }
+            setOnErrorListener { mp, _, _ ->
+                try {
+                    mp.release()
+                    tempFile.delete()
+                } catch (_: Exception) {}
+                true
+            }
+            prepare()
+            start()
+        }
+    } catch (e: Exception) {
+        Log.e("LucilleAudio", "Failed to play voice", e)
+    }
+}
+
+suspend fun queryLucilleChatApi(
+    serverBase: String,
+    message: String,
+    voice: Boolean = true
+): Pair<String, String?> = withContext(Dispatchers.IO) {
+    val candidateBases = buildList {
+        if (serverBase.isNotBlank()) add(serverBase.trimEnd('/'))
+        add("http://127.0.0.1:8403")
+        add("http://100.82.1.21:8403")
+        add("http://10.0.2.2:8403")
+    }.distinct()
+
+    for (base in candidateBases) {
+        try {
+            val url = URL("$base/api/chat")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 3500
+            conn.readTimeout = 25000
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("X-Swarm-Auth", "1307")
+            conn.doOutput = true
+
+            val jsonReq = JSONObject().apply {
+                put("message", message)
+                put("voice", voice)
+            }
+
+            conn.outputStream.use { os ->
+                os.write(jsonReq.toString().toByteArray(Charsets.UTF_8))
+                os.flush()
+            }
+
+            if (conn.responseCode in 200..299) {
+                val respText = conn.inputStream.bufferedReader().use { it.readText() }
+                val jsonObj = JSONObject(respText)
+                val reply = jsonObj.optString("text", "")
+                val audioB64 = if (jsonObj.has("audio_b64") && !jsonObj.isNull("audio_b64")) jsonObj.getString("audio_b64") else null
+                if (reply.isNotBlank()) {
+                    return@withContext Pair(reply, audioB64)
+                }
+            }
+        } catch (_: Exception) {
+            // try next candidate
+        }
+    }
+    Pair(getSeductiveLucilleResponse(message), null)
+}
+
+// ─── Biometric & PIN Security Gate ───────────────────────────────────────────
+fun launchBiometricPrompt(
+    activity: FragmentActivity,
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit
+) {
+    val executor = ContextCompat.getMainExecutor(activity)
+    val callback = object : BiometricPrompt.AuthenticationCallback() {
+        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+            super.onAuthenticationSucceeded(result)
+            onSuccess()
+        }
+        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+            super.onAuthenticationError(errorCode, errString)
+            onError(errString.toString())
+        }
+        override fun onAuthenticationFailed() {
+            super.onAuthenticationFailed()
+        }
+    }
+
+    try {
+        val prompt = BiometricPrompt(activity, executor, callback)
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Unlock Lucille Assistant")
+            .setSubtitle("Use Fingerprint or Device PIN / Screen Lock")
+            .setAllowedAuthenticators(
+                BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
+            .build()
+        prompt.authenticate(promptInfo)
+    } catch (e: Exception) {
+        onError(e.message ?: "Biometrics unavailable")
+    }
+}
+
+@Composable
+fun LucilleAuthGateScreen(
+    onUnlock: () -> Unit
+) {
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    var enteredPin by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val defaultPin = "1307"
+
+    // Prompt user with fingerprint / system screen lock on initial launch
+    LaunchedEffect(Unit) {
+        activity?.let {
+            launchBiometricPrompt(
+                activity = it,
+                onSuccess = { onUnlock() },
+                onError = { err -> errorMessage = err }
+            )
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(R.drawable.lucille_background),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xE6080208))
+        )
+
+        FallingPetalsEffect(isNight = true)
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xD9180414)),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.5.dp, Color(0xFFFF2E88).copy(alpha = 0.6f)),
+                modifier = Modifier.fillMaxWidth(0.92f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, Color(0xFFFF2E88), CircleShape)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.lucilla_ai_goddess),
+                            contentDescription = "Lucille Avatar",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "LUCILLE 🌸",
+                            color = Color(0xFFFF2E88),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp
+                        )
+                        Text(
+                            "SWARM OS Companion • Secure Gate",
+                            color = Color(0xFFD9A3C7),
+                            fontSize = 11.sp
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            activity?.let {
+                                launchBiometricPrompt(
+                                    activity = it,
+                                    onSuccess = { onUnlock() },
+                                    onError = { err -> errorMessage = err }
+                                )
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF2E88)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Touch Fingerprint / Screen Lock", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Text("— OR ENTER 4-DIGIT PIN —", color = Color(0xFF997A8F), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        for (i in 0 until 4) {
+                            val filled = i < enteredPin.length
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(if (filled) Color(0xFFFF66B2) else Color(0x33FF66B2))
+                                    .border(1.dp, Color(0xFFFF2E88), CircleShape)
+                            )
+                        }
+                    }
+
+                    val keypad = listOf(
+                        listOf("1", "2", "3"),
+                        listOf("4", "5", "6"),
+                        listOf("7", "8", "9"),
+                        listOf("C", "0", "⌫")
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        keypad.forEach { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                row.forEach { key ->
+                                    Surface(
+                                        onClick = {
+                                            when (key) {
+                                                "C" -> enteredPin = ""
+                                                "⌫" -> if (enteredPin.isNotEmpty()) enteredPin = enteredPin.dropLast(1)
+                                                else -> {
+                                                    if (enteredPin.length < 4) {
+                                                        val newPin = enteredPin + key
+                                                        enteredPin = newPin
+                                                        if (newPin.length == 4) {
+                                                            if (newPin == defaultPin) {
+                                                                onUnlock()
+                                                            } else {
+                                                                errorMessage = "Incorrect PIN (Default: $defaultPin)"
+                                                                enteredPin = ""
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        color = Color(0x33250A1E),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, Color(0x4DFF2E88)),
+                                        modifier = Modifier.size(54.dp, 38.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(key, color = Color(0xFFFFE6F2), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (errorMessage != null) {
+                        Text(
+                            errorMessage!!,
+                            color = Color(0xFFFF3355),
+                            fontSize = 11.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            Text(
+                "Biometric & PIN Protected · No Token Needed",
+                color = Color(0xFF997A8F),
+                fontSize = 10.sp
+            )
+        }
+    }
+}
+

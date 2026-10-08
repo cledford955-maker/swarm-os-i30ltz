@@ -31,10 +31,13 @@ type Config struct {
 	NewsFeeds   []Feed    `json:"news_feeds"`
 	NewsBlock   []string  `json:"news_blocklist"`
 
-	Token     string `json:"-"`
-	SteamKey  string `json:"-"`
-	SteamID   string `json:"-"`
-	NvidiaKey string `json:"-"`
+	Token         string `json:"-"`
+	SteamKey      string `json:"-"`
+	SteamID       string `json:"-"`
+	NvidiaKey     string `json:"-"`
+	OpenRouterKey string `json:"-"`
+	ElevenKey     string `json:"-"`
+	ElevenVoiceID string `json:"-"`
 }
 
 type Feed struct {
@@ -46,7 +49,7 @@ type Feed struct {
 func defaultConfig() Config {
 	home, _ := os.UserHomeDir()
 	return Config{
-		Listen:  "127.0.0.1:8403",
+		Listen:  "127.0.0.1:8403;100.82.1.21:8403",
 		DataDir: filepath.Join(home, ".local/share/lucille-assistant"),
 		Repos:   []string{"/mnt/swarmbuild", "/mnt/Lucy"},
 		Mounts:  []string{"/", "/home", "/mnt/swarmbuild", "/mnt/Lucy", "/mnt/brains", "/mnt/ventoy", "/mnt/recoverybuild", "/mnt/boltz"},
@@ -106,5 +109,8 @@ func loadConfig() Config {
 	cfg.SteamKey = os.Getenv("STEAM_API_KEY")
 	cfg.SteamID = envOr("STEAM_ID64", os.Getenv("STEAM_ID"))
 	cfg.NvidiaKey = os.Getenv("NVIDIA_API_KEY")
+	cfg.OpenRouterKey = os.Getenv("OPENROUTER_API_KEY")
+	cfg.ElevenKey = os.Getenv("ELEVEN_API_KEY")
+	cfg.ElevenVoiceID = envOr("ELEVEN_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 	return cfg
 }

@@ -952,12 +952,34 @@ function addChatMsg(text,fromUser){
   log.appendChild(d);
   log.scrollTop=log.scrollHeight;
 }
-const LUCILLE_REPLIES=['On it! 💙','Got it, broken.','Sure thing.','You got it.','Working on that…','Noted! 🌸','I hear you.'];
+async function sendChatMessage(msg){
+  if(!msg || !msg.trim()) return;
+  addChatMsg(msg, true);
+  try {
+    const res = await api('/api/chat', { message: msg, voice: true });
+    if (res && res.text) {
+      addChatMsg(res.text, false);
+      if (res.audio_b64) {
+        try {
+          const audio = new Audio("data:audio/mp3;base64," + res.audio_b64);
+          audio.play().catch(e => console.log('Audio autoplay:', e));
+        } catch(ae) {
+          console.warn('Audio play error:', ae);
+        }
+      }
+      return;
+    }
+  } catch(e) {
+    console.warn('Chat API error, fallback to persona:', e);
+  }
+  const fallback = LUCILLE_REPLIES[Math.floor(Math.random()*LUCILLE_REPLIES.length)];
+  setTimeout(()=>addChatMsg(fallback, false), 400);
+}
+
 function sendChat(){
   const inp=$('#chat-in'); if(!inp||!inp.value.trim()) return;
   const msg=inp.value.trim(); inp.value='';
-  addChatMsg(msg,true);
-  setTimeout(()=>addChatMsg(LUCILLE_REPLIES[Math.floor(Math.random()*LUCILLE_REPLIES.length)],false),600);
+  sendChatMessage(msg);
 }
 
 function openSettings(){
@@ -997,7 +1019,7 @@ document.addEventListener('click', e=>{
   /* settings */
   if(t.id==='conn'||t.id==='conn-sidebar'||t.id==='conn-tb') return openSettings();
   /* quick-chip sends to chat */
-  if(t.dataset.q){ addChatMsg(t.dataset.q,true); setTimeout(()=>addChatMsg("I'm here, broken. What's on your mind? 💙",false),600); return; }
+  if(t.dataset.q){ sendChatMessage(t.dataset.q); return; }
   /* chat send button */
   if(t.id==='chat-send'||t.id==='chat-fab-tb') {
     if(t.id==='chat-fab-tb'){ const cp=$('#chatpanel'); if(cp) cp.classList.toggle('open'); return; }
