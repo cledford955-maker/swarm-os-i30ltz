@@ -113,7 +113,7 @@ class _GardenBackdropState extends State<GardenBackdrop> with SingleTickerProvid
           image: image,
           duration: const Duration(milliseconds: 1400),
           // Dim a little so the label and smoke stay readable over bright photos.
-          color: Colors.black.withValues(alpha: 0.30),
+          color: Colors.black.withValues(alpha: 0.12),
           colorBlendMode: BlendMode.darken,
         ),
       ),
@@ -123,8 +123,8 @@ class _GardenBackdropState extends State<GardenBackdrop> with SingleTickerProvid
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.55)],
-            stops: const [0.55, 1.0],
+            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.38)],
+            stops: const [0.60, 1.0],
           ),
         ),
       ),

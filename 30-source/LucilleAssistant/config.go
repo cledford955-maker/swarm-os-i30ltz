@@ -48,8 +48,8 @@ func defaultConfig() Config {
 	return Config{
 		Listen:  "127.0.0.1:8403",
 		DataDir: filepath.Join(home, ".local/share/lucille-assistant"),
-		Repos:   []string{"/mnt/Lucy"},
-		Mounts:  []string{"/", "/home", "/mnt/Lucy", "/mnt/brains", "/mnt/boltz"},
+		Repos:   []string{"/mnt/swarmbuild", "/mnt/Lucy"},
+		Mounts:  []string{"/", "/home", "/mnt/swarmbuild", "/mnt/Lucy", "/mnt/brains", "/mnt/ventoy", "/mnt/recoverybuild", "/mnt/boltz"},
 		Projects: []string{
 			"SWARM OS ISO", "LucyServer-go", "Companion app", "Lucille Assistant", "Recovery OS",
 		},

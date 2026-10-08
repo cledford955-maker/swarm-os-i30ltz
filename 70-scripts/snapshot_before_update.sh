@@ -32,7 +32,11 @@ fi
 
 # ── Config ────────────────────────────────────────────────────────────────────
 ROOT_DEV="/dev/nvme0n1p2"
-ROOT_UUID="366134c3-3986-4475-b9de-4707d582656e"
+# Read from the device: the filesystem UUID changes whenever the root is
+# reformatted (a hard-coded one went stale and made the GRUB rollback entry
+# point at a filesystem that no longer existed).
+ROOT_UUID="$(lsblk -no UUID "$ROOT_DEV" | head -n1)"
+[ -n "$ROOT_UUID" ] || { echo "Cannot read the UUID of $ROOT_DEV" >&2; exit 1; }
 BTRFS_MNT="/mnt/swarm_btrfs_top"    # scratch mount — Btrfs root, no subvol
 KEEP=5                               # how many snapshots to keep
 

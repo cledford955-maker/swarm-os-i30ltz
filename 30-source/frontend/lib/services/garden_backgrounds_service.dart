@@ -4,7 +4,7 @@
 // strain card. They come from the first of these folders that has an image:
 //   /opt/swarm_os/garden/backgrounds   (installed system, filled by the garden
 //                                       content updater)
-//   /mnt/Lucy/images/garden            (dev drive)
+//   /mnt/Lucy/images/weedbackgrounds   (dev drive)
 // When neither has one, the garden keeps its painted grow-room.
 //
 // A photo is only labelled with a strain when the file says so, never guessed:
@@ -44,7 +44,7 @@ class GardenBackgroundsService {
 
   static const List<String> defaultDirs = [
     '/opt/swarm_os/garden/backgrounds',
-    '/mnt/Lucy/images/garden',
+    '/mnt/Lucy/images/weedbackgrounds',
   ];
   static const int defaultIntervalSecs = 12;
   static const int minIntervalSecs = 4;
