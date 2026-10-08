@@ -23,10 +23,6 @@ for operation in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD rebase-merge rebase-app
     exit 1
   fi
 done
-if ! git diff --cached --quiet; then
-  echo 'SYNC PAUSED: existing staged changes require their owner to commit.' >&2
-  exit 1
-fi
 
 # Shared memory (2026-09-16): mirror /mnt/brains/swarm-memory into the repo so
 # it is versioned and pushed with everything else. Skipped quietly when the
@@ -58,12 +54,27 @@ if ! mirror_memory; then
   status=1
 fi
 
+MAX_MB=90
 if [ -n "$(git status --porcelain)" ]; then
-  if git add -A && git commit -m "auto-sync: $(date -Iseconds)" --quiet; then
-    echo 'Saved local changes.'
+  git add -A
+  big=""
+  while IFS= read -r -d '' f; do
+    if [ -f "$f" ]; then
+      sz=$(stat -c%s "$f" 2>/dev/null || echo 0)
+      if [ "$sz" -gt $((MAX_MB * 1024 * 1024)) ]; then
+        big="$big $f ($((sz / 1024 / 1024))MB)"
+      fi
+    fi
+  done < <(git diff --cached --name-only -z)
+  if [ -n "$big" ]; then
+    git reset -q; echo "ERROR: files over ${MAX_MB}MB, not committing:$big" >&2; status=1
   else
-    echo 'ERROR: Could not save local changes; syncing the last committed versions.' >&2
-    status=1
+    if git commit -m "auto-sync: $(date -Iseconds)" --quiet; then
+      echo 'Saved local changes.'
+    else
+      echo 'ERROR: Could not save local changes; syncing the last committed versions.' >&2
+      status=1
+    fi
   fi
 fi
 # Each destination has a verified last-common snapshot. The helper merges

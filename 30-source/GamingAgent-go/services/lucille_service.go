@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -125,6 +126,10 @@ There are no tools to call. Do not use snake_case field names or wrap this objec
 		return &models.LucilleEvalResult{Error: err.Error()}, nil
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return &models.LucilleEvalResult{Error: chatHTTPError(resp)}, nil
+	}
 
 	var raw struct {
 		Choices []struct {
@@ -365,6 +370,10 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("%s", chatHTTPError(resp))
+	}
+
 	if !stream {
 		var raw struct {
 			Choices []struct {
@@ -372,7 +381,7 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 			} `json:"choices"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || len(raw.Choices) == 0 {
-			return "", fmt.Errorf("nemotron response parse failed")
+			return "", fmt.Errorf("chat model response parse failed")
 		}
 		return raw.Choices[0].Message.Content, nil
 	}
@@ -401,6 +410,14 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 		}
 	}
 	return "", nil
+}
+
+// chatHTTPError turns a non-200 chat-provider reply into a readable message
+// (status plus the provider's own, length-capped text) so a dead key or rate
+// limit reads as "HTTP 401: ..." instead of a generic parse failure.
+func chatHTTPError(resp *http.Response) string {
+	b, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+	return fmt.Sprintf("chat provider returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
 }
 
 func topByPlaytime(games []models.SteamGame, n int) []models.SteamGame {

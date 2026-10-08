@@ -111,8 +111,14 @@ else
 fi
 
 UEFI=()
-OVMF_CODE="/usr/share/edk2-ovmf/x64/OVMF_CODE.4m.fd"
-OVMF_VARS_SRC="/usr/share/edk2-ovmf/x64/OVMF_VARS.4m.fd"
+# Arch (edk2-ovmf) and Debian/Ubuntu (ovmf) install the firmware in different places.
+OVMF_CODE=""; OVMF_VARS_SRC=""
+for pair in "/usr/share/edk2-ovmf/x64/OVMF_CODE.4m.fd:/usr/share/edk2-ovmf/x64/OVMF_VARS.4m.fd" \
+            "/usr/share/OVMF/OVMF_CODE_4M.fd:/usr/share/OVMF/OVMF_VARS_4M.fd"; do
+    if [ -f "${pair%%:*}" ] && [ -f "${pair##*:}" ]; then
+        OVMF_CODE="${pair%%:*}"; OVMF_VARS_SRC="${pair##*:}"; break
+    fi
+done
 GATE_VARS="$(mktemp -u -t swarm-gate-vars-XXXXXX).fd"
 if [ -f "$OVMF_CODE" ] && [ -f "$OVMF_VARS_SRC" ]; then
     cp "$OVMF_VARS_SRC" "$GATE_VARS"
@@ -121,7 +127,7 @@ if [ -f "$OVMF_CODE" ] && [ -f "$OVMF_VARS_SRC" ]; then
     info "Firmware: UEFI (OVMF)"
 else
     info "Firmware: BIOS (OVMF not installed — real hardware boots UEFI, so this"
-    info "          gate is weaker than it should be; pacman -S edk2-ovmf)"
+    info "          gate is weaker than it should be; pacman -S edk2-ovmf / apt install ovmf)"
 fi
 
 cleanup() {

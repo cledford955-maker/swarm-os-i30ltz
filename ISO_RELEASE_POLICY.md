@@ -1,14 +1,18 @@
-# ISO storage policy — 2026-09-24
+# ISO storage policy — 2026-10-06 (supersedes 2026-09-24)
 
-User decision: keep **ten current operating-system ISO files total**, on Ventoy.
-This applies to all operating systems, not just SWARM. It supersedes the older
-"ten rolling builds plus stable exceptions" policy.
+User decision (2026-10-06): keep **five SWARM ISOs** and **five Recovery OS
+ISOs**, each OS counted separately. This replaces the 2026-09-24 rule of ten
+shared across all operating systems.
 
-- Keep the ten newest distinct completed images by modification time. Stable
-  labels do not exempt an image from the total. Weekly Boltz archives are the
-  explicit exception outside this active set.
-- SWARM releases live at `/mnt/ventoy/ISO/SWARM_OS/`. Other future OS installers
-  may live elsewhere on Ventoy but count toward the same total of ten.
+- SWARM: `70-scripts/swarm_iso_manager.py` keeps the five newest
+  `swarm-os-*.iso` images on Ventoy, by modification time. Stable labels do not
+  exempt an image. Other OSes on the stick are never counted or removed.
+- Recovery OS: `/mnt/recoverybuild/70-scripts/build.sh` writes ONLY to
+  `/mnt/ventoy/ISO/recovery-os/` (policy 2026-10-07; aborts if Ventoy UUID 5ABB-83DF
+  is not mounted, no local copy) and keeps the five newest `i30ltz-recovery-*.iso`
+  there after each build. Its `.sha256` sidecars go with it.
+- Weekly Boltz archives remain the explicit exception outside these sets.
+- SWARM releases live at `/mnt/ventoy/ISO/SWARM_OS/`.
 - Once per ISO calendar week, archive the newest SWARM image with a recorded
   `boot_gate=pass` to `/mnt/boltz/ISO/SWARM_OS/weekly/YYYY-Www/`. Verify source and
   destination SHA-256 checksums. Do not archive failed/untested builds, and do not
@@ -20,7 +24,7 @@ This applies to all operating systems, not just SWARM. It supersedes the older
   media aborts release operations before version stamping.
 - Use only `70-scripts/build_swarm_iso.sh` as the normal user. It creates one
   in-progress ISO directly in Ventoy `.incoming/`, publishes it on the same
-  filesystem, and enforces the ten-image total. The temporary in-progress image
+  filesystem, and enforces the five-SWARM-image limit. The temporary in-progress image
   is removed on normal failure; the next locked build clears interrupted output.
 - No project-disk/desktop ISO copies, duplicate latest/fallback images, or separate
   push-to-Ventoy workflow. `latest.txt` is a filename pointer, never a full copy.

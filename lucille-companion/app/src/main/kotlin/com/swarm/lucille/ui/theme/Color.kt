@@ -1,36 +1,35 @@
-// Color.kt — SWARM OS dark purple-lightning palette  v1.0.0  2026-09-24
 package com.swarm.lucille.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ── SWARM OS Brand Colors ────────────────────────────────────────────────────
-val SwarmBg         = Color(0xFF0A0010)   // near-black deep purple
-val SwarmSurface    = Color(0xFF100820)   // slightly lighter surface
-val SwarmSurface2   = Color(0xFF1A0E2E)   // card background
-val SwarmBorder     = Color(0xFF2A1550)   // subtle card border
+val CarbonBackground = Color(0xFF0C0D12)
+val CarbonSurface = Color(0xFF161824)
+val CarbonSurfaceVariant = Color(0xFF202436)
+val CarbonBorder = Color(0xFF2E334D)
 
-val SwarmPurple     = Color(0xFF7C3AED)   // primary purple
-val SwarmPurpleLight= Color(0xFFA855F7)   // lighter violet
-val SwarmCyan       = Color(0xFF00D8FF)   // electric cyan accent
-val SwarmCyanDim    = Color(0xFF0096B3)   // dimmer cyan for secondary
+val NvidiaGreen = Color(0xFF76B900)
+val SwarmGreen = Color(0xFF88D800)
 
-val SwarmGold       = Color(0xFFFFB800)   // warning / achievement gold
-val SwarmRed        = Color(0xFFFF4757)   // critical / error red
-val SwarmGreen      = Color(0xFF2ED573)   // success / online green
-val SwarmOrange     = Color(0xFFFF6B35)   // medium severity warning
+val ElectricPurple = Color(0xFF9D00FF)
+val ElectricPurpleDark = Color(0xFF5F0099)
+val ElectricRed = Color(0xFFFF1744)
+val ElectricRedDark = Color(0xFFB20025)
+val LightningYellow = Color(0xFFFFEA00)
+val ElectricCyan = Color(0xFF00E5FF)
+val NeonGreen = Color(0xFF00E676)
 
-// ── Text ─────────────────────────────────────────────────────────────────────
-val TextPrimary     = Color(0xFFF0E8FF)   // primary text — warm white
-val TextSecondary   = Color(0xFFBBA8D8)   // secondary text — muted lavender
-val TextDisabled    = Color(0xFF5C4D7A)   // disabled / hint text
+val TextPrimary = Color(0xFFF1F5F9)
+val TextSecondary = Color(0xFF94A3B8)
+val TextMuted = Color(0xFF64748B)
 
-// ── Status colors ─────────────────────────────────────────────────────────────
-val StatusCritical  = SwarmRed
-val StatusWarn      = SwarmOrange
-val StatusInfo      = SwarmCyan
-val StatusOk        = SwarmGreen
-
-// ── Gradient helpers (used in header cards) ───────────────────────────────────
-val GradientPurpleCyan   = listOf(SwarmPurple, SwarmCyan)
-val GradientPurpleViolet = listOf(Color(0xFF4B0082), SwarmPurple)
-val GradientDarkPurple   = listOf(SwarmBg, SwarmSurface2)
+// Swarm Theme Aliases for compatibility
+val SwarmBg = CarbonBackground
+val SwarmSurface = CarbonSurface
+val SwarmSurface2 = CarbonSurfaceVariant
+val SwarmBorder = CarbonBorder
+val SwarmCyan = ElectricCyan
+val SwarmPurple = ElectricPurple
+val SwarmRed = ElectricRed
+val SwarmGold = LightningYellow
+val SwarmOrange = Color(0xFFFF9100)
+val TextDisabled = TextMuted

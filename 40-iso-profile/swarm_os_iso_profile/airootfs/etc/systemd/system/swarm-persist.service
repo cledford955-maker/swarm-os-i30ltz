@@ -1,0 +1,25 @@
+[Unit]
+Description=SWARM OS — persistent storage on the live USB (Ventoy swarm-persist.img)
+Documentation=file:///usr/lib/swarm/swarm-persist.sh
+# Live boot only (archiso creates /run/archiso); inert on an installed system.
+ConditionPathExists=/run/archiso
+DefaultDependencies=no
+After=local-fs.target systemd-udevd.service
+# Everything that writes state must see the persistent mounts first.
+Before=sysinit.target basic.target shutdown.target
+Before=NetworkManager.service iwd.service bluetooth.service tailscaled.service sshd.service
+Before=swarm-secrets.service gaming-agent.service lucy-server.service lucille-core.service
+Before=swarm-memory-tick.service swarm-snapshot.service swarm-ui.service getty@tty1.service
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/swarm/swarm-persist.sh start
+ExecStop=/usr/lib/swarm/swarm-persist.sh stop
+# Missing stick/image is not an error; never block boot for this.
+SuccessExitStatus=0 1
+TimeoutStartSec=60
+
+[Install]
+WantedBy=sysinit.target

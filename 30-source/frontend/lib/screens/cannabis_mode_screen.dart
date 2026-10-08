@@ -5,6 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/swarm_text_styles.dart';
 import '../services/garden_photos_service.dart';
+import '../services/garden_backgrounds_service.dart';
+import '../widgets/garden_backdrop.dart';
+import '../widgets/garden_smoke.dart';
+
+// Accent for a photo whose strain isn't in the table below (or has none).
+const _plainAccent = Color(0xFF4CAF50);
 
 // ── Strain database ───────────────────────────────────────────────────────────
 
@@ -30,7 +36,12 @@ const _strains = [
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class CannabisModeScreen extends StatefulWidget {
-  const CannabisModeScreen({super.key});
+  const CannabisModeScreen({super.key, this.backgroundDirs, this.backgroundInterval});
+
+  /// Where to look for background photos, and how long each stays up.
+  /// Default to GardenBackgroundsService's folders and interval; tests override.
+  final List<String>? backgroundDirs;
+  final Duration? backgroundInterval;
 
   @override
   State<CannabisModeScreen> createState() => _CannabisModeScreenState();
@@ -50,6 +61,12 @@ class _CannabisModeScreenState extends State<CannabisModeScreen>
   double _strainCrossFade = 1.0;   // 1 = fully showing _strainIndex
 
   final _rng = Random();
+
+  // The photo on screen, or null while the painted grow-room is showing (no
+  // photos on disk). With a photo up, the strain card follows the photo and
+  // the 7-second strain rotation below stands down.
+  GardenBackground? _photo;
+  bool get _photoMode => _photo != null;
 
   @override
   void initState() {
@@ -87,11 +104,39 @@ class _CannabisModeScreenState extends State<CannabisModeScreen>
   }
 
   void _scheduleStrainCycle() {
+    if (_photoMode) return;
     _strainTimer = Timer(const Duration(seconds: 7), _cycleStrain);
   }
 
-  void _cycleStrain() {
+  /// A new background photo appeared (or, with null, the photos are gone).
+  void _onPhoto(GardenBackground? photo) {
     if (!mounted) return;
+    final wasPhotoMode = _photoMode;
+    if (photo == null && !wasPhotoMode) return;
+    setState(() => _photo = photo);
+    if (photo != null) {
+      _strainTimer?.cancel();
+    } else {
+      _scheduleStrainCycle();
+    }
+  }
+
+  /// The strain row shown on the card: the photo's own strain when it has one,
+  /// otherwise (no photos) the rotating strain. A photo with no strain gets its
+  /// caption, never an invented strain.
+  (String, String, String, Color) get _shownStrain {
+    final photo = _photo;
+    if (photo == null) return _strains[_strainIndex];
+    final name = photo.strain;
+    if (name == null) return (photo.caption ?? 'Cannabis garden', 'Plant', '', _plainAccent);
+    for (final s in _strains) {
+      if (s.$1 == name) return s;
+    }
+    return (name, 'Cannabis', '', _plainAccent);
+  }
+
+  void _cycleStrain() {
+    if (!mounted || _photoMode) return;
     setState(() { _strainCrossFade = 1.0; });
 
     // Fade out over 800 ms, then swap, fade back in
@@ -120,8 +165,14 @@ class _CannabisModeScreenState extends State<CannabisModeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final strain = _strains[_strainIndex];
+    final strain = _shownStrain;
     final accent = strain.$4;
+    final photo = _photo;
+    const exitHint = 'Swipe up or press Esc to exit';
+    final tag = photo == null ? 'LIVE STRAIN' : (photo.strain != null ? 'STRAIN' : 'GARDEN');
+    final footnote = photo == null
+        ? 'Strain rotates every 7 seconds  ·  $exitHint'
+        : [if (photo.credit != null) photo.credit!, exitHint].join('  ·  ');
 
     return Scaffold(
       backgroundColor: const Color(0xFF050208),
@@ -143,83 +194,119 @@ class _CannabisModeScreenState extends State<CannabisModeScreen>
             ),
           ),
 
-          // ── Grow-light ceiling beam ───────────────────────────────
-          AnimatedBuilder(
-            animation: _lightController,
-            builder: (_, __) => CustomPaint(
-              size: Size.infinite,
-              painter: _GrowLightPainter(t: _lightController.value, accent: accent),
+          // ── Real photos: full-screen plants and buds, cycling. Paints
+          //    nothing until the first photo is ready (or if there are none),
+          //    and reports each photo so the card below can label it. ───────
+          GardenBackdrop(
+            loader: () => GardenBackgroundsService.load(
+              widget.backgroundDirs ?? GardenBackgroundsService.dirs,
+              knownStrains: _strains.map((s) => s.$1),
             ),
+            interval: widget.backgroundInterval ?? GardenBackgroundsService.interval,
+            onChanged: _onPhoto,
           ),
 
-          // ── Spotlight sweep ───────────────────────────────────────
-          AnimatedBuilder(
-            animation: _spotController,
-            builder: (_, __) => CustomPaint(
-              size: Size.infinite,
-              painter: _SpotlightPainter(t: _spotController.value, accent: accent),
-            ),
-          ),
-
-          // ── Floating cannabis buds + leaves ───────────────────────
-          AnimatedBuilder(
-            animation: _leafController,
-            builder: (_, __) => CustomPaint(
-              size: Size.infinite,
-              painter: _FloatingBudsPainter(t: _leafController.value, accent: accent),
-            ),
-          ),
-
-          // ── Center bud: real photo when the strain has one on disk,
-          //    procedural painter otherwise. Photos live at
-          //    /opt/swarm_os/garden/<slug>.{jpg,jpeg,png,webp} and are
-          //    resolved by GardenPhotosService.instance. The glow/accent
-          //    ring stays under both paths so the animation reads the same.
-          Center(
-            child: SizedBox(
-              width: 300, height: 300,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  AnimatedBuilder(
-                    animation: _glowController,
-                    builder: (_, __) => CustomPaint(
-                      painter: _CenterBudPainter(
-                        pulse: _glowController.value,
-                        accent: accent,
-                        drawBud: GardenPhotosService.instance.photoPathFor(strain.$1) == null,
-                      ),
-                    ),
-                  ),
-                  Builder(builder: (_) {
-                    final path = GardenPhotosService.instance.photoPathFor(strain.$1);
-                    if (path == null) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.all(28),
-                      child: ClipOval(
-                        child: Image.file(
-                          File(path),
-                          fit: BoxFit.cover,
-                          // If the file suddenly disappears (btrfs snapshot
-                          // rollback mid-render, unlikely but possible), fall
-                          // back to the painter — never let a broken image
-                          // widget crash the garden.
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                        ),
-                      ),
-                    );
-                  }),
-                ],
+          // ── The painted grow-room, shown only while there is no photo.
+          //    Its coloured beams would tint a real photograph. ──────────────
+          if (!_photoMode) ...[
+            // ── Grow-light ceiling beam ───────────────────────────────
+            AnimatedBuilder(
+              animation: _lightController,
+              builder: (_, __) => CustomPaint(
+                size: Size.infinite,
+                painter: _GrowLightPainter(t: _lightController.value, accent: accent),
               ),
             ),
-          ),
+
+            // ── Spotlight sweep ───────────────────────────────────────
+            AnimatedBuilder(
+              animation: _spotController,
+              builder: (_, __) => CustomPaint(
+                size: Size.infinite,
+                painter: _SpotlightPainter(t: _spotController.value, accent: accent),
+              ),
+            ),
+
+            // ── Floating cannabis buds + leaves ───────────────────────
+            AnimatedBuilder(
+              animation: _leafController,
+              builder: (_, __) => CustomPaint(
+                size: Size.infinite,
+                painter: _FloatingBudsPainter(t: _leafController.value, accent: accent),
+              ),
+            ),
+
+            // ── Center bud: real photo when the strain has one on disk,
+            //    procedural painter otherwise. Photos live at
+            //    /opt/swarm_os/garden/<slug>.{jpg,jpeg,png,webp} and are
+            //    resolved by GardenPhotosService.instance. The glow/accent
+            //    ring stays under both paths so the animation reads the same.
+            Center(
+              child: SizedBox(
+                width: 300, height: 300,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    AnimatedBuilder(
+                      animation: _glowController,
+                      builder: (_, __) => CustomPaint(
+                        painter: _CenterBudPainter(
+                          pulse: _glowController.value,
+                          accent: accent,
+                          drawBud: GardenPhotosService.instance.photoPathFor(strain.$1) == null,
+                        ),
+                      ),
+                    ),
+                    Builder(builder: (_) {
+                      final path = GardenPhotosService.instance.photoPathFor(strain.$1);
+                      if (path == null) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.all(28),
+                        child: ClipOval(
+                          child: Image.file(
+                            File(path),
+                            fit: BoxFit.cover,
+                            // If the file suddenly disappears (btrfs snapshot
+                            // rollback mid-render, unlikely but possible), fall
+                            // back to the painter — never let a broken image
+                            // widget crash the garden.
+                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          // ── Blunts burning in an ashtray, smoke rising ────────────
+          GardenSmoke(accent: accent),
 
           // ── Strain info card ──────────────────────────────────────
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: Opacity(
-              opacity: _strainCrossFade.clamp(0.0, 1.0),
-              child: _StrainCard(strain: strain),
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 600),
+                layoutBuilder: (current, previous) => Stack(
+                  alignment: Alignment.bottomLeft,
+                  children: [...previous, if (current != null) current],
+                ),
+                child: Opacity(
+                  // Keyed by what it shows, so the label fades with its photo.
+                  key: ValueKey('${photo?.path}|${strain.$1}'),
+                  opacity: photo == null ? _strainCrossFade.clamp(0.0, 1.0) : 1.0,
+                  child: _StrainCard(
+                    strain: strain,
+                    tag: tag,
+                    caption: photo?.strain != null ? photo?.caption : null,
+                    footnote: footnote,
+                  ),
+                ),
+              ),
             ),
           ),
 
@@ -238,7 +325,15 @@ class _CannabisModeScreenState extends State<CannabisModeScreen>
 
 class _StrainCard extends StatelessWidget {
   final (String, String, String, Color) strain;
-  const _StrainCard({required this.strain});
+  final String tag;
+  final String? caption;
+  final String footnote;
+  const _StrainCard({
+    required this.strain,
+    this.tag = 'LIVE STRAIN',
+    this.caption,
+    this.footnote = 'Strain rotates every 7 seconds  ·  Swipe up or press Esc to exit',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +370,7 @@ class _StrainCard extends StatelessWidget {
               Container(width: 6, height: 6, decoration: BoxDecoration(color: accent, shape: BoxShape.circle,
                   boxShadow: [BoxShadow(color: accent, blurRadius: 6)])),
               const SizedBox(width: 8),
-              Text('LIVE STRAIN', style: TextStyle(color: accent.withValues(alpha: 0.7), fontSize: 10, letterSpacing: 2)),
+              Text(tag, style: TextStyle(color: accent.withValues(alpha: 0.7), fontSize: 10, letterSpacing: 2)),
             ],
           ),
           const SizedBox(height: 10),
@@ -286,7 +381,12 @@ class _StrainCard extends StatelessWidget {
               shadows: [Shadow(color: accent.withValues(alpha: 0.8), blurRadius: 16)],
             ),
           ),
+          if (caption != null) ...[
+            const SizedBox(height: 4),
+            Text(caption!, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
+          ],
           const SizedBox(height: 6),
+          if (effects.isNotEmpty)
           Row(
             children: effects.split(' · ').map((e) => Container(
               margin: const EdgeInsets.only(right: 10),
@@ -301,7 +401,7 @@ class _StrainCard extends StatelessWidget {
           const SizedBox(height: 10),
           Container(height: 1, color: accent.withValues(alpha: 0.2)),
           const SizedBox(height: 10),
-          Text('Strain rotates every 7 seconds  ·  Swipe up or press Esc to exit',
+          Text(footnote,
               style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 10, letterSpacing: 1.2)),
         ],
       ),

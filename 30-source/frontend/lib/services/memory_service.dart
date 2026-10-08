@@ -3,7 +3,8 @@
 // Falls back to local JSON if API is down.
 
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' hide Platform;
+import '../platform/platform.dart';
 import 'package:http/http.dart' as http;
 
 class MemoryNote {

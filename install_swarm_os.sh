@@ -13,7 +13,11 @@ banner(){ echo -e "\n${CYN}  === $1 ===${NC}\n"; }
 
 # ── Disk detection ────────────────────────────────────────────────────────────
 # Usage: install_swarm_os.sh [--disk /dev/sdX] [--non-interactive]
-# If --disk is not passed, the script auto-detects the largest non-removable disk
+#        install_swarm_os.sh --root-uuid UUID --esp-uuid UUID [--non-interactive]
+# --root-uuid / --esp-uuid pick the partitions by filesystem UUID: the btrfs
+# root is formatted, the FAT EFI partition is mounted and kept, and every other
+# partition on the disk is left alone. Protected partitions are refused.
+# If neither is passed, the script auto-detects the largest non-removable disk
 # and asks for confirmation before touching anything.
 #
 # --non-interactive: for the graphical installer (LucyServer's /install
@@ -26,9 +30,16 @@ banner(){ echo -e "\n${CYN}  === $1 ===${NC}\n"; }
 DISK=""
 NONINTERACTIVE=0
 PASSWORD_FILE=""
+ROOT_UUID_ARG=""
+ESP_UUID_ARG=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --disk) DISK="$2"; shift 2 ;;
+    # Partition-level targeting (preferred on a disk that holds other data):
+    # --root-uuid is the btrfs OS partition that gets formatted; --esp-uuid is
+    # the existing FAT32 EFI partition that is mounted and NEVER formatted.
+    --root-uuid) ROOT_UUID_ARG="$2"; shift 2 ;;
+    --esp-uuid)  ESP_UUID_ARG="$2"; shift 2 ;;
     --non-interactive|--yes) NONINTERACTIVE=1; shift ;;
     # Root-readable-only tempfile holding the i30ltz account password, staged
     # by the graphical installer (LucyServer's /install session) — read once,
@@ -45,8 +56,96 @@ if [ -n "$PASSWORD_FILE" ]; then
   rm -f "$PASSWORD_FILE"
 fi
 
+# ── Preflight: nothing below touches a disk until every input is confirmed ───
+# Tools and files come from the live USB's package set and staged airootfs. A
+# run from a plain host fails here, before any prompt and before any format.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIVE_SHARE=/usr/local/share/swarm-os
+REPO_PROFILE=/mnt/Lucy/40-iso-profile/swarm_os_iso_profile
+first_file() { local f; for f in "$@"; do if [ -f "$f" ]; then echo "$f"; return 0; fi; done; return 0; }
+
+PROFILE_PACKAGES=$(first_file "$SCRIPT_DIR/swarm_os_iso_profile/packages.x86_64" "$LIVE_SHARE/packages.x86_64" "$REPO_PROFILE/packages.x86_64")
+PROFILE_PACMAN_CONF=$(first_file "$LIVE_SHARE/pacman.conf" "$REPO_PROFILE/pacman.conf")
+ROOTFS_ARCHIVE=$(first_file "$LIVE_SHARE/airootfs.tar")
+PROFILE_ROOT=""
+for d in "$SCRIPT_DIR/swarm_os_iso_profile" "$REPO_PROFILE"; do
+  if [ -d "$d/airootfs" ]; then PROFILE_ROOT="$d"; break; fi
+done
+
+PREFLIGHT_FAIL=0
+for t in pacstrap arch-chroot genfstab grub-install grub-mkconfig mkfs.btrfs mkfs.fat mkinitcpio blkid lsblk findmnt; do
+  command -v "$t" >/dev/null 2>&1 || { echo -e "${RED}  missing tool: $t${NC}"; PREFLIGHT_FAIL=1; }
+done
+[ -n "$PROFILE_PACKAGES" ]  || { echo -e "${RED}  missing package manifest (packages.x86_64)${NC}"; PREFLIGHT_FAIL=1; }
+[ -n "$PROFILE_PACMAN_CONF" ] || { echo -e "${RED}  missing pacman.conf${NC}"; PREFLIGHT_FAIL=1; }
+[ -n "$ROOTFS_ARCHIVE" ] || [ -n "$PROFILE_ROOT" ] || { echo -e "${RED}  missing rootfs (airootfs.tar or airootfs/)${NC}"; PREFLIGHT_FAIL=1; }
+if [ "$PREFLIGHT_FAIL" -eq 1 ]; then
+  echo -e "${RED}Preflight failed. No disk was changed.${NC}"
+  echo "Run this installer from the SWARM OS live USB, which ships these tools and files."
+  exit 1
+fi
+info "Preflight OK: tools, package manifest and rootfs found"
+
+# Partitions this installer must never format, matched by filesystem UUID: the
+# project tree, memory, the AI backup drive, the Slick vault, swap and the
+# Ventoy stick. Partition targeting refuses these outright. Keep in sync with
+# the fstab section below, which mounts the same drives after install.
+PROTECTED_UUIDS=(
+  62f0e009-43c2-4760-8d6c-d7c445f5f3df   # Swarm Build (/mnt/Lucy)
+  fba1b27f-407b-4385-9dfa-851833f249db   # i30ltz-brains (memory)
+  689e6547-b439-4e7f-93c9-a6dcfabed46b   # i30ltz-AI backup (/mnt/boltz)
+  019a3cd8-46c5-4a19-a760-8e0c1096b248   # Slick LUKS vault
+  0b6ceb0d-9a07-4320-be27-d9719c766814   # swarm_swap
+  5ABB-83DF                              # Ventoy stick
+)
+
+# Partition mode: the operator names the root (formatted) and EFI (kept)
+# partitions by UUID. Nothing is partitioned, and the disk is derived from
+# the root partition, so no other partition on it can be touched.
+PARTITION_MODE=0
+if [ -n "$ROOT_UUID_ARG" ] || [ -n "$ESP_UUID_ARG" ]; then
+  PARTITION_MODE=1
+  [ -n "$ROOT_UUID_ARG" ] && [ -n "$ESP_UUID_ARG" ] || { echo -e "${RED}ERROR: --root-uuid and --esp-uuid must be given together.${NC}"; exit 1; }
+  [ -z "$DISK" ] || { echo -e "${RED}ERROR: pass --disk, or --root-uuid/--esp-uuid, not both.${NC}"; exit 1; }
+
+  # Resolve through udev's by-uuid links, not the blkid cache: the cache can
+  # still hold a pre-format UUID after a partition is reformatted.
+  TARGET_ROOT=$(readlink -f "/dev/disk/by-uuid/$ROOT_UUID_ARG" 2>/dev/null || true)
+  TARGET_EFI=$(readlink -f "/dev/disk/by-uuid/$ESP_UUID_ARG" 2>/dev/null || true)
+  [ -b "$TARGET_ROOT" ] || { echo -e "${RED}ERROR: no partition has UUID $ROOT_UUID_ARG${NC}"; exit 1; }
+  [ -b "$TARGET_EFI" ]  || { echo -e "${RED}ERROR: no partition has UUID $ESP_UUID_ARG${NC}"; exit 1; }
+  [ "$TARGET_ROOT" != "$TARGET_EFI" ] || { echo -e "${RED}ERROR: root and EFI are the same partition.${NC}"; exit 1; }
+
+  for uuid in "$ROOT_UUID_ARG" "$ESP_UUID_ARG"; do
+    for protected in "${PROTECTED_UUIDS[@]}"; do
+      [ "$uuid" = "$protected" ] && { echo -e "${RED}REFUSED: $uuid is a protected partition (project/memory/vault/swap/ventoy).${NC}"; exit 1; }
+    done
+  done
+
+  # Only a btrfs partition is ever formatted, and only a FAT EFI partition is mounted.
+  [ "$(blkid -p -s TYPE -o value "$TARGET_ROOT")" = btrfs ] || { echo -e "${RED}ERROR: $TARGET_ROOT is not btrfs; refusing to format it.${NC}"; exit 1; }
+  [ "$(blkid -p -s TYPE -o value "$TARGET_EFI")" = vfat ] || { echo -e "${RED}ERROR: $TARGET_EFI is not FAT (EFI); refusing.${NC}"; exit 1; }
+
+  # Never format the partition the live USB is running from.
+  LIVE_SRC=$(findmnt -rn -o SOURCE /run/archiso/bootmnt 2>/dev/null || true)
+  for dev in "$TARGET_ROOT" "$TARGET_EFI"; do
+    [ "$dev" != "$LIVE_SRC" ] || { echo -e "${RED}REFUSED: $dev is the live USB's boot device.${NC}"; exit 1; }
+  done
+
+  DISK="/dev/$(lsblk -no PKNAME "$TARGET_ROOT" | head -n1)"
+  echo -e "\n${CYN}Partition plan on ${DISK}:${NC}"
+  lsblk -o NAME,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINTS "$DISK"
+  echo -e "\n${RED}WILL FORMAT (all data on it is erased): $TARGET_ROOT${NC}"
+  echo -e "${GRN}KEPT, mounted, NOT formatted (EFI):      $TARGET_EFI${NC}"
+  echo -e "Every other partition on $DISK is left untouched.\n"
+  if [ "$NONINTERACTIVE" -eq 0 ]; then
+    read -r -p "Type the root partition path ($TARGET_ROOT) to erase it: " CONFIRM
+    [[ "$CONFIRM" == "$TARGET_ROOT" ]] || { echo "Aborted."; exit 1; }
+  fi
+fi
+
 if [ "$NONINTERACTIVE" -eq 1 ] && [ -z "$DISK" ]; then
-  echo -e "${RED}ERROR: --non-interactive requires --disk to be passed explicitly.${NC}"
+  echo -e "${RED}ERROR: --non-interactive requires --disk, or both --root-uuid and --esp-uuid.${NC}"
   exit 1
 fi
 
@@ -84,7 +183,9 @@ if [ -z "$DISK" ]; then
 fi
 
 # Derive EFI and root partitions (handles NVMe p1/p2 vs SATA 1/2)
-if [[ "$DISK" == *"nvme"* ]] || [[ "$DISK" == *"mmcblk"* ]]; then
+if [ "$PARTITION_MODE" -eq 1 ]; then
+  : # already resolved by UUID above
+elif [[ "$DISK" == *"nvme"* ]] || [[ "$DISK" == *"mmcblk"* ]]; then
   TARGET_EFI="${DISK}p1"
   TARGET_ROOT="${DISK}p2"
 else
@@ -165,33 +266,6 @@ mount "$TARGET_EFI" "$MOUNT_POINT/boot/efi"
 info "Mounted $TARGET_ROOT (@ subvol) → $MOUNT_POINT"
 info "Mounted $TARGET_ROOT (@home subvol) → $MOUNT_POINT/home"
 info "Mounted $TARGET_EFI → $MOUNT_POINT/boot/efi"
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROFILE_PACKAGES="$SCRIPT_DIR/swarm_os_iso_profile/packages.x86_64"
-if [ ! -f "$PROFILE_PACKAGES" ]; then
-  PROFILE_PACKAGES="/usr/local/share/swarm-os/packages.x86_64"
-fi
-if [ ! -f "$PROFILE_PACKAGES" ]; then
-  echo -e "${RED}ERROR: Package manifest is missing from the live environment.${NC}"
-  echo "Expected: /usr/local/share/swarm-os/packages.x86_64"
-  exit 1
-fi
-PROFILE_ROOT="$SCRIPT_DIR/swarm_os_iso_profile"
-if [ ! -d "$PROFILE_ROOT/airootfs" ]; then
-  PROFILE_ROOT="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile"
-fi
-ROOTFS_ARCHIVE="/usr/local/share/swarm-os/airootfs.tar"
-if [ ! -f "$ROOTFS_ARCHIVE" ] && [ -d "$PROFILE_ROOT/airootfs" ]; then
-  ROOTFS_ARCHIVE=""
-fi
-PROFILE_PACMAN_CONF="/usr/local/share/swarm-os/pacman.conf"
-if [ ! -f "$PROFILE_PACMAN_CONF" ]; then
-  PROFILE_PACMAN_CONF="/mnt/Lucy/40-iso-profile/swarm_os_iso_profile/pacman.conf"
-fi
-if [ ! -f "$PROFILE_PACMAN_CONF" ]; then
-  echo -e "${RED}ERROR: SWARM OS pacman configuration is missing.${NC}"
-  exit 1
-fi
 
 banner "Running pacstrap..."
 PACKAGES=$(grep -v '^#' "$PROFILE_PACKAGES" | grep -v '^$' | tr '\n' ' ')

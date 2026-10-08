@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' hide Platform;
+import '../platform/platform.dart';
 import 'package:flutter/foundation.dart';
 
 class SdkPackage {

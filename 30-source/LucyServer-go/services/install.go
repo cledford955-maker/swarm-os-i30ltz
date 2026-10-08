@@ -21,6 +21,12 @@ type InstallDisk struct {
 	Model           string `json:"model"`
 	HasLuks         bool   `json:"hasLuks"`         // an encrypted partition exists — almost certainly NOT the install target
 	PartitionsReady bool   `json:"partitionsReady"` // EFI+ROOT partitions already exist (p1/p2 or 1/2) — install_swarm_os.sh --non-interactive requires this
+	// Filesystem UUIDs of the target partitions, read from the partitions
+	// themselves. The install is driven by these, not by the disk path: the
+	// root is formatted, the EFI is mounted and kept. Empty unless the
+	// partition exists with the expected filesystem (btrfs root, FAT EFI).
+	EfiUUID  string `json:"efiUuid,omitempty"`
+	RootUUID string `json:"rootUuid,omitempty"`
 }
 
 // ListDisks mirrors install_swarm_os.sh's own auto-detect logic (same
@@ -65,16 +71,61 @@ func ListDisks() []InstallDisk {
 		sizeHuman = strings.TrimSpace(sizeHuman)
 
 		efi, root := targetPartitions(path)
-		disks = append(disks, InstallDisk{
+		disk := InstallDisk{
 			Path:            path,
 			SizeBytes:       sizeBytes,
 			SizeHuman:       sizeHuman,
 			Model:           model,
 			HasLuks:         luksSet[path[strings.LastIndex(path, "/")+1:]],
 			PartitionsReady: pathExists(efi) && pathExists(root),
-		})
+		}
+		if disk.PartitionsReady {
+			disk.EfiUUID = partitionUUID(efi, "vfat")
+			disk.RootUUID = partitionUUID(root, "btrfs")
+		}
+		disks = append(disks, disk)
 	}
 	return disks
+}
+
+// partitionUUID returns the filesystem UUID of dev if it has the wanted
+// filesystem type, and "" otherwise. The installer refuses anything else too;
+// this only keeps the GUI from offering a target it would reject.
+//
+// It reads udev's database, not the blkid cache: after a format the blkid
+// cache can still hold the old UUID, while udev is updated as soon as the
+// partition is re-probed, and udev is readable without root.
+func partitionUUID(dev, wantType string) string {
+	props := RunCommand("udevadm info -q property -n "+dev, "").StandardOutput
+	var typ, uuid string
+	for _, line := range strings.Split(props, "\n") {
+		switch {
+		case strings.HasPrefix(line, "ID_FS_TYPE="):
+			typ = strings.TrimPrefix(line, "ID_FS_TYPE=")
+		case strings.HasPrefix(line, "ID_FS_UUID="):
+			uuid = strings.TrimPrefix(line, "ID_FS_UUID=")
+		}
+	}
+	if typ != wantType {
+		return ""
+	}
+	return uuid
+}
+
+// FindInstallTarget returns the listed disk whose partitions carry exactly the
+// given UUIDs. The UUIDs come from the client, so they are only accepted when
+// they match what ListDisks reports right now. The installer checks protected
+// partitions again on its own side.
+func FindInstallTarget(disk, rootUUID, espUUID string) (InstallDisk, bool) {
+	if rootUUID == "" || espUUID == "" {
+		return InstallDisk{}, false
+	}
+	for _, d := range ListDisks() {
+		if d.Path == disk && d.PartitionsReady && d.RootUUID == rootUUID && d.EfiUUID == espUUID {
+			return d, true
+		}
+	}
+	return InstallDisk{}, false
 }
 
 // targetPartitions mirrors install_swarm_os.sh's NVMe-vs-SATA partition
@@ -98,17 +149,17 @@ type installHandshake struct {
 	Password string `json:"password"`
 }
 
-// HandleInstallSession runs install_swarm_os.sh --disk <disk> --non-interactive
-// under sudo (see /etc/sudoers.d/20-swarm-installer for the scoped NOPASSWD
-// grant this depends on) and relays its output live over the WebSocket, same
+// HandleInstallSession runs install_swarm_os.sh --root-uuid <uuid> --esp-uuid
+// <uuid> --non-interactive under sudo (see /etc/sudoers.d/20-swarm-installer
+// for the NOPASSWD grant) and relays its output live over the WebSocket, same
 // bidirectional-relay shape as HandleTerminalSession in terminal.go — reused
 // rather than reinvented, and bidirectional (not just output) on purpose: if
 // something unexpected still prompts, the operator watching the log can type
 // into it rather than the whole install silently wedging.
 //
-// disk MUST already be validated by the caller (handlers/install.go) against
-// the exact set ListDisks() just returned — never pass through a raw client
-// string un-checked, this becomes a sudo command line.
+// target MUST come from FindInstallTarget, which checks the client's UUIDs
+// against ListDisks() — never build this from a raw client string, since it
+// becomes a sudo command line.
 //
 // The i30ltz account password (needed when no prior install's shadow hash
 // was preserved) crosses this boundary via a root-readable-only tempfile,
@@ -116,7 +167,7 @@ type installHandshake struct {
 // policy strips arbitrary env vars from the elevated process, so that
 // wouldn't reliably reach the script anyway. This mirrors the same
 // PASSFILE pattern swarm-unseal-secrets already uses for its own passphrase.
-func HandleInstallSession(conn *websocket.Conn, disk string) {
+func HandleInstallSession(conn *websocket.Conn, target InstallDisk) {
 	defer conn.Close()
 
 	_, first, err := conn.ReadMessage()
@@ -129,7 +180,8 @@ func HandleInstallSession(conn *websocket.Conn, disk string) {
 		return
 	}
 
-	args := []string{"-n", "/usr/local/bin/install_swarm_os.sh", "--disk", disk, "--non-interactive"}
+	args := []string{"-n", "/usr/local/bin/install_swarm_os.sh",
+		"--root-uuid", target.RootUUID, "--esp-uuid", target.EfiUUID, "--non-interactive"}
 	if hs.Password != "" {
 		pwFile, err := os.CreateTemp("", "swarm-install-pw-*")
 		if err != nil {

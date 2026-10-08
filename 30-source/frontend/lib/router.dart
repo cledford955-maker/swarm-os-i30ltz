@@ -37,11 +37,43 @@ import 'pages/cinema_page.dart';
 import 'pages/git_lens_page.dart';
 import 'pages/diff_viewer_page.dart';
 import 'pages/command_reference_page.dart';
+import 'pages/web_demo_coming_soon.dart';
 
 /// SWARM OS Route Configuration
 /// Mirrors the 11 routes from the Next.js App Router
+// Web demo build (--dart-define=MOCK=true): skip splash + stone-cipher lock.
+const _demoMode = bool.fromEnvironment('MOCK');
+
+// Desktop-only features shown as "coming soon" in the web demo.
+const _demoUnavailable = <String, List<String>>{
+  '/coder': ['Coder IDE', 'Full code editor with git, Android and Apple build panels, task runner and Ollama assistant.'],
+  '/ide': ['Coder IDE', 'Full code editor with git, Android and Apple build panels, task runner and Ollama assistant.'],
+  '/explorer': ['File Explorer', 'Browse and manage the files on your SWARM OS machine.'],
+  '/files-explorer': ['File Explorer', 'Browse and manage the files on your SWARM OS machine.'],
+  '/gitlens': ['GitLens', 'Repository history, blame and diffs across your local workspaces.'],
+  '/git': ['GitLens', 'Repository history, blame and diffs across your local workspaces.'],
+  '/diff': ['Diff Viewer', 'Side-by-side file and repository diffs.'],
+  '/grub': ['GRUB Terminal', 'Multi-pane terminal with tabs, split view and ANSI colour.'],
+  '/terminal-grub': ['GRUB Terminal', 'Multi-pane terminal with tabs, split view and ANSI colour.'],
+  '/install': ['Installer', 'Install SWARM OS to an NVMe drive from the live USB.'],
+  '/mirror': ['Device Mirror', 'Mirror and control your paired Android phone.'],
+  '/cinema': ['Cinema', 'Local video library and player.'],
+  '/videos': ['Cinema', 'Local video library and player.'],
+  '/studio': ['Cinema', 'Local video library and player.'],
+};
+
 final goRouter = GoRouter(
-  initialLocation: '/splash',
+  initialLocation: _demoMode ? '/' : '/splash',
+  redirect: (context, state) {
+    if (!_demoMode) return null;
+    final loc = state.matchedLocation;
+    if (loc == '/splash' || loc == '/lock') return '/';
+    final info = _demoUnavailable[loc];
+    if (info != null) {
+      return Uri(path: '/coming-soon', queryParameters: {'f': info[0], 'd': info[1]}).toString();
+    }
+    return null;
+  },
   routes: [
     // Standalone full-screen 1999 Electric Blue Trans-Am WS6 Splash & Cockpit Loading
     GoRoute(
@@ -66,6 +98,13 @@ final goRouter = GoRouter(
       builder: (context, state, child) => SwarmShell(child: child),
       routes: [
         GoRoute(path: '/', builder: (_, __) => const HexDesktopPage()),
+        GoRoute(
+          path: '/coming-soon',
+          builder: (_, state) => WebDemoComingSoonPage(
+            feature: state.uri.queryParameters['f'] ?? 'This feature',
+            blurb: state.uri.queryParameters['d'] ?? '',
+          ),
+        ),
         GoRoute(path: '/hub', builder: (_, __) => const HubPage()),
         GoRoute(path: '/reference', builder: (_, __) => const CommandReferencePage()),
         GoRoute(path: '/agent/lucille', builder: (_, __) => const LucilleChatPage()),

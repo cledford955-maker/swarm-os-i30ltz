@@ -96,6 +96,8 @@ class _InstallSwarmOsPageState extends State<InstallSwarmOsPage> {
     try {
       final socket = await _service.startInstall(
         disk: _selected!.path,
+        rootUuid: _selected!.rootUuid,
+        efiUuid: _selected!.efiUuid,
         password: _passwordController.text,
         onLine: (chunk) {
           joined.write(chunk);

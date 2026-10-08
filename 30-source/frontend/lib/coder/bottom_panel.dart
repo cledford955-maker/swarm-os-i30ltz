@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' hide Platform;
+import '../platform/platform.dart';
 import 'package:flutter/material.dart';
 import '../theme/swarm_colors.dart';
 import '../widgets/swarm_terminal.dart';

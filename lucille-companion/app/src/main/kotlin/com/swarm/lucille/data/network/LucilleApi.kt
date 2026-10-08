@@ -4,6 +4,7 @@ package com.swarm.lucille.data.network
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
 import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -72,7 +73,8 @@ class LucilleApi(
             if (!resp.isSuccessful) {
                 return ApiResult.Error("HTTP ${resp.code}: $bodyStr", resp.code)
             }
-            val parsed = gson.fromJson(bodyStr, T::class.java)
+            val type = object : TypeToken<T>() {}.type
+            val parsed = gson.fromJson<T>(bodyStr, type)
             ApiResult.Success(parsed)
         } catch (e: IOException) {
             ApiResult.Error("Network error: ${e.message}")
@@ -95,12 +97,14 @@ class LucilleApi(
     // ── Voice ────────────────────────────────────────────────────────────────
     fun getVoiceSMS(): ApiResult<VoiceResponse>      = get("/api/voice", mapOf("kind" to "sms"))
     fun getVoiceCalls(): ApiResult<VoiceResponse>    = get("/api/voice", mapOf("kind" to "calls"))
-    fun getVoiceVoicemail(): ApiResult<VoiceResponse>= get("/api/voice", mapOf("kind" to "voicemail"))
+    fun getVoiceVoicemail(): ApiResult<VoiceResponse> = get("/api/voice", mapOf("kind" to "voicemail"))
     fun getVoiceThread(threadId: String): ApiResult<VoiceResponse> =
         get("/api/voice", mapOf("thread" to threadId))
 
-    fun sendVoiceSMS(threadId: String, body: String): ApiResult<BaseResponse> =
-        post("/api/voice/send", mapOf("thread_id" to threadId, "body" to body))
+    fun sendVoiceSMS(threadId: String, body: String): ApiResult<BaseResponse> {
+        val payload = mapOf("thread_id" to threadId, "body" to body)
+        return post("/api/voice/send", payload)
+    }
 
     // ── Contacts ─────────────────────────────────────────────────────────────
     fun getContacts(): ApiResult<ContactsResponse>  = get("/api/contacts")

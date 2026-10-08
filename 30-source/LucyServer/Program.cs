@@ -23,7 +23,7 @@ LucyServer.Services.SwarmSecrets.PurgeLegacySecretFiles();
 // Hardening applied 2026-10-05.
 //
 // The previous code read:
-//     Environment.GetEnvironmentVariable("SWARM_AUTH_TOKEN") ?? "swarm-token-2026"
+//     SwarmSecrets.Lookup("SWARM_AUTH_TOKEN") ?? throw new InvalidOperationException("SWARM_AUTH_TOKEN is not set. Set it in /mnt/Lucy/20-runtime/.env")
 // so every copy of this source shipped a working credential for
 // /api/run_command and /api/terminal/ws — remote code execution for anyone who
 // could reach the port. That literal is published in this repository's history

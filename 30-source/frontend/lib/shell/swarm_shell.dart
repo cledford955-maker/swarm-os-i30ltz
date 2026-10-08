@@ -14,7 +14,7 @@ import '../services/wake_word_service.dart';
 import '../widgets/hive_watermark_overlay.dart';
 import '../widgets/lucille_voice_hud_button.dart';
 import '../widgets/hive_420_overlay.dart';
-import '../widgets/cpu_aura_wallpaper.dart';
+import '../widgets/rotating_wallpaper.dart';
 import '../widgets/swarm_ambient_background.dart';
 import 'desktop_geometry.dart';
 
@@ -78,13 +78,15 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
       backgroundColor: SwarmColors.bg,
       body: Stack(
         children: [
-          // 1. Background Wallpaper — FALLEN SOLDIER with a light aura that
-          //    pulses faster as CPU load rises. Also records the shell size
-          //    so new windows open between the icon rails.
+          // 1. Background Wallpaper — a random picture from
+          //    /mnt/Lucy/images/websitebackgrounds, swapped every few minutes
+          //    (FALLEN SOLDIER if the folder is missing), with a light aura
+          //    that pulses faster as CPU load rises. Also records the shell
+          //    size so new windows open between the icon rails.
           Positioned.fill(
             child: LayoutBuilder(builder: (context, constraints) {
               DesktopGeometry.screen = constraints.biggest;
-              return const CpuAuraWallpaper();
+              return const RotatingWallpaper();
             }),
           ),
 

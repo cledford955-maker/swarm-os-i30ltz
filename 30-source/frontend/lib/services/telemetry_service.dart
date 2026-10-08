@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' hide Platform;
+import '../platform/platform.dart';
 import 'dart:async';
 
 import 'package:http/http.dart' as http;

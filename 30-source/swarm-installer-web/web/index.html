@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Install SWARM OS</title>
+<!--
+  SWARM_OS Graphical Installer — frontend
+  Version __VERSION__ | __BUILD_DATE__
+  NO external assets: the live ISO has no guaranteed network.
+  Fonts are system stacks; the hornet mark is inline SVG.
+-->
+<style>
+:root {
+  --pink:       #ff69b4;
+  --pink-neon:  #ff2dac;
+  --pink-glow:  rgba(255,45,172,0.35);
+  --purple:     #b52bfa;
+  --orange:     #ff7400;
+  --orange-deep:#cc3500;
+  --dark:       #0a0408;
+  --dark-2:     #140a12;
+  --panel:      rgba(18,8,15,0.88);
+  --panel-2:    rgba(32,12,24,0.72);
+  --border:     rgba(255,105,180,0.22);
+  --border-hot: rgba(255,45,172,0.55);
+  --text:       #ffe0ef;
+  --muted:      rgba(255,224,239,0.55);
+  --ok:         #4eff91;
+  --warn:       #ffcc44;
+  --danger:     #ff4d6a;
+  --radius:     14px;
+  --radius-sm:  9px;
+  --mono: ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", "Liberation Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Cantarell, "Noto Sans", "DejaVu Sans", sans-serif;
+  --cursive: "URW Chancery L", "Apple Chancery", cursive, var(--sans);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--sans);
+  color: var(--text);
+  background:
+    radial-gradient(1200px 700px at 15% -10%, rgba(255,45,172,0.16), transparent 60%),
+    radial-gradient(900px 600px at 100% 100%, rgba(181,43,250,0.14), transparent 55%),
+    linear-gradient(160deg, var(--dark) 0%, var(--dark-2) 55%, #1a0612 100%);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+}
+
+/* ambient drifting embers */
+#embers { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.ember {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,160,60,0.9), rgba(255,60,0,0));
+  animation: rise linear infinite;
+}
+@keyframes rise {
+  0%   { transform: translateY(100vh) scale(0.6); opacity: 0; }
+  12%  { opacity: 0.8; }
+  100% { transform: translateY(-12vh) scale(1.1); opacity: 0; }
+}
+
+/* ─── shell ─────────────────────────────────────────── */
+#shell {
+  position: relative; z-index: 1;
+  width: min(880px, 100%);
+  max-height: calc(100vh - 48px);
+  background: var(--panel);
+  backdrop-filter: saturate(170%) blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 60px var(--pink-glow);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── header ────────────────────────────────────────── */
+header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, rgba(255,116,0,0.10), transparent 60%);
+  flex-shrink: 0;
+}
+.hornet {
+  width: 46px; height: 46px; flex-shrink: 0;
+  background: linear-gradient(145deg, var(--orange), var(--orange-deep));
+  border-radius: 13px; padding: 4px;
+  box-shadow: 0 4px 16px rgba(255,100,0,0.5), 0 0 0 1px rgba(255,180,0,0.3);
+}
+.hornet svg { width: 100%; height: 100%; display: block; }
+.brand h1 {
+  font-size: 1.35rem; font-weight: 700; letter-spacing: 0.02em;
+  background: linear-gradient(135deg, #ffb86b, var(--orange), var(--pink-neon));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.brand p { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+.hdr-spacer { flex: 1; }
+.ver { font-family: var(--mono); font-size: 0.64rem; color: var(--muted); text-align: right; line-height: 1.45; }
+#dry-badge {
+  display: none; font-family: var(--mono); font-size: 0.6rem;
+  color: #04150a; background: var(--warn); padding: 3px 8px;
+  border-radius: 20px; font-weight: 700; letter-spacing: 0.05em;
+}
+#dry-badge.on { display: inline-block; }
+
+/* ─── steps rail ────────────────────────────────────── */
+#rail {
+  display: flex; gap: 6px; padding: 12px 24px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.rail-step {
+  flex: 1; display: flex; flex-direction: column; gap: 6px;
+  font-size: 0.66rem; color: var(--muted); letter-spacing: 0.03em;
+}
+.rail-bar { height: 3px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.rail-bar i { display: block; height: 100%; width: 0; border-radius: 3px;
+  background: linear-gradient(90deg, var(--orange), var(--pink-neon));
+  transition: width 0.45s ease; }
+.rail-step.done .rail-bar i, .rail-step.active .rail-bar i { width: 100%; }
+.rail-step.active { color: var(--text); font-weight: 600; }
+.rail-step.done { color: var(--pink); }
+
+/* ─── panes ─────────────────────────────────────────── */
+main { padding: 22px 24px; overflow-y: auto; flex: 1; min-height: 0; }
+main::-webkit-scrollbar { width: 5px; }
+main::-webkit-scrollbar-thumb { background: var(--pink-neon); border-radius: 4px; }
+.pane { display: none; animation: fade 0.35s ease; }
+.pane.active { display: block; }
+@keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+h2 { font-size: 1.1rem; font-weight: 650; margin-bottom: 6px; }
+.lede { font-size: 0.85rem; color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
+
+/* welcome */
+.welcome-hero { text-align: center; padding: 10px 0 18px; }
+.welcome-hero .big-hornet {
+  width: 110px; height: 110px; margin: 0 auto 14px;
+  background: linear-gradient(145deg, var(--orange), var(--orange-deep));
+  border-radius: 28px; padding: 10px;
+  box-shadow: 0 10px 40px rgba(255,100,0,0.45), 0 0 0 1px rgba(255,180,0,0.35);
+  animation: hover 4s ease-in-out infinite;
+}
+@keyframes hover { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.welcome-hero .big-hornet svg { width: 100%; height: 100%; }
+.welcome-hero h2 { font-size: 1.6rem; }
+.feat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.feat div {
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 11px 13px; font-size: 0.78rem;
+  display: flex; gap: 9px; align-items: flex-start; line-height: 1.45;
+}
+.feat span:first-child { font-size: 1rem; flex-shrink: 0; }
+
+/* disks */
+#disk-list { display: flex; flex-direction: column; gap: 8px; }
+.disk {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 13px 15px; cursor: pointer;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+.disk:hover { border-color: var(--border-hot); box-shadow: 0 0 18px var(--pink-glow); }
+.disk.sel { border-color: var(--pink-neon); background: rgba(255,45,172,0.14);
+  box-shadow: 0 0 22px var(--pink-glow); }
+.disk input { margin-top: 3px; accent-color: var(--pink-neon); flex-shrink: 0; }
+.disk-body { flex: 1; min-width: 0; }
+.disk-top { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.disk-path { font-family: var(--mono); font-size: 0.9rem; font-weight: 600; }
+.disk-size { font-size: 0.8rem; color: var(--pink); font-weight: 600; }
+.disk-meta { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+.flags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.flag {
+  font-size: 0.64rem; padding: 2px 7px; border-radius: 20px;
+  background: rgba(255,204,68,0.15); color: var(--warn);
+  border: 1px solid rgba(255,204,68,0.35);
+}
+.flag.safe { background: rgba(78,255,145,0.12); color: var(--ok); border-color: rgba(78,255,145,0.3); }
+
+/* form */
+.field { margin-bottom: 14px; }
+label { display: block; font-size: 0.76rem; color: var(--muted); margin-bottom: 5px; }
+input[type=text], input[type=password] {
+  width: 100%; background: rgba(0,0,0,0.35); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 0.86rem; font-family: var(--sans);
+  outline: none; transition: border-color 0.18s, box-shadow 0.18s;
+}
+input:focus { border-color: var(--pink-neon); box-shadow: 0 0 0 3px rgba(255,45,172,0.16); }
+input.mono { font-family: var(--mono); }
+.hint { font-size: 0.7rem; color: var(--muted); margin-top: 5px; }
+.hint.bad { color: var(--danger); }
+.hint.good { color: var(--ok); }
+.fixed-user {
+  font-family: var(--mono); font-size: 0.86rem;
+  background: rgba(0,0,0,0.3); border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px; color: var(--pink);
+}
+
+/* summary + danger */
+.danger {
+  background: rgba(255,77,106,0.10); border: 1px solid rgba(255,77,106,0.42);
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px;
+}
+.danger h3 { font-size: 0.88rem; color: var(--danger); margin-bottom: 6px; }
+.danger p { font-size: 0.79rem; line-height: 1.6; color: #ffd9e0; }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 7px 14px; font-size: 0.8rem; margin-bottom: 16px; }
+.kv dt { color: var(--muted); }
+.kv dd { font-family: var(--mono); }
+
+/* log */
+#log {
+  background: #050205; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 13px 15px;
+  font-family: var(--mono); font-size: 0.73rem; line-height: 1.6;
+  height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+}
+#log::-webkit-scrollbar { width: 5px; }
+#log::-webkit-scrollbar-thumb { background: var(--pink-neon); border-radius: 4px; }
+#log .l-err { color: var(--danger); }
+#log .l-ok  { color: var(--ok); }
+#log .l-warn{ color: var(--warn); }
+#log .l-hdr { color: var(--pink); font-weight: 600; }
+.spin {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid rgba(255,105,180,0.25); border-top-color: var(--pink-neon);
+  animation: spin 0.8s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#install-status { display: flex; align-items: center; gap: 9px; font-size: 0.82rem; margin-bottom: 12px; }
+
+/* done */
+.done-hero { text-align: center; padding: 16px 0; }
+.done-mark {
+  width: 76px; height: 76px; margin: 0 auto 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 2.2rem;
+  background: rgba(78,255,145,0.14); border: 2px solid var(--ok);
+  box-shadow: 0 0 34px rgba(78,255,145,0.35);
+}
+.done-mark.bad { background: rgba(255,77,106,0.14); border-color: var(--danger);
+  box-shadow: 0 0 34px rgba(255,77,106,0.35); }
+
+/* ─── footer ────────────────────────────────────────── */
+footer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 15px 24px; border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.25); flex-shrink: 0;
+}
+.foot-note { font-size: 0.7rem; color: var(--muted); flex: 1; }
+button {
+  font-family: var(--sans); font-size: 0.83rem; font-weight: 600;
+  padding: 9px 20px; border-radius: 24px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, opacity 0.15s;
+}
+button:hover:not(:disabled) { transform: translateY(-1px); background: rgba(255,45,172,0.16); }
+button:disabled { opacity: 0.35; cursor: not-allowed; }
+button.primary {
+  background: linear-gradient(135deg, var(--orange), var(--pink-neon));
+  border: none; color: #fff; box-shadow: 0 4px 18px var(--pink-glow);
+}
+button.primary:hover:not(:disabled) { box-shadow: 0 7px 26px var(--pink-glow); }
+button.danger-btn {
+  background: linear-gradient(135deg, #ff4d6a, #b5002a); border: none; color: #fff;
+  box-shadow: 0 4px 18px rgba(255,77,106,0.4);
+}
+@media (max-width: 620px) {
+  .feat, .kv { grid-template-columns: 1fr; }
+  .rail-step { font-size: 0; gap: 0; }
+}
+</style>
+</head>
+<body>
+
+<div id="embers"></div>
+
+<div id="shell">
+
+  <header>
+    <div class="hornet" id="hornet-mark"></div>
+    <div class="brand">
+      <h1>SWARM OS</h1>
+      <p>Graphical Installer &middot; Lucille Core AI</p>
+    </div>
+    <div class="hdr-spacer"></div>
+    <span id="dry-badge">DRY RUN</span>
+    <div class="ver">v__VERSION__<br>__BUILD_DATE__</div>
+  </header>
+
+  <div id="rail">
+    <div class="rail-step active" data-step="0"><div class="rail-bar"><i></i></div>Welcome</div>
+    <div class="rail-step" data-step="1"><div class="rail-bar"><i></i></div>Disk</div>
+    <div class="rail-step" data-step="2"><div class="rail-bar"><i></i></div>Account</div>
+    <div class="rail-step" data-step="3"><div class="rail-bar"><i></i></div>Confirm</div>
+    <div class="rail-step" data-step="4"><div class="rail-bar"><i></i></div>Install</div>
+  </div>
+
+  <main>
+
+    <!-- 0 · WELCOME -->
+    <section class="pane active" data-pane="0">
+      <div class="welcome-hero">
+        <div class="big-hornet" id="hornet-big"></div>
+        <h2>Install SWARM OS</h2>
+        <p class="lede">AI-native gaming &amp; coding OS with Lucille Core AI built in.<br>
+        This wizard will set up SWARM OS on a disk in this machine.</p>
+      </div>
+      <div class="feat">
+        <div><span>🤖</span><span><strong>Lucille (LLcy)</strong> — offline AI assistant for daily life, gaming and code</span></div>
+        <div><span>🎮</span><span><strong>Gamescope session</strong> — console-style gaming shell out of the box</span></div>
+        <div><span>⚡</span><span><strong>Tuned kernel &amp; I/O</strong> — performance profile for integrated graphics</span></div>
+        <div><span>🔒</span><span><strong>Hardened networking</strong> — no inbound SSH, mesh-only remote access</span></div>
+      </div>
+    </section>
+
+    <!-- 1 · DISK -->
+    <section class="pane" data-pane="1">
+      <h2>Choose the install disk</h2>
+      <p class="lede">SWARM OS will be written to the disk you pick. Flagged disks are
+      shown but are usually the wrong target — removable media, read-only devices,
+      or drives holding encrypted archives.</p>
+      <div id="disk-list"><p class="lede">Scanning disks…</p></div>
+      <button id="rescan" style="margin-top:12px">↻ Rescan disks</button>
+    </section>
+
+    <!-- 2 · ACCOUNT -->
+    <section class="pane" data-pane="2">
+      <h2>Set the account password</h2>
+      <p class="lede">SWARM OS installs with a fixed primary account. Set its password now —
+      it is written directly to the installed system and never stored on the live media.</p>
+      <div class="field">
+        <label>Primary account</label>
+        <div class="fixed-user">i30ltz</div>
+        <p class="hint">Account name is fixed by the SWARM OS profile.</p>
+      </div>
+      <div class="field">
+        <label for="pw1">Password</label>
+        <input id="pw1" type="password" autocomplete="new-password" spellcheck="false"/>
+      </div>
+      <div class="field">
+        <label for="pw2">Confirm password</label>
+        <input id="pw2" type="password" autocomplete="new-password" spellcheck="false"/>
+        <p class="hint" id="pw-hint">Enter the password twice.</p>
+      </div>
+    </section>
+
+    <!-- 3 · CONFIRM -->
+    <section class="pane" data-pane="3">
+      <h2>Confirm installation</h2>
+      <div class="danger">
+        <h3>⚠ This erases the selected disk</h3>
+        <p>Everything on the target disk will be destroyed and replaced with SWARM OS.
+        This cannot be undone. Make sure the path below is the disk you intend to wipe.</p>
+      </div>
+      <dl class="kv">
+        <dt>Target disk</dt><dd id="sum-disk">—</dd>
+        <dt>Capacity</dt><dd id="sum-size">—</dd>
+        <dt>Model</dt><dd id="sum-model">—</dd>
+        <dt>Account</dt><dd>i30ltz</dd>
+        <dt>Installer</dt><dd>install_swarm_os.sh --non-interactive</dd>
+      </dl>
+      <div class="field">
+        <label for="confirm-path">Type the disk path exactly to unlock the install button</label>
+        <input id="confirm-path" class="mono" type="text" spellcheck="false" autocomplete="off" placeholder="/dev/…"/>
+        <p class="hint" id="confirm-hint">Must match the target disk path character for character.</p>
+      </div>
+    </section>
+
+    <!-- 4 · INSTALL -->
+    <section class="pane" data-pane="4">
+      <h2 id="install-title">Installing SWARM OS</h2>
+      <div id="install-status"><div class="spin"></div><span>Starting installer…</span></div>
+      <div id="log"></div>
+    </section>
+
+    <!-- 5 · DONE -->
+    <section class="pane" data-pane="5">
+      <div class="done-hero">
+        <div class="done-mark" id="done-mark">✓</div>
+        <h2 id="done-title">SWARM OS is installed</h2>
+        <p class="lede" id="done-text">Remove the install media and reboot into your new system.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span class="foot-note" id="foot-note">SWARM OS installer &middot; running from live media</span>
+    <button id="back">Back</button>
+    <button id="next" class="primary">Continue</button>
+  </footer>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════
+   SWARM OS Installer — frontend controller
+   v__VERSION__ · __BUILD_DATE__
+════════════════════════════════════════════════════════ */
+const CSRF    = "__CSRF_TOKEN__";
+const DRY_RUN = __DRY_RUN__;
+
+const HORNET_SVG = `
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="16" cy="26" rx="15" ry="6" fill="rgba(190,225,255,0.55)" transform="rotate(-30 16 26)"/>
+  <ellipse cx="48" cy="26" rx="15" ry="6" fill="rgba(190,225,255,0.55)" transform="rotate(30 48 26)"/>
+  <ellipse cx="32" cy="40" rx="11" ry="16" fill="#FF7400"/>
+  <rect x="21" y="34" width="22" height="4" rx="2" fill="#1a0800" opacity="0.72"/>
+  <rect x="21" y="42" width="22" height="4" rx="2" fill="#1a0800" opacity="0.72"/>
+  <ellipse cx="29" cy="36" rx="4" ry="7" fill="rgba(255,200,100,0.22)"/>
+  <polygon points="32,56 28,50 36,50" fill="#cc3000"/>
+  <rect x="27" y="22" width="10" height="8" rx="3" fill="#FF8C00"/>
+  <ellipse cx="32" cy="17" rx="10" ry="9" fill="#FF8C00"/>
+  <ellipse cx="29" cy="13" rx="4" ry="3" fill="rgba(255,220,130,0.28)"/>
+  <ellipse cx="25" cy="16" rx="4" ry="4.5" fill="#111"/>
+  <ellipse cx="39" cy="16" rx="4" ry="4.5" fill="#111"/>
+  <circle cx="24" cy="14.5" r="1.2" fill="rgba(255,255,255,0.7)"/>
+  <circle cx="38" cy="14.5" r="1.2" fill="rgba(255,255,255,0.7)"/>
+  <line x1="28" y1="9" x2="21" y2="2" stroke="#FF7400" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="20.5" cy="1.8" r="2" fill="#FFB700"/>
+  <line x1="36" y1="9" x2="43" y2="2" stroke="#FF7400" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="43.5" cy="1.8" r="2" fill="#FFB700"/>
+  <line x1="22" y1="36" x2="10" y2="32" stroke="#cc4400" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="22" y1="40" x2="9"  y2="40" stroke="#cc4400" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="22" y1="44" x2="11" y2="49" stroke="#cc4400" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="42" y1="36" x2="54" y2="32" stroke="#cc4400" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="42" y1="40" x2="55" y2="40" stroke="#cc4400" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="42" y1="44" x2="53" y2="49" stroke="#cc4400" stroke-width="1.5" stroke-linecap="round"/>
+</svg>`;
+document.getElementById('hornet-mark').innerHTML = HORNET_SVG;
+document.getElementById('hornet-big').innerHTML  = HORNET_SVG;
+if (DRY_RUN) document.getElementById('dry-badge').classList.add('on');
+
+/* embers */
+(function () {
+  const box = document.getElementById('embers');
+  for (let i = 0; i < 26; i++) {
+    const e = document.createElement('div');
+    e.className = 'ember';
+    const s = 2 + Math.random() * 5;
+    e.style.cssText = `left:${Math.random()*100}%;width:${s}px;height:${s}px;` +
+      `animation-duration:${11+Math.random()*14}s;animation-delay:${Math.random()*16}s;`;
+    box.appendChild(e);
+  }
+})();
+
+/* ── state ─────────────────────────────────────────── */
+let step     = 0;
+let disks    = [];
+let selected = null;
+let launched = false;
+
+const paneEls = [...document.querySelectorAll('.pane')];
+const railEls = [...document.querySelectorAll('.rail-step')];
+const btnBack = document.getElementById('back');
+const btnNext = document.getElementById('next');
+
+function show(n) {
+  step = n;
+  paneEls.forEach(p => p.classList.toggle('active', +p.dataset.pane === n));
+  railEls.forEach(r => {
+    const i = +r.dataset.step;
+    r.classList.toggle('active', i === Math.min(n, 4));
+    r.classList.toggle('done', i < Math.min(n, 4));
+  });
+  syncFooter();
+}
+
+function syncFooter() {
+  btnBack.style.display = (step === 0 || step >= 4) ? 'none' : '';
+  btnNext.className = 'primary';
+  btnNext.style.display = '';
+  btnNext.disabled = false;
+
+  if (step === 0) { btnNext.textContent = 'Get started'; }
+  else if (step === 1) {
+    btnNext.textContent = 'Continue';
+    btnNext.disabled = !selected;
+  }
+  else if (step === 2) {
+    btnNext.textContent = 'Continue';
+    btnNext.disabled = !passwordsOk();
+  }
+  else if (step === 3) {
+    btnNext.textContent = '⚠ Erase disk and install';
+    btnNext.className = 'danger-btn';
+    btnNext.disabled = document.getElementById('confirm-path').value.trim() !== (selected && selected.path);
+  }
+  else if (step === 4) { btnNext.style.display = 'none'; }
+  else if (step === 5) {
+    btnNext.textContent = 'Reboot now';
+    btnNext.disabled = false;
+  }
+}
+
+/* ── disks ─────────────────────────────────────────── */
+async function loadDisks() {
+  const box = document.getElementById('disk-list');
+  box.innerHTML = '<p class="lede">Scanning disks…</p>';
+  try {
+    const r = await fetch('/api/disks');
+    const j = await r.json();
+    disks = j.disks || [];
+    if (j.error) {
+      box.innerHTML = `<p class="lede" style="color:var(--danger)">Could not list disks: ${esc(j.error)}</p>`;
+      return;
+    }
+    if (!disks.length) {
+      box.innerHTML = '<p class="lede" style="color:var(--warn)">No eligible install disks found.</p>';
+      renderExcluded(j.excluded, box);
+      return;
+    }
+    box.innerHTML = '';
+    disks.forEach((d, i) => {
+      const el = document.createElement('label');
+      el.className = 'disk';
+      const flags = d.warnings.length
+        ? d.warnings.map(w => `<span class="flag">⚠ ${esc(w)}</span>`).join('')
+        : '<span class="flag safe">✓ looks like a normal install target</span>';
+      el.innerHTML = `
+        <input type="radio" name="disk" value="${esc(d.path)}"/>
+        <div class="disk-body">
+          <div class="disk-top">
+            <span class="disk-path">${esc(d.path)}</span>
+            <span class="disk-size">${esc(d.size_h)}</span>
+          </div>
+          <div class="disk-meta">${esc(d.model)}${d.tran ? ' · ' + esc(d.tran.toUpperCase()) : ''} · ${d.partitions} existing partition(s)</div>
+          <div class="flags">${flags}</div>
+        </div>`;
+      el.querySelector('input').addEventListener('change', () => {
+        selected = d;
+        [...box.querySelectorAll('.disk')].forEach(x => x.classList.remove('sel'));
+        el.classList.add('sel');
+        syncFooter();
+      });
+      box.appendChild(el);
+    });
+    renderExcluded(j.excluded, box);
+  } catch (err) {
+    box.innerHTML = `<p class="lede" style="color:var(--danger)">Disk scan failed: ${esc(String(err))}</p>`;
+  }
+}
+/* Show what was filtered out and why — a missing disk should never be a
+   mystery, especially the USB this installer is running from. */
+function renderExcluded(list, box) {
+  if (!list || !list.length) return;
+  const d = document.createElement('div');
+  d.style.cssText = 'margin-top:14px;padding:11px 13px;background:rgba(0,0,0,0.3);' +
+    'border:1px dashed var(--border);border-radius:var(--radius-sm)';
+  d.innerHTML = '<div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px">' +
+    'Not offered as targets (' + list.length + ')</div>' +
+    list.map(x => '<div style="font-family:var(--mono);font-size:0.68rem;' +
+      'color:var(--muted);line-height:1.7">· ' + esc(x) + '</div>').join('');
+  box.appendChild(d);
+}
+
+document.getElementById('rescan').addEventListener('click', () => { selected = null; loadDisks(); });
+
+/* ── password ──────────────────────────────────────── */
+const pw1 = document.getElementById('pw1');
+const pw2 = document.getElementById('pw2');
+const pwHint = document.getElementById('pw-hint');
+
+function passwordsOk() {
+  return pw1.value.length > 0 && pw1.value === pw2.value;
+}
+function checkPw() {
+  if (!pw1.value && !pw2.value) {
+    pwHint.textContent = 'Enter the password twice.'; pwHint.className = 'hint';
+  } else if (!pw2.value) {
+    pwHint.textContent = 'Confirm the password.'; pwHint.className = 'hint';
+  } else if (pw1.value !== pw2.value) {
+    pwHint.textContent = '✗ Passwords do not match.'; pwHint.className = 'hint bad';
+  } else {
+    pwHint.textContent = '✓ Passwords match.'; pwHint.className = 'hint good';
+  }
+  syncFooter();
+}
+pw1.addEventListener('input', checkPw);
+pw2.addEventListener('input', checkPw);
+
+/* ── confirm ───────────────────────────────────────── */
+const confirmPath = document.getElementById('confirm-path');
+confirmPath.addEventListener('input', () => {
+  const hint = document.getElementById('confirm-hint');
+  const want = selected ? selected.path : '';
+  if (!confirmPath.value) {
+    hint.textContent = 'Must match the target disk path character for character.';
+    hint.className = 'hint';
+  } else if (confirmPath.value.trim() === want) {
+    hint.textContent = '✓ Matches — install button unlocked.';
+    hint.className = 'hint good';
+  } else {
+    hint.textContent = '✗ Does not match ' + want;
+    hint.className = 'hint bad';
+  }
+  syncFooter();
+});
+
+function fillSummary() {
+  if (!selected) return;
+  document.getElementById('sum-disk').textContent  = selected.path;
+  document.getElementById('sum-size').textContent  = selected.size_h;
+  document.getElementById('sum-model').textContent = selected.model;
+  confirmPath.placeholder = selected.path;
+}
+
+/* ── install ───────────────────────────────────────── */
+const logBox = document.getElementById('log');
+
+function appendLog(line) {
+  const d = document.createElement('div');
+  const low = line.toLowerCase();
+  if (/^===/.test(line))                              d.className = 'l-hdr';
+  else if (/error|fatal|failed|cannot|✗/.test(low))    d.className = 'l-err';
+  else if (/warn|⚠/.test(low))                        d.className = 'l-warn';
+  else if (/success|complete|done|✓/.test(low))        d.className = 'l-ok';
+  d.textContent = line;
+  const atBottom = logBox.scrollTop + logBox.clientHeight >= logBox.scrollHeight - 30;
+  logBox.appendChild(d);
+  if (atBottom) logBox.scrollTop = logBox.scrollHeight;
+}
+
+async function startInstall() {
+  if (launched) return;
+  launched = true;
+  show(4);
+  document.getElementById('foot-note').textContent =
+    'Installing — do not power off or remove the media';
+
+  let res;
+  try {
+    res = await fetch('/api/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: JSON.stringify({
+        disk: selected.path,
+        password: pw1.value,
+        confirm: confirmPath.value.trim(),
+      }),
+    });
+  } catch (err) {
+    appendLog('FATAL: could not reach the installer backend: ' + err);
+    finish(false, 'Could not start the installer');
+    return;
+  }
+
+  // Clear the plaintext from the DOM the moment it has been handed over.
+  pw1.value = ''; pw2.value = '';
+
+  if (!res.ok) {
+    let msg = 'HTTP ' + res.status;
+    try { msg = (await res.json()).error || msg; } catch (_) {}
+    appendLog('FATAL: ' + msg);
+    finish(false, msg);
+    return;
+  }
+
+  const es = new EventSource('/api/log');
+  es.addEventListener('line', e => appendLog(e.data));
+  es.addEventListener('done', e => {
+    es.close();
+    let st = {};
+    try { st = JSON.parse(e.data); } catch (_) {}
+    finish(st.state === 'success', 'Installer exit code ' + st.returncode);
+  });
+  es.onerror = () => { /* server closes the stream when finished */ };
+}
+
+function finish(ok, detail) {
+  const statusRow = document.getElementById('install-status');
+  statusRow.innerHTML = ok
+    ? '<span style="color:var(--ok);font-size:1.05rem">✓</span><span>Installation complete</span>'
+    : '<span style="color:var(--danger);font-size:1.05rem">✗</span><span>Installation failed</span>';
+  document.getElementById('install-title').textContent =
+    ok ? 'SWARM OS installed' : 'Installation failed';
+
+  const mark = document.getElementById('done-mark');
+  mark.textContent = ok ? '✓' : '✗';
+  mark.classList.toggle('bad', !ok);
+  document.getElementById('done-title').textContent =
+    ok ? 'SWARM OS is installed' : 'Installation did not finish';
+  document.getElementById('done-text').textContent = ok
+    ? (DRY_RUN
+        ? 'Dry run finished — no disk was modified.'
+        : 'Remove the install media and reboot into your new system.')
+    : 'The log above shows what went wrong. Nothing further was changed. ' + (detail || '');
+
+  document.getElementById('foot-note').textContent = ok
+    ? 'Installation finished' : 'Installation failed — review the log';
+
+  setTimeout(() => show(5), ok ? 1100 : 2200);
+}
+
+/* ── nav ───────────────────────────────────────────── */
+btnNext.addEventListener('click', () => {
+  if (step === 0)      { show(1); loadDisks(); }
+  else if (step === 1) { show(2); pw1.focus(); }
+  else if (step === 2) { fillSummary(); show(3); confirmPath.focus(); }
+  else if (step === 3) { startInstall(); }
+  else if (step === 5) { reboot(); }
+});
+btnBack.addEventListener('click', () => { if (step > 0 && step < 4) show(step - 1); });
+
+async function reboot() {
+  btnNext.disabled = true;
+  btnNext.textContent = 'Rebooting…';
+  try {
+    await fetch('/api/reboot', { method: 'POST', headers: { 'X-CSRF-Token': CSRF } });
+  } catch (_) {
+    btnNext.textContent = 'Reboot manually';
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+show(0);
+</script>
+</body>
+</html>

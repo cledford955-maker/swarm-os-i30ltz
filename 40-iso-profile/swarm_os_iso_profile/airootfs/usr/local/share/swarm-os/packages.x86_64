@@ -49,6 +49,10 @@ openvpn
 labwc
 # provides libseat.so — used via LIBSEAT_BACKEND=logind
 seatd
+# window-switcher / status strip for labwc — no built-in panel, so waybar
+# provides the taskbar (workspaces, active-window title, system tray, clock,
+# battery, network). Config at /etc/xdg/waybar/. (b6 — 2026-09-25)
+waybar
 libxkbcommon
 # XWayland keyboard handling — safety net if Flutter's GTK embedder needs
 # the X11 fallback path (see swarm-ui.service)
@@ -125,6 +129,9 @@ lvm2
 # Task #2 (Podman rootless containers) + Task #3 (harden baseline) from the
 # SWARM OS journey roadmap. shadow (in base) already ships newuidmap/newgidmap
 # on Arch, so no separate "uidmap" package is needed for user namespaces.
+# NVIDIA Container Toolkit/CUDA are intentionally omitted. This machine has
+# Intel integrated graphics and 16 GB RAM; NVIDIA skills use hosted HTTP APIs.
+# See 70-scripts/NVIDIA_RUNTIME.md before adding any local NIM runtime.
 podman
 # provides /usr/bin/docker shim so DOCKER_HOST tooling "just works"
 podman-docker
@@ -141,8 +148,8 @@ apparmor
 # tailscale — REMOVED 2026-09-11: not in [core]/[extra] (this profile's
 # pacman.conf has no AUR/CachyOS repos), AUR-only on vanilla Arch. Adding it
 # broke pacstrap ("failed to install packages to new root") on the first real
-# build attempt after this session's changes. The nftables.conf iif
-# "tailscale0" rule stays a no-op until tailscale is installed some other way
+# build attempt after this session's changes. The nftables.conf iifname
+# "tailscale0" rules load before the interface exists and match once installed
 # — e.g. a first-boot script running tailscale's own install.sh, same pattern
 # as swarm-ollama-pull.sh in install_swarm_os.sh — not via packages.x86_64.
 # kept installed for manual/ad-hoc use; NOT enabled by default — nftables.conf

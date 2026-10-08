@@ -10,6 +10,10 @@ class InstallDisk {
   final String model;
   final bool hasLuks;
   final bool partitionsReady;
+  /// Filesystem UUIDs the installer is driven by: [rootUuid] is the btrfs
+  /// partition that gets formatted, [efiUuid] the FAT EFI that is kept.
+  final String efiUuid;
+  final String rootUuid;
 
   InstallDisk({
     required this.path,
@@ -18,6 +22,8 @@ class InstallDisk {
     required this.model,
     required this.hasLuks,
     required this.partitionsReady,
+    this.efiUuid = '',
+    this.rootUuid = '',
   });
 
   factory InstallDisk.fromJson(Map<String, dynamic> j) => InstallDisk(
@@ -27,6 +33,8 @@ class InstallDisk {
         model: j['model'] as String? ?? '',
         hasLuks: j['hasLuks'] as bool? ?? false,
         partitionsReady: j['partitionsReady'] as bool? ?? false,
+        efiUuid: j['efiUuid'] as String? ?? '',
+        rootUuid: j['rootUuid'] as String? ?? '',
       );
 }
 
@@ -55,12 +63,17 @@ class InstallService {
   /// once the socket closes (the install finished, or the connection dropped).
   Future<WebSocket> startInstall({
     required String disk,
+    required String rootUuid,
+    required String efiUuid,
     required String password,
     required void Function(String chunk) onLine,
     required void Function() onDone,
   }) async {
     final wsBase = SwarmConfig.httpBase.replaceFirst('http', 'ws');
-    final uri = Uri.parse('$wsBase/api/install/ws?disk=${Uri.encodeQueryComponent(disk)}');
+    final uri = Uri.parse('$wsBase/api/install/ws'
+        '?disk=${Uri.encodeQueryComponent(disk)}'
+        '&rootUuid=${Uri.encodeQueryComponent(rootUuid)}'
+        '&espUuid=${Uri.encodeQueryComponent(efiUuid)}');
     final socket = await WebSocket.connect(
       uri.toString(),
       headers: {'X-Swarm-Auth': SwarmConfig.authToken},

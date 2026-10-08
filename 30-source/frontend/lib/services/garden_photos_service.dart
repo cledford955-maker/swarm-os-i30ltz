@@ -15,7 +15,8 @@
 //
 // GARDEN_PHOTOS_DIR env var overrides the default path — used by tests.
 
-import 'dart:io';
+import 'dart:io' hide Platform;
+import '../platform/platform.dart';
 import 'dart:collection';
 
 class GardenPhotosService {

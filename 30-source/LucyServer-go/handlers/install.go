@@ -17,21 +17,15 @@ func (h *InstallHandler) Disks(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, services.ListDisks())
 }
 
-// WebSocket streams a live install_swarm_os.sh run. The `disk` query param
-// is validated against ListDisks()'s own output — never trusted as a raw
-// client string, since it becomes part of a sudo command line.
+// WebSocket streams a live install_swarm_os.sh run. The target is named by
+// partition UUIDs (rootUuid = formatted btrfs root, espUuid = kept FAT EFI)
+// plus the disk they belong to. Each must match ListDisks()'s own output, so
+// nothing from the client reaches the sudo command line unchecked.
 func (h *InstallHandler) WebSocket(w http.ResponseWriter, r *http.Request) {
-	disk := r.URL.Query().Get("disk")
-
-	valid := false
-	for _, d := range services.ListDisks() {
-		if d.Path == disk {
-			valid = true
-			break
-		}
-	}
-	if !valid {
-		http.Error(w, "unknown or unsafe disk path", http.StatusBadRequest)
+	q := r.URL.Query()
+	target, ok := services.FindInstallTarget(q.Get("disk"), q.Get("rootUuid"), q.Get("espUuid"))
+	if !ok {
+		http.Error(w, "unknown or unsafe install target", http.StatusBadRequest)
 		return
 	}
 
@@ -39,5 +33,5 @@ func (h *InstallHandler) WebSocket(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	services.HandleInstallSession(conn, disk)
+	services.HandleInstallSession(conn, target)
 }

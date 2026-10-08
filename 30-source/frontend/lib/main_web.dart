@@ -1,0 +1,159 @@
+// Web demo entrypoint (Vercel). Same shell as main.dart minus desktop-only window/media init.
+// Build: flutter build web --release -t lib/main_web.dart --dart-define=MOCK=true
+import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'platform/mock_http.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart' as p;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'router.dart';
+import 'theme/swarm_theme.dart';
+import 'widgets/openrouter_balance_widget.dart';
+import 'widgets/ui_zoom_control.dart';
+import 'services/ui_scale_service.dart';
+import 'services/ai_client.dart';
+import 'services/telemetry_service.dart';
+import 'services/memory_service.dart';
+import 'services/sound_service.dart';
+import 'services/gamepad_service.dart';
+import 'services/vital_service.dart';
+import 'services/sentinel_client.dart';
+import 'services/openrouter_balance_service.dart';
+import 'services/live_model_catalog_service.dart';
+import 'services/lucille_voice_service.dart';
+import 'services/wake_word_service.dart';
+import 'services/google_hub_service.dart';
+import 'services/auth_service.dart';
+import 'services/lucy_server_client.dart';
+
+void main() {
+  http.runWithClient(_start, createMockClient);
+}
+
+Future<void> _start() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final prefs = await SharedPreferences.getInstance();
+  final aiClient = AiClient();
+  final telemetryService = TelemetryService();
+  final memoryService = MemoryService();
+  final soundService = SoundService.instance;
+  final gamepadService = GamepadService();
+  final vitalService = VitalService();
+  final sentinelClient = SentinelClient();
+  final openRouterBalanceService = OpenRouterBalanceService();
+  final liveModelCatalogService = LiveModelCatalogService();
+  unawaited(liveModelCatalogService.ensureLoaded());
+  final voiceService = LucilleVoiceService();
+  final wakeWordService = WakeWordService();
+  final googleHubService = GoogleHubService();
+  final authService = AuthService();
+  final lucyServerClient = LucyServerClient();
+  final uiScaleService = UiScaleService();
+
+  runApp(
+    ProviderScope(
+      child: p.MultiProvider(
+        providers: [
+          p.ChangeNotifierProvider.value(value: uiScaleService),
+          p.Provider.value(value: aiClient),
+          p.Provider.value(value: telemetryService),
+          p.Provider.value(value: memoryService),
+          p.Provider.value(value: soundService),
+          p.ChangeNotifierProvider.value(value: gamepadService),
+          p.ChangeNotifierProvider.value(value: vitalService),
+          p.Provider.value(value: sentinelClient),
+          p.ChangeNotifierProvider.value(value: openRouterBalanceService),
+          p.ChangeNotifierProvider.value(value: liveModelCatalogService),
+          p.ChangeNotifierProvider.value(value: voiceService),
+          p.ChangeNotifierProvider.value(value: wakeWordService),
+          p.Provider.value(value: googleHubService),
+          p.Provider.value(value: authService),
+          p.Provider.value(value: lucyServerClient),
+          p.Provider.value(value: prefs),
+        ],
+        child: const SwarmApp(),
+      ),
+    ),
+  );
+}
+
+class SwarmApp extends StatefulWidget {
+  const SwarmApp({super.key});
+
+  @override
+  State<SwarmApp> createState() => _SwarmAppState();
+}
+
+class _SwarmAppState extends State<SwarmApp> {
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  // Ctrl+= / Ctrl+- / Ctrl+0 — whole-shell zoom, works from any screen.
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (!HardwareKeyboard.instance.isControlPressed) return false;
+    final ui = context.read<UiScaleService>();
+    if (event.logicalKey == LogicalKeyboardKey.equal ||
+        event.logicalKey == LogicalKeyboardKey.numpadAdd) {
+      ui.zoomIn();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.minus ||
+        event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
+      ui.zoomOut();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.digit0 ||
+        event.logicalKey == LogicalKeyboardKey.numpad0) {
+      ui.reset();
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      title: 'SWARM OS · Lucille v6',
+      debugShowCheckedModeBanner: false,
+      theme: SwarmTheme.dark,
+      routerConfig: goRouter,
+      builder: (context, child) {
+        return p.Consumer<UiScaleService>(
+          builder: (context, ui, _) {
+            return Stack(
+              children: [
+                if (child != null) WholeShellZoom(scale: ui.scale, child: child),
+                const Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 10,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: SafeArea(
+                      child: Center(child: OpenRouterBalanceWidget()),
+                    ),
+                  ),
+                ),
+                const UiZoomControl(),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}

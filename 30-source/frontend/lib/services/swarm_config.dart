@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' hide Platform;
+import '../platform/platform.dart';
 
 /// Single source of truth for how the Flutter shell contacts LucyServer.
 ///
@@ -7,7 +8,9 @@ import 'dart:io';
 /// shell inherits it on boot.  Falls back to the shared literal so a fresh
 /// install that hasn't set a custom token still works.
 class SwarmConfig {
-  static const _fallbackToken = 'swarm-token-2026';
+  // Web demo build (--dart-define=MOCK=true): no real token is ever compiled in.
+  static const _demo = bool.fromEnvironment('MOCK');
+  static const _fallbackToken = _demo ? 'demo' : 'swarm-token-2026';
   static const _fallbackHost = '127.0.0.1';
   static const _fallbackPort = 5000;
 

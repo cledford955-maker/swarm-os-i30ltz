@@ -24,8 +24,12 @@ NC='\033[0m'
 
 # Flutter SDK lives on LUCILLE — self-contained, no host dependency.
 # Go/cargo/dotnet are pacman packages; see 70-scripts/setup-dev-deps.sh to install them.
-FLUTTER_SDK="/mnt/Lucy/30-source/flutter-sdk"
-export PATH="$FLUTTER_SDK/bin:$HOME/.dotnet/tools:$HOME/.local/bin:$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$PATH"
+# ALL BUILDING happens on /mnt/swarmbuild (policy 2026-10-07); /mnt/Lucy is the source of truth.
+# Sync first with 70-scripts/sync_lucy_swarmbuild.sh to-build; sync VERSION/source back with "to-lucy".
+BUILD_ROOT="${SWARM_BUILD_ROOT:-/mnt/swarmbuild}"
+[ -d "$BUILD_ROOT/70-scripts" ] && mountpoint -q "$BUILD_ROOT" || { echo "ERROR: $BUILD_ROOT is not a mounted SWARM build tree. Run 70-scripts/check_mounts.sh" >&2; exit 1; }
+FLUTTER_SDK="$BUILD_ROOT/30-source/flutter-sdk"
+export PATH="$HOME/.cargo/bin:$HOME/.dotnet:$FLUTTER_SDK/bin:$HOME/.dotnet/tools:$HOME/.local/bin:$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$PATH"
 export FLUTTER_ROOT="$FLUTTER_SDK"
 
 if [ "$EUID" -eq 0 ]; then
@@ -35,7 +39,7 @@ if [ "$EUID" -eq 0 ]; then
     exit 1
 fi
 
-LUCY="/mnt/Lucy"
+LUCY="$BUILD_ROOT"   # historical variable name; this is the BUILD tree
 SCRIPT_DIR="/run/media/i30ltz/lucy-master/Luccile-v+"   # read-only reference; do not write here
 VERSION_FILE="$LUCY/VERSION"
 PROFILE_DIR="$LUCY/40-iso-profile/swarm_os_iso_profile"
@@ -275,7 +279,7 @@ fi
 # 4c. Lucille-Core Engine -> /usr/bin/lucille-core
 echo -e "  Compiling native C++20 lucille-core..."
 mkdir -p "$SOURCE_DIR/lucille-core/build"
-(cd "$SOURCE_DIR/lucille-core/build" && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j"$(nproc)")
+(cd "$SOURCE_DIR/lucille-core/build" && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PROJECT_lucille_core_INCLUDE="$LUCY/70-scripts/lucille_core_cmake_shim.cmake" && make -j"$(nproc)")
 mkdir -p "$AIROOTFS/usr/bin"
 cp -f "$SOURCE_DIR/lucille-core/build/lucille-core" "$AIROOTFS/usr/bin/lucille-core"
 chmod +x "$AIROOTFS/usr/bin/lucille-core"
@@ -450,10 +454,14 @@ mkdir -p "$WORK_DIR"
 # Bake build identity into installed system
 printf 'SWARM_VERSION=%s\nSWARM_COMMIT=%s\nSWARM_DATE=%s\n' "$NEW_VER" "$COMMIT" "$(date +%Y%m%d)" > "$AIROOTFS/etc/swarm-release"
 
-if command -v mkarchiso &>/dev/null; then
+# This host is Ubuntu. A host mkarchiso validates the profile against Arch's own
+# grub package, which Ubuntu does not have, so it aborts before building. The
+# Arch container builds the same profile with its own packages. Native mode
+# stays available only on request: SWARM_NATIVE_MKARCHISO=1.
+if [ "${SWARM_NATIVE_MKARCHISO:-0}" = 1 ] && command -v mkarchiso &>/dev/null; then
     sudo SYSTEMD_LOG_LEVEL=err mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
 else
-    echo -e "  ${YELLOW}mkarchiso not found (non-Arch host) — using Docker container${NC}"
+    echo -e "  ${YELLOW}Building in the Arch container (mkarchiso-docker.sh)${NC}"
     sudo SYSTEMD_LOG_LEVEL=err "$LUCY/70-scripts/mkarchiso-docker.sh" -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
 fi
 
@@ -474,7 +482,7 @@ else
 fi
 # exFAT uses latest.txt, not symlinks or duplicate multi-GB latest/fallback ISOs.
 sudo python3 "$ISO_MANAGER" publish "$TARGET_ISO" "swarm-os-v${NEW_VER}-${COMMIT}.iso" --result "$RESULT"
-echo "ISO stored ONLY in $RELEASE_DIR; ten newest ISOs total retained across Ventoy."
+echo "ISO stored ONLY in $RELEASE_DIR; newest five SWARM ISOs retained (Recovery OS keeps its own five in ISO/recovery-os)."
 if [[ $RESULT == failed ]]; then
  echo 'Boot gate failed. The previous latest pointer was not promoted to this build.' >&2
  exit 1

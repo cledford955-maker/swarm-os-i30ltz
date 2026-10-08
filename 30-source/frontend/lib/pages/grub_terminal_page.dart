@@ -7,7 +7,8 @@
 // Wraps the SwarmTerminal multi-pane widget with a dramatic header.
 // ═══════════════════════════════════════════════════════════════
 
-import 'dart:io';
+import 'dart:io' hide Platform;
+import '../platform/platform.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';

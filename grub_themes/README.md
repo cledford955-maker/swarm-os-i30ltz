@@ -15,3 +15,7 @@ Assets: original METALWASPGRUB.jpeg; green monitor art edited using built-in ima
 Image-generation prompts: preserve green monitor/carbon fiber/wasp, remove all menu text and progress bars, clear lower area for real rows; reproduce four reference icons on transparent 2×2 sprite sheet; create an isolated angular glossy cyan CachyOS C with transparent background and legibility at 96px. Built-in tool mode used throughout.
 
 Real GRUB screenshots: ../80-vm/grub-theme-check/cachy-final.png and swarm-final.png. Tests used harmless display-only entries, never booted or modified the host disks.
+
+## swarm_dev — Debian GRUB (2026-10-07)
+
+Third theme, for Debian's own GRUB. Background = `images/grub/developerbackground.jpg`; menu = Debian, SWARM OS, Recovery OS, CachyOS, Ventoy, Power & firmware, with 3D medallion icons rendered by `70-scripts/prepare_debian_grub_theme.py` (no image model needed). Install: `sudo 70-scripts/install_debian_grub_theme.sh` (revert: `--uninstall`). Entry logic: `09_swarm_debian`. Recovery OS entry needs `\EFI\i30ltz` on the sda1 ESP (RC-11) and shows a message until then.

@@ -149,7 +149,28 @@ class _BackendPageState extends ConsumerState<BackendPage> {
     }
   }
 
+  // Web demo (--dart-define=MOCK=true): no sockets/processes in a browser, so
+  // services come up healthy once and Start/Stop just flip the state.
+  static const bool _demo = bool.fromEnvironment('MOCK');
+  bool _demoSeeded = false;
+
   Future<void> _checkAllServices() async {
+    if (_demo) {
+      if (_demoSeeded) return;
+      _demoSeeded = true;
+      var ms = 3;
+      setState(() {
+        for (final s in _services) {
+          s.status = ServiceStatus.online;
+          s.latency = Duration(milliseconds: ms++);
+          s.lastLog = s.port > 0 ? 'Listening on 127.0.0.1:${s.port} (demo)' : 'Active (demo)';
+        }
+      });
+      for (final s in _services) {
+        _addLog('INFO', '${s.name} online${s.port > 0 ? ' on port ${s.port}' : ''}.');
+      }
+      return;
+    }
     for (final service in _services) {
       if (service.socketPath.isNotEmpty) {
         final sock = File(service.socketPath);
@@ -199,6 +220,13 @@ class _BackendPageState extends ConsumerState<BackendPage> {
     setState(() => service.status = ServiceStatus.starting);
     _addLog('EXEC', 'Starting ${service.name} -> ${service.startCommand}');
     
+    if (_demo) {
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (!mounted) return;
+      setState(() => service.status = ServiceStatus.online);
+      _addLog('INFO', '${service.name} started (demo).');
+      return;
+    }
     await SystemLauncher.launch(context, service.startCommand, displayName: service.name);
     await Future.delayed(const Duration(seconds: 2));
     _checkAllServices();
@@ -206,6 +234,11 @@ class _BackendPageState extends ConsumerState<BackendPage> {
 
   Future<void> _stopService(BackendServiceItem service) async {
     _addLog('EXEC', 'Stopping ${service.name} -> ${service.stopCommand}');
+    if (_demo) {
+      setState(() => service.status = ServiceStatus.offline);
+      _addLog('INFO', '${service.name} stopped (demo).');
+      return;
+    }
     await Process.run('bash', ['-c', service.stopCommand]);
     
     if (service.socketPath.isNotEmpty) {

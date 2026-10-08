@@ -1,10 +1,16 @@
 // ═══════════════════════════════════════════════════════════════
-// Swarm OS — CPU Aura Wallpaper v1.0.0 (2026-09-16)
+// Swarm OS — CPU Aura Wallpaper v1.1.0 (2026-10-08)
 //
-// The FALLEN SOLDIER wallpaper with a soft light aura that pulses. The
-// pulse rate follows CPU load: a slow ~3.2 s breath when idle, down to a
-// ~0.45 s throb at 100 %. Each lightning bolt in the image gets its own
-// glow in its own color, so the aura reads as the storm charging up.
+// A wallpaper with a soft light aura that pulses. The pulse rate follows CPU
+// load: a slow ~3.2 s breath when idle, down to a ~0.45 s throb at 100 %.
+// The FALLEN SOLDIER artwork also gets a glow on each lightning bolt, in the
+// bolt's own color, so the aura reads as the storm charging up. Those glows
+// are placed by fractions of that one image, so [boltGlows] must be true only
+// while it is on screen; they ease in and out when it changes. Every other
+// picture gets just the screen-edge rim.
+//
+// [image] can change at runtime; the new picture crossfades in (RotatingWallpaper
+// drives that from a folder of pictures).
 //
 // CPU is sampled once a second from /proc/stat (jiffy deltas). The pulse
 // phase is integrated per frame, so a speed change never makes it jump.
@@ -14,6 +20,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'crossfade_image.dart';
 
 const kFallenSoldierWallpaper = 'assets/wallpapers/fallen_soldier.jpg';
 
@@ -38,7 +45,14 @@ const _glows = [
 ];
 
 class CpuAuraWallpaper extends StatefulWidget {
-  const CpuAuraWallpaper({super.key});
+  const CpuAuraWallpaper({
+    super.key,
+    this.image = const AssetImage(kFallenSoldierWallpaper),
+    this.boltGlows = true,
+  });
+
+  final ImageProvider image;
+  final bool boltGlows;
 
   @override
   State<CpuAuraWallpaper> createState() => _CpuAuraWallpaperState();
@@ -56,9 +70,13 @@ class _CpuAuraWallpaperState extends State<CpuAuraWallpaper>
   int? _prevIdle, _prevTotal;
   bool _sampling = false;
 
+  // Eased 0..1 strength of the bolt glows; follows widget.boltGlows.
+  late double _glow;
+
   @override
   void initState() {
     super.initState();
+    _glow = widget.boltGlows ? 1 : 0;
     _ticker = createTicker(_tick)..start();
   }
 
@@ -96,6 +114,7 @@ class _CpuAuraWallpaperState extends State<CpuAuraWallpaper>
     }
     // Ease toward the sampled load so the tempo glides instead of stepping.
     _load += (_targetLoad - _load) * math.min(1, dt * 2.5);
+    _glow += ((widget.boltGlows ? 1.0 : 0.0) - _glow) * math.min(1, dt * 2.5);
     final period = 3.2 - 2.75 * _load; // 3.2 s idle → 0.45 s flat out
     _phase.value = (_phase.value + dt / period) % 1.0;
   }
@@ -110,16 +129,14 @@ class _CpuAuraWallpaperState extends State<CpuAuraWallpaper>
   @override
   Widget build(BuildContext context) {
     return Stack(fit: StackFit.expand, children: [
-      Image.asset(
-        kFallenSoldierWallpaper,
-        fit: BoxFit.cover,
-        alignment: Alignment.center,
+      CrossfadeImage(
+        image: widget.image,
         color: Colors.black.withValues(alpha: 0.18),
         colorBlendMode: BlendMode.darken,
       ),
       RepaintBoundary(
         child: CustomPaint(
-          painter: _AuraPainter(_phase, () => _load),
+          painter: _AuraPainter(_phase, () => _load, () => _glow),
         ),
       ),
     ]);
@@ -129,7 +146,8 @@ class _CpuAuraWallpaperState extends State<CpuAuraWallpaper>
 class _AuraPainter extends CustomPainter {
   final ValueNotifier<double> phase;
   final double Function() load;
-  _AuraPainter(this.phase, this.load) : super(repaint: phase);
+  final double Function() glow;
+  _AuraPainter(this.phase, this.load, this.glow) : super(repaint: phase);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -138,12 +156,14 @@ class _AuraPainter extends CustomPainter {
     final drawn = _imageSize * scale;
     final origin = Offset((size.width - drawn.width) / 2, (size.height - drawn.height) / 2);
     final l = load();
+    final boltStrength = glow();
 
     for (final g in _glows) {
+      if (boltStrength < 0.01) break; // not the FALLEN SOLDIER picture
       // Smooth breath: 0..1 with a quick rise and slower fall.
       final t = (phase.value + g.phase) % 1.0;
       final wave = math.pow(math.sin(t * math.pi), 2).toDouble();
-      final strength = (0.10 + 0.22 * wave) * (0.8 + 0.6 * l);
+      final strength = (0.10 + 0.22 * wave) * (0.8 + 0.6 * l) * boltStrength;
       final center = origin + Offset(g.at.dx * drawn.width, g.at.dy * drawn.height);
       final radius = g.radius * drawn.height * (0.85 + 0.25 * wave);
       final paint = Paint()

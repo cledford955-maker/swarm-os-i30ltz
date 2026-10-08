@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║  swarm-installer — launcher                                         ║
+# ║  Version: 1.0.0 | Date: 2026-10-05                                  ║
+# ║  Starts the installer backend, then opens it fullscreen in whatever ║
+# ║  browser the ISO actually shipped with.                             ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+set -euo pipefail
+
+VERSION="1.0.0"
+LIB_DIR="${SWARM_INSTALLER_LIB:-/usr/local/lib/swarm-installer}"
+SERVER="$LIB_DIR/server.py"
+
+# Qt/GTK apps under gamescope or bare sway need a sane backend.
+export GDK_BACKEND="${GDK_BACKEND:-wayland,x11}"
+export MOZ_ENABLE_WAYLAND="${MOZ_ENABLE_WAYLAND:-1}"
+
+if [[ ! -f "$SERVER" ]]; then
+    echo "swarm-installer: backend missing at $SERVER" >&2
+    exit 1
+fi
+
+# ── Start backend, capture the URL it prints on stdout ────────────────
+FIFO="$(mktemp -u /tmp/swarm-installer.XXXXXX.url)"
+mkfifo "$FIFO"
+
+python3 "$SERVER" > "$FIFO" &
+SERVER_PID=$!
+
+cleanup() {
+    [[ -n "${BROWSER_PID:-}" ]] && kill "$BROWSER_PID" 2>/dev/null || true
+    kill "$SERVER_PID" 2>/dev/null || true
+    rm -f "$FIFO"
+}
+trap cleanup EXIT INT TERM
+
+URL=""
+# Read the single SWARM_INSTALLER_URL= line, with a hard timeout so a broken
+# backend does not hang the live session forever.
+while IFS= read -r -t 20 line; do
+    case "$line" in
+        SWARM_INSTALLER_URL=*) URL="${line#SWARM_INSTALLER_URL=}"; break ;;
+    esac
+done < "$FIFO" || true
+
+if [[ -z "$URL" ]]; then
+    echo "swarm-installer: backend did not report a URL within 20s" >&2
+    exit 1
+fi
+
+echo "swarm-installer v$VERSION → $URL"
+
+# ── Find a browser and run it kiosk/fullscreen ────────────────────────
+# Ordered cheapest-to-heaviest. Each entry is "binary:args..." where the
+# URL is appended last.
+launch_browser() {
+    local url="$1"
+
+    if command -v cage >/dev/null 2>&1 && command -v chromium >/dev/null 2>&1; then
+        cage -- chromium --kiosk --no-first-run --no-sandbox \
+            --disable-translate --disable-infobars "$url" & BROWSER_PID=$!; return 0
+    fi
+    for b in chromium chromium-browser google-chrome brave-browser; do
+        if command -v "$b" >/dev/null 2>&1; then
+            "$b" --kiosk --no-first-run --disable-translate \
+                 --disable-infobars --app="$url" & BROWSER_PID=$!; return 0
+        fi
+    done
+    if command -v firefox >/dev/null 2>&1; then
+        firefox --kiosk "$url" & BROWSER_PID=$!; return 0
+    fi
+    for b in epiphany GtkLauncher surf qutebrowser falkon midori; do
+        if command -v "$b" >/dev/null 2>&1; then
+            "$b" "$url" & BROWSER_PID=$!; return 0
+        fi
+    done
+    return 1
+}
+
+if ! launch_browser "$URL"; then
+    cat >&2 <<EOF
+
+  swarm-installer: no browser found in this image.
+
+  The installer backend IS running. Open this URL from any browser
+  on this machine to continue:
+
+      $URL
+
+  To ship a browser in the ISO, add one of these to
+  40-iso-profile/swarm_os_iso_profile/packages.x86_64:
+      chromium      (recommended, supports --kiosk)
+      firefox
+      epiphany      (lightest)
+
+EOF
+    # Keep the backend alive so a manually-opened browser can still reach it.
+    wait "$SERVER_PID"
+    exit 1
+fi
+
+# Exit when the browser window closes; cleanup() tears down the backend.
+wait "$BROWSER_PID"

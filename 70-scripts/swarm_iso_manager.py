@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep ten current ISOs on Ventoy; archive verified SWARM builds weekly on Boltz."""
+"""Keep five current SWARM ISOs on Ventoy; archive verified SWARM builds weekly on Boltz."""
 import argparse
 import contextlib
 import fcntl
@@ -18,7 +18,7 @@ STORE = Path('/mnt/ventoy/ISO/SWARM_OS')
 MOUNT = Path('/mnt/ventoy')
 PROJECT = Path('/mnt/Lucy')
 ISO_RE = re.compile(r'^swarm[-_]os[-_]v?\d.*\.iso$', re.I)
-KEEP = 10
+KEEP = 5  # SWARM images kept on Ventoy. Recovery OS keeps its own five; see ISO_RELEASE_POLICY.md
 ARCHIVE_MOUNT = Path('/mnt/boltz')
 ARCHIVE = ARCHIVE_MOUNT / 'ISO/SWARM_OS/weekly'
 ARCHIVE_UUID = '689e6547-b439-4e7f-93c9-a6dcfabed46b'
@@ -92,8 +92,9 @@ def update_latest(store):
     atomic_text(store/'latest.txt',candidate.name+'\n')
 
 def prune(store,dry_run=False,root=None):
-    # 2026-09-24: explicit user policy supersedes stable/other-OS exemptions.
-    removed=all_isos(root or store)[KEEP:]
+    # 2026-10-06: user policy is five SWARM ISOs (was ten shared across OSes).
+    # Only SWARM images are counted or removed; other OSes on the stick are never touched.
+    removed=[p for p in all_isos(root or store) if ISO_RE.fullmatch(p.name)][KEEP:]
     for p in removed:
         print(('Would remove ' if dry_run else 'Removing ')+p.name)
         if not dry_run:
@@ -264,7 +265,7 @@ def main():
             p=store/Path(args.iso).name
             if not p.is_file() or p.is_symlink() or not ISO_RE.fullmatch(p.name): raise ValueError('Choose an existing versioned SWARM ISO')
             marker=p.with_name(p.name+'.stable')
-            if args.command=='stable': atomic_text(marker,args.note+'\n');print('Labelled stable (still counts toward the ten-image limit): '+p.name)
+            if args.command=='stable': atomic_text(marker,args.note+'\n');print('Labelled stable (still counts toward the five-image limit): '+p.name)
             else:
                 if re.search(r'(^|[-_.])stable([-_.]|$)',p.stem,re.I): raise ValueError('Rename the ISO to remove its stable label first.')
                 marker.unlink(missing_ok=True);print('No longer pinned: '+p.name)

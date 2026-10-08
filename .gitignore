@@ -103,3 +103,7 @@ grub_themes/backups/
 # Recovery OS lives on /mnt/recoverybuild (own repos)
 30-source/android_companion/
 30-source/i30ltz-recovery*/
+
+# Local IDE installs & desktop launchers
+/Antigravity IDE/
+/*.desktop

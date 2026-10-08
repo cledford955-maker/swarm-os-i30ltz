@@ -9,56 +9,56 @@
     ".NETCoreApp,Version=v10.0/linux-x64": {
       "GoogleWorkspaceService/1.0.0": {
         "dependencies": {
-          "Google.Apis.Auth": "1.76.0",
+          "Google.Apis.Auth": "1.77.0",
           "Google.Apis.Calendar.v3": "1.75.0.4206",
-          "Google.Apis.Drive.v3": "1.76.0.4261",
+          "Google.Apis.Drive.v3": "1.77.0.4276",
           "Google.Apis.Gmail.v1": "1.75.0.4225",
           "Google.Apis.PeopleService.v1": "1.74.0.3973",
           "Google.Apis.Tasks.v1": "1.74.0.3958",
           "Microsoft.AspNetCore.OpenApi": "10.0.11",
           "Microsoft.Data.Sqlite": "10.0.12",
-          "MimeKit": "4.17.0"
+          "MimeKit": "4.18.1"
         },
         "runtime": {
           "GoogleWorkspaceService.dll": {}
         }
       },
-      "BouncyCastle.Cryptography/2.6.2": {
+      "BouncyCastle.Cryptography/2.7.0": {
         "runtime": {
           "lib/net6.0/BouncyCastle.Cryptography.dll": {
             "assemblyVersion": "2.0.0.0",
-            "fileVersion": "2.6.2.46322"
+            "fileVersion": "2.7.0.16391"
           }
         }
       },
-      "Google.Apis/1.76.0": {
+      "Google.Apis/1.77.0": {
         "dependencies": {
-          "Google.Apis.Core": "1.76.0"
+          "Google.Apis.Core": "1.77.0"
         },
         "runtime": {
           "lib/net6.0/Google.Apis.dll": {
-            "assemblyVersion": "1.76.0.0",
-            "fileVersion": "1.76.0.0"
+            "assemblyVersion": "1.77.0.0",
+            "fileVersion": "1.77.0.0"
           }
         }
       },
-      "Google.Apis.Auth/1.76.0": {
+      "Google.Apis.Auth/1.77.0": {
         "dependencies": {
-          "Google.Apis": "1.76.0",
-          "Google.Apis.Core": "1.76.0",
+          "Google.Apis": "1.77.0",
+          "Google.Apis.Core": "1.77.0",
           "System.Management": "7.0.2"
         },
         "runtime": {
           "lib/net6.0/Google.Apis.Auth.dll": {
-            "assemblyVersion": "1.76.0.0",
-            "fileVersion": "1.76.0.0"
+            "assemblyVersion": "1.77.0.0",
+            "fileVersion": "1.77.0.0"
           }
         }
       },
       "Google.Apis.Calendar.v3/1.75.0.4206": {
         "dependencies": {
-          "Google.Apis": "1.76.0",
-          "Google.Apis.Auth": "1.76.0"
+          "Google.Apis": "1.77.0",
+          "Google.Apis.Auth": "1.77.0"
         },
         "runtime": {
           "lib/net6.0/Google.Apis.Calendar.v3.dll": {
@@ -67,33 +67,33 @@
           }
         }
       },
-      "Google.Apis.Core/1.76.0": {
+      "Google.Apis.Core/1.77.0": {
         "dependencies": {
           "Newtonsoft.Json": "13.0.4"
         },
         "runtime": {
           "lib/net6.0/Google.Apis.Core.dll": {
-            "assemblyVersion": "1.76.0.0",
-            "fileVersion": "1.76.0.0"
+            "assemblyVersion": "1.77.0.0",
+            "fileVersion": "1.77.0.0"
           }
         }
       },
-      "Google.Apis.Drive.v3/1.76.0.4261": {
+      "Google.Apis.Drive.v3/1.77.0.4276": {
         "dependencies": {
-          "Google.Apis": "1.76.0",
-          "Google.Apis.Auth": "1.76.0"
+          "Google.Apis": "1.77.0",
+          "Google.Apis.Auth": "1.77.0"
         },
         "runtime": {
           "lib/net6.0/Google.Apis.Drive.v3.dll": {
-            "assemblyVersion": "1.76.0.4261",
-            "fileVersion": "1.76.0.4261"
+            "assemblyVersion": "1.77.0.4276",
+            "fileVersion": "1.77.0.4276"
           }
         }
       },
       "Google.Apis.Gmail.v1/1.75.0.4225": {
         "dependencies": {
-          "Google.Apis": "1.76.0",
-          "Google.Apis.Auth": "1.76.0"
+          "Google.Apis": "1.77.0",
+          "Google.Apis.Auth": "1.77.0"
         },
         "runtime": {
           "lib/net6.0/Google.Apis.Gmail.v1.dll": {
@@ -104,8 +104,8 @@
       },
       "Google.Apis.PeopleService.v1/1.74.0.3973": {
         "dependencies": {
-          "Google.Apis": "1.76.0",
-          "Google.Apis.Auth": "1.76.0"
+          "Google.Apis": "1.77.0",
+          "Google.Apis.Auth": "1.77.0"
         },
         "runtime": {
           "lib/net6.0/Google.Apis.PeopleService.v1.dll": {
@@ -116,8 +116,8 @@
       },
       "Google.Apis.Tasks.v1/1.74.0.3958": {
         "dependencies": {
-          "Google.Apis": "1.76.0",
-          "Google.Apis.Auth": "1.76.0"
+          "Google.Apis": "1.77.0",
+          "Google.Apis.Auth": "1.77.0"
         },
         "runtime": {
           "lib/net6.0/Google.Apis.Tasks.v1.dll": {
@@ -163,14 +163,14 @@
           }
         }
       },
-      "MimeKit/4.17.0": {
+      "MimeKit/4.18.1": {
         "dependencies": {
-          "BouncyCastle.Cryptography": "2.6.2"
+          "BouncyCastle.Cryptography": "2.7.0"
         },
         "runtime": {
           "lib/net10.0/MimeKit.dll": {
-            "assemblyVersion": "4.17.0.0",
-            "fileVersion": "4.17.0.0"
+            "assemblyVersion": "4.18.0.0",
+            "fileVersion": "4.18.1.0"
           }
         }
       },
@@ -247,26 +247,26 @@
       "serviceable": false,
       "sha512": ""
     },
-    "BouncyCastle.Cryptography/2.6.2": {
+    "BouncyCastle.Cryptography/2.7.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-7oWOcvnntmMKNzDLsdxAYqApt+AjpRpP2CShjMfIa3umZ42UQMvH0tl1qAliYPNYO6vTdcGMqnRrCPmsfzTI1w==",
-      "path": "bouncycastle.cryptography/2.6.2",
-      "hashPath": "bouncycastle.cryptography.2.6.2.nupkg.sha512"
+      "sha512": "sha512-U+12df8UEWHgBi04YVf/Lgi2dy3SItlIYvHjjEVa/BngCQIzDCDRBk50DDByCfDvSbe5pRNFr3b7UrVK2kMcLw==",
+      "path": "bouncycastle.cryptography/2.7.0",
+      "hashPath": "bouncycastle.cryptography.2.7.0.nupkg.sha512"
     },
-    "Google.Apis/1.76.0": {
+    "Google.Apis/1.77.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-sIhJW2vT1cXE/yUFp1q1Mv7EUgbGu2uMIcqqv+BgElRdGQApxiYpZ/jG6hFkQB8/AG9kGurJOzLOM9PZ++GEtA==",
-      "path": "google.apis/1.76.0",
-      "hashPath": "google.apis.1.76.0.nupkg.sha512"
+      "sha512": "sha512-zj7MKdZz7lWRM7z2meqh5S9KSf83c1xY8Fa+b1KzYxw9xMugUxcQtwPoxJgFzxKJgLE64dAra0ze++P/Up4k6Q==",
+      "path": "google.apis/1.77.0",
+      "hashPath": "google.apis.1.77.0.nupkg.sha512"
     },
-    "Google.Apis.Auth/1.76.0": {
+    "Google.Apis.Auth/1.77.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-WzRCykQ0OApOEFdUYYBJ6riIxs+xk635s0KsGb83zJcABa66DCgaAXiWZuZjSqnwA3hjm7u8mmzR4EUHpJ1UfQ==",
-      "path": "google.apis.auth/1.76.0",
-      "hashPath": "google.apis.auth.1.76.0.nupkg.sha512"
+      "sha512": "sha512-lcgXlzM+JkX0nKKc7KBwTdiei2IbV20PuTe3cVQ2zOhq0j4IiS9I4xlRQY4igdCMLlmobthz5xtHiPr/wxl0Ew==",
+      "path": "google.apis.auth/1.77.0",
+      "hashPath": "google.apis.auth.1.77.0.nupkg.sha512"
     },
     "Google.Apis.Calendar.v3/1.75.0.4206": {
       "type": "package",
@@ -275,19 +275,19 @@
       "path": "google.apis.calendar.v3/1.75.0.4206",
       "hashPath": "google.apis.calendar.v3.1.75.0.4206.nupkg.sha512"
     },
-    "Google.Apis.Core/1.76.0": {
+    "Google.Apis.Core/1.77.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-P2nFbC0SsnUe8sGjhpCLs6CHIWFzURgUS2M9l9aUV1vJjVXpesRbegEYZS/dLKehcgx8twDP7xA5OMGygMD55g==",
-      "path": "google.apis.core/1.76.0",
-      "hashPath": "google.apis.core.1.76.0.nupkg.sha512"
+      "sha512": "sha512-7Yj4dpbOLFbxct6x5AFHQEZ25E8/f+5zqW39Q8f/GZknLyuS+uhnt2DIcKQplBNJTK9WNXompbYLWsPRhO6Nmg==",
+      "path": "google.apis.core/1.77.0",
+      "hashPath": "google.apis.core.1.77.0.nupkg.sha512"
     },
-    "Google.Apis.Drive.v3/1.76.0.4261": {
+    "Google.Apis.Drive.v3/1.77.0.4276": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-QLdhrQDimW0bMcKptU3JKQHs4zFWWOgmcTwYy2LTim61fDPJeEeCCqDD0fJGnB1kMuC7Ls3vOjrkAaCUZ9TKVw==",
-      "path": "google.apis.drive.v3/1.76.0.4261",
-      "hashPath": "google.apis.drive.v3.1.76.0.4261.nupkg.sha512"
+      "sha512": "sha512-0w7UaoIonNwzyGo1Hf/+cIVQX8ITV5Pd4DcSMYWoRuu64qZ8xsP07U2v/L5iNuQk0soXHUASxCuM+JZ61Ylisg==",
+      "path": "google.apis.drive.v3/1.77.0.4276",
+      "hashPath": "google.apis.drive.v3.1.77.0.4276.nupkg.sha512"
     },
     "Google.Apis.Gmail.v1/1.75.0.4225": {
       "type": "package",
@@ -338,12 +338,12 @@
       "path": "microsoft.openapi/2.7.5",
       "hashPath": "microsoft.openapi.2.7.5.nupkg.sha512"
     },
-    "MimeKit/4.17.0": {
+    "MimeKit/4.18.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-h/KXsCreJf8RpR/PSAtlbvYtZFndp9N8Wn1Bs248AL7ITyhn+AiIY5bLTvt60tbN2mu6g8KadtBNWygTji2lqg==",
-      "path": "mimekit/4.17.0",
-      "hashPath": "mimekit.4.17.0.nupkg.sha512"
+      "sha512": "sha512-D8AfFVMFVJldWmhQWCziC9nWUN/zayFFBAKpyjVyCeh0tqBiI9jtUVuMrKgWw1EGnCp09msDZldbRvp2jfUehQ==",
+      "path": "mimekit/4.18.1",
+      "hashPath": "mimekit.4.18.1.nupkg.sha512"
     },
     "Newtonsoft.Json/13.0.4": {
       "type": "package",
