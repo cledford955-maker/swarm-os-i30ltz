@@ -386,8 +386,10 @@ func (a *App) ideas(ctx context.Context) ([]Idea, string, error) {
 			"Suggest 6 concrete app/project/build ideas that fit what they are working on. " +
 			"Reply with ONLY a JSON array of objects {\"title\",\"pitch\",\"stack\",\"size\"} where size is evening, weekend or sprint. Context:\n" +
 			strings.Join(ctxLines, "\n")
+		// nvidia/llama-3.3-nemotron-super-49b-v1 was retired (HTTP 410, 2026-09-20).
+		// Use nemotron-3.5-lightning-30b-a3b which is the current supported NIM model.
 		body, _ := json.Marshal(map[string]any{
-			"model":       "nvidia/llama-3.3-nemotron-super-49b-v1",
+			"model":       "nvidia/nemotron-3.5-lightning-30b-a3b",
 			"messages":    []map[string]string{{"role": "system", "content": "detailed thinking off"}, {"role": "user", "content": prompt}},
 			"temperature": 0.8, "max_tokens": 1200,
 		})
@@ -405,7 +407,7 @@ func (a *App) ideas(ctx context.Context) ([]Idea, string, error) {
 			Choices []struct{ Message struct{ Content string } }
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&cr); err != nil || len(cr.Choices) == 0 {
-			return nil, fmt.Errorf("Nemotron returned HTTP %d with no answer", resp.StatusCode)
+			return nil, fmt.Errorf("NIM returned HTTP %d with no answer", resp.StatusCode)
 		}
 		txt := cr.Choices[0].Message.Content
 		i, j := strings.Index(txt, "["), strings.LastIndex(txt, "]")

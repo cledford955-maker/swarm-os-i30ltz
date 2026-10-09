@@ -42,7 +42,9 @@ func StreamChat(ctx context.Context, req models.LucyRequest) (<-chan string, <-c
 func streamToChannel(ctx context.Context, req models.LucyRequest, out chan<- string) error {
 	modelId := req.ModelId
 	if modelId == "" {
-		modelId = "nvidia/llama-3.3-nemotron-super-49b-v1"
+		// nvidia/llama-3.3-nemotron-super-49b-v1 was retired by NVIDIA (HTTP 410).
+		// Default to the same OpenRouter model GamingAgent uses for Lucille chat.
+		modelId = "moonshotai/kimi-k2.5"
 	}
 
 	var (

@@ -113,9 +113,10 @@ func (a *App) generateChatReply(ctx context.Context, req ChatRequest) (string, s
 		}
 	}
 
-	// 2. NVIDIA NIM / Nemotron fallback
+	// 2. NVIDIA NIM fallback — nvidia/llama-3.3-nemotron-super-49b-v1 was
+	// retired by NVIDIA (HTTP 410 as of 2026-09-20); skip if that's the model.
 	if a.cfg.NvidiaKey != "" {
-		nemotronModel := "nvidia/llama-3.3-nemotron-super-49b-v1"
+		nemotronModel := "nvidia/nemotron-3.5-lightning-30b-a3b"
 		reply, err := a.callNemotron(ctx, nemotronModel, req)
 		if err == nil && reply != "" {
 			return reply, nemotronModel, "nvidia-nemotron", nil
