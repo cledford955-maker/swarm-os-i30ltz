@@ -18,8 +18,9 @@ TABLE=(
   "/mnt/recoverybuild|UUID=a409250b-3973-4448-aeda-94a911538eb4|btrfs|defaults,noatime,nofail|1"
   # App build partitions (user decision 2026-10-09), all on the 1.8 TB build drive. See CLAUDE.md "App build partitions".
   "/mnt/lucillebuild|UUID=93037d5a-5b82-484c-ac20-28211c09e1c0|ext4|defaults,noatime,nofail|1"
-  # boltzbuild is NTFS (ntfs3 driver) as of 2026-10-09; if it is reformatted ext4 the UUID changes - update this row.
-  "/mnt/boltzbuild|UUID=67C2E9F8241FD7AE|ntfs3|uid=$OWNER_UID,gid=$OWNER_GID,umask=022,noatime,nofail|1"
+  # boltzbuild: created NTFS (UUID 67C2E9F8241FD7AE) by mistake, reformatted ext4 2026-10-09 by apply_app_build_mounts.sh --reformat-boltz
+  # with this fixed UUID. Reports MISSING/ELSEWHERE until that has been run.
+  "/mnt/boltzbuild|UUID=e195839a-f617-4abd-9bf3-b64a679b7474|ext4|defaults,noatime,nofail|1"
   # Recovery OS installed root/home lives on the Samsung T7, not the build drive, so it may legitimately be unplugged.
   "/mnt/recoveryos|UUID=490b9e60-afb2-45c6-91ce-2c6b1ea5a2f3|btrfs|defaults,noatime,nofail|0"
   "/mnt/lucy_master|UUID=c400a0ee-6710-4fe7-ad7a-c80dc3f402ca|ext4|ro,noatime,nofail|1"

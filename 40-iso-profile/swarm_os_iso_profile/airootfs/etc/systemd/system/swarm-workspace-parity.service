@@ -1,6 +1,9 @@
 [Unit]
 Description=SWARM workspace SHA-256 parity check
 After=local-fs.target
+# Dev-machine feature: needs /mnt/Lucy AND the external lucy-master mirror. On a standalone SWARM OS skip silently.
+ConditionPathIsMountPoint=/mnt/Lucy
+ConditionPathExists=/run/media/i30ltz/lucy-master
 
 [Service]
 Type=oneshot

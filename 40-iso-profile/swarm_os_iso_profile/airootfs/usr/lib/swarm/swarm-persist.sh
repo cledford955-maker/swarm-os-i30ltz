@@ -24,7 +24,7 @@ OVERLAY_HOME=/home/swarm
 BIND_DIRS=(
   /etc/swarm_os                          # gaming.db, lucy/ state
   /mnt/brains                            # shared memory log (also a mountpoint for swarm-memory-tick)
-  /mnt/Lucy/logs                         # swarm-ui crash logs survive the reboot
+  /var/log/swarm-ui                      # swarm-ui crash logs survive the reboot
   /var/lib/swarm
   /var/lib/tailscale
   /var/lib/bluetooth
