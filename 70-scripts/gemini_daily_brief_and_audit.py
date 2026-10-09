@@ -93,9 +93,13 @@ def run_tests():
     ok, stdout, stderr = run_cmd("go test ./... && go vet ./...", cwd=REPO_ROOT / "30-source/LucyServer-go")
     out["LucyServer-go"] = "PASS" if ok else f"FAIL ({stderr})"
 
-    # LucilleAssistant
-    ok, stdout, stderr = run_cmd("go vet ./...", cwd=REPO_ROOT / "30-source/LucilleAssistant")
-    out["LucilleAssistant"] = "CLEAN" if ok else f"FAIL ({stderr})"
+    # LucilleAssistant (moved 2026-10-09 to its own build partition; vet with that partition's Go)
+    la_root = Path("/mnt/lucillebuild")
+    if (la_root / "src/LucilleAssistant/go.mod").exists():
+        ok, stdout, stderr = run_cmd(f"bash -c '. {la_root}/env.sh && go vet ./...'", cwd=la_root / "src/LucilleAssistant")
+        out["LucilleAssistant"] = "CLEAN" if ok else f"FAIL ({stderr})"
+    else:
+        out["LucilleAssistant"] = "SKIPPED (/mnt/lucillebuild not mounted)"
 
     return out
 

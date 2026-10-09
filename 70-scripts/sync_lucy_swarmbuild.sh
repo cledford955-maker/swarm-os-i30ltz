@@ -6,7 +6,9 @@
 set -euo pipefail
 dir=${1:?usage: $0 to-build|to-lucy [-n]}; shift || true
 for m in /mnt/Lucy /mnt/swarmbuild; do mountpoint -q "$m" || { echo "$m not mounted: run 70-scripts/check_mounts.sh" >&2; exit 1; }; done
-EXCL=(--exclude=/swarm_os_build_work/ --exclude=.swarm-build.lock)
+# 30-source/LucilleAssistant moved to its own build partition (/mnt/lucillebuild) on 2026-10-09; never sync it
+# back in either direction (to-lucy would otherwise resurrect it from swarmbuild's frozen copy).
+EXCL=(--exclude=/swarm_os_build_work/ --exclude=.swarm-build.lock --exclude=/30-source/LucilleAssistant/)
 case $dir in
   to-build) src=/mnt/Lucy/;       dst=/mnt/swarmbuild/ ;;
   # --update: Lucy is the source of truth, so only take files the build tree has

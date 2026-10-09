@@ -11,10 +11,17 @@ OWNER_UID=${SUDO_UID:-$(id -u)}; OWNER_GID=${SUDO_GID:-$(id -g)}
 # mountpoint | fstab source | fstype | options | required(1/0)
 TABLE=(
   "/mnt/Lucy|UUID=62f0e009-43c2-4760-8d6c-d7c445f5f3df|ext4|defaults,noatime,nofail|1"
-  "/mnt/swarmbuild|LABEL=swarm-build|ext4|defaults,noatime,nofail|1"
+  # swarmbuild was LABEL=swarm-build; the partition was relabeled "A. swarm-build" on 2026-10-09, so match by UUID.
+  "/mnt/swarmbuild|UUID=5c84ef0e-d7b8-4b36-b1c4-58817b483dda|ext4|defaults,noatime,nofail|1"
   "/mnt/brains|UUID=fba1b27f-407b-4385-9dfa-851833f249db|ext4|defaults,noatime,nofail|1"
   "/mnt/ventoy|UUID=5ABB-83DF|exfat|uid=$OWNER_UID,gid=$OWNER_GID,umask=022,noatime,nofail|1"
   "/mnt/recoverybuild|UUID=a409250b-3973-4448-aeda-94a911538eb4|btrfs|defaults,noatime,nofail|1"
+  # App build partitions (user decision 2026-10-09), all on the 1.8 TB build drive. See CLAUDE.md "App build partitions".
+  "/mnt/lucillebuild|UUID=93037d5a-5b82-484c-ac20-28211c09e1c0|ext4|defaults,noatime,nofail|1"
+  # boltzbuild is NTFS (ntfs3 driver) as of 2026-10-09; if it is reformatted ext4 the UUID changes - update this row.
+  "/mnt/boltzbuild|UUID=67C2E9F8241FD7AE|ntfs3|uid=$OWNER_UID,gid=$OWNER_GID,umask=022,noatime,nofail|1"
+  # Recovery OS installed root/home lives on the Samsung T7, not the build drive, so it may legitimately be unplugged.
+  "/mnt/recoveryos|UUID=490b9e60-afb2-45c6-91ce-2c6b1ea5a2f3|btrfs|defaults,noatime,nofail|0"
   "/mnt/lucy_master|UUID=c400a0ee-6710-4fe7-ad7a-c80dc3f402ca|ext4|ro,noatime,nofail|1"
   "/mnt/boltz|UUID=689e6547-b439-4e7f-93c9-a6dcfabed46b|ext4|defaults,noatime,nofail|0"
 )
