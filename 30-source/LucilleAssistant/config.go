@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type MedDose struct {
@@ -86,9 +87,39 @@ func defaultConfig() Config {
 	}
 }
 
+func loadEnvFiles() {
+	paths := []string{
+		"/mnt/swarmbuild/20-runtime/.env",
+		"/mnt/Lucy/20-runtime/.env",
+		"/etc/swarm_os.env",
+	}
+	for _, p := range paths {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(b), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) == 2 {
+				k := strings.TrimSpace(parts[0])
+				v := strings.TrimSpace(parts[1])
+				v = strings.Trim(v, `"'`)
+				if os.Getenv(k) == "" {
+					_ = os.Setenv(k, v)
+				}
+			}
+		}
+	}
+}
+
 // loadConfig merges ~/.config/lucille-assistant/config.json over the defaults
 // and writes the merged file back on first run so it is easy to edit.
 func loadConfig() Config {
+	loadEnvFiles()
 	cfg := defaultConfig()
 	home, _ := os.UserHomeDir()
 	path := envOr("LUCILLE_ASSISTANT_CONFIG", filepath.Join(home, ".config/lucille-assistant/config.json"))

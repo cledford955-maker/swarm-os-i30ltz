@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -552,15 +553,25 @@ fun ChatDashboardPanel(
             }
         }
 
-        // Quick action chips (Matching web screenshot: Talk, I'm feeling..., Help me with..., Just chat)
+        // Quick action chips (Horizontally scrollable with comfortable touch targets)
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            QuickActionChip("💬 Talk", palette) { onSend("Let's talk, darling...") }
-            QuickActionChip("🌸 I'm feeling...", palette) { onSend("I wanted to share how I'm feeling with you...") }
-            QuickActionChip("💡 Help me...", palette) { onSend("Can you help me with something special?") }
-            QuickActionChip("✨ Just chat", palette) { onSend("Just keep me company and chat with me.") }
+            QuickActionChip("💬 Talk", palette) {
+                onSend("Hi Lucille, how are you doing today? Let's talk.")
+            }
+            QuickActionChip("🌸 I'm feeling...", palette) {
+                textInput = "I'm feeling "
+            }
+            QuickActionChip("💡 Help me with...", palette) {
+                textInput = "Can you help me with "
+            }
+            QuickActionChip("✨ Just chat", palette) {
+                onSend("Tell me something interesting and keep me company, Lucille.")
+            }
         }
 
         // Input bar with send button
@@ -603,12 +614,12 @@ fun QuickActionChip(label: String, palette: DashboardPalette, onClick: () -> Uni
     Surface(
         onClick = onClick,
         color = palette.panel,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, palette.pink.copy(alpha = 0.5f)),
-        modifier = Modifier.height(26.dp)
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, palette.pink.copy(alpha = 0.6f)),
+        modifier = Modifier.height(32.dp)
     ) {
-        Box(modifier = Modifier.padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {
-            Text(label, color = palette.text, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+        Box(modifier = Modifier.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+            Text(label, color = palette.text, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -1117,6 +1128,12 @@ fun playBase64Audio(context: android.content.Context, base64Audio: String) {
         val tempFile = File.createTempFile("lucille_voice_", ".mp3", context.cacheDir)
         tempFile.writeBytes(audioBytes)
         MediaPlayer().apply {
+            setAudioAttributes(
+                android.media.AudioAttributes.Builder()
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                    .build()
+            )
             setDataSource(tempFile.absolutePath)
             setOnCompletionListener { mp ->
                 try {
@@ -1180,9 +1197,11 @@ suspend fun queryLucilleChatApi(
                 if (reply.isNotBlank()) {
                     return@withContext Pair(reply, audioB64)
                 }
+            } else {
+                Log.w("LucilleChat", "$base responded with HTTP ${conn.responseCode}")
             }
-        } catch (_: Exception) {
-            // try next candidate
+        } catch (e: Exception) {
+            Log.w("LucilleChat", "Error connecting to $base: ${e.message}")
         }
     }
     Pair(getSeductiveLucilleResponse(message), null)

@@ -102,7 +102,7 @@ func (a *App) handleTTS(w http.ResponseWriter, r *http.Request) {
 func (a *App) generateChatReply(ctx context.Context, req ChatRequest) (string, string, string, error) {
 	model := req.Model
 	if model == "" {
-		model = "openai/gpt-4o-mini"
+		model = envOr("OPENROUTER_MODEL", "qwen/qwen3.6-plus")
 	}
 
 	// 1. OpenRouter
@@ -110,6 +110,12 @@ func (a *App) generateChatReply(ctx context.Context, req ChatRequest) (string, s
 		reply, err := a.callOpenRouter(ctx, model, req)
 		if err == nil && reply != "" {
 			return reply, model, "openrouter", nil
+		}
+		if model != "qwen/qwen3.6-flash" {
+			reply, err = a.callOpenRouter(ctx, "qwen/qwen3.6-flash", req)
+			if err == nil && reply != "" {
+				return reply, "qwen/qwen3.6-flash", "openrouter", nil
+			}
 		}
 	}
 
@@ -138,7 +144,7 @@ func (a *App) callOpenRouter(ctx context.Context, model string, req ChatRequest)
 		"model":       model,
 		"messages":    messages,
 		"temperature": 0.75,
-		"max_tokens":  400,
+		"max_tokens":  1000,
 	}
 
 	b, _ := json.Marshal(bodyData)
@@ -236,39 +242,46 @@ func (a *App) callNemotron(ctx context.Context, model string, req ChatRequest) (
 // synthesizeVoice calls ElevenLabs TTS with the given text and returns base64-encoded audio.
 func (a *App) synthesizeVoice(ctx context.Context, text string) (string, error) {
 	if a.cfg.ElevenKey != "" {
-		voiceID := a.cfg.ElevenVoiceID
-		if voiceID == "" {
-			voiceID = "21m00Tcm4TlvDq8ikWAM" // Rachel
+		voiceIDs := []string{
+			a.cfg.ElevenVoiceID,
+			"EXAVITQu4vr4xnSDxMaL", // Sarah (premade working female voice)
+			"FGY2WhTYpPnrIDTdsKH5", // Laura (premade working female voice)
 		}
+		for _, voiceID := range voiceIDs {
+			if strings.TrimSpace(voiceID) == "" {
+				continue
+			}
+			bodyData := map[string]any{
+				"text":     text,
+				"model_id": "eleven_multilingual_v2",
+				"voice_settings": map[string]any{
+					"stability":        0.55,
+					"similarity_boost": 0.80,
+				},
+			}
 
-		bodyData := map[string]any{
-			"text":     text,
-			"model_id": "eleven_multilingual_v2",
-			"voice_settings": map[string]any{
-				"stability":        0.55,
-				"similarity_boost": 0.80,
-			},
-		}
+			b, _ := json.Marshal(bodyData)
+			url := fmt.Sprintf("https://api.elevenlabs.io/v1/text-to-speech/%s", voiceID)
+			httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
+			if err != nil {
+				continue
+			}
+			httpReq.Header.Set("Content-Type", "application/json")
+			httpReq.Header.Set("xi-api-key", a.cfg.ElevenKey)
 
-		b, _ := json.Marshal(bodyData)
-		url := fmt.Sprintf("https://api.elevenlabs.io/v1/text-to-speech/%s", voiceID)
-		httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
-		if err != nil {
-			return "", err
-		}
-		httpReq.Header.Set("Content-Type", "application/json")
-		httpReq.Header.Set("xi-api-key", a.cfg.ElevenKey)
+			resp, err := httpc.Do(httpReq)
+			if err != nil {
+				continue
+			}
 
-		resp, err := httpc.Do(httpReq)
-		if err != nil {
-			return "", err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode < 300 {
-			audioBytes, err := io.ReadAll(resp.Body)
-			if err == nil && len(audioBytes) > 0 {
-				return base64.StdEncoding.EncodeToString(audioBytes), nil
+			if resp.StatusCode < 300 {
+				audioBytes, err := io.ReadAll(resp.Body)
+				resp.Body.Close()
+				if err == nil && len(audioBytes) > 0 {
+					return base64.StdEncoding.EncodeToString(audioBytes), nil
+				}
+			} else {
+				resp.Body.Close()
 			}
 		}
 	}
