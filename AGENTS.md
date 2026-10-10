@@ -1,5 +1,9 @@
 # SWARM OS — AI Onboarding Prompt
 
+## What this project is, and the quality bar (user, 2026-10-10)
+
+SWARM OS, Lucille, Recovery OS and the two phone apps are a **personal hobby project**, built out of passion by one person (i30ltz). They are **not a company product and not for enterprise customers.** When the user says "enterprise level" they mean **enterprise quality**: careful engineering, tests, safe defaults, honest docs, nothing that loses data or breaks quietly. They do **not** mean enterprise features or process (no multi-tenant, compliance paperwork, SLAs, committees). The goal is that if anyone ever does look at it, it is **as polished and as cool as possible**. The money behind it is personal and limited, so prefer solutions that are cheap to run and easy for one person to maintain, and do not burn paid API calls, compute or tokens on wasteful experiments.
+
 ## ISO releases and desktop tools — user policy (2026-09-24)
 
 **Keep ten current operating-system ISOs total on Ventoy, across all OSes. No stable-label exceptions. Archive at most one new boot-verified SWARM build per calendar week under `/mnt/boltz/ISO/SWARM_OS/weekly/`; these historical archives are the exception to the active ten.** Use `70-scripts/build_swarm_iso.sh` as the normal user; it builds directly into Ventoy, prunes the total to ten, and never falls back to local copies. Verify both mount UUIDs before writes. Archive only recorded boot passes with verified SHA-256; never copy an unchanged build again or write into an unmounted Boltz directory. Read `ISO_RELEASE_POLICY.md` before changing build, retention, VM or launch scripts. The old ten-plus-stable rule is superseded. VM launcher: `70-scripts/launch_swarm_vm.sh`; editor: `70-scripts/open_swarm_code.sh`.
@@ -109,7 +113,7 @@ Run `70-scripts/setup-dev-deps.sh` on any new machine after mounting LUCILLE.
 
 ## Hard rules — do not break these
 
-- **Never write to `/run/media/i30ltz/lucy-master/`** — read-only reference mount. All writes go to `/mnt/Lucy/`.
+- **Never write to `/run/media/i30ltz/lucy-master/`** — read-only reference mount. All writes go to `/mnt/Lucy/`. **One exception (user, 2026-10-10): `70-scripts/sync_lucy_master.sh` two-way syncs a chosen folder of the encrypted lucy-master volume with `/mnt/Lucy` (new data is copied, only real deletions are carried over, deletions go to a trash, the first run deletes nothing). Nothing else writes to lucy-master, and `/mnt/archive` (= `lucy-master-bak`, c400a0ee) has no sync job.**
 - **Never write to `/mnt/lucy/`** — lowercase, different path, not this project.
 - **Never `rm -rf` anything in `airootfs/` without checking for symlinks to lucy-master.** Use `ls -la` first.
 - **Never commit `.env`** — it contains production API keys.
@@ -131,6 +135,8 @@ All OSes, the companion phones and Codex share one append-only memory log at `/m
 |---|---|---|
 | GamingAgent | 8401 | `30-source/GamingAgent-go/` |
 | LucyServer | 5000 (+ 8402 memory sync, LAN) | `30-source/LucyServer/` (.NET, being replaced by `LucyServer-go/`) |
+
+**Network (Tailscale): the Debian dev PC is `100.82.1.19`** (changed 2026-10-09 by the user; it was `100.82.1.21`, and `.19` had been Cachy's address). `100.82.1.21` no longer exists on the tailnet. Never hardcode it: `tailscale ip -4` prints the current address. The LucyServer drop-in `~/.config/systemd/user/swarm-lucy-dev.service.d/listen.conf` (`ASPNETCORE_URLS`) was changed to `http://127.0.0.1:5000;http://100.82.1.19:5000` on 2026-10-09 (backup `listen.conf.bak-20261009-202628`; the `swarm-lucy-dev` user unit is not enabled at boot, but the user started it at 20:27 and it now listens on `127.0.0.1:5000` and `100.82.1.19:5000`). The only thing still pinned to `.21` is the frozen copy under `30-source/LucilleAssistant` (do not edit it), plus any companion app with a saved node address of `.21`. Lucille Assistant already listens on `100.82.1.19:8403` (`LUCILLE_ASSISTANT_LISTEN` in `~/.config/lucille-assistant/.env`) and its phone app tries `100.82.1.19:8403`.
 
 ---
 

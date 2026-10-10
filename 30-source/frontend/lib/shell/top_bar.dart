@@ -81,7 +81,7 @@ class SwarmTopBar extends ConsumerWidget {
                         border: Border.all(color: SwarmColors.accent.withValues(alpha: 0.4), width: 0.8),
                       ),
                       child: Text(
-                        'v6.2.83',
+                        'v6.2.88',
                         style: SwarmTextStyles.codeSmall.copyWith(
                           color: SwarmColors.accent,
                           fontSize: 9,

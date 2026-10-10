@@ -308,3 +308,31 @@ data class CoachTip(
     val tip: String = "",
     val source: String? = null       // "live" | "static"
 )
+
+// ─── Lucille Assistant: project briefings ──────────────────────────────────
+// Served by the separate Lucille Assistant service (own port, own pairing) —
+// see data/network/LucilleAssistantApi.kt. Shape mirrors briefings.go's Briefing struct.
+data class Briefing(
+    val id: String = "",
+    val title: String = "",
+    val project: String = "",
+    val summary: String = "",
+    val body: String = "",
+    @SerializedName("read_first") val readFirst: List<String>? = null,
+    val order: Int = 0,
+    val created: String? = null,
+    val updated: String? = null
+)
+
+data class BriefingsListResponse(
+    val ok: Boolean = false,
+    val briefings: List<Briefing>? = null,
+    val error: String? = null
+)
+
+data class PairRedeemResponse(
+    val ok: Boolean = false,
+    val id: String? = null,
+    val token: String? = null,
+    val error: String? = null
+)

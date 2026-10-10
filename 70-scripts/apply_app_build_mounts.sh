@@ -7,7 +7,7 @@
 #   options: --yes  skip the typed confirmation of the reformat
 #
 #   /mnt/lucillebuild  C. Lucille build    Lucille Assistant build     PARTUUID d3bc74a6-...   ext4
-#   /mnt/boltzbuild    D. BOLTZ Recovery   i30ltz Recovery app build   PARTUUID 52545158-...   NTFS -> ext4 (UUID e195839a-...)
+#   /mnt/boltzbuild    Boltz Built         Boltz Recovery phone app    PARTUUID 61b76036-...   ext4 (user reformat 2026-10-09; was NTFS 52545158-.../UUID e195839a-... planned)
 #   /mnt/recoveryos    Recovery OS         Recovery OS root/home       PARTUUID 993d0098-...   btrfs (Samsung T7)
 #
 # Partitions are located by PARTUUID, which survives a reformat; each fstab row is built from the filesystem
@@ -32,9 +32,9 @@ done
 [[ $DRY -eq 0 && $EUID -ne 0 ]] && { echo "needs sudo:  sudo $0 $*" >&2; exit 1; }
 OWNER_UID=${SUDO_UID:-$(id -u)}; OWNER_GID=${SUDO_GID:-$(id -g)}
 HEADER="# ==== App build partitions (user decision 2026-10-09) - see /mnt/Lucy/CLAUDE.md ===="
-BOLTZ_PARTUUID=52545158-4886-4f7e-8fed-7556cebaaefd
-BOLTZ_LABEL="D. BOLTZ Recovery"
-BOLTZ_EXT4_UUID=e195839a-f617-4abd-9bf3-b64a679b7474
+BOLTZ_PARTUUID=61b76036-5814-43fa-80b2-84ce5164f3d4   # changed when the user reformatted D with GNOME Disks (was 52545158-4886-4f7e-8fed-7556cebaaefd)
+BOLTZ_LABEL="Boltz Built"
+BOLTZ_EXT4_UUID=6f7c7656-2984-4fb0-81c8-bfc11ca81461   # the UUID actually on the disk (reformatted outside this script)
 
 # mountpoint|PARTUUID   (NOTE: do not name any variable LINES/COLUMNS/SECONDS/RANDOM/UID - bash owns those)
 PARTS=(

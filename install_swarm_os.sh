@@ -685,6 +685,47 @@ if [ -z "$HOST_PW_HASH" ] || [ "$HOST_PW_HASH" = "!" ] || [ "$HOST_PW_HASH" = "*
     fi
 fi
 
+# ── Admin login password (lock-screen recovery / cipher reset) ───────────────
+# LucyServer's /api/settings/verify_login_password bcrypt-checks this file and
+# FAILS CLOSED when it is missing, so a fresh install with no admin password
+# means a forgotten stone cipher can never be recovered (found 2026-10-10: the
+# user booted, could not match their cipher, and had no admin password). Set it
+# here, at install time. Preserved across reinstalls only if the user re-enters
+# it; an existing hash on the target root is left alone.
+ADMIN_PW_FILE="$MOUNT_POINT/etc/swarm_os/lucy/login_password.txt"
+if [ ! -s "$ADMIN_PW_FILE" ]; then
+    banner "Admin login password"
+    ADMIN_PW=""
+    if [ "$NONINTERACTIVE" -eq 1 ]; then
+        ADMIN_PW="${SWARM_ADMIN_PASSWORD:-}"
+    else
+        while true; do
+            read -r -s -p "Set the SWARM OS admin login password (lock-screen recovery): " ADMIN_PW; echo
+            read -r -s -p "Repeat it: " ADMIN_PW2; echo
+            [ -n "$ADMIN_PW" ] && [ "$ADMIN_PW" = "$ADMIN_PW2" ] && break
+            warn "Empty or mismatched - try again."
+        done
+        unset ADMIN_PW2
+    fi
+    if [ -n "$ADMIN_PW" ]; then
+        mkdir -p "$(dirname "$ADMIN_PW_FILE")"
+        # Password goes in on stdin, never argv (visible in /proc/*/cmdline).
+        if printf '%s' "$ADMIN_PW" | arch-chroot "$MOUNT_POINT" python3 -c \
+            'import sys,bcrypt;sys.stdout.buffer.write(bcrypt.hashpw(sys.stdin.buffer.read(),bcrypt.gensalt()))' \
+            > "$ADMIN_PW_FILE" 2>/dev/null && [ -s "$ADMIN_PW_FILE" ]; then
+            chmod 600 "$ADMIN_PW_FILE"
+            arch-chroot "$MOUNT_POINT" chown i30ltz:i30ltz /etc/swarm_os/lucy/login_password.txt 2>/dev/null || true
+            info "Admin login password saved (bcrypt hash only)"
+        else
+            rm -f "$ADMIN_PW_FILE"
+            warn "Could not hash the admin password (python-bcrypt missing in target). Set it after first login: Settings > Login password."
+        fi
+    else
+        warn "No admin password set. Set it after first login: Settings > Login password."
+    fi
+    unset ADMIN_PW
+fi
+
 banner "Cleaning up..."
 sync
 umount -R "$MOUNT_POINT"

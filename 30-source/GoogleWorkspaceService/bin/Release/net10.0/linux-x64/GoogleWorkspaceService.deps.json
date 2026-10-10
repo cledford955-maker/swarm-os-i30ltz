@@ -10,7 +10,7 @@
       "GoogleWorkspaceService/1.0.0": {
         "dependencies": {
           "Google.Apis.Auth": "1.77.0",
-          "Google.Apis.Calendar.v3": "1.75.0.4206",
+          "Google.Apis.Calendar.v3": "1.77.0.4285",
           "Google.Apis.Drive.v3": "1.77.0.4276",
           "Google.Apis.Gmail.v1": "1.75.0.4225",
           "Google.Apis.PeopleService.v1": "1.74.0.3973",
@@ -55,15 +55,15 @@
           }
         }
       },
-      "Google.Apis.Calendar.v3/1.75.0.4206": {
+      "Google.Apis.Calendar.v3/1.77.0.4285": {
         "dependencies": {
           "Google.Apis": "1.77.0",
           "Google.Apis.Auth": "1.77.0"
         },
         "runtime": {
           "lib/net6.0/Google.Apis.Calendar.v3.dll": {
-            "assemblyVersion": "1.75.0.4206",
-            "fileVersion": "1.75.0.4206"
+            "assemblyVersion": "1.77.0.4285",
+            "fileVersion": "1.77.0.4285"
           }
         }
       },
@@ -268,12 +268,12 @@
       "path": "google.apis.auth/1.77.0",
       "hashPath": "google.apis.auth.1.77.0.nupkg.sha512"
     },
-    "Google.Apis.Calendar.v3/1.75.0.4206": {
+    "Google.Apis.Calendar.v3/1.77.0.4285": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-cmO57WIZbu1azbmPi+6ak7oOMVitehx/WrcUIp97t6ZLlkXZz/zcsZInrYPcdS6maSQPvncy98gHqN7dSPHSmQ==",
-      "path": "google.apis.calendar.v3/1.75.0.4206",
-      "hashPath": "google.apis.calendar.v3.1.75.0.4206.nupkg.sha512"
+      "sha512": "sha512-luetW/3LeflQj8VBetNX8+pBDo2w2Z8slKlE2+nsI8ZkGZ6ZW5bgCq0OouhHuRo37VNikZCxwYNft0fYR6xGHw==",
+      "path": "google.apis.calendar.v3/1.77.0.4285",
+      "hashPath": "google.apis.calendar.v3.1.77.0.4285.nupkg.sha512"
     },
     "Google.Apis.Core/1.77.0": {
       "type": "package",

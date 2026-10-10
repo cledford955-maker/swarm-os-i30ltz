@@ -46,6 +46,15 @@ class MainViewModel(
     private val _projectBrief = MutableStateFlow<UiState<ProjectBriefResponse>>(UiState())
     val projectBrief = _projectBrief.asStateFlow()
 
+    // ── Briefings (separate Lucille Assistant service)
+    private val _briefings = MutableStateFlow<UiState<BriefingsListResponse>>(UiState())
+    val briefings = _briefings.asStateFlow()
+
+    private val _pairing = MutableStateFlow<UiState<PairRedeemResponse>>(UiState())
+    val pairing = _pairing.asStateFlow()
+
+    val assistantPaired = prefs.assistantToken.map { it.isNotBlank() }
+
     // ── Mail
     private val _mail = MutableStateFlow<UiState<MailResponse>>(UiState())
     val mail = _mail.asStateFlow()
@@ -126,6 +135,29 @@ class MainViewModel(
             _projectBrief.value = loadingState()
             _projectBrief.value = repo.getProjectBrief(forceRefresh).toUiState()
         }
+    }
+
+    // ── Briefings (separate Lucille Assistant service) ─────────────────────
+
+    fun loadBriefings(forceRefresh: Boolean = false) {
+        viewModelScope.launch {
+            _briefings.value = loadingState()
+            _briefings.value = repo.getBriefings(forceRefresh).toUiState()
+        }
+    }
+
+    /** Redeems a 6-digit one-time code printed on the PC (`lucille-assistant pair`). */
+    fun redeemAssistantPairCode(code: String, label: String = "Android") {
+        viewModelScope.launch {
+            _pairing.value = loadingState()
+            val res = repo.redeemAssistantPairCode(code, label)
+            _pairing.value = res.toUiState()
+            if (res is ApiResult.Success && res.data.ok) loadBriefings(forceRefresh = true)
+        }
+    }
+
+    fun clearPairingError() {
+        _pairing.value = UiState()
     }
 
     // ── Mail ──────────────────────────────────────────────────────────────────

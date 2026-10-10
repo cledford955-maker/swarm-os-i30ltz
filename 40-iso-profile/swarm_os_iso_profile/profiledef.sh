@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-iso_name="swarm-os-v6.2.83-857ba1af"
+iso_name="swarm-os-v6.2.88-fdc0ec7c"
 iso_label="SWARM_OS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="SWARM OS <https://github.com/swarm>"
-iso_application="SWARM OS · Lucille v6.2.83"
+iso_application="SWARM OS · Lucille v6.2.88"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="swarm"
 buildmodes=('iso')
@@ -51,7 +51,6 @@ file_permissions=(
   ["/opt/swarm_os/swarm-slint/swarm-slint"]="0:0:755"
   ["/opt/swarm_os/swarm-overlay/swarm-overlay"]="0:0:755"
   ["/opt/swarm_os/GoogleWorkspaceService/GoogleWorkspaceService"]="0:0:755"
-  ["/opt/swarm_os/i30ltz-recovery"]="0:0:755"
   ["/usr/local/bin/install_swarm_os.sh"]="0:0:755"
   ["/usr/local/bin/swarm-snapshot.sh"]="0:0:755"
   ["/usr/lib/swarm/swarm-persist.sh"]="0:0:755"

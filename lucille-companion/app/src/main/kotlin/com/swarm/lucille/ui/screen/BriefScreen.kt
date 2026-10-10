@@ -23,7 +23,7 @@ import com.swarm.lucille.ui.viewmodel.MainViewModel
 @Composable
 fun BriefScreen(vm: MainViewModel) {
     var tab by remember { mutableStateOf(0) }
-    val tabs = listOf("DAILY", "PROJECT")
+    val tabs = listOf("DAILY", "PROJECT", "BRIEFINGS")
 
     Column(modifier = Modifier.fillMaxSize().background(SwarmBg)) {
         // Sub-tab bar
@@ -51,6 +51,7 @@ fun BriefScreen(vm: MainViewModel) {
         when (tab) {
             0 -> DailyTab(vm)
             1 -> ProjectTab(vm)
+            2 -> BriefingsTab(vm)
         }
     }
 }
@@ -283,6 +284,119 @@ fun GitRepoCard(repo: RepoStatus) {
             }
             repo.error?.let {
                 Text("⚠ $it", style = MaterialTheme.typography.labelSmall, color = SwarmRed)
+            }
+        }
+    }
+}
+
+// ─── Project Briefings (separate Lucille Assistant service) ──────────────────
+
+@Composable
+fun BriefingsTab(vm: MainViewModel) {
+    val paired by vm.assistantPaired.collectAsStateWithLifecycle(initialValue = false)
+
+    if (!paired) {
+        AssistantPairingCard(vm)
+        return
+    }
+
+    val state by vm.briefings.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.loadBriefings() }
+
+    when {
+        state.loading -> SwarmLoading("Loading briefings…")
+        state.error  != null -> SwarmError(state.error!!) { vm.loadBriefings(true) }
+        state.data   != null -> BriefingsContent(state.data!!.briefings.orEmpty(), onRefresh = { vm.loadBriefings(true) })
+        else -> SwarmEmpty("No briefings yet") { vm.loadBriefings() }
+    }
+}
+
+@Composable
+fun BriefingsContent(items: List<Briefing>, onRefresh: () -> Unit) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item { SectionHeader("📋 PROJECT BRIEFINGS") }
+        items(items.sortedBy { it.order }) { b -> BriefingCard(b) }
+        item {
+            TextButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
+                Text("↺ REFRESH BRIEFINGS", color = SwarmCyan, style = MaterialTheme.typography.labelLarge)
+            }
+        }
+    }
+}
+
+@Composable
+fun BriefingCard(b: Briefing) {
+    var expanded by remember { mutableStateOf(false) }
+    SwarmCard(modifier = Modifier.clickable { expanded = !expanded }) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(b.title, style = MaterialTheme.typography.headlineSmall, color = SwarmCyan)
+                SwarmBadge(b.project.uppercase(), SwarmPurple)
+            }
+            Text(if (expanded) "▲" else "▼", color = TextDisabled)
+        }
+        if (b.summary.isNotBlank()) {
+            Text(b.summary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
+        }
+        if (expanded) {
+            if (!b.readFirst.isNullOrEmpty()) {
+                Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("READ FIRST", style = MaterialTheme.typography.labelSmall, color = SwarmGold)
+                    b.readFirst.forEach { line ->
+                        Text("• $line", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            if (b.body.isNotBlank()) {
+                Text(
+                    b.body,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AssistantPairingCard(vm: MainViewModel) {
+    var code by remember { mutableStateOf("") }
+    val pairState by vm.pairing.collectAsStateWithLifecycle()
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        SwarmCard(modifier = Modifier.padding(24.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("🔐 PAIR WITH LUCILLE ASSISTANT", style = MaterialTheme.typography.labelLarge, color = SwarmCyan)
+                Text(
+                    "Run `lucille-assistant pair` on the PC — it prints a 6-digit code good for 10 minutes. Enter it below.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) code = it },
+                    label = { Text("6-digit code") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (pairState.error != null) {
+                    Text(pairState.error!!, style = MaterialTheme.typography.bodySmall, color = SwarmRed)
+                }
+                Button(
+                    onClick = { vm.redeemAssistantPairCode(code) },
+                    enabled = code.length == 6 && !pairState.loading,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (pairState.loading) "PAIRING…" else "PAIR THIS PHONE")
+                }
             }
         }
     }

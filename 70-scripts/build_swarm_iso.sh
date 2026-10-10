@@ -25,7 +25,8 @@ NC='\033[0m'
 # Flutter SDK lives on LUCILLE — self-contained, no host dependency.
 # Go/cargo/dotnet are pacman packages; see 70-scripts/setup-dev-deps.sh to install them.
 # ALL BUILDING happens on /mnt/swarmbuild (policy 2026-10-07); /mnt/Lucy is the source of truth.
-# Sync first with 70-scripts/sync_lucy_swarmbuild.sh to-build; sync VERSION/source back with "to-lucy".
+# Sync first with `70-scripts/sync_lucy_swarmbuild.sh both --apply` (two-way: new files from each side are kept, deletions are propagated);
+# run it again after the build so VERSION and source edits flow back to Lucy. (The older one-way to-build/to-lucy modes still exist.)
 BUILD_ROOT="${SWARM_BUILD_ROOT:-/mnt/swarmbuild}"
 [ -d "$BUILD_ROOT/70-scripts" ] && mountpoint -q "$BUILD_ROOT" || { echo "ERROR: $BUILD_ROOT is not a mounted SWARM build tree. Run 70-scripts/check_mounts.sh" >&2; exit 1; }
 FLUTTER_SDK="$BUILD_ROOT/30-source/flutter-sdk"
@@ -265,16 +266,9 @@ if [ -d "$GAMING_DIR" ]; then
     echo -e "  ${GREEN}✓ GamingAgent (Go) staged.${NC}"
 fi
 
-# 4b3. DR. I30LTZ Recovery Eval (Rust) -> /opt/swarm_os/i30ltz-recovery
-I30LTZ_DIR="$SOURCE_DIR/i30ltz-recovery"
-if [ -d "$I30LTZ_DIR" ]; then
-    echo -e "  Compiling DR. I30LTZ Recovery eval (Rust)..."
-    (cd "$I30LTZ_DIR" && cargo build --release 2>&1 | tail -3)
-    mkdir -p "$AIROOTFS/opt/swarm_os"
-    cp -f "$I30LTZ_DIR/target/release/i30ltz-recovery" "$AIROOTFS/opt/swarm_os/i30ltz-recovery"
-    chmod +x "$AIROOTFS/opt/swarm_os/i30ltz-recovery"
-    echo -e "  ${GREEN}✓ DR. I30LTZ Recovery staged to /opt/swarm_os/i30ltz-recovery.${NC}"
-fi
+# 4b3. (removed 2026-10-09, user) The I30LTZ Recovery program (Rust/Raylib) is Recovery OS content and is NOT shipped with
+# SWARM OS. sync_lucy_swarmbuild.sh never deletes, so purge any stale copy a build tree still carries before mkarchiso sees it.
+rm -f "$AIROOTFS/opt/swarm_os/i30ltz-recovery" "$AIROOTFS/etc/systemd/system/i30ltz-recovery.service"
 
 # 4c. Lucille-Core Engine -> /usr/bin/lucille-core
 echo -e "  Compiling native C++20 lucille-core..."

@@ -89,3 +89,79 @@
 ---
 
 *LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.87 | 2026-10-09*
+
+
+---
+## 🌙 LUCILLE CORE AI — Nightly Report | 2026-10-10 | v6.2.87
+
+**Date:** 2026-10-10 | **Time:** ~00:00 ET | **Suite Version:** v6.2.87 / i30LTZ v0.3.0-alpha
+**Overall Status:** 🟡 YELLOW — codebase healthy, multiple incidents still open, 0 commits today
+
+---
+
+### 📦 Git Status
+
+| Repo | Branch | Last Commit | Dirty Files | Untracked | Commits Today |
+|------|--------|-------------|-------------|-----------|---------------|
+| /mnt/Lucy (SWARM_OS/LUCILLE) | main | `fdc0ec7` auto-sync 2026-10-09 16:07 ET | 13 modified | 1 (fix_boltzbuild_mount.sh) | **0** |
+| /mnt/recoverybuild (i30LTZ) | main | `0aceb58` remove superseded companion-app | 14 modified | 0 | 0 (auto-sync only) |
+
+**Dirty files in /mnt/Lucy:** 40-iso-profile (grub.cfg, loopback.cfg, profiledef.sh, syslinux, swarm-secrets.service, i30ltz-recovery.service deleted), 70-scripts (3 scripts), AGENTS.md, CLAUDE.md, SWARM_AI_FEATURES.md
+**Dirty files in /mnt/recoverybuild:** AI_INSTRUCTIONS.md, CONSOLIDATION_LOG.md, MASTER_BUILD_LIST.md, MOUNTS.md, ai-board.tsv, I30LTZ_RECOVERY_BUILD_TRACKER.md, 70-scripts (5 scripts), CLAUDE.md, README.md
+
+---
+
+### 🔨 Build Health
+
+| Project | Last Build | Result | Notes |
+|---------|-----------|--------|-------|
+| lucille-core (C++) | 2026-10-06 | ✅ PASS | Binary + test_engine present |
+| LucyServer (Go) | 2026-10-07 | ✅ PASS | All handlers clean |
+| GamingAgent (Go) | 2026-10-07 | ✅ PASS | 28/28 tests |
+| LucilleAssistant (Go+Android) | 2026-10-07 | ✅ PASS | go vet clean; 108 lines UNCOMMITTED |
+| Lucille Companion (Android/Gradle) | 2026-10-09 | ✅ PASS | 50 tasks; 12 executed, 38 up-to-date |
+| GoogleWorkspaceService (.NET 10) | 2026-10-07 | ✅ STAGED | Binary in airootfs |
+| swarm-ui.service (live ISO) | 2026-10-06 | 🔴 CRASH | Boot drops to tty1; fix staged, ISO rebuild pending |
+| i30LTZ Recovery ISO | 2026-10-09 | 🟡 PARTIAL | RC-11 installed on sda3 (btrfs UUID 71287bbf); boot test PENDING |
+| AI Sync (sync_lucille_ai.sh) | 2026-10-10 | 🔴 FAIL | sdb8 missing + sda4 LUKS locked; ok=0 every run |
+
+---
+
+### 🔴 Active Incidents
+
+| # | Sev | Incident | Day | Fix |
+|---|-----|----------|-----|-----|
+| INC-1 | 🔴 CRITICAL | OpenRouter API key 401 — Lucille chat DEAD | **Day 19+** | New key → `20-runtime/.env` OPENROUTER_API_KEY |
+| INC-2 | 🟠 HIGH | Steam Web API key 403 | Day 19+ | Regen at steamcommunity.com/dev/apikey |
+| INC-3 | 🟠 HIGH | swarm-ui.service crashes on live ISO boot | Day 24 | Build fresh ISO from /mnt/swarmbuild, boot via Ventoy |
+| INC-4 | 🔴 CRITICAL | /mnt/archive 100% full, /mnt/storage 97% full | Day 3+ | Run dedupe_archive.py or rotate archive |
+| INC-5 | 🟠 HIGH | rsync --no-delete unsupported on rsync 3.5.0 | Weeks | Fix `70-scripts/sync_lucille_ai.sh` |
+| INC-6 | 🟡 MEDIUM | sda4 (lucy-master) LUKS locked — AI sync skips every run | Ongoing | `sudo cryptsetup open /dev/sda4 luks-a24202ce-...` |
+
+---
+
+### ✅ Key Wins (2026-10-09 / Today)
+
+- ✅ RC-11 EXECUTED: Recovery OS installed on sda3 (btrfs, NEW UUID `71287bbf-81bf-4074-9619-4180b5a15742`) with standalone bootloader on sda1 — pending unplugged-drive boot test
+- ✅ Auto-sync commits running hourly on both repos (keeping code safe despite dirty state)
+- ✅ Companion app (Android/Gradle) remains green — 50 tasks tracked
+
+---
+
+### 🎯 Tomorrow's Priority Queue
+
+| Rank | Project | Task | Why It Matters |
+|------|---------|------|----------------|
+| 1 | SWARM_OS / LUCILLE | **RC-11 Boot Test** — unplug Debian drive, boot Recovery OS from F12 menu | Install ran but ZERO confirmed boots; this is the acceptance test |
+| 2 | SWARM_OS / LUCILLE | **Fix API keys** — new OpenRouter key + Steam key → `20-runtime/.env` | Lucille chat dead 19+ days; primary AI feature non-functional |
+| 3 | SWARM_OS / LUCILLE | **Commit all dirty files** — 13 modified in /mnt/Lucy, 14 in /mnt/recoverybuild | Auto-sync only; real commits needed before ISO build |
+| 4 | SWARM_OS / LUCILLE | **Fix rsync + LUKS unlock** in `70-scripts/sync_lucille_ai.sh` | AI sync failing every single run; backup pipeline dead for weeks |
+| 5 | SWARM_OS / LUCILLE | **ISO rebuild** — sync to /mnt/swarmbuild, `build_swarm_iso.sh`, boot via Ventoy | swarm-ui.service fix staged but never tested in live ISO boot |
+
+---
+
+### 📓 EOD Note to Broken
+
+🟡 YELLOW — RC-11 got done yesterday, that's a real W. But chat is still dead on night 19 and you've got 27 dirty files across two repos. Tomorrow: **boot test Recovery OS first (unplug the Debian drive, F12, pick i30LTZ), then fix the API key so Lucille can actually talk to you.**
+
+*LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.87 | 2026-10-10*

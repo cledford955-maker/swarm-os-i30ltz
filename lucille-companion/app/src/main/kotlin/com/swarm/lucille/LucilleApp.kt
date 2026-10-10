@@ -4,6 +4,7 @@ package com.swarm.lucille
 
 import android.app.Application
 import com.swarm.lucille.data.network.LucilleApi
+import com.swarm.lucille.data.network.LucilleAssistantApi
 import com.swarm.lucille.data.prefs.AppPrefs
 import com.swarm.lucille.data.repository.LucilleRepository
 
@@ -12,12 +13,14 @@ class LucilleApp : Application() {
     // Singletons — accessible anywhere via (application as LucilleApp).*
     lateinit var prefs: AppPrefs
     lateinit var api: LucilleApi
+    lateinit var assistantApi: LucilleAssistantApi
     lateinit var repository: LucilleRepository
 
     override fun onCreate() {
         super.onCreate()
-        prefs      = AppPrefs(this)
-        api        = LucilleApi()
-        repository = LucilleRepository(api, prefs)
+        prefs        = AppPrefs(this)
+        api          = LucilleApi()
+        assistantApi = LucilleAssistantApi()
+        repository   = LucilleRepository(api, assistantApi, prefs)
     }
 }

@@ -13,6 +13,7 @@ private fun <T> CacheEntry<T>?.valid(ttlMs: Long) = this != null && System.curre
 
 class LucilleRepository(
     private val api: LucilleApi,
+    private val assistantApi: LucilleAssistantApi,
     private val prefs: AppPrefs
 ) {
     private val io = Dispatchers.IO
@@ -27,6 +28,7 @@ class LucilleRepository(
     private var cacheSMS:          CacheEntry<VoiceResponse>?        = null
     private var cacheCalls:        CacheEntry<VoiceResponse>?        = null
     private var cacheVoicemail:    CacheEntry<VoiceResponse>?        = null
+    private var cacheBriefings:    CacheEntry<BriefingsListResponse>? = null
 
     companion object {
         const val TTL_BRIEF    = 5 * 60_000L   // 5 min
@@ -35,20 +37,31 @@ class LucilleRepository(
         const val TTL_CALENDAR = 2 * 60_000L   // 2 min
         const val TTL_VOICE    = 90 * 1_000L   // 90 s
         const val TTL_TELEMETRY= 3 * 1_000L    // 3 s (live data)
+        const val TTL_BRIEFINGS= 2 * 60_000L   // 2 min
     }
 
     // ── Config sync ───────────────────────────────────────────────────────
-    /** Pull latest credentials from DataStore and configure the API client. */
+    /** Pull latest credentials from DataStore and configure the API clients. */
     suspend fun syncConfig() {
         val url = prefs.serverUrl.firstOrNull() ?: ""
         val tok = prefs.authToken.firstOrNull() ?: ""
         api.configure(url, tok)
+        val assistantTok = prefs.assistantToken.firstOrNull() ?: ""
+        assistantApi.configureFromLucyServerUrl(url, assistantTok)
     }
 
     /** Reconfigure immediately with new credentials. */
     fun configure(url: String, token: String) {
         api.configure(url, token)
         clearCache()
+    }
+
+    /** Lucille Assistant has its own device-pairing token, separate from LucyServer's. */
+    suspend fun configureAssistantToken(token: String) {
+        prefs.setAssistantToken(token)
+        val url = prefs.serverUrl.firstOrNull() ?: ""
+        assistantApi.configureFromLucyServerUrl(url, token)
+        cacheBriefings = null
     }
 
     fun clearCache() {
@@ -61,6 +74,7 @@ class LucilleRepository(
         cacheSMS          = null
         cacheCalls        = null
         cacheVoicemail    = null
+        cacheBriefings    = null
     }
 
     // ── Connectivity check ────────────────────────────────────────────────
@@ -182,4 +196,29 @@ class LucilleRepository(
     // ── Coach ─────────────────────────────────────────────────────────────
     suspend fun getCoachTips(game: String = ""): ApiResult<CoachResponse> =
         withContext(io) { api.getCoachTips(game) }
+
+    // ── Lucille Assistant: project briefings ─────────────────────────────
+    val assistantConfigured: Boolean get() = assistantApi.isConfigured && assistantApi.hasToken
+
+    suspend fun getBriefings(forceRefresh: Boolean = false): ApiResult<BriefingsListResponse> =
+        withContext(io) {
+            if (!assistantApi.hasToken) return@withContext ApiResult.Error("Not paired with Lucille Assistant yet.")
+            if (!forceRefresh && cacheBriefings.valid(TTL_BRIEFINGS)) {
+                return@withContext ApiResult.Success(cacheBriefings!!.value)
+            }
+            val res = assistantApi.getBriefings()
+            if (res is ApiResult.Success) cacheBriefings = CacheEntry(res.data)
+            res
+        }
+
+    /** Redeems a 6-digit one-time code (printed on the PC) and saves the resulting token. */
+    suspend fun redeemAssistantPairCode(code: String, label: String): ApiResult<PairRedeemResponse> =
+        withContext(io) {
+            val url = prefs.serverUrl.firstOrNull() ?: ""
+            val res = assistantApi.redeemPairCode(url, code, label)
+            if (res is ApiResult.Success && res.data.ok && !res.data.token.isNullOrBlank()) {
+                configureAssistantToken(res.data.token)
+            }
+            res
+        }
 }

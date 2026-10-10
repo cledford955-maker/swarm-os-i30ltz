@@ -107,3 +107,7 @@ grub_themes/backups/
 # Local IDE installs & desktop launchers
 /Antigravity IDE/
 /*.desktop
+
+# two-way sync state and trash (swarm_twoway_sync.py)
+/.swarm-sync/
+/.sync-trash/

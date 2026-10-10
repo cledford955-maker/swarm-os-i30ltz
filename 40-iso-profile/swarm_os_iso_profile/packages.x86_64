@@ -217,6 +217,7 @@ nss-mdns
 
 # SWARM diagnostic collector (standard-library Python).
 python
+python-bcrypt
 
 # swarm-overlay's embedded webview (wry/tao, Rust) links libwebkit2gtk-4.1 at
 # runtime — was missing from this list, so a fresh install had the overlay

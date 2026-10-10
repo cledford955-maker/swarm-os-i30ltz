@@ -26,8 +26,9 @@ ARCHIVE_UUID = '689e6547-b439-4e7f-93c9-a6dcfabed46b'
 def require_archive():
     mount = json.loads(subprocess.check_output(
         ['findmnt', '--json', '--mountpoint', str(ARCHIVE_MOUNT), '-o', 'TARGET,UUID,FSTYPE'],
-        text=True))['filesystems'][0]
-    if mount['uuid'].lower() != ARCHIVE_UUID or mount['fstype'] != 'ext4':
+        text=True))['filesystems']
+    mount = next((m for m in mount if m.get('uuid')), {'uuid':'', 'fstype':''})
+    if (mount['uuid'] or '').lower() != ARCHIVE_UUID or mount['fstype'] != 'ext4':
         raise RuntimeError('Expected Boltz filesystem is not mounted at /mnt/boltz.')
     if ARCHIVE.resolve() != ARCHIVE:
         raise RuntimeError('Weekly archive must not redirect through a symlink.')
@@ -45,8 +46,10 @@ def all_isos(root):
     return sorted(result, key=lambda p: (p.stat().st_mtime_ns, str(p)), reverse=True)
 
 def require_store():
-    mount = json.loads(subprocess.check_output(['findmnt','--json','--mountpoint',str(MOUNT),'-o','TARGET,UUID,FSTYPE'],text=True))['filesystems'][0]
-    if mount['uuid'].upper() != '5ABB-83DF' or mount['fstype'] != 'exfat':
+    mount = json.loads(subprocess.check_output(['findmnt','--json','--mountpoint',str(MOUNT),'-o','TARGET,UUID,FSTYPE'],text=True))['filesystems']
+    # systemd automount stacks an autofs entry (no UUID) under the real one; use the real one.
+    mount = next((m for m in mount if m.get('uuid')), {'uuid':'', 'fstype':''})
+    if (mount['uuid'] or '').upper() != '5ABB-83DF' or mount['fstype'] != 'exfat':
         raise RuntimeError('Expected Ventoy data partition is not mounted at /mnt/ventoy.')
     if STORE.resolve() != STORE:
         raise RuntimeError('ISO directory must not redirect through a symlink.')
