@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- swarm-grub selection bar: 9-slice master, 17x17 px = 8 px corner + 1 px stretch + 8 px corner.
+     build.sh cuts it into select_{nw,n,ne,w,c,e,sw,s,se}.png by viewBox, so keep the size and the
+     8 px corner radius in step with SLICE_R in build.sh. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17 17" width="17" height="17">
+  <rect x="0.9" y="0.9" width="15.2" height="15.2" rx="7.2" fill="#19d3ff" fill-opacity="0.20" stroke="#19d3ff" stroke-width="1.8"/>
+</svg>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- swarm-grub icon: Power and firmware submenu: gear (menu class "tools"). 128x128 art, rendered at 64x64.
+     Shared medallion: metal rim, dark glass face, neon ring + glyph in #c6d2ea. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="rim" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#b4c0da"/><stop offset="0.5" stop-color="#3a465e"/><stop offset="1" stop-color="#0c111b"/>
+    </linearGradient>
+    <radialGradient id="face" cx="0.45" cy="0.35" r="0.8">
+      <stop offset="0" stop-color="#1b2740"/><stop offset="0.7" stop-color="#0a101c"/><stop offset="1" stop-color="#04070d"/>
+    </radialGradient>
+    <radialGradient id="aura" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.62" stop-color="#c6d2ea" stop-opacity="0"/><stop offset="1" stop-color="#c6d2ea" stop-opacity="0.5"/>
+    </radialGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.30"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="64" cy="64" r="62" fill="url(#rim)"/>
+  <circle cx="64" cy="64" r="57" fill="url(#face)"/>
+  <circle cx="64" cy="64" r="57" fill="url(#aura)"/>
+  <circle cx="64" cy="64" r="54.5" fill="none" stroke="#c6d2ea" stroke-width="2.2" opacity="0.9"/>
+  <g filter="url(#glow)" fill="none" stroke="#c6d2ea" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="64" cy="64" r="22" stroke-width="11"/>
+    <g fill="#c6d2ea" stroke="none">
+      <rect x="58.5" y="21" width="11" height="13" rx="2" transform="rotate(0 64 64)"/>
+      <rect x="58.5" y="21" width="11" height="13" rx="2" transform="rotate(45 64 64)"/>
+      <rect x="58.5" y="21" width="11" height="13" rx="2" transform="rotate(90 64 64)"/>
+      <rect x="58.5" y="21" width="11" height="13" rx="2" transform="rotate(135 64 64)"/>
+      <rect x="58.5" y="21" width="11" height="13" rx="2" transform="rotate(180 64 64)"/>
+      <rect x="58.5" y="21" width="11" height="13" rx="2" transform="rotate(225 64 64)"/>
+      <rect x="58.5" y="21" width="11" height="13" rx="2" transform="rotate(270 64 64)"/>
+      <rect x="58.5" y="21" width="11" height="13" rx="2" transform="rotate(315 64 64)"/>
+    </g>
+  </g>
+  <ellipse cx="64" cy="34" rx="40" ry="24" fill="url(#gloss)"/>
+</svg>
