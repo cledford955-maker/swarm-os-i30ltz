@@ -1,0 +1,95 @@
+# swarm-grub - GRUB theme for Debian. build.sh turns this template into theme.txt:
+# each font placeholder below becomes the exact name stored in the generated .pf2 font.
+#
+# The art is 1920x1080 and every position is a percentage of the screen, so the glass menu panel
+# painted into background.svg (27%..73% wide, 25%..81% tall) stays under boot_menu at any 16:9 mode.
+# Icons are picked by the menu entry's --class names: see icons/ and README.md.
+
+desktop-image: "background.png"
+desktop-color: "#04070d"
+title-text: ""
+
+# GRUB's own messages and the 'c' command line / 'e' editor.
+message-font: "@FONT_HINT@"
+message-color: "#9fb6d8"
+message-bg-color: "#05080f"
+terminal-font: "@FONT_MONO@"
+terminal-box: "terminal_box_*.png"
+terminal-left: "12%"
+terminal-top: "14%"
+terminal-width: "76%"
+terminal-height: "70%"
+terminal-border: "12"
+
++ label {
+  left = 0
+  top = 6%
+  width = 100%
+  align = "center"
+  text = "SWARM OS"
+  font = "@FONT_TITLE@"
+  color = "#e8f6ff"
+}
+
++ label {
+  left = 0
+  top = 15%
+  width = 100%
+  align = "center"
+  text = "LUCILLE AI CORE  //  DEBIAN"
+  font = "@FONT_SMALL@"
+  color = "#19d3ff"
+}
+
++ boot_menu {
+  left = 29%
+  top = 27%
+  width = 42%
+  height = 52%
+  item_font = "@FONT_MENU@"
+  selected_item_font = "@FONT_MENU@"
+  item_color = "#8fb0d8"
+  selected_item_color = "#ffffff"
+  icon_width = 64
+  icon_height = 64
+  item_height = 68
+  item_padding = 12
+  item_icon_space = 22
+  item_spacing = 4
+  item_pixmap_style = "item_*.png"
+  selected_item_pixmap_style = "select_*.png"
+  scrollbar = false
+}
+
++ progress_bar {
+  id = "__timeout__"
+  left = 35%
+  top = 84%
+  width = 30%
+  height = 8
+  show_text = false
+  fg_color = "#19d3ff"
+  bg_color = "#0a1220"
+  border_color = "#2a5ca8"
+}
+
++ label {
+  id = "__timeout__"
+  left = 0
+  top = 87%
+  width = 100%
+  align = "center"
+  text = "Booting selected entry in %d s"
+  font = "@FONT_HINT@"
+  color = "#19d3ff"
+}
+
++ label {
+  left = 0
+  top = 92%
+  width = 100%
+  align = "center"
+  text = "↑ ↓  select        Enter  boot        e  edit        c  command line"
+  font = "@FONT_HINT@"
+  color = "#6f8fb8"
+}

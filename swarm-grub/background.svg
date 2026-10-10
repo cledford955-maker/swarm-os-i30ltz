@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- swarm-grub background, 1920x1080. Obsidian + electric: hex "wasp nest" cells, neon frame, glass menu panel.
-     The panel rectangle must match boot_menu in theme.txt.in (27%..73% x 28%..80%). No text here:
+     The panel rectangle must match boot_menu in theme.txt.in (27%..73% x 25%..81%). No text here:
      titles are real GRUB labels so they stay crisp and take the theme font. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
   <defs>
@@ -113,20 +113,20 @@
 
   <!-- title rules (the title itself is a GRUB label centred at the top) -->
   <g filter="url(#glow)">
-    <path d="M150 122 H700" stroke="url(#ruleL)" stroke-width="3"/>
-    <path d="M1220 122 H1770" stroke="url(#ruleR)" stroke-width="3"/>
-    <path d="M716.0 113.0 L723.8 117.5 L723.8 126.5 L716.0 131.0 L708.2 126.5 L708.2 117.5 Z" fill="#19d3ff" fill-opacity="0.7" stroke="#19d3ff" stroke-width="2"/>
-    <path d="M1204.0 113.0 L1211.8 117.5 L1211.8 126.5 L1204.0 131.0 L1196.2 126.5 L1196.2 117.5 Z" fill="#8a4dff" fill-opacity="0.7" stroke="#8a4dff" stroke-width="2"/>
+    <path d="M150 98 H700" stroke="url(#ruleL)" stroke-width="3"/>
+    <path d="M1220 98 H1770" stroke="url(#ruleR)" stroke-width="3"/>
+    <path d="M716.0 89.0 L723.8 93.5 L723.8 102.5 L716.0 107.0 L708.2 102.5 L708.2 93.5 Z" fill="#19d3ff" fill-opacity="0.7" stroke="#19d3ff" stroke-width="2"/>
+    <path d="M1204.0 89.0 L1211.8 93.5 L1211.8 102.5 L1204.0 107.0 L1196.2 102.5 L1196.2 93.5 Z" fill="#8a4dff" fill-opacity="0.7" stroke="#8a4dff" stroke-width="2"/>
   </g>
 
   <!-- menu panel -->
-  <rect x="518" y="302" width="884" height="562" rx="26" fill="none" stroke="#19d3ff" stroke-width="12" stroke-opacity="0.38" filter="url(#blur14)"/>
-  <rect x="518" y="302" width="884" height="562" rx="26" fill="url(#panelFill)"/>
-  <rect x="518" y="302" width="884" height="562" rx="26" fill="none" stroke="url(#panelEdge)" stroke-width="2.6"/>
-  <path d="M552 303.5 H1368" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.4"/>
+  <rect x="518" y="268" width="884" height="610" rx="26" fill="none" stroke="#19d3ff" stroke-width="12" stroke-opacity="0.38" filter="url(#blur14)"/>
+  <rect x="518" y="268" width="884" height="610" rx="26" fill="url(#panelFill)"/>
+  <rect x="518" y="268" width="884" height="610" rx="26" fill="none" stroke="url(#panelEdge)" stroke-width="2.6"/>
+  <path d="M552 269.5 H1368" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.4"/>
   <g stroke="#19d3ff" stroke-width="3" stroke-linecap="round" opacity="0.9" filter="url(#glow)">
-    <path d="M562 862.5 H678"/>
-    <path d="M1242 862.5 H1358" stroke="#8a4dff"/>
+    <path d="M562 876.5 H678"/>
+    <path d="M1242 876.5 H1358" stroke="#8a4dff"/>
   </g>
 
   <!-- footer rule above the key hints -->

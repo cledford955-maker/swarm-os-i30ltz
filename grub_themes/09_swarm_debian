@@ -1,4 +1,7 @@
 #!/bin/sh
+# SUPERSEDED 2026-10-10 by swarm-grub/entries/20_swarm_entries (install: sudo bash swarm-grub/install.sh --with-entries).
+# This older script still names CachyOS (decommissioned) and Recovery OS on Debian's ESP (it now has its own ESP A367-87E3).
+# It is kept only because 70-scripts/install_debian_grub_theme.sh (swarm_dev, never installed) copies it. Do not use both.
 # /etc/grub.d/09_swarm_debian — top-level menu for the DEBIAN GRUB (sda1 ESP, removable path).
 # Order: Debian, SWARM OS, Recovery OS, CachyOS, Ventoy, Power & firmware (submenu: reboot / power off / UEFI setup).
 # IDs: swarm-native (Debian kernels submenu), swarm-swarmos, swarm-recovery, swarm-cachyos, swarm-ventoy.

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- swarm-grub console background. Debian's 05_debian_theme paints a background_image behind GRUB's
+     command line ('c') and editor ('e'), and it would otherwise be the blue desktop-base wallpaper.
+     install.sh points GRUB_BACKGROUND at this image instead: a dark gradient with a faint electric glow.
+     Rendered small (480x270) on purpose: GRUB stretches it to the screen and it is only a backdrop. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#070c17"/><stop offset="1" stop-color="#03050a"/>
+    </linearGradient>
+    <radialGradient id="cy" cx="0.12" cy="0.95" r="0.6">
+      <stop offset="0" stop-color="#19d3ff" stop-opacity="0.18"/><stop offset="1" stop-color="#19d3ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vi" cx="0.9" cy="0.05" r="0.6">
+      <stop offset="0" stop-color="#8a4dff" stop-opacity="0.18"/><stop offset="1" stop-color="#8a4dff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#base)"/>
+  <rect width="1920" height="1080" fill="url(#cy)"/>
+  <rect width="1920" height="1080" fill="url(#vi)"/>
+</svg>
