@@ -64,3 +64,29 @@
 | 2026-10-10 | v6.2.87 | **[HIGH]** | ISO-REBUILD: sync /mnt/Lucy → /mnt/swarmbuild, run build_swarm_iso.sh, boot from Ventoy | PENDING |
 
 > *Nightly append by LUCILLE CORE AI | 2026-10-10 00:00 ET*
+
+---
+
+## 2026-10-11 | Nightly Append | v6.2.88
+
+### Status Update — Overnight / Morning
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-10 | v0.3.0-alpha | **[CRITICAL]** | BOOT-TEST RC-11: Physical boot test — unplug Debian, F12, i30LTZ | ⚠️ STATUS UNKNOWN — no commit or log entry confirming completed |
+| 2026-10-10 | v6.2.87 | **[CRITICAL]** | API-KEYS: OpenRouter + Steam key to 20-runtime/.env | 🔴 STILL PENDING — Day 20+ |
+| 2026-10-10 | v6.2.87 | **[HIGH]** | COMMIT: Dirty files in /mnt/Lucy + /mnt/recoverybuild | ✅ RESOLVED — auto-sync committed all files; repos CLEAN as of 22:44 ET |
+| 2026-10-10 | v6.2.87 | **[HIGH]** | SYNC-FIX + LUKS: Fix sync_lucille_ai.sh + add LUKS unlock reminder | 🔴 STILL PENDING |
+| 2026-10-10 | v6.2.87 | **[HIGH]** | ISO-REBUILD: sync to /mnt/swarmbuild, build_swarm_iso.sh, Ventoy boot | 🔴 STILL PENDING |
+
+### Tomorrow's Top 5 (2026-10-12 Priority Queue)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-11 | v0.3.0-alpha | **[CRITICAL]** | BOOT-TEST: Unplug Debian drive, F12 boot, select i30LTZ Recovery — acceptance test | PENDING |
+| 2026-10-11 | v6.2.88 | **[CRITICAL]** | API-KEYS: Add OpenRouter key + Steam key to 20-runtime/.env — Day 20+ dead | PENDING |
+| 2026-10-11 | v6.2.22 | **[HIGH]** | COMPANION: Wire RecoveryAiScreen to live Dr. I30LTZ / MAD AI SSE backend endpoint | PENDING |
+| 2026-10-11 | v6.2.88 | **[HIGH]** | SYNC-FIX: Drop --no-delete from sync_lucille_ai.sh + LUKS unlock before sync | PENDING |
+| 2026-10-11 | v6.2.88 | **[HIGH]** | ISO-REBUILD: sync /mnt/Lucy → /mnt/swarmbuild, build_swarm_iso.sh, boot via Ventoy | PENDING |
+
+> *Nightly append by LUCILLE CORE AI | 2026-10-11 00:00 ET | v6.2.88*
