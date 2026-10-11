@@ -195,7 +195,7 @@ Run `70-scripts/setup-dev-deps.sh` on any new machine after mounting LUCILLE.
 
 ## Hard rules — do not break these
 
-- **Never write to `/run/media/i30ltz/lucy-master/`** — read-only reference mount. All writes go to `/mnt/Lucy/`. **One exception (user, 2026-10-10): `70-scripts/sync_lucy_master.sh` two-way syncs a chosen folder of the encrypted lucy-master volume with `/mnt/Lucy` (new data is copied, only real deletions are carried over, deletions go to a trash, the first run deletes nothing). Nothing else writes to lucy-master, and `/mnt/archive` (= `lucy-master-bak`, c400a0ee) has no sync job.**
+- **Never write to `/run/media/i30ltz/lucy-master/`** — read-only reference mount. All writes go to `/mnt/Lucy/`. No sync job targets lucy-master or `/mnt/archive` (`lucy-master-bak`, c400a0ee): the Lucy ↔ lucy-master two-way sync (`sync_lucy_master.sh`) was removed on 2026-10-11 at the user's request. The one remaining writer is the older, additive `70-scripts/sync_lucille_ai.sh` (runs from the ISO's `lucille-ai-sync` unit; its sda4 leg only runs if the LUKS volume is already unlocked).
 - **Never write to `/mnt/lucy/`** — lowercase, different path, not this project.
 - **Never `rm -rf` anything in `airootfs/` without checking for symlinks to lucy-master.** Use `ls -la` first.
 - **Never commit `.env`** — it contains production API keys.
