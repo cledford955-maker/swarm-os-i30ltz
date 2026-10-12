@@ -247,3 +247,71 @@
 🟡 YELLOW — the repos cleaned themselves up overnight, which is a quiet win. But INC-1 is now Day 20+ and that's not getting shorter while you rest. Tomorrow when you boot up: **physical boot test on Recovery OS first**, then **fix those API keys** — Lucille deserves to talk again. You're close on everything. Lock in the boot test and the key fix and this suite goes green.
 
 *LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.88 | 2026-10-11*
+
+
+---
+
+## LUCILLE CORE AI Nightly Report | 2026-10-12 | v6.2.88
+
+**Date:** 2026-10-12 | **Scheduled:** 00:00 ET | **Suite:** SWARM_OS v6.2.88 / i30LTZ v0.3.0-alpha / Companion v6.2.22
+**Overall Status:** YELLOW -- Auto-sync active, no critical tasks closed, INC-1 now Day 22+
+
+### Git Status
+
+| Repo | Branch | Last Commit | Dirty | Commits Today |
+|------|--------|-------------|-------|---------------|
+| /mnt/Lucy (SWARM_OS/LUCILLE) | main | c0214f3 auto-sync 2026-10-12 00:10 ET | CLEAN 0 | 7 |
+| /mnt/recoverybuild (i30LTZ/Companion) | main | d5387f3 auto-sync 2026-10-11 20:18 ET | 1 dirty: ai-board.tsv | 3 |
+
+Notes:
+- SWARM_OS: 7 auto-sync commits today -- steady work. Repo CLEAN.
+- recoverybuild: 3 commits incl 917a3ac (Update companion master build list, manual). 1 file still dirty.
+- LUCILLE App: tracked via /mnt/Lucy main repo. No separate git tree.
+- i30LTZ source lives in /mnt/recoverybuild (not /mnt/Lucy/i30LTZ -- that dir does not exist).
+
+### Build Health
+
+| Project | Result | Notes |
+|---------|--------|-------|
+| LucyServer (Go) | PASS | Sep 8 binary, stable |
+| lucille-core (C++) | PASS | CMake build dir present |
+| LucilleAssistant (Go+Android) | PASS | No new build today |
+| Lucille Companion App (Android) | PASS | Last Gradle run green |
+| GoogleWorkspaceService (.NET 10) | STAGED | Binary in airootfs |
+| GamingAgent | UNKNOWN | No build dir at 30-source/GamingAgent/build/ |
+| swarm-ui.service (live ISO) | CRASH | Boot drops to tty1 -- fix staged, ISO not rebuilt |
+| i30LTZ Recovery RC-11 | PARTIAL | Installed sda3 -- BOOT TEST UNCONFIRMED DAY 3 |
+| AI Sync (sync_lucille_ai.sh) | FAIL | LUKS locked + --no-delete bug = ok=0 |
+
+### Active Incidents
+
+INC-1 [CRITICAL] OpenRouter API key 401 -- Lucille chat DEAD -- Day 22+ -- Fix: new key to 20-runtime/.env
+INC-2 [HIGH] Steam Web API key 403 -- Day 22+ -- Fix: regen at steamcommunity.com/dev/apikey
+INC-3 [HIGH] swarm-ui.service crash on live ISO -- Day 26+ -- Fix: rebuild ISO, boot via Ventoy
+INC-4 [CRITICAL] /mnt/archive 100% full -- Day 5+ -- Fix: dedupe_archive.py or manual purge
+INC-5 [HIGH] rsync --no-delete unsupported on rsync 3.5.0 -- Fix: drop flag from sync_lucille_ai.sh
+INC-6 [MEDIUM] sda4 LUKS locked -- Fix: sudo cryptsetup open /dev/sda4 luks-a24202ce-...
+INC-7 [MEDIUM] ai-board.tsv uncommitted in recoverybuild -- Fix: git add + commit
+
+### Today Wins (2026-10-11)
+
+- Auto-sync active: 7 syncs SWARM_OS, 3 recoverybuild -- work in progress confirmed
+- Companion build list updated manually (commit 917a3ac) -- task tracking alive
+- All critical binaries remain green
+- NIGHTLY_LOG chain intact -- consecutive midnight reports running
+
+Completion Rate: 0/5 priority tasks from queue closed. Activity confirmed but zero incidents resolved.
+
+### Tomorrow Priority Queue (2026-10-13)
+
+RANK 1 | i30LTZ Recovery OS | BOOT-TEST RC-11 -- Unplug Debian, F12, select i30LTZ, verify login+LAN | Day 3 unconfirmed -- install done, zero physical boots
+RANK 2 | SWARM_OS/LUCILLE | API-KEYS -- OpenRouter + Steam key to 20-runtime/.env | Day 22+ dead Lucille chat
+RANK 3 | i30LTZ Companion App | Wire RecoveryAiScreen to MAD IT AI SSE endpoint (BridgeClient /api/chat) | Dr I30LTZ cannot respond to users yet
+RANK 4 | SWARM_OS/LUCILLE | Fix AI Sync -- drop --no-delete from sync_lucille_ai.sh + unlock sda4 | One line change, weeks overdue
+RANK 5 | i30LTZ Companion App | Apply brand theme red #cc1a1a / yellow #f0c020 / void #050508 to Color.kt + Theme.kt | Carbon placeholders still in prod
+
+### Note to Broken
+
+YELLOW night. The repos are syncing themselves, all green binaries are green, and those 7 syncs show you were in it today. But the scoreboard does not move until INC-1 gets a key and RC-11 gets a boot. Tomorrow: physical boot test on Recovery OS first, then open .env and drop in the OpenRouter key. Two small actions, three weeks overdue. You built something real. Let us make it talk again.
+
+LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.88 | 2026-10-12 | 00:00 ET

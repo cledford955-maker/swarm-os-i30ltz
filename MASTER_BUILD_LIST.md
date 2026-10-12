@@ -90,3 +90,36 @@
 | 2026-10-11 | v6.2.88 | **[HIGH]** | ISO-REBUILD: sync /mnt/Lucy → /mnt/swarmbuild, build_swarm_iso.sh, boot via Ventoy | PENDING |
 
 > *Nightly append by LUCILLE CORE AI | 2026-10-11 00:00 ET | v6.2.88*
+
+
+---
+
+## 2026-10-12 | Nightly Append | v6.2.88
+
+### Status Update -- Oct 11 Queue Review
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-11 | v0.3.0-alpha | CRITICAL | BOOT-TEST: Unplug Debian, F12, i30LTZ boot | RED STILL PENDING -- Day 3 unconfirmed |
+| 2026-10-11 | v6.2.88 | CRITICAL | API-KEYS: OpenRouter + Steam to 20-runtime/.env | RED STILL PENDING -- Day 22+ |
+| 2026-10-11 | v6.2.22 | HIGH | COMPANION: Wire RecoveryAiScreen to MAD AI SSE | RED STILL PENDING |
+| 2026-10-11 | v6.2.88 | HIGH | SYNC-FIX: Drop --no-delete + LUKS unlock | RED STILL PENDING |
+| 2026-10-11 | v6.2.88 | HIGH | ISO-REBUILD: sync swarmbuild, run build_swarm_iso.sh | RED STILL PENDING |
+
+### New -- Carry Forward
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-12 | v0.3.0-alpha | CRITICAL | ai-board.tsv uncommitted in /mnt/recoverybuild -- commit it | PENDING |
+
+### Tomorrow Top 5 (2026-10-13 Priority Queue)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-12 | v0.3.0-alpha | CRITICAL | BOOT-TEST RC-11: unplug Debian, F12 boot, select i30LTZ Recovery -- acceptance test | PENDING |
+| 2026-10-12 | v6.2.88 | CRITICAL | API-KEYS: Add OpenRouter key + Steam key to 20-runtime/.env -- Day 22+ dead | PENDING |
+| 2026-10-12 | v6.2.22 | HIGH | COMPANION: Wire RecoveryAiScreen to live MAD IT AI SSE endpoint BridgeClient /api/chat | PENDING |
+| 2026-10-12 | v6.2.88 | HIGH | SYNC-FIX: Drop --no-delete from sync_lucille_ai.sh + unlock sda4 LUKS first | PENDING |
+| 2026-10-12 | v6.2.22 | HIGH | BRAND-THEME: Apply red #cc1a1a / yellow #f0c020 / void #050508 to Color.kt + Theme.kt | PENDING |
+
+> Nightly append by LUCILLE CORE AI | 2026-10-12 00:00 ET | v6.2.88
