@@ -1,13 +1,11 @@
 // ═══════════════════════════════════════════════════════════════
-// Swarm OS — CPU Aura Wallpaper v1.1.0 (2026-10-08)
+// Swarm OS — CPU Aura Wallpaper v1.2.0 (2026-10-12)
 //
 // A wallpaper with a soft light aura that pulses. The pulse rate follows CPU
 // load: a slow ~3.2 s breath when idle, down to a ~0.45 s throb at 100 %.
-// The FALLEN SOLDIER artwork also gets a glow on each lightning bolt, in the
-// bolt's own color, so the aura reads as the storm charging up. Those glows
-// are placed by fractions of that one image, so [boltGlows] must be true only
-// while it is on screen; they ease in and out when it changes. Every other
-// picture gets just the screen-edge rim.
+// Every picture gets the screen-edge rim aura. The old bolt-glow overlays
+// that were keyed pixel-perfectly to the fallen-soldier artwork are retired
+// (boltGlows is accepted but treated as always false).
 //
 // [image] can change at runtime; the new picture crossfades in (RotatingWallpaper
 // drives that from a folder of pictures).
@@ -22,7 +20,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'crossfade_image.dart';
 
-const kFallenSoldierWallpaper = 'assets/wallpapers/fallen_soldier.jpg';
+// Bundled fallback shown on first frame and when the wallpaper folder is
+// absent (live ISO / drive not mounted). Wild Thing leads every session.
+const kDefaultWallpaper = 'assets/wallpapers/wild_thing.jpg';
+// Keep old name so nothing else breaks if it references it.
+const kFallenSoldierWallpaper = kDefaultWallpaper;
 
 // Source image is 1408 x 768. Glow anchors are fractions of that image.
 const _imageSize = Size(1408, 768);
@@ -47,11 +49,15 @@ const _glows = [
 class CpuAuraWallpaper extends StatefulWidget {
   const CpuAuraWallpaper({
     super.key,
-    this.image = const AssetImage(kFallenSoldierWallpaper),
-    this.boltGlows = true,
+    this.image = const AssetImage(kDefaultWallpaper),
+    // boltGlows is accepted for backward compat but is always treated as
+    // false — the glows were pixel-mapped to the old fallen-soldier art.
+    this.boltGlows = false,
   });
 
   final ImageProvider image;
+  // ignored — kept so call-sites don't need updating
+  // ignore: unused_field
   final bool boltGlows;
 
   @override
@@ -70,13 +76,12 @@ class _CpuAuraWallpaperState extends State<CpuAuraWallpaper>
   int? _prevIdle, _prevTotal;
   bool _sampling = false;
 
-  // Eased 0..1 strength of the bolt glows; follows widget.boltGlows.
-  late double _glow;
+  // Bolt glows permanently off — artwork-specific, retired with fallen-soldier.
+  static const double _glow = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _glow = widget.boltGlows ? 1 : 0;
     _ticker = createTicker(_tick)..start();
   }
 
@@ -114,7 +119,7 @@ class _CpuAuraWallpaperState extends State<CpuAuraWallpaper>
     }
     // Ease toward the sampled load so the tempo glides instead of stepping.
     _load += (_targetLoad - _load) * math.min(1, dt * 2.5);
-    _glow += ((widget.boltGlows ? 1.0 : 0.0) - _glow) * math.min(1, dt * 2.5);
+    // _glow is permanently 0 (bolt glows retired); no easing needed.
     final period = 3.2 - 2.75 * _load; // 3.2 s idle → 0.45 s flat out
     _phase.value = (_phase.value + dt / period) % 1.0;
   }

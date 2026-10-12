@@ -1,16 +1,18 @@
 // Desktop wallpaper that rotates through a folder of pictures.
 //
-// Shows the bundled FALLEN SOLDIER picture at once, then fades to a random
-// picture from the folder (see WallpaperRotationService) and fades to another
-// one every interval. Each picture is decoded off-screen first, so a large PNG
-// never makes the swap stutter, and one that fails to decode is dropped from
-// the rotation rather than shown broken. If the folder is missing or empty the
-// bundled picture simply stays.
+// Wild Thing (Jimi Hendrix / The Troggs) is always shown first, then
+// the slideshow rotates through /mnt/Lucy/images/websitebackgrounds on a
+// timer. Each picture is decoded off-screen first so a large PNG never
+// makes the swap stutter; one that fails to decode is dropped from the
+// rotation. If the folder is missing or empty the bundled wild_thing.jpg
+// stays on screen.
 //
-// The CPU-driven aura lives in CpuAuraWallpaper; the bolt glows are switched on
-// only while FALLEN SOLDIER is showing. Over every picture sits the same
-// burning blunt and rising smoke as garden mode (GardenSmoke), part of the
-// wallpaper layer so it stays behind icons and windows and never takes a click.
+// The CPU-driven aura lives in CpuAuraWallpaper. Over every picture sits
+// the same burning blunt and rising smoke as garden mode (GardenSmoke),
+// part of the wallpaper layer so it stays behind icons/windows.
+//
+// WallpaperRotationService.currentPath is kept in sync so listeners (e.g.
+// the Wild Thing quote overlay in swarm_shell) know what is on screen.
 
 import 'dart:async';
 import 'dart:io' hide Platform;
@@ -41,13 +43,14 @@ class _RotatingWallpaperState extends State<RotatingWallpaper> {
   Timer? _timer;
   bool _busy = false;
 
-  // null means the bundled picture.
+  // null = bundled wild_thing.jpg fallback.
   ImageProvider? _image;
-  bool _boltGlows = true;
 
   @override
   void initState() {
     super.initState();
+    // Publish initial state: bundled wild_thing (null path = wild thing).
+    WallpaperRotationService.currentPath.value = null;
     _timer = Timer.periodic(
       widget.interval ?? WallpaperRotationService.interval,
       (_) => _advance(),
@@ -82,12 +85,10 @@ class _RotatingWallpaperState extends State<RotatingWallpaper> {
         if (!mounted) return;
         final next = _picker.next(pool);
         if (next == null) {
-          // Folder gone (drive unmounted): go back to the bundled picture.
+          // Folder gone (drive unmounted): fall back to bundled wild_thing.
           if (_image != null) {
-            setState(() {
-              _image = null;
-              _boltGlows = true;
-            });
+            setState(() => _image = null);
+            WallpaperRotationService.currentPath.value = null;
           }
           return;
         }
@@ -99,10 +100,8 @@ class _RotatingWallpaperState extends State<RotatingWallpaper> {
           _picker.reject(next);
           continue;
         }
-        setState(() {
-          _image = provider;
-          _boltGlows = WallpaperRotationService.isFallenSoldier(next);
-        });
+        setState(() => _image = provider);
+        WallpaperRotationService.currentPath.value = next;
         return;
       }
     } finally {
@@ -114,8 +113,7 @@ class _RotatingWallpaperState extends State<RotatingWallpaper> {
   Widget build(BuildContext context) {
     return Stack(fit: StackFit.expand, children: [
       CpuAuraWallpaper(
-        image: _image ?? const AssetImage(kFallenSoldierWallpaper),
-        boltGlows: _boltGlows,
+        image: _image ?? const AssetImage(kDefaultWallpaper),
       ),
       if (widget.blunt ?? WallpaperRotationService.blunt) const GardenSmoke(),
     ]);

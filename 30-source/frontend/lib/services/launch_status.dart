@@ -34,11 +34,11 @@ class LaunchStatusRegistry {
     notifierFor(id).value = LaunchAuraState.idle;
   }
 
-  // One red flash, then auto-reverts to idle so the aura doesn't linger.
+  // Red flash for 5 s, then auto-reverts to idle so the aura doesn't linger.
   static void setClosed(String id) {
     _pollers.remove(id)?.cancel();
     notifierFor(id).value = LaunchAuraState.closed;
-    Timer(const Duration(milliseconds: 650), () {
+    Timer(const Duration(seconds: 5), () {
       if (notifierFor(id).value == LaunchAuraState.closed) {
         notifierFor(id).value = LaunchAuraState.idle;
       }

@@ -1,14 +1,14 @@
 // Desktop wallpaper rotation.
 //
-// The shell shows a random picture from a folder and swaps to another one on a
-// timer. The folder is read again on every swap, so pictures dropped in while
-// the shell is running join the rotation without a restart. Only the folder
-// itself is read, not its subfolders, so parking a picture in a subfolder takes
-// it out of the rotation.
+// The shell starts on Wild Thing (Jimi Hendrix / The Troggs) then
+// rotates through every picture in the folder on a timer. The folder
+// is read again on every swap, so pictures dropped in while the shell
+// is running join the rotation without a restart. Only the folder
+// itself is read, not its subfolders.
 //
-// Folder: /mnt/Lucy/images/websitebackgrounds. When it has no usable image
-// (live ISO, drive not mounted) the caller keeps the wallpaper bundled in
-// assets.
+// Folder: /mnt/Lucy/images/websitebackgrounds. When it has no usable
+// image (live ISO, drive not mounted) the bundled wild_thing.jpg is
+// shown instead.
 //
 // SWARM_WALLPAPER_DIR overrides the folder (used by tests).
 // SWARM_WALLPAPER_INTERVAL_SECS overrides the swap interval: default 600,
@@ -18,6 +18,7 @@
 
 import 'dart:io' hide Platform;
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import '../platform/platform.dart';
 
 class WallpaperRotationService {
@@ -27,6 +28,11 @@ class WallpaperRotationService {
   static const List<String> extensions = ['jpg', 'jpeg', 'png', 'webp'];
   static const int defaultIntervalSecs = 600;
   static const int minIntervalSecs = 15;
+
+  /// Published by RotatingWallpaper whenever the displayed picture changes.
+  /// null = bundled fallback (wild_thing.jpg). Listeners (e.g. swarm_shell)
+  /// use this to show contextual overlays like the Wild Thing quote.
+  static final ValueNotifier<String?> currentPath = ValueNotifier(null);
 
   static String get dir => Platform.environment['SWARM_WALLPAPER_DIR'] ?? defaultDir;
 
@@ -73,9 +79,18 @@ class WallpaperRotationService {
     return out;
   }
 
-  /// True for the picture the shell's aura bolt glows were drawn for. The
-  /// glows are placed by fractions of that artwork, so they only make sense
-  /// on it. Matches `FALLENSOLDIER.jpeg`, `fallen_soldier.jpg`, etc.
+  /// True when [path] is the Wild Thing wallpaper — used to show the
+  /// Jimi Hendrix quote overlay. Matches `wildthing.jpg`, `wild_thing.jpg`,
+  /// `Wild Thing.png`, etc.
+  static bool isWildThing(String? path) {
+    if (path == null) return true; // bundled fallback IS wild_thing
+    final stem = path.split('/').last.split('.').first;
+    return stem.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '') == 'wildthing';
+  }
+
+  /// True for the old fallen-soldier artwork — kept for backward compat so
+  /// nothing crashes if the file is still in the folder; the bolt glows that
+  /// were keyed to it are now permanently off.
   static bool isFallenSoldier(String path) {
     final stem = path.split('/').last.split('.').first;
     return stem.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '') == 'fallensoldier';
@@ -84,6 +99,8 @@ class WallpaperRotationService {
 
 /// Random order without repeats: every picture is shown once before any is
 /// shown again, and the first of a new round is never the one just shown.
+/// On the very first pick the Wild Thing picture is always chosen first
+/// (if it exists in the pool), so the desktop opens on Jimi every time.
 class WallpaperPicker {
   WallpaperPicker({Random? random}) : _random = random ?? Random();
 
@@ -91,11 +108,22 @@ class WallpaperPicker {
   final Set<String> _shown = {};
   final Set<String> _rejected = {};
   String? _current;
+  bool _firstPick = true;
 
   /// Next picture from [pool], or null when nothing usable is left.
   String? next(List<String> pool) {
     final usable = [for (final p in pool) if (!_rejected.contains(p)) p];
     if (usable.isEmpty) return _current = null;
+
+    // First pick: always Wild Thing if it is in the pool.
+    if (_firstPick) {
+      _firstPick = false;
+      final wt = usable.where(WallpaperRotationService.isWildThing).firstOrNull;
+      if (wt != null) {
+        _shown.add(wt);
+        return _current = wt;
+      }
+    }
 
     var fresh = [for (final p in usable) if (!_shown.contains(p)) p];
     if (fresh.isEmpty) {

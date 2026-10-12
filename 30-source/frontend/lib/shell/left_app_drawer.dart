@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/swarm_colors.dart';
 import '../services/system_launcher.dart';
+import '../services/launch_status.dart';
 import '../models/swarm_apps.dart';
 import '../widgets/agent_avatar.dart';
 import 'companion_bridge_dialog.dart';
@@ -120,7 +121,7 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
       }
       return;
     }
-    await SystemLauncher.launch(context, app.command, displayName: app.name);
+    await SystemLauncher.launch(context, app.command, displayName: app.name, agentId: app.id);
   }
 
   List<AppItem> get _filteredApps {
@@ -441,22 +442,11 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                             dense: true,
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 4),
-                            leading: Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: app.color.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                    color: app.color.withValues(alpha: 0.35)),
-                              ),
-                              child: Center(
-                                child: AppIconOrb(
-                                  icon: app.icon,
-                                  color: app.color,
-                                  size: 30,
-                                ),
-                              ),
+                            leading: _LaunchAuraIcon(
+                              id: app.id,
+                              icon: app.icon,
+                              color: app.color,
+                              size: 38,
                             ),
                             title: Row(
                               children: [
@@ -544,6 +534,90 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Per-icon launch-state aura ─────────────────────────────────────────────
+// Wraps an AppIconOrb in a container whose border + glow tracks the tile's
+// LaunchAuraState: blinking green while loading, solid green while running,
+// red for 5 s when closed/failed.
+class _LaunchAuraIcon extends StatefulWidget {
+  const _LaunchAuraIcon({
+    required this.id,
+    required this.icon,
+    required this.color,
+    required this.size,
+  });
+
+  final String id;
+  final IconData icon;
+  final Color color;
+  final double size;
+
+  @override
+  State<_LaunchAuraIcon> createState() => _LaunchAuraIconState();
+}
+
+class _LaunchAuraIconState extends State<_LaunchAuraIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blink;
+
+  @override
+  void initState() {
+    super.initState();
+    _blink = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<LaunchAuraState>(
+      valueListenable: LaunchStatusRegistry.notifierFor(widget.id),
+      builder: (_, aura, __) {
+        return AnimatedBuilder(
+          animation: _blink,
+          builder: (_, __) {
+            Color border = widget.color.withValues(alpha: 0.35);
+            List<BoxShadow> glow = const [];
+
+            if (aura == LaunchAuraState.loading) {
+              // Blink green
+              final alpha = 0.4 + _blink.value * 0.6;
+              border = const Color(0xFF00FF88).withValues(alpha: alpha);
+              glow = [BoxShadow(color: const Color(0xFF00FF88).withValues(alpha: alpha * 0.6), blurRadius: 10, spreadRadius: 1)];
+            } else if (aura == LaunchAuraState.running) {
+              border = const Color(0xFF00FF88).withValues(alpha: 0.7);
+              glow = const [BoxShadow(color: Color(0x5500FF88), blurRadius: 8, spreadRadius: 1)];
+            } else if (aura == LaunchAuraState.closed) {
+              border = const Color(0xFFFF3333).withValues(alpha: 0.9);
+              glow = const [BoxShadow(color: Color(0x88FF3333), blurRadius: 12, spreadRadius: 2)];
+            }
+
+            return Container(
+              width: widget.size,
+              height: widget.size,
+              decoration: BoxDecoration(
+                color: widget.color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: border),
+                boxShadow: glow,
+              ),
+              child: Center(
+                child: AppIconOrb(icon: widget.icon, color: widget.color, size: widget.size - 8),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

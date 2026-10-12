@@ -8,6 +8,7 @@ import '../widgets/draggable_osd.dart';
 import 'left_app_drawer.dart';
 import 'right_settings_drawer.dart';
 import '../services/gamepad_service.dart';
+import '../services/wallpaper_rotation_service.dart';
 import '../widgets/virtual_cursor_overlay.dart';
 import '../widgets/seductive_lips_visualizer.dart';
 import '../services/wake_word_service.dart';
@@ -78,11 +79,10 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
       backgroundColor: SwarmColors.bg,
       body: Stack(
         children: [
-          // 1. Background Wallpaper — a random picture from
-          //    /mnt/Lucy/images/websitebackgrounds, swapped every few minutes
-          //    (FALLEN SOLDIER if the folder is missing), with a light aura
-          //    that pulses faster as CPU load rises. Also records the shell
-          //    size so new windows open between the icon rails.
+          // 1. Background Wallpaper — starts on Wild Thing, then rotates through
+          //    /mnt/Lucy/images/websitebackgrounds every few minutes. The CPU
+          //    aura pulses faster as load rises. Also records shell size so new
+          //    windows open between the icon rails.
           Positioned.fill(
             child: LayoutBuilder(builder: (context, constraints) {
               DesktopGeometry.screen = constraints.biggest;
@@ -90,7 +90,13 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
             }),
           ),
 
-          // 1b. Large Background Welcome Typography
+          // 1b. Wild Thing quote — shown while the Wild Thing wallpaper is on
+          //     screen. Fades out when the slideshow moves on.
+          const Positioned.fill(
+            child: _WildThingQuote(),
+          ),
+
+          // 1c. Large Background Welcome Typography
           const Positioned.fill(
             child: HiveBackgroundWelcome(),
           ),
@@ -287,6 +293,83 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
           const VirtualCursorOverlay(),
         ],
       ),
+    );
+  }
+}
+
+// ─── Wild Thing quote overlay ────────────────────────────────────────────────
+// Shows Jimi Hendrix's opening lyric from "Wild Thing" (The Troggs, 1966,
+// written by Chip Taylor) while that wallpaper is on screen, then fades out.
+class _WildThingQuote extends StatelessWidget {
+  const _WildThingQuote();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<String?>(
+      valueListenable: WallpaperRotationService.currentPath,
+      builder: (_, path, __) {
+        final show = WallpaperRotationService.isWildThing(path);
+        return IgnorePointer(
+          child: AnimatedOpacity(
+            opacity: show ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 1200),
+            child: Align(
+              alignment: const Alignment(0.0, 0.65),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '"Wild Thing, I love you,',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        fontStyle: FontStyle.italic,
+                        letterSpacing: 1.5,
+                        color: Colors.white.withValues(alpha: 0.82),
+                        shadows: const [
+                          Shadow(color: Color(0xCC000000), blurRadius: 18),
+                          Shadow(color: Color(0x88000000), blurRadius: 6),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'but I want to know for sure."',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        fontStyle: FontStyle.italic,
+                        letterSpacing: 1.5,
+                        color: Colors.white.withValues(alpha: 0.82),
+                        shadows: const [
+                          Shadow(color: Color(0xCC000000), blurRadius: 18),
+                          Shadow(color: Color(0x88000000), blurRadius: 6),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '— Wild Thing · The Troggs · 1966',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        letterSpacing: 2.5,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.45),
+                        shadows: const [Shadow(color: Color(0xAA000000), blurRadius: 8)],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

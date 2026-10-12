@@ -82,6 +82,25 @@ void main() {
     });
   });
 
+  group('WallpaperRotationService.isWildThing', () {
+    test('null path (bundled fallback) is wild-thing', () {
+      expect(WallpaperRotationService.isWildThing(null), isTrue);
+    });
+
+    test('matches wildthing.jpg and wild_thing.jpg variants', () {
+      expect(WallpaperRotationService.isWildThing('/x/wildthing.jpg'), isTrue);
+      expect(WallpaperRotationService.isWildThing('/x/wild_thing.jpg'), isTrue);
+      expect(WallpaperRotationService.isWildThing('/x/Wild Thing.png'), isTrue);
+      expect(WallpaperRotationService.isWildThing('/x/WILDTHING.jpeg'), isTrue);
+    });
+
+    test('does not match other wallpapers', () {
+      expect(WallpaperRotationService.isWildThing('/x/Lucille1.png'), isFalse);
+      expect(WallpaperRotationService.isWildThing('/x/fallen_soldier.jpg'), isFalse);
+      expect(WallpaperRotationService.isWildThing('/wildthing/other.jpg'), isFalse);
+    });
+  });
+
   group('WallpaperPicker', () {
     final pool = ['a', 'b', 'c', 'd', 'e'];
 
@@ -119,6 +138,22 @@ void main() {
     test('a rejected-out pool gives null', () {
       final picker = WallpaperPicker()..reject('x');
       expect(picker.next(const ['x']), isNull);
+    });
+
+    test('wild_thing.jpg is always the first pick when present in the pool', () {
+      final wtPool = ['a', 'b', '/wallpapers/wild_thing.jpg', 'c'];
+      final picker = WallpaperPicker(random: Random(42));
+      expect(picker.next(wtPool), '/wallpapers/wild_thing.jpg');
+      // Subsequent picks are random (not wild-thing again on second call).
+      final second = picker.next(wtPool)!;
+      expect(second, isNot('/wallpapers/wild_thing.jpg'));
+    });
+
+    test('first-pick skips wild_thing prioritisation when pool lacks it', () {
+      final picker = WallpaperPicker(random: Random(0));
+      final first = picker.next(pool)!;
+      // Just verify no crash — it will be some element of pool.
+      expect(pool, contains(first));
     });
 
     test('a picture added later joins the rotation', () {
@@ -162,12 +197,13 @@ void main() {
       await disposeWallpaper(t);
     });
 
-    testWidgets('bolt glows come back on for FALLEN SOLDIER', (t) async {
+    testWidgets('fallen-soldier file loads like any other picture (bolt glows retired)', (t) async {
+      // Bolt glows were pixel-mapped to old artwork; they are permanently off.
       File('${tmp.path}/FALLENSOLDIER.png').writeAsBytesSync(_tinyPng);
       await pumpWallpaper(t, tmp.path, swapped: true);
 
       expect(aura(t).image, isA<ResizeImage>());
-      expect(aura(t).boltGlows, isTrue);
+      expect(aura(t).boltGlows, isFalse);
       await disposeWallpaper(t);
     });
 
@@ -192,7 +228,8 @@ void main() {
       await pumpWallpaper(t, '${tmp.path}/nope');
 
       expect(aura(t).image, isA<AssetImage>());
-      expect(aura(t).boltGlows, isTrue);
+      // boltGlows is always false now (bolt glows retired with fallen-soldier art)
+      expect(aura(t).boltGlows, isFalse);
       await disposeWallpaper(t);
     });
 
