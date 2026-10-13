@@ -62,7 +62,10 @@ func (h *LucilleHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	h.lucille.ChatStream(req, w)
+	// Pass the request context so a client disconnect cancels the upstream
+	// OpenRouter request instead of leaking a goroutine for the full 120s
+	// timeout (bug flagged in every audit since 2026-09-27).
+	h.lucille.ChatStream(req, r.Context(), w)
 }
 
 func (h *LucilleHandler) History(w http.ResponseWriter, r *http.Request) {

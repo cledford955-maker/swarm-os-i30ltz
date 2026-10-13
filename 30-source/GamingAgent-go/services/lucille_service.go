@@ -3,6 +3,7 @@ package services
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -115,7 +116,7 @@ There are no tools to call. Do not use snake_case field names or wrap this objec
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", chatEndpoint, bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+os.Getenv(chatAPIKeyEnv))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("HTTP-Referer", "https://github.com/i30ltz/swarm-os")
@@ -165,7 +166,7 @@ func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleCha
 	messages := s.buildContextMessages()
 	messages = append(messages, req.Messages...)
 
-	reply, err := s.callChat(messages, false, nil)
+	reply, err := s.callChat(context.Background(), messages, false, nil)
 	if err != nil {
 		return &models.LucilleChatResponse{SessionId: sessionId, Error: err.Error()}, nil
 	}
@@ -178,7 +179,8 @@ func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleCha
 }
 
 // ChatStream calls the chat model with streaming=true and writes SSE chunks to w.
-func (s *LucilleService) ChatStream(req models.LucilleChatRequest, w http.ResponseWriter) {
+// ctx should be r.Context() so a client disconnect cancels the upstream request.
+func (s *LucilleService) ChatStream(req models.LucilleChatRequest, ctx context.Context, w http.ResponseWriter) {
 	sessionId := req.SessionId
 	if sessionId == "" {
 		sessionId = fmt.Sprintf("session-%d", time.Now().UnixMilli())
@@ -197,7 +199,7 @@ func (s *LucilleService) ChatStream(req models.LucilleChatRequest, w http.Respon
 	messages = append(messages, req.Messages...)
 
 	var fullReply strings.Builder
-	_, _ = s.callChat(messages, true, func(token string) {
+	_, _ = s.callChat(ctx, messages, true, func(token string) {
 		fullReply.WriteString(token)
 		fmt.Fprintf(w, "data: %s\n\n", token)
 		if f, ok := w.(http.Flusher); ok {
@@ -342,7 +344,7 @@ Valid verbs:
 
 Only ever use these exact verbs. Never invent a new verb. If the user is just chatting or asking a question, do not include an ACTION line at all.`
 
-func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, onToken func(string)) (string, error) {
+func (s *LucilleService) callChat(ctx context.Context, messages []models.ChatMessage, stream bool, onToken func(string)) (string, error) {
 	msgs := make([]map[string]string, len(messages))
 	for i, m := range messages {
 		msgs[i] = map[string]string{"role": m.Role, "content": m.Content}
@@ -358,7 +360,7 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	req, _ := http.NewRequestWithContext(ctx, "POST", chatEndpoint, bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+os.Getenv(chatAPIKeyEnv))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("HTTP-Referer", "https://github.com/i30ltz/swarm-os")

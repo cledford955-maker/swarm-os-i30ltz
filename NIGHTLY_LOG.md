@@ -315,3 +315,93 @@ RANK 5 | i30LTZ Companion App | Apply brand theme red #cc1a1a / yellow #f0c020 /
 YELLOW night. The repos are syncing themselves, all green binaries are green, and those 7 syncs show you were in it today. But the scoreboard does not move until INC-1 gets a key and RC-11 gets a boot. Tomorrow: physical boot test on Recovery OS first, then open .env and drop in the OpenRouter key. Two small actions, three weeks overdue. You built something real. Let us make it talk again.
 
 LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.88 | 2026-10-12 | 00:00 ET
+
+---
+## LUCILLE CORE AI — Health Check Report | 2026-10-13 | v6.2.88
+
+**Date:** 2026-10-13 | **Scheduled audit, Sonnet 4.6** | **Overall Status:** 🟡 YELLOW — 3 code bugs fixed; 5 incidents still require user action
+
+---
+
+### 🔴 Active Incidents (Unchanged — Require User at Machine)
+
+| # | Sev | Incident | Duration | Fix |
+|---|-----|----------|----------|-----|
+| INC-1 | 🔴 CRITICAL | OpenRouter API key 401 — Lucille chat DEAD | **Day 23+** | New key → `20-runtime/.env` OPENROUTER_API_KEY |
+| INC-2 | 🟠 HIGH | Steam Web API key 403 | Day 23+ | Regen at steamcommunity.com/dev/apikey |
+| INC-3 | 🟠 HIGH | swarm-ui.service crashes on live ISO boot | Day 27+ | Fix is STAGED — needs `build_swarm_iso.sh` + Ventoy boot test |
+| INC-4 | 🔴 CRITICAL | /mnt/archive 100% full, /mnt/storage 97% full | Day 6+ | Run `python3 dedupe_archive.py` or manual purge |
+| INC-5 | ✅ RESOLVED | rsync `--no-delete` unsupported on rsync 3.5.0 | Fixed 2026-10-13 | Removed flag from `70-scripts/sync_lucille_ai.sh` |
+| INC-6 | 🟡 MEDIUM | sda4 (lucy-master) LUKS locked | Ongoing | `sudo cryptsetup open /dev/sda4 luks-a24202ce-...` |
+
+---
+
+### 🔨 Build Health
+
+| Project | Status | Notes |
+|---------|--------|-------|
+| GamingAgent-go | ✅ PASS | `go build ./...` + `go vet ./...` clean after today's changes |
+| LucyServer-go | ✅ PASS (last verified 2026-10-07) | No changes today |
+| lucille-core (C++) | ✅ PASS | Binary present |
+| LucilleAssistant (Go+Android) | ✅ PASS (last verified 2026-10-07) | No changes today |
+| Lucille Companion (Android) | ✅ PASS (last verified 2026-10-09) | No changes today |
+| swarm-ui.service (live ISO) | 🔴 CRASH | Boot drops to tty1 — fix staged, ISO rebuild STILL PENDING |
+| i30LTZ Recovery RC-11 | 🟡 PARTIAL | Installed sda3 — boot test UNCONFIRMED Day 4 |
+| AI Sync (sync_lucille_ai.sh) | 🟡 FIXED | --no-delete bug resolved; sda4 still LUKS-locked |
+
+---
+
+### ✅ Fixed This Run (2026-10-13)
+
+| Fix | File | Bug |
+|-----|------|-----|
+| `/health` now real | `GamingAgent-go/handlers/health.go` | Was always `200 ok` regardless of dead keys/DB; now returns `503 degraded` with named checks when `OPENROUTER_API_KEY`/`STEAM_API_KEY` missing or DB unreachable |
+| Context threading | `GamingAgent-go/services/lucille_service.go` + `handlers/lucille.go` | `ChatStream` didn't pass `r.Context()` — client disconnect leaked goroutine + OpenRouter quota for the full 120s timeout; now uses `http.NewRequestWithContext` |
+| rsync --no-delete | `70-scripts/sync_lucille_ai.sh` | INC-5: rsync 3.5.0 rejects this flag; removed (default is already non-deleting); AI sync can now run when sda4 is unlocked |
+
+---
+
+### 🕳️ Wiring Gaps / Mocks Documented
+
+| Gap | Location | Status |
+|-----|----------|--------|
+| `RecoveryAiScreen` not wired to live MAD IT SSE | `I30LTZ-Recovery-companion ui/screens/RecoveryAiScreen.kt` | Mock/stand-in only; CP-15 code written, live endpoint test PENDING |
+| `swarm-installer-web` | `30-source/swarm-installer-web/` | Exists as directory; unclear if wired into build |
+| Graphical installer ADMIN_PASSWORD flow | `LucyServer /install` + Flutter | Does not collect/pass `SWARM_ADMIN_PASSWORD` — user must set manually post-install |
+| `GamingAgent-go` has zero handler tests | `handlers/` | Only `services/` tested (28/28); handler smoke tests needed |
+| `lucille-android/` build broken | `Color.kt` | `Void` color undefined since commit `6d86c56`; pre-existing; not the active app |
+| `LUKS-ALERT` systemd service | Not yet created | sda4 locked every run silently; MASTER_BUILD_LIST item PENDING |
+
+---
+
+### 💡 Improvement Suggestions
+
+1. **Fix INC-1 first** — OpenRouter key 401 is Day 23+. Drop in the new key (`20-runtime/.env` `OPENROUTER_API_KEY`), then curl `http://localhost:8401/health` to see the real diagnosis. With today's health fix, `/health` now tells you exactly what's broken instead of lying.
+
+2. **Add 100-200ms sleep between CheapShark calls** in `GamingAgent-go/services/` `PriceAlertDaemon.CheckOnce()` — currently fires ~734 API calls in a tight loop for 367 Steam games per 24h cycle. A 150ms inter-call sleep drops the burst to ~55s instead of near-instant, protecting against rate limiting.
+
+3. **Handler smoke tests for GamingAgent** — `handlers/` has 0 tests. Add `httptest.NewRecorder`-based tests for `/health`, `/api/lucille/eval`, `/api/lucille/chat`. The buggy always-ok `/health` went undetected for weeks precisely because no test checked its output.
+
+4. **Add `-trimpath` to Go builds in `build_swarm_iso.sh`** — current binaries embed full `/mnt/Lucy/30-source/...` paths in stack traces, leaking the dev machine's disk layout into every panic. One flag addition (`-trimpath`) strips this without affecting runtime behavior.
+
+5. **Wire `SWARM_ADMIN_PASSWORD` into the Flutter graphical installer** — `install_swarm_os.sh` now prompts for it correctly (fixed 2026-10-10), but the GUI flow (`LucyServer /install` + `install_page.dart`) still doesn't collect or pass it, meaning any graphical install leaves the system locked on first boot.
+
+6. **Move GamingAgent build detection to a real path** — NIGHTLY_LOG has flagged `GamingAgent build UNKNOWN` because it looks for `30-source/GamingAgent/build/` (old .NET path). The Go binary lives in `30-source/GamingAgent-go/gaming-agent` (or wherever `go build` puts it). Update the nightly checker to the correct path.
+
+7. **Create `LUKS-ALERT` systemd service** (MASTER_BUILD_LIST item): a tiny oneshot that runs `cryptsetup status luks-a24202ce-...` at login and fires a `notify-send` if sda4 is locked. This unblocks the AI sync pipeline without requiring the user to remember to unlock manually.
+
+---
+
+### 🎯 Priority Queue (2026-10-13)
+
+| Rank | Task | Why |
+|------|------|-----|
+| 1 | **RC-11 Boot Test** — unplug Debian, F12, i30LTZ Recovery | 4 days unconfirmed |
+| 2 | **API Keys** — OpenRouter + Steam → `20-runtime/.env` | Day 23+ dead chat |
+| 3 | **ISO Rebuild** — `build_swarm_iso.sh` + Ventoy boot | swarm-ui fix still not tested |
+| 4 | **Wire RecoveryAiScreen** to live MAD IT SSE `/api/chat` | Core CP-15 feature non-functional |
+| 5 | **Install LUKS-ALERT service** — unlock reminder at login | Unblocks AI sync |
+
+---
+
+*LUCILLE CORE AI | SWARM_OS Suite Health Check | v6.2.88 | 2026-10-13*

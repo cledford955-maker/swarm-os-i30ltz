@@ -123,3 +123,28 @@
 | 2026-10-12 | v6.2.22 | HIGH | BRAND-THEME: Apply red #cc1a1a / yellow #f0c020 / void #050508 to Color.kt + Theme.kt | PENDING |
 
 > Nightly append by LUCILLE CORE AI | 2026-10-12 00:00 ET | v6.2.88
+
+---
+
+## 2026-10-13 | Scheduled Health Check | v6.2.88
+
+### Fixed This Run
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-13 | v6.2.88 | **[FIXED]** | INC-5 SYNC-FIX: Removed `--no-delete` from `70-scripts/sync_lucille_ai.sh` — rsync 3.5.0 does not support this flag; default rsync is already non-deleting | ✅ DONE |
+| 2026-10-13 | v6.2.88 | **[FIXED]** | GamingAgent `/health` stub: replaced always-ok stub with real DB ping + API key presence check; returns 503 when keys missing | ✅ DONE |
+| 2026-10-13 | v6.2.88 | **[FIXED]** | GamingAgent context leak: `ChatStream` now passes `r.Context()` through to `callChat` via `http.NewRequestWithContext`; client disconnect cancels upstream OpenRouter request | ✅ DONE |
+
+### New Pending Items
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-13 | v6.2.88 | **[HIGH]** | Add 100-200ms sleep between CheapShark calls in GamingAgent `PriceAlertDaemon.CheckOnce()` — currently fires ~734 calls in a tight loop | PENDING |
+| 2026-10-13 | v6.2.88 | **[HIGH]** | Add handler smoke tests for GamingAgent `handlers/` — `/health`, `/api/lucille/eval`, `/api/lucille/chat` via `httptest.NewRecorder` | PENDING |
+| 2026-10-13 | v6.2.88 | **[MEDIUM]** | Wire `SWARM_ADMIN_PASSWORD` into Flutter graphical installer (LucyServer `/install` + `install_page.dart`) — currently user must set post-install manually | PENDING |
+| 2026-10-13 | v6.2.88 | **[MEDIUM]** | Create `LUKS-ALERT` systemd service — notify-send at login if sda4 LUKS is locked; unblocks AI sync pipeline | PENDING |
+| 2026-10-13 | v6.2.88 | **[LOW]** | Add `-trimpath` to Go builds in `build_swarm_iso.sh` — strip dev machine paths from stack traces | PENDING |
+| 2026-10-13 | v6.2.88 | **[LOW]** | Fix nightly build-status checker: GamingAgent-go binary path is wrong (looks for old .NET path) | PENDING |
+
+> Health check audit by Sonnet 4.6 | 2026-10-13 | v6.2.88

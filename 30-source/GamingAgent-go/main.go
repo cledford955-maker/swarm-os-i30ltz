@@ -45,6 +45,9 @@ func main() {
 	// Warm GFN catalog in background
 	go gfnSvc.WarmCache()
 
+	// Wire real DB into /health so it reflects actual service state.
+	handlers.SetHealthDeps(&handlers.HealthDeps{DB: database})
+
 	// Handlers
 	gfnH := handlers.NewGfnHandler(gfnSvc, gamesSvc)
 	steamH := handlers.NewSteamHandler(steamSvc)
