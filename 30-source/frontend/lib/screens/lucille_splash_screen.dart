@@ -8,9 +8,8 @@ import 'package:media_kit_video/media_kit_video.dart';
 /// ═══════════════════════════════════════════════════════════════
 /// LUCILLE CINEMATIC VIDEO SPLASH SCREEN
 /// ═══════════════════════════════════════════════════════════════
-/// Plays the Grok-generated 1999 Trans-Am WS6 → cyber-wasp nest
-/// MP4 video fullscreen with audio via media_kit (Linux native),
-/// then auto-transitions to the Hub.
+/// Plays the cinematic Blue Angels MP4 video fullscreen with audio
+/// via media_kit (Linux native), then auto-transitions to the Hub.
 /// ═══════════════════════════════════════════════════════════════
 class LucilleSplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
@@ -19,7 +18,7 @@ class LucilleSplashScreen extends StatefulWidget {
   const LucilleSplashScreen({
     super.key,
     required this.onComplete,
-    this.duration = const Duration(seconds: 9),
+    this.duration = const Duration(seconds: 11),
   });
 
   @override
@@ -91,24 +90,36 @@ class _LucilleSplashScreenState extends State<LucilleSplashScreen>
         debugPrint('media_kit error: $error');
       });
 
-      // Try the bundled asset path first (Flutter release bundle)
-      final bundlePath = '${Directory.current.path}/data/flutter_assets/assets/splash/lucille_transam_splash.mp4';
-      const devPath = '/run/media/i30ltz/lucy-master/Lucille-v6/frontend/assets/splash/lucille_transam_splash.mp4';
+      // Locate splash video (blueangels.mp4 is primary)
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      final candidates = [
+        '${Directory.current.path}/data/flutter_assets/assets/splash/blueangels.mp4',
+        '${Directory.current.path}/assets/splash/blueangels.mp4',
+        if (exeDir.isNotEmpty) '$exeDir/data/flutter_assets/assets/splash/blueangels.mp4',
+        '/opt/swarm_os/swarm_flutter/data/flutter_assets/assets/splash/blueangels.mp4',
+        '/mnt/Lucy/images/blueangels.mp4',
+        '/mnt/swarmbuild/images/blueangels.mp4',
+        '/home/i30ltz/Videos/blueangels.mp4',
+        // Fallbacks for transam if blueangels is not found
+        '${Directory.current.path}/data/flutter_assets/assets/splash/lucille_transam_splash.mp4',
+        '${Directory.current.path}/assets/splash/lucille_transam_splash.mp4',
+        if (exeDir.isNotEmpty) '$exeDir/data/flutter_assets/assets/splash/lucille_transam_splash.mp4',
+        '/run/media/i30ltz/lucy-master/Lucille-v6/frontend/assets/splash/lucille_transam_splash.mp4',
+      ];
 
-      String videoPath;
-      if (File(bundlePath).existsSync()) {
-        videoPath = bundlePath;
-      } else if (File(devPath).existsSync()) {
-        videoPath = devPath;
-      } else {
-        // Last resort — look relative to executable
-        final exeDir = File(Platform.resolvedExecutable).parent.path;
-        final exePath = '$exeDir/data/flutter_assets/assets/splash/lucille_transam_splash.mp4';
-        if (File(exePath).existsSync()) {
-          videoPath = exePath;
-        } else {
-          throw FileSystemException('Video file not found', bundlePath);
+      String? videoPath;
+      for (final candidate in candidates) {
+        if (File(candidate).existsSync()) {
+          videoPath = candidate;
+          break;
         }
+      }
+
+      if (videoPath == null) {
+        throw FileSystemException(
+          'Splash video file not found',
+          candidates.first,
+        );
       }
 
       debugPrint('Playing splash video from: $videoPath');
@@ -171,9 +182,13 @@ class _LucilleSplashScreenState extends State<LucilleSplashScreen>
                 Opacity(
                   opacity: _fadeIn.value,
                   child: Image.asset(
-                    'assets/splash/transam_1440p.jpg',
+                    'assets/splash/blueangels_poster.jpg',
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    errorBuilder: (_, __, ___) => Image.asset(
+                      'assets/splash/transam_1440p.jpg',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
                   ),
                 )
               else
@@ -260,7 +275,7 @@ class _LucilleSplashScreenState extends State<LucilleSplashScreen>
                                     color: _cyan.withValues(alpha: 0.5)),
                               ),
                               child: const Text(
-                                '1999 TRANS-AM WS6',
+                                'BLUE ANGELS',
                                 style: TextStyle(
                                   color: _cyan,
                                   fontSize: 10,

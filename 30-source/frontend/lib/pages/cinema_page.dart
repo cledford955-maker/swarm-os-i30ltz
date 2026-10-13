@@ -115,6 +115,9 @@ class _CinemaPageState extends State<CinemaPage> with SingleTickerProviderStateM
 
     // 1. Check known primary video locations
     final primaryCandidates = [
+      '/mnt/Lucy/images/blueangels.mp4',
+      '/mnt/swarmbuild/images/blueangels.mp4',
+      '/home/i30ltz/Desktop/transam.mp4',
       '/run/media/i30ltz/lucy-master/transam_video.mp4',
       '/run/media/i30ltz/lucy-master/Luccile-v+/frontend/assets/splash/lucille_transam_splash.mp4',
       '/run/media/i30ltz/lucy-master/Lucille-v6/frontend/assets/splash/lucille_transam_splash.mp4',
@@ -128,7 +131,11 @@ class _CinemaPageState extends State<CinemaPage> with SingleTickerProviderStateM
           title: file.path.split('/').last,
           path: file.path,
           fileSize: '$sizeMb MB',
-          prompt: p.contains('transam') ? '1999 Trans-Am WS6 burnout & cyber-wasp nest macro 3D' : null,
+          prompt: p.contains('transam')
+              ? '1999 Trans-Am WS6 burnout & cyber-wasp nest macro 3D'
+              : (p.contains('blueangels')
+                  ? 'Blue Angels F/A-18 Super Hornet flight demo'
+                  : null),
         ));
       }
     }

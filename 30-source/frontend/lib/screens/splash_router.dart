@@ -5,7 +5,7 @@ import 'lucille_splash_screen.dart';
 /// ═══════════════════════════════════════════════════════════════
 /// SPLASH ROUTER
 /// ═══════════════════════════════════════════════════════════════
-/// Plays the cinematic Grok-generated Trans-Am WS6 video splash,
+/// Plays the cinematic Blue Angels video splash,
 /// then navigates to the Hub.
 /// ═══════════════════════════════════════════════════════════════
 class SplashRouter extends StatelessWidget {

@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-13 01:10 UTC from 105 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-13 02:08 UTC from 107 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 51 entries
+- `debian@debian` — 53 entries
 
 ## Decisions
 
@@ -187,7 +187,7 @@ _debian@debian · 2026-10-08T03:39:33_
 ## Claude memory
 
 ### MEMORY.md
-_debian@debian · 2026-10-12T20:49:05_
+_debian@debian · 2026-10-13T01:33:13_
 
 # Memory Index
 
@@ -216,6 +216,7 @@ _debian@debian · 2026-10-12T20:49:05_
 - [Hobby, enterprise quality](user_hobby_enterprise_quality.md) — 2026-10-10: personal passion project on a limited budget; "enterprise level" = quality, not enterprise features; keep costs and complexity low
 - [Debian GRUB = swarm-grub](project_debian_grub_swarm_grub.md) — 2026-10-10: user chose the new swarm-grub theme for Debian's GRUB; built + QEMU-tested, install pending their sudo; not to be mixed with swarm_dev; 09_swarm_debian entries stale
 - [Lucille Assistant 1.6.0 project brief](project_lucille_project_brief.md) — 2026-10-12: C partition app; brief reads PC files, git fallback, suggestions to MASTER_BUILD_LIST inbox + Boltz; built, cutover/phone install pending
+- [Lucille AI window 1.7.0](project_lucille_ai_window.md) — 2026-10-12: OpenRouter/Claude key window + 3 offline models; keys never shipped; fixed legacy-.env leak of SWARM keys; not cut over, Ollama not installed
 
 ### feedback_disk_letter_instability.md
 _cachyos@cachyos-i30ltz · 2026-09-16T09:28:08_
@@ -443,6 +444,31 @@ User confirmed 2026-09-20: "forge has been renamed Apex other ai now working on 
 **Why this matters:** Earlier the same day (2026-09-19 pass), a swarm-slint Lucille panel tab was built and explicitly named "Forge" (`forge_controller.rs`, `ui/forge_state.slint`, `ui/views/forge.slint` — a general coding-focused Lucille chat tab, NOT necessarily the same "IDE" this rename refers to). It's unconfirmed whether this rename applies to that swarm-slint tab specifically, to the separate `CoderPage`/`/coder`/`/ide` AI-coding-assistant area in the Flutter frontend, or to something else entirely called an "IDE" elsewhere in the project. Don't assume which one without checking current code/asking.
 
 **How to apply:** Before referring to anything as "Forge" going forward, check whether the current name should be "Apex" instead — search current code/`SWARM_AI_FEATURES.md` rather than trusting older memories or this session's own earlier "Forge" work as still-accurate naming. Since another AI is confirmed actively working on whichever area this rename applies to, avoid touching it until the user says otherwise, per the standing multiple-concurrent-AI guidance.
+
+### project_lucille_ai_window.md
+_debian@debian · 2026-10-13T01:33:13_
+
+---
+name: lucille-assistant-ai-window
+description: "2026-10-12 Lucille Assistant 1.7.0 AI window (OpenRouter + Claude keys, 3 offline models): design rules, the legacy-.env key leak it fixed, what is built vs pending"
+metadata:
+  node_type: memory
+  type: project
+  originSessionId: 071a1933-a7f8-45ac-9fc5-c9707ab2cceb
+  modified: 2026-10-13T01:29:13.565Z
+---
+
+Lucille Assistant 1.7.0 (partition C, `/mnt/lucilleassistant` that day) added **Config -> "Lucille's brains"** in the phone app (+ web Connect sheet): OpenRouter and Claude key entry, Auto/Cloud/Offline source, and a swarm of 3 small offline models (Ollama-compatible, config.json `local_models`). User request 2026-10-12: "window for openrouter and claude keys … swarm of 3 offline models … don't ship it".
+
+**Why / rules that came out of it:**
+- "Don't ship" = keys live only in `~/.config/lucille-assistant/keys.env` (0600), never in repo/`dist/`/bundles; the API never returns a key (set/source/last4 only). Keep it that way; never add a "show my key" endpoint.
+- Her `.env` was effectively empty but the service still read SWARM's `/mnt/Lucy/20-runtime/.env` as a legacy fallback, so she silently used SWARM's production keys (and would have spent its `ANTHROPIC_API_KEY`). 1.7 skips `OPENROUTER_API_KEY`/`ANTHROPIC_API_KEY`/`CLAUDE_API_KEY` from legacy paths; other keys and `SWARM_AUTH_TOKEN` still come from there. Check this whenever adding a paid provider.
+- Project is stdlib-only (`GOPROXY=off`), so Claude is called via raw HTTP, not the Go SDK. Default model `claude-haiku-5-5` (budget), a deliberate deviation from the usual Opus default; `ANTHROPIC_MODEL` overrides.
+- Offline models/endpoint are config.json only, not editable from the phone (a phone must not redirect her chats to another host).
+
+**How to apply:** Ollama is NOT installed and no models are pulled (user's call; ~4.5 GB: llama3.2:3b, qwen2.5:3b, gemma3:1b; no GPU, ~8 GB free). 1.7.0 is built (`dist/`) and emulator-tested but NOT cut over, NOT on a phone, and 1.5/1.6/1.7 work is uncommitted in C's git. Real OpenRouter/Claude/Ollama calls were never exercised. See [[lucille-assistant-project-brief]].
+
+Emulator tip: the emulator keyboard garbles fast `adb input text` (a key came through as "ks-or-v"); type in 4-char chunks with a pause. The app's local PIN gate prints its default PIN on a wrong attempt.
 
 ### project_lucille_identity.md
 _debian@debian · 2026-10-12T04:08:09_
