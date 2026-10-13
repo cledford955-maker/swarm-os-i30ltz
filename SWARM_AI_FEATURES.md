@@ -1236,5 +1236,13 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 - **Code integration**: Updated `30-source/frontend/lib/screens/lucille_splash_screen.dart` (`_initVideo` resolution candidates prioritizing `blueangels.mp4`, duration adjusted to 11s, badge text updated from '1999 TRANS-AM WS6' to 'BLUE ANGELS', extracted fallback poster frame `blueangels_poster.jpg`), `lib/screens/splash_router.dart`, and `lib/pages/cinema_page.dart` (added Blue Angels and Desktop Trans-Am to video gallery scanner).
 - Staged into both `/mnt/swarmbuild` and `/mnt/Lucy`.
 
-*Last updated: 2026-10-12 — SWARM OS splash screen updated to Blue Angels (video + poster frame + badge); Trans-Am preserved on Desktop as transam.mp4.*
+### DONE — 4-Stone Cipher Implementation & Lock Screen Reset Fixes (2026-10-12, user requested; Antigravity)
+- **4-Stone Cipher (reduced from 6)**: Updated `cyber_stone_lock_screen.dart` and `cyber_stone_lock.dart` to require and display a 4-stone glyph sequence instead of 6 stones. Both main cipher and garden cipher now configure and activate with 4 stones. Display slots adjusted to 4 slots (`targetSlots = 4`). Buttons updated to `ACTIVATE CIPHER n/4` and `ARM GARDEN n/4`.
+- **Fixed TextField Focus Stealing ("wont let you type")**: Removed recurring `FocusNode()..requestFocus()` creation inside `build()`, which was stealing focus from modal dialogs on every animation frame. Introduced state-level `_screenFocusNode` properly unfocused during dialogs and refocused on pop, with dedicated `FocusNode` for the password `TextField`.
+- **Handled Unconfigured Recovery Password**: If no admin recovery password is configured in LucyServer (`No login password configured`), clicking "CHANGE CIPHER" or triggering corner-tap recovery no longer traps the user with an impossible password request. It presents a direct confirmation dialog to reset the stone cipher.
+- **Active Cipher Reset**: Cleared saved `cyber_stone_cipher_master_pattern` and `cyber_stone_cipher_garden_pattern` in `/mnt/swarm/@home/i30ltz/.local/share/com.swarmos.swarm_flutter/shared_preferences.json` (backup saved). SWARM OS lock screen will greet the user on next boot directly in setup mode for a fresh 4-stone cipher sequence.
+- Synced across `/mnt/swarmbuild` and `/mnt/Lucy`.
+
+*Last updated: 2026-10-12 — 4-stone cipher implemented; lock screen focus and unconfigured-password reset bugs resolved; active cipher reset on SWARM OS.*
+
 

@@ -75,7 +75,7 @@ final goRouter = GoRouter(
     return null;
   },
   routes: [
-    // Standalone full-screen 1999 Electric Blue Trans-Am WS6 Splash & Cockpit Loading
+    // Standalone full-screen Blue Angels Splash & Cockpit Loading
     GoRoute(
       path: '/splash',
       builder: (_, __) => const SplashRouter(child: HubPage()),

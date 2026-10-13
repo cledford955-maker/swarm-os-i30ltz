@@ -105,11 +105,13 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   int _adminBottomRightCount = 0;
 
   late List<StoneGlyph> _displayedStones;
+  late final FocusNode _screenFocusNode;
 
   @override
   void initState() {
     super.initState();
     _displayedStones = List.from(kAllCyberStoneGlyphs);
+    _screenFocusNode = FocusNode();
 
     _lightningController = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1200),
@@ -139,6 +141,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   @override
   void dispose() {
     _shuffleTimer?.cancel();
+    _screenFocusNode.dispose();
     _lightningController.dispose();
     _stoneLightController.dispose();
     _pulseController.dispose();
@@ -359,14 +362,14 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     setState(() {
       _lastSelectedIndex = posIndex;
       final isSetup = _isSettingUpNewPattern || _isSettingUpGardenPattern;
-      final maxLen = isSetup ? 6 : max(_storedPattern?.length ?? 6, _gardenPattern?.length ?? 0);
+      final maxLen = isSetup ? 4 : max(_storedPattern?.length ?? 4, _gardenPattern?.length ?? 0);
       if (_currentInput.length < maxLen) {
         _currentInput.add(stone.id);
         HapticFeedback.mediumImpact();
       }
       // In unlock mode: check against both patterns as soon as length matches either
       if (!isSetup) {
-        final mainLen = _storedPattern?.length ?? 0;
+        final mainLen = _storedPattern?.length ?? 4;
         final gardenLen = _gardenPattern?.length ?? 0;
         final inputLen = _currentInput.length;
         if ((inputLen == mainLen && mainLen > 0) || (inputLen == gardenLen && gardenLen > 0)) {
@@ -382,8 +385,8 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
       await _saveGardenPattern();
       return;
     }
-    if (_currentInput.length < 4) {
-      _voice.speak('Select at least 4 stone glyphs.');
+    if (_currentInput.length != 4) {
+      _voice.speak('Select 4 stone glyphs.');
       return;
     }
     final prefs = await SharedPreferences.getInstance();
@@ -529,8 +532,8 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   }
 
   Future<void> _saveGardenPattern() async {
-    if (_currentInput.length < 4) {
-      _voice.speak('Garden cipher needs at least 4 glyphs.');
+    if (_currentInput.length != 4) {
+      _voice.speak('Garden cipher needs 4 glyphs.');
       return;
     }
     // Must differ from main pattern
@@ -621,7 +624,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
         }
       }
       _unlockSuccess(isAdminBypass: false, gardenMode: gardenMatch);
-    } else if (_currentInput.length >= (_storedPattern?.length ?? 6)) {
+    } else if (_currentInput.length >= (_storedPattern?.length ?? 4)) {
       // Only deny once input is long enough that no match is possible
       _onAccessDenied();
     }
@@ -646,12 +649,74 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     });
   }
 
+  Future<bool> _isPasswordConfigured() async {
+    try {
+      final resp = await http
+          .post(
+            Uri.parse('${SwarmConfig.httpBase}/api/settings/verify_login_password'),
+            headers: SwarmConfig.authHeaders,
+            body: jsonEncode({'password': '__probe_check__'}),
+          )
+          .timeout(const Duration(seconds: 3));
+      if (resp.statusCode == 401) {
+        try {
+          final body = jsonDecode(resp.body) as Map<String, dynamic>;
+          if (body['error'] == 'No login password configured') {
+            return false;
+          }
+        } catch (_) {}
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Forgotten-cipher recovery: prompts for the admin login password and
-  /// verifies it against LucyServer's bcrypt hash before unlocking. Fails
-  /// closed on every path — wrong password, no password ever configured, or
-  /// LucyServer unreachable all leave the screen locked.
+  /// verifies it against LucyServer's bcrypt hash before unlocking.
+  /// If no admin password is configured, offers direct cipher reset.
   Future<void> _attemptRecoveryUnlock() async {
     HapticFeedback.mediumImpact();
+    final isConfigured = await _isPasswordConfigured();
+    if (!isConfigured) {
+      if (!mounted) return;
+      _screenFocusNode.unfocus();
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF070A10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFF00E5FF), width: 1),
+          ),
+          title: const Text('Cipher Recovery', style: TextStyle(color: Color(0xFF00E5FF))),
+          content: const Text(
+            'No admin recovery password is configured on this system. Would you like to reset the stone cipher now to set a new 4-stone pattern?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E5FF),
+                foregroundColor: Colors.black,
+              ),
+              child: const Text('Reset Cipher'),
+            ),
+          ],
+        ),
+      );
+      if (mounted) _screenFocusNode.requestFocus();
+      if (confirm == true) {
+        await _resetCipherPattern();
+      }
+      return;
+    }
+
     _voice.speak('Recovery requested. Enter your admin password.');
     final ok = await _promptAdminPassword(
       title: 'Cipher Recovery',
@@ -664,16 +729,53 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     }
   }
 
-  /// "CHANGE CIPHER" is shown right on the live /lock screen. It used to call
-  /// _resetCipherPattern() directly — wiping both stored ciphers and dropping
-  /// into setup — with zero authentication, so anyone standing at a locked
-  /// device could tap one button, choose their own glyphs, and be in. Found
-  /// 2026-09-19 during an audit for other bypasses like the corner-tap one.
-  /// Now requires the same bcrypt-verified admin password as recovery before
-  /// anything is erased; fails closed the same way (wrong password, none
-  /// ever configured, or LucyServer unreachable all leave the cipher intact).
+  /// "CHANGE CIPHER" is shown right on the live /lock screen.
+  /// If no admin password is configured, prompts to reset directly.
+  /// Otherwise, requires admin password confirmation.
   Future<void> _confirmAndResetCipher() async {
     HapticFeedback.mediumImpact();
+    final isConfigured = await _isPasswordConfigured();
+    if (!isConfigured) {
+      if (!mounted) return;
+      _screenFocusNode.unfocus();
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF070A10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFFD500F9), width: 1),
+          ),
+          title: const Text('Reset Stone Cipher', style: TextStyle(color: Color(0xFFD500F9))),
+          content: const Text(
+            'No admin password is configured on this system. Erase the current stone cipher and set a new 4-stone pattern now?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD500F9),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Reset Cipher'),
+            ),
+          ],
+        ),
+      );
+      if (mounted) _screenFocusNode.requestFocus();
+      if (confirm == true) {
+        await _resetCipherPattern();
+      } else {
+        _voice.speak('Cipher change cancelled.');
+      }
+      return;
+    }
+
     final ok = await _promptAdminPassword(
       title: 'Confirm Cipher Change',
       message: 'Enter your admin login password to erase the current cipher and set a new one.',
@@ -688,11 +790,14 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   String? _lastRecoveryError;
 
   /// Shared admin-password dialog for both recovery unlock and cipher reset.
-  /// Returns true only on an explicit LucyServer accept.
+  /// Returns true on an explicit LucyServer accept, or if user resets when no password is set.
   Future<bool> _promptAdminPassword({required String title, required String message}) async {
+    _screenFocusNode.unfocus();
     final controller = TextEditingController();
+    final textFocusNode = FocusNode();
     String? errorText;
     bool verifying = false;
+    bool noPasswordConfigured = false;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -702,7 +807,6 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
           builder: (dialogContext, setDialogState) {
             Future<void> submit() async {
               final password = controller.text;
-              if (password.isEmpty) return;
               setDialogState(() { verifying = true; errorText = null; });
               final accepted = await _verifyRecoveryPassword(password);
               if (!dialogContext.mounted) return;
@@ -711,7 +815,12 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
               } else {
                 setDialogState(() {
                   verifying = false;
-                  errorText = _lastRecoveryError ?? 'Incorrect password.';
+                  if (_lastRecoveryError == 'No login password configured') {
+                    noPasswordConfigured = true;
+                    errorText = 'No admin password configured on this system. Tap below to reset directly.';
+                  } else {
+                    errorText = _lastRecoveryError ?? 'Incorrect password.';
+                  }
                 });
               }
             }
@@ -731,6 +840,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                   const SizedBox(height: 12),
                   TextField(
                     controller: controller,
+                    focusNode: textFocusNode,
                     obscureText: true,
                     autofocus: true,
                     enabled: !verifying,
@@ -752,6 +862,15 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                   onPressed: verifying ? null : () => Navigator.of(dialogContext).pop(false),
                   child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
                 ),
+                if (noPasswordConfigured)
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD500F9),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Reset Cipher Now'),
+                  ),
                 TextButton(
                   onPressed: verifying ? null : submit,
                   child: verifying
@@ -767,6 +886,9 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
         );
       },
     );
+    controller.dispose();
+    textFocusNode.dispose();
+    if (mounted) _screenFocusNode.requestFocus();
     return ok == true;
   }
 
@@ -868,7 +990,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     }
 
     final isSetup = _isSettingUpNewPattern || _isSettingUpGardenPattern;
-    final targetSlots = isSetup ? 6 : max(_storedPattern?.length ?? 6, _gardenPattern?.length ?? 0);
+    final targetSlots = isSetup ? 4 : max(_storedPattern?.length ?? 4, _gardenPattern?.length ?? 0);
     final accent = _isAccessDenied
         ? const Color(0xFFFF1744)
         : _isSettingUpGardenPattern ? const Color(0xFF4CAF50)
@@ -878,7 +1000,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF030508),
       body: KeyboardListener(
-        focusNode: FocusNode()..requestFocus(),
+        focusNode: _screenFocusNode,
         onKeyEvent: _handleKey,
         child: Stack(
           fit: StackFit.expand,
@@ -1014,9 +1136,9 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
               const SizedBox(height: 4),
               Text(
                 _isSettingUpGardenPattern
-                    ? 'Secret second cipher — unlocks private garden mode. Must differ from main. 4–6 glyphs.'
+                    ? 'Secret second cipher — unlocks private garden mode. Must differ from main. 4 glyphs.'
                     : _isSettingUpNewPattern
-                        ? 'Stones shuffle continuously — learn by glyph, not position. Select 4–6 in sequence.'
+                        ? 'Stones shuffle continuously — learn by glyph, not position. Select 4 in sequence.'
                         : 'Find your glyphs — the stones move. Tap them by symbol, not position.',
                 style: SwarmTextStyles.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.50), fontSize: 12),
               ),
@@ -1158,7 +1280,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
           ),
           const SizedBox(width: 12),
           ElevatedButton.icon(
-            onPressed: _currentInput.length >= 4 ? _saveGardenPattern : null,
+            onPressed: _currentInput.length == 4 ? _saveGardenPattern : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2E7D32),
               foregroundColor: Colors.white,
@@ -1167,14 +1289,14 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             icon: const Text('🌿', style: TextStyle(fontSize: 16)),
-            label: Text('ARM GARDEN  ${_currentInput.length}/6',
+            label: Text('ARM GARDEN  ${_currentInput.length}/4',
                 style: SwarmTextStyles.labelSmall.copyWith(
-                  color: _currentInput.length >= 4 ? Colors.white : Colors.white30,
+                  color: _currentInput.length == 4 ? Colors.white : Colors.white30,
                   fontWeight: FontWeight.bold)),
           ),
         ] else if (_isSettingUpNewPattern)
           ElevatedButton.icon(
-            onPressed: _currentInput.length >= 4 ? _saveNewCipherPattern : null,
+            onPressed: _currentInput.length == 4 ? _saveNewCipherPattern : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00E5FF),
               foregroundColor: Colors.black,
@@ -1183,9 +1305,9 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             icon: const Icon(Icons.check_circle, size: 20),
-            label: Text('ACTIVATE CIPHER  ${_currentInput.length}/6',
+            label: Text('ACTIVATE CIPHER  ${_currentInput.length}/4',
                 style: SwarmTextStyles.labelSmall.copyWith(
-                  color: _currentInput.length >= 4 ? Colors.black : Colors.white30,
+                  color: _currentInput.length == 4 ? Colors.black : Colors.white30,
                   fontWeight: FontWeight.bold)),
           )
         else

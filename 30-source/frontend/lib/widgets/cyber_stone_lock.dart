@@ -8,7 +8,7 @@ import '../theme/swarm_text_styles.dart';
 /// Features:
 /// - 12 3D-embossed stones with chiseled cybernetic glyphs
 /// - Electric Blue (#00E5FF) and Electric Purple (#D500F9) lightning shock arcs
-/// - 6-glyph pattern sequence entry with randomized position shuffle
+/// - 4-glyph pattern sequence entry with randomized position shuffle
 /// - Bluetooth Gamepad / D-Pad friendly controller navigation
 /// - Admin Secret Bypass: 3 clicks Top-Left + 3 clicks Bottom-Right
 class CyberStoneLockDialog extends StatefulWidget {
@@ -62,7 +62,7 @@ class _CyberStoneLockDialogState extends State<CyberStoneLockDialog>
   final LucilleVoiceService _voice = LucilleVoiceService();
 
   final List<int> _enteredSequence = [];
-  final int _maxSlots = 6;
+  final int _maxSlots = 4;
   int _focusedIndex = 0;
   bool _isAccessDenied = false;
 
@@ -151,8 +151,8 @@ class _CyberStoneLockDialogState extends State<CyberStoneLockDialog>
   }
 
   void _validateSequence() {
-    // Correct default password sequence: 6 unique or custom chosen glyphs
-    // By default, any 6-glyph combination or the Admin bypass unlocks
+    // Correct default password sequence: 4 unique or custom chosen glyphs
+    // By default, any 4-glyph combination or the Admin bypass unlocks
     _unlockSuccess(isAdminBypass: false);
   }
 

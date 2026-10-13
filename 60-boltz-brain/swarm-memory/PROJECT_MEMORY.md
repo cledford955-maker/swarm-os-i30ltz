@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-13 02:08 UTC from 107 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-13 03:12 UTC from 108 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 53 entries
+- `debian@debian` — 54 entries
 
 ## Decisions
 
@@ -446,7 +446,7 @@ User confirmed 2026-09-20: "forge has been renamed Apex other ai now working on 
 **How to apply:** Before referring to anything as "Forge" going forward, check whether the current name should be "Apex" instead — search current code/`SWARM_AI_FEATURES.md` rather than trusting older memories or this session's own earlier "Forge" work as still-accurate naming. Since another AI is confirmed actively working on whichever area this rename applies to, avoid touching it until the user says otherwise, per the standing multiple-concurrent-AI guidance.
 
 ### project_lucille_ai_window.md
-_debian@debian · 2026-10-13T01:33:13_
+_debian@debian · 2026-10-13T02:34:07_
 
 ---
 name: lucille-assistant-ai-window
@@ -466,7 +466,7 @@ Lucille Assistant 1.7.0 (partition C, `/mnt/lucilleassistant` that day) added **
 - Project is stdlib-only (`GOPROXY=off`), so Claude is called via raw HTTP, not the Go SDK. Default model `claude-haiku-5-5` (budget), a deliberate deviation from the usual Opus default; `ANTHROPIC_MODEL` overrides.
 - Offline models/endpoint are config.json only, not editable from the phone (a phone must not redirect her chats to another host).
 
-**How to apply:** Ollama is NOT installed and no models are pulled (user's call; ~4.5 GB: llama3.2:3b, qwen2.5:3b, gemma3:1b; no GPU, ~8 GB free). 1.7.0 is built (`dist/`) and emulator-tested but NOT cut over, NOT on a phone, and 1.5/1.6/1.7 work is uncommitted in C's git. Real OpenRouter/Claude/Ollama calls were never exercised. See [[lucille-assistant-project-brief]].
+**How to apply:** Ollama 0.40.3 is installed (user said yes, 2026-10-12) in `~/.local/opt/ollama` as user service `ollama.service` (loopback), models llama3.2:3b / qwen2.5:3b / gemma3:1b pulled. 1.7.0 is cut over on the PC and on the 3 phones (USB `adb install -r`; phone SM-S166V drops USB mid-install, `adb push` + `pm install` worked). The 1.5/1.6/1.7 work is still uncommitted in C's git. No real OpenRouter/Claude call was ever exercised; no key entered yet. CPU is an i5-10310U: offline replies take 11-30 s (2-4 tok/s) — never use the shared 8 s `httpc` for local models, keep the local persona short, and keep tests hermetic (`cfg.Local.Enabled=false` in setupTestApp) because a real Ollama is now listening. See [[lucille-assistant-project-brief]].
 
 Emulator tip: the emulator keyboard garbles fast `adb input text` (a key came through as "ks-or-v"); type in 4-char chunks with a pause. The app's local PIN gate prints its default PIN on a wrong attempt.
 
