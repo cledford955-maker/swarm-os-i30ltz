@@ -54,6 +54,13 @@
   <windowRules>
     <!-- Flutter desktop shell: full-screen, no compositor title bar (Flutter draws its own top bar) -->
     <windowRule title="SWARM OS*" serverDecoration="no" maximized="yes"/>
+    <!-- Keep the full-screen shell beneath every app window: otherwise a click
+         on the desktop raises it over e.g. the browser, which then looks closed
+         (reported 2026-10-13). Matched by app_id so a browser tab titled
+         "SWARM OS ..." is never pinned down. -->
+    <windowRule identifier="com.swarmos.swarm_flutter">
+      <action name="ToggleAlwaysOnBottom"/>
+    </windowRule>
     <!-- Lucille panel (swarm-slint): floating companion, no compositor title bar -->
     <windowRule title="Lucille" serverDecoration="no"/>
     <!-- Gaming overlay (swarm-overlay, 2026-09-20): dashboard + browser-widget
