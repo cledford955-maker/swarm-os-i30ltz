@@ -1243,6 +1243,25 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 - **Active Cipher Reset**: Cleared saved `cyber_stone_cipher_master_pattern` and `cyber_stone_cipher_garden_pattern` in `/mnt/swarm/@home/i30ltz/.local/share/com.swarmos.swarm_flutter/shared_preferences.json` (backup saved). SWARM OS lock screen will greet the user on next boot directly in setup mode for a fresh 4-stone cipher sequence.
 - Synced across `/mnt/swarmbuild` and `/mnt/Lucy`.
 
-*Last updated: 2026-10-12 — 4-stone cipher implemented; lock screen focus and unconfigured-password reset bugs resolved; active cipher reset on SWARM OS.*
+### DONE — Hardware USB Master Key for Flash Sticks (2026-10-12, user requested; Antigravity)
+- **USB Master Key Detection Engine (`30-source/frontend/lib/services/usb_master_key_service.dart`)**:
+  - Automatically detects cheap USB flash drives (FAT32, exFAT, ext4, NTFS) on insertion.
+  - Automatically mounts unmounted USB drive partitions safely via `udisksctl mount -b <partition> --no-user-interaction`.
+  - Searches drive root and `.swarm/` for standard master key files (`swarm_master.key`, `swarm.key`, `.swarm_master.key`, `master.key`, `lucille.key`).
+  - Verifies key tokens (supports standard signature `SWARM_MASTER_KEY_V1`, `KEY=`, or user-configured secret in SharedPreferences/etc).
+  - Protects system mounts (`/`, `/boot`, `/mnt/Lucy`, `/mnt/swarmbuild`, `/mnt/archive`, `lucy-master`).
+- **Lock Screen Integration (`30-source/frontend/lib/screens/cyber_stone_lock_screen.dart`)**:
+  - Live periodic polling (every 1.8s) while on the lock screen.
+  - When a flash drive master key is inserted: Lucille announces *"Hardware master key detected on flash drive. Override authorized."* and a prominent cyber banner displays the drive label with direct `[ UNLOCK ]` and `[ RESET CIPHER ]` actions.
+  - Direct bypass in the "CHANGE CIPHER" and recovery dialogs if a master key flash drive is inserted.
+  - "MAKE USB KEY" button in cipher setup and lock actions: allows writing/provisioning a master key (`swarm_master.key`) to any plugged-in flash drive with one click.
+- **CLI Management Utility (`70-scripts/swarm_usb_key.sh`)**:
+  - Staged to `/usr/local/bin/swarm-usb-key` in ISO airootfs and `/opt/swarm_os/bin/swarm-usb-key` in installed system.
+  - Supports `list` (view connected flash drives and key status), `scan` (search for keys), and `create <target_dir|dev>` (write a master key).
+- **Compilation & Test Coverage**:
+  - Comprehensive unit tests in `30-source/frontend/test/usb_master_key_service_test.dart` (all 4 tests passing; full frontend suite 103/103 tests passing).
+  - Compiled release bundle staged to `/opt/swarm_os/swarm_flutter/` across `/mnt/swarmbuild`, `/mnt/Lucy`, and `/mnt/swarm/@/opt/swarm_os/swarm_flutter/`.
+
+*Last updated: 2026-10-12 — Hardware USB master key engine for cheap flash sticks implemented, tested, compiled, and deployed.*
 
 

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/lucille_voice_service.dart';
 import '../services/swarm_config.dart';
+import '../services/usb_master_key_service.dart';
 import '../theme/swarm_text_styles.dart';
 
 /// Stone glyph representation
@@ -104,6 +105,11 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   int _adminTopLeftCount = 0;
   int _adminBottomRightCount = 0;
 
+  // Hardware USB Master Key
+  Timer? _usbScanTimer;
+  UsbMasterKeyInfo? _detectedUsbKey;
+  bool _isScanningUsb = false;
+
   late List<StoneGlyph> _displayedStones;
   late final FocusNode _screenFocusNode;
 
@@ -136,10 +142,12 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     _loadMasterPattern();
     _checkTotpStatus();
     _startAutoShuffle();
+    _startUsbKeyScan();
   }
 
   @override
   void dispose() {
+    _usbScanTimer?.cancel();
     _shuffleTimer?.cancel();
     _screenFocusNode.dispose();
     _lightningController.dispose();
@@ -210,6 +218,224 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     } else {
       _voice.speak('Stone cipher perimeter active. Enter your glyph sequence.');
     }
+  }
+
+  // ── Hardware USB Master Key ───────────────────────────────────────────────
+
+  void _startUsbKeyScan() {
+    _scanUsbKey();
+    _usbScanTimer = Timer.periodic(const Duration(milliseconds: 1800), (_) {
+      _scanUsbKey();
+    });
+  }
+
+  Future<void> _scanUsbKey() async {
+    if (_isScanningUsb || !mounted) return;
+    _isScanningUsb = true;
+    try {
+      final key = await UsbMasterKeyService.scanForMasterKey();
+      if (!mounted) return;
+      if (key != null && _detectedUsbKey == null) {
+        setState(() => _detectedUsbKey = key);
+        _voice.speak('Hardware master key detected on flash drive. Override authorized.');
+      } else if (key == null && _detectedUsbKey != null) {
+        setState(() => _detectedUsbKey = null);
+      }
+    } catch (_) {
+    } finally {
+      _isScanningUsb = false;
+    }
+  }
+
+  void _unlockWithUsbKey() {
+    HapticFeedback.heavyImpact();
+    _voice.speak('Hardware master key verified. Welcome.');
+    _unlockSuccess(isAdminBypass: true);
+  }
+
+  Future<void> _resetWithUsbKey() async {
+    HapticFeedback.heavyImpact();
+    _voice.speak('Master key authorized. Stone cipher reset.');
+    await _resetCipherPattern();
+  }
+
+  Future<void> _openCreateMasterKeyDialog() async {
+    _screenFocusNode.unfocus();
+    List<UsbDriveTarget> targets = [];
+    bool loading = true;
+    String? statusMessage;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setModalState) {
+            void loadDrives() async {
+              setModalState(() {
+                loading = true;
+                statusMessage = null;
+              });
+              final found = await UsbMasterKeyService.listAvailableUsbDrives();
+              if (!dialogCtx.mounted) return;
+              setModalState(() {
+                targets = found;
+                loading = false;
+              });
+            }
+
+            if (loading && targets.isEmpty && statusMessage == null) {
+              loadDrives();
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF070A10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Color(0xFF00E5FF), width: 1.5),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.usb, color: Color(0xFF00E5FF)),
+                  SizedBox(width: 10),
+                  Text('Create USB Master Key', style: TextStyle(color: Color(0xFF00E5FF), fontSize: 18)),
+                ],
+              ),
+              content: SizedBox(
+                width: 480,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Insert any cheap USB flash drive (FAT32, exFAT, etc.). SWARM OS will write a master key file (swarm_master.key) that will unlock the system or reset the stone cipher whenever plugged in.',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    if (loading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
+                        ),
+                      )
+                    else if (statusMessage != null)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF143322),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF00E676)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Color(0xFF00E676), size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(statusMessage!, style: const TextStyle(color: Colors.white, fontSize: 13))),
+                          ],
+                        ),
+                      )
+                    else if (targets.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF161F2E),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.usb_off, color: Colors.white38, size: 36),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'No USB flash drives detected.',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Plug in a flash drive and tap Refresh.',
+                              style: TextStyle(color: Colors.white54, fontSize: 12),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: loadDrives,
+                              icon: const Icon(Icons.refresh, size: 16, color: Color(0xFF00E5FF)),
+                              label: const Text('Refresh', style: TextStyle(color: Color(0xFF00E5FF))),
+                            ),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      const Text(
+                        'Select target USB drive:',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: targets.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (_, idx) {
+                            final drive = targets[idx];
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF121B28),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: drive.hasExistingKey ? const Color(0xFF00E676) : Colors.white24),
+                              ),
+                              child: ListTile(
+                                leading: Icon(Icons.usb, color: drive.hasExistingKey ? const Color(0xFF00E676) : const Color(0xFF00E5FF)),
+                                title: Text(drive.displayName, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                subtitle: Text(
+                                  '${drive.size}  •  ${drive.mountPath}${drive.hasExistingKey ? "  •  (Key exists)" : ""}',
+                                  style: TextStyle(color: drive.hasExistingKey ? const Color(0xFF00E676) : Colors.white54, fontSize: 11),
+                                ),
+                                trailing: ElevatedButton(
+                                  onPressed: () async {
+                                    setModalState(() => loading = true);
+                                    final ok = await UsbMasterKeyService.writeMasterKeyToDrive(drive.mountPath);
+                                    if (!dialogCtx.mounted) return;
+                                    setModalState(() {
+                                      loading = false;
+                                      if (ok) {
+                                        statusMessage = 'Master key saved to ${drive.displayName}! You can now use this flash stick as your master key.';
+                                        _voice.speak('USB master key created successfully.');
+                                      } else {
+                                        statusMessage = 'Error writing master key to drive.';
+                                      }
+                                    });
+                                    _scanUsbKey();
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF00E5FF),
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  ),
+                                  child: Text(drive.hasExistingKey ? 'Rewrite' : 'Write Key', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
+                  child: const Text('Close', style: TextStyle(color: Colors.white60)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (mounted) _screenFocusNode.requestFocus();
   }
 
   // ── TOTP 2FA ──────────────────────────────────────────────────────────────
@@ -836,6 +1062,29 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_detectedUsbKey != null) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D1B2A),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF00E5FF)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.usb, color: Color(0xFF00E5FF), size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'USB Master Key detected (${_detectedUsbKey!.driveLabel}). You can bypass the password directly.',
+                              style: const TextStyle(color: Color(0xFF00E5FF), fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   Text(message, style: const TextStyle(color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 12),
                   TextField(
@@ -862,6 +1111,16 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                   onPressed: verifying ? null : () => Navigator.of(dialogContext).pop(false),
                   child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
                 ),
+                if (_detectedUsbKey != null)
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00E5FF),
+                      foregroundColor: Colors.black,
+                    ),
+                    icon: const Icon(Icons.usb, size: 16, color: Colors.black),
+                    label: const Text('Bypass with Master Key', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
                 if (noPasswordConfigured)
                   ElevatedButton(
                     onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -1067,6 +1326,10 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _buildHeader(accent),
+                          if (_detectedUsbKey != null) ...[
+                            const SizedBox(height: 16),
+                            _buildUsbMasterKeyBanner(accent),
+                          ],
                           const SizedBox(height: 20),
                           _buildInputSlots(targetSlots, accent),
                           const SizedBox(height: 24),
@@ -1170,6 +1433,87 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     );
   }
 
+  Widget _buildUsbMasterKeyBanner(Color accent) {
+    final label = _detectedUsbKey?.driveLabel ?? 'USB Flash Drive';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF071927),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF00E5FF), width: 1.5),
+        boxShadow: const [
+          BoxShadow(color: Color(0x6600E5FF), blurRadius: 18, spreadRadius: 1),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF00E5FF), width: 1),
+                ),
+                child: const Icon(Icons.usb, color: Color(0xFF00E5FF), size: 22),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'HARDWARE MASTER KEY DETECTED',
+                    style: TextStyle(
+                      color: Color(0xFF00E5FF),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Flash Drive: $label  •  Hardware Override Ready',
+                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: _unlockWithUsbKey,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00E5FF),
+                  foregroundColor: Colors.black,
+                  elevation: 6,
+                  shadowColor: const Color(0xFF00E5FF),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.lock_open, size: 18, color: Colors.black),
+                label: const Text('UNLOCK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.1)),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                onPressed: _resetWithUsbKey,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFD500F9), width: 1.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.restart_alt, size: 18, color: Color(0xFFD500F9)),
+                label: const Text('RESET CIPHER', style: TextStyle(color: Color(0xFFD500F9), fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInputSlots(int targetSlots, Color accent) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -1260,12 +1604,19 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
           label: Text('CLEAR', style: SwarmTextStyles.labelSmall.copyWith(color: Colors.white60)),
         ),
         const SizedBox(width: 12),
-        if (!_isSettingUpNewPattern && !_isSettingUpGardenPattern)
+        if (!_isSettingUpNewPattern && !_isSettingUpGardenPattern) ...[
           TextButton.icon(
             onPressed: _confirmAndResetCipher,
             icon: const Icon(Icons.restart_alt, color: Color(0xFFD500F9), size: 18),
             label: Text('CHANGE CIPHER', style: SwarmTextStyles.labelSmall.copyWith(color: const Color(0xFFD500F9))),
           ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: _openCreateMasterKeyDialog,
+            icon: const Icon(Icons.usb, color: Color(0xFF00E5FF), size: 18),
+            label: Text('USB MASTER KEY', style: SwarmTextStyles.labelSmall.copyWith(color: const Color(0xFF00E5FF))),
+          ),
+        ],
         const Spacer(),
         if (_isSettingUpGardenPattern) ...[
           // Skip garden setup
@@ -1294,7 +1645,18 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                   color: _currentInput.length == 4 ? Colors.white : Colors.white30,
                   fontWeight: FontWeight.bold)),
           ),
-        ] else if (_isSettingUpNewPattern)
+        ] else if (_isSettingUpNewPattern) ...[
+          OutlinedButton.icon(
+            onPressed: _openCreateMasterKeyDialog,
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFF00E5FF), width: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.usb, color: Color(0xFF00E5FF), size: 18),
+            label: Text('MAKE USB KEY', style: SwarmTextStyles.labelSmall.copyWith(color: const Color(0xFF00E5FF))),
+          ),
+          const SizedBox(width: 12),
           ElevatedButton.icon(
             onPressed: _currentInput.length == 4 ? _saveNewCipherPattern : null,
             style: ElevatedButton.styleFrom(
@@ -1309,7 +1671,8 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                 style: SwarmTextStyles.labelSmall.copyWith(
                   color: _currentInput.length == 4 ? Colors.black : Colors.white30,
                   fontWeight: FontWeight.bold)),
-          )
+          ),
+        ]
         else
           // Used to show a "BYPASS: TL×3 → BR×3" badge here, spelling out the
           // exact corner-tap combo on the permanently-visible lock screen —
