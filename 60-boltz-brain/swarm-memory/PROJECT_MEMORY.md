@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-12 20:44 UTC from 103 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-13 00:08 UTC from 105 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 49 entries
+- `debian@debian` — 51 entries
 
 ## Decisions
 
@@ -187,7 +187,7 @@ _debian@debian · 2026-10-08T03:39:33_
 ## Claude memory
 
 ### MEMORY.md
-_debian@debian · 2026-10-12T04:08:09_
+_debian@debian · 2026-10-12T20:49:05_
 
 # Memory Index
 
@@ -215,6 +215,7 @@ _debian@debian · 2026-10-12T04:08:09_
 - [Secure Boot + LUKS unlock plan](project_secureboot_luks_plan.md) — 2026-10-10 decision: Secure Boot on, TPM auto-unlock lucy-master (T7), slick stays manual; SWARM unsigned today; order + PCR 7 per-OS gotcha; only a read-only preflight exists
 - [Hobby, enterprise quality](user_hobby_enterprise_quality.md) — 2026-10-10: personal passion project on a limited budget; "enterprise level" = quality, not enterprise features; keep costs and complexity low
 - [Debian GRUB = swarm-grub](project_debian_grub_swarm_grub.md) — 2026-10-10: user chose the new swarm-grub theme for Debian's GRUB; built + QEMU-tested, install pending their sudo; not to be mixed with swarm_dev; 09_swarm_debian entries stale
+- [Lucille Assistant 1.6.0 project brief](project_lucille_project_brief.md) — 2026-10-12: C partition app; brief reads PC files, git fallback, suggestions to MASTER_BUILD_LIST inbox + Boltz; built, cutover/phone install pending
 
 ### feedback_disk_letter_instability.md
 _cachyos@cachyos-i30ltz · 2026-09-16T09:28:08_
@@ -495,6 +496,31 @@ Lucille is the AI companion and operating system soul of SWARM OS. She is NOT a 
 - **Not part of the Android companion app (decided 2026-09-19)**: that app is DR. I30LTZ's PC-fixing/recovery tool exclusively — its Lucille persona, voice-switcher, and Lucille-branded UI/flavor text were fully removed. User's reasoning: "the companion app is for fixing pcs and recovery more i30ltz job." See [[feedback_persona_vs_infrastructure_naming]] for how her name still legitimately appears there (drive name, shared TTS backend voice) without being "her app."
 
 **Lucille's own app (2026-09-19, in progress):** `30-source/LucilleAssistant/` — a separate Go service (port 8403) + phone-first web app is becoming her actual home: daily brief, health/meds/water/sleep nudges, git/drive status, gaming hours + deals, shared-memory read/write, build ideas. Published as its own Artifact (see CLAUDE.md's Artifact section — note this is a SEPARATE artifact from the gaming dashboard one). This is where her "assistant coder app" vision (mentioned by the user) is heading — not the Android companion app, not the SWARM OS desktop shell itself.
+
+### project_lucille_project_brief.md
+_debian@debian · 2026-10-12T20:49:05_
+
+---
+name: lucille-assistant-project-brief
+description: "2026-10-12 Lucille Assistant 1.6.0 \"project brief\" feature: where the code lives, what is built vs pending (cutover, phone install, Boltz repo policy)"
+metadata:
+  node_type: memory
+  type: project
+  originSessionId: 81535861-41b4-45f8-87b2-f1bf66f9d0fd
+  modified: 2026-10-12T20:44:45.832Z
+---
+
+Lucille Assistant lives on partition C (`/mnt/lucillebuild`; user confirmed "lucillebuild is it"), NOT in the /mnt/Lucy repo. On 2026-10-12 it was mounted at `/mnt/lucilleassistant` (check_mounts: ELSEWHERE); source is `src/LucilleAssistant` there (own local git, uncommitted 1.5.0 + 1.6.0 work mixed).
+
+1.6.0 added the Briefs -> Brief artifact view: reads each briefing's `read_first` files from the PC, phone falls back to the public GitHub mirrors when the PC is offline, suggestions get a copy-ready `claude` command, "Add to project md" and "Send to Boltz". The "project md" = the *Idea inbox* section of `/mnt/recoverybuild/00-CURRENT/MASTER_BUILD_LIST.md` (append-only, `- DATE who: ...` lines).
+
+**Why:** user request 2026-10-12: brief from PC files, git fallback, artifact look with ready-to-run command, suggestions into the project md, coding jobs to Boltz.
+
+**How to apply:**
+- Built and tested (Go tests, 4 Kotlin tests, emulator run incl. git fallback via a dropping proxy), but NOT cut over: the running service answered 1.5.0. Cutover (`scripts/cutover_live_service.sh`) and installing `dist/LucilleAssistant-1.6.0-debug.apk` are the user's steps.
+- Only `lucille-assistant` maps to a Dr. Boltz repo (`lucille`); SWARM OS / Recovery OS / Companion are not bridge repos. Adding one is the user's policy call (lets Dr. Boltz edit that repo), do not add it unasked.
+- "Ready to run" is copy-only by design; never add a run-arbitrary-command endpoint (see actions.go rationale).
+- Emulator testing: AVD `Medium_Phone` in ~/.android is locked after cold boot, so use a throwaway AVD (ANDROID_AVD_HOME in the scratchpad, small dataPartition because /tmp is tmpfs); unset the build partition's ANDROID_* vars before launching the emulator. The app's PIN gate default is printed on its error line.
 
 ### project_lucy_swarmbuild_sync.md
 _debian@debian · 2026-10-11T23:18:58_
