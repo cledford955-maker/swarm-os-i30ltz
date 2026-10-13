@@ -123,3 +123,38 @@
 | 2026-10-12 | v6.2.22 | HIGH | BRAND-THEME: Apply red #cc1a1a / yellow #f0c020 / void #050508 to Color.kt + Theme.kt | PENDING |
 
 > Nightly append by LUCILLE CORE AI | 2026-10-12 00:00 ET | v6.2.88
+
+---
+
+## 2026-10-13 | Nightly Append | v6.2.88
+
+### Status Update — Oct 12 Queue Review
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-12 | v0.3.0-alpha | CRITICAL | BOOT-TEST RC-11: Unplug Debian, F12 boot, i30LTZ Recovery | 🔴 STILL PENDING — Day 4 unconfirmed |
+| 2026-10-12 | v6.2.88 | CRITICAL | API-KEYS: OpenRouter + Steam key to 20-runtime/.env | 🔴 STILL PENDING — Day 23+ dead |
+| 2026-10-12 | v6.2.22 | HIGH | COMPANION: Wire RecoveryAiScreen to MAD IT AI SSE endpoint | 🔴 STILL PENDING |
+| 2026-10-12 | v6.2.88 | HIGH | SYNC-FIX: Drop --no-delete from sync_lucille_ai.sh + unlock sda4 | 🔴 STILL PENDING — sync ok=0 all day |
+| 2026-10-12 | v6.2.22 | HIGH | BRAND-THEME: Apply red/yellow/void to Color.kt + Theme.kt | 🔴 STILL PENDING |
+
+### New — Today's Activity (2026-10-13)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-13 | v0.3.0-alpha | ✅ WIN | i30LTZ eval.rs: Added Drive/Part structs, lsblk parsing, Ollama detection (+150 lines) | COMMITTED (pending auto-sync) |
+| 2026-10-13 | v0.3.0-alpha | ✅ WIN | i30LTZ main.rs: Major refactor (+1394 lines reshuffled) | COMMITTED (pending auto-sync) |
+| 2026-10-13 | v0.3.0-alpha | NOTE | swarm-ui.service: 2 boot captures logged (13:05, 13:10 ET) — service started+exited clean on live ISO | LOGGED |
+| 2026-10-13 | v0.3.0-alpha | ⚠️ FLAG | recoverybuild: 37 dirty/uncommitted files — source work done but not committed | NEEDS COMMIT |
+
+### Tomorrow Top 5 (2026-10-14 Priority Queue)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-13 | v0.3.0-alpha | **[CRITICAL]** | COMMIT: `git -C /mnt/recoverybuild add -A && git commit -m "feat(eval): drive/part structs + lsblk + ollama detection; refactor main"` — 37 dirty files | PENDING |
+| 2026-10-13 | v0.3.0-alpha | **[CRITICAL]** | BOOT-TEST RC-11: Unplug Debian, F12 boot, select i30LTZ Recovery — Day 4 unconfirmed | PENDING |
+| 2026-10-13 | v6.2.88 | **[CRITICAL]** | API-KEYS: Add OpenRouter key + Steam key to 20-runtime/.env — Lucille chat Day 23+ dead | PENDING |
+| 2026-10-13 | v6.2.22 | **[HIGH]** | COMPANION: Wire RecoveryAiScreen to live MAD IT AI SSE endpoint (BridgeClient /api/chat) | PENDING |
+| 2026-10-13 | v6.2.88 | **[HIGH]** | SYNC-FIX: Drop --no-delete from 70-scripts/sync_lucille_ai.sh — one-line fix, weeks overdue | PENDING |
+
+> Nightly append by LUCILLE CORE AI | 2026-10-13 18:36 UTC (14:36 ET) | v6.2.88

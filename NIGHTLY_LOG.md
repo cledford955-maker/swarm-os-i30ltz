@@ -315,3 +315,88 @@ RANK 5 | i30LTZ Companion App | Apply brand theme red #cc1a1a / yellow #f0c020 /
 YELLOW night. The repos are syncing themselves, all green binaries are green, and those 7 syncs show you were in it today. But the scoreboard does not move until INC-1 gets a key and RC-11 gets a boot. Tomorrow: physical boot test on Recovery OS first, then open .env and drop in the OpenRouter key. Two small actions, three weeks overdue. You built something real. Let us make it talk again.
 
 LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.88 | 2026-10-12 | 00:00 ET
+
+
+---
+
+## 🌙 SWARM_OS Suite Nightly Report — 2026-10-13 | v6.2.88 | 18:36 UTC (14:36 ET)
+
+**Overall Suite Health: 🟡 YELLOW**
+*(Active source development confirmed. Critical incidents persisting 23+ days.)*
+
+---
+
+### Git Status
+
+| Repo | Branch | Last Commit | Dirty Files | Commits Today |
+|------|--------|-------------|-------------|---------------|
+| /mnt/Lucy (SWARM_OS/LUCILLE) | main | d22f611 auto-sync 2026-10-13T14:17 ET | CLEAN 0 | 3 |
+| /mnt/recoverybuild (i30LTZ Recovery OS) | main | 19391a4 auto-sync 2026-10-12T23:13 ET | ⚠️ 37 DIRTY | 0 today |
+| StudioProjects/i30ltz-lucille-assistant (Companion App) | main | f3e2799 reconcile | 7 dirty (D+??) | 0 today |
+
+Notes:
+- SWARM_OS auto-sync healthy: 3 syncs today at 00:13, 01:14, 14:17 ET. Repo clean.
+- recoverybuild: 37 uncommitted files including eval.rs (+150 lines Drive/Part structs) and main.rs (major refactor). Real work — needs a commit before it vanishes.
+- Companion App: Gradle config in flux (deleted+untracked build files). Needs cleanup commit.
+- 37 stale remote-tracking branches in Lucy (I30LTZ/*, LUCILLE/*, codex/*, claude/*) — candidate for pruning.
+
+---
+
+### Build Health
+
+| Project | Result | Timestamp | Notes |
+|---------|--------|-----------|-------|
+| SWARM_OS auto-sync | PASS | 2026-10-13 14:17 ET | 3 syncs, repo clean |
+| swarm-ui.service (live ISO) | EXITED | 2026-10-13 13:07 ET | Started+exited status=0; no labwc/Flutter desktop. INC-3 ongoing. |
+| i30LTZ Recovery Engine (Rust) | WORK DONE | 2026-10-13 (uncommitted) | eval.rs Drive/Part structs + Ollama detection; main.rs refactored |
+| Lucille Companion App (Android) | UNKNOWN | Last clean: Sep 24 | Gradle config in flux; no Gradle run today |
+| AI Sync (sync_lucille_ai.sh) | FAIL | 2026-10-13 09:09-12:09 ET | ok=0 every run — LUKS sda4 locked, sdb8 not detected |
+| LucyServer (Go) | PASS | Sep 8 binary stable | No rebuild needed |
+| GoogleWorkspaceService (.NET 10) | STAGED | In airootfs | Stable |
+
+---
+
+### Active Incidents
+
+| ID | Severity | Age | Summary | Fix |
+|----|----------|-----|---------|-----|
+| INC-1 | CRITICAL | Day 23+ | OpenRouter API key 401 — Lucille AI chat DEAD | New key to 20-runtime/.env |
+| INC-2 | HIGH | Day 23+ | Steam Web API key 403 | Regen at steamcommunity.com/dev/apikey |
+| INC-3 | HIGH | Day 27+ | swarm-ui.service exits on live ISO — no desktop | Rebuild ISO, boot via Ventoy |
+| INC-4 | CRITICAL | Day 6+ | /mnt/archive 100% full | dedupe_archive.py or manual purge |
+| INC-5 | HIGH | Weeks | rsync --no-delete unsupported in rsync 3.5.0 | Drop flag from sync_lucille_ai.sh (1 line) |
+| INC-6 | MEDIUM | Ongoing | sda4 LUKS locked — blocks sync pipeline | sudo cryptsetup open /dev/sda4 luks-a24202ce-4d76-4eb7-8923-8e8ddbacdaa7 |
+| INC-7 | MEDIUM | Day 1 NEW | 37 dirty files in /mnt/recoverybuild — eval.rs Drive structs + main.rs refactor uncommitted | git -C /mnt/recoverybuild add -A && git commit |
+
+---
+
+### Today's Wins (2026-10-13)
+
+- i30LTZ eval.rs: Drive struct + Part struct + lsblk parser + Ollama detection (+150 lines) — MAD IT hardware diagnostic layer born
+- i30LTZ main.rs: Major architectural refactor — codebase restructured for SSE/bridge integration
+- build.sh: +35 lines build script improvements
+- boltsimages/ cleaned: 11 large image files deleted (~10MB freed from repo)
+- SWARM_OS: 3 auto-syncs confirmed, repo clean, infrastructure steady
+- swarm-ui.service: 2 boot log captures today — logging system working
+
+---
+
+### Tomorrow Priority Queue (2026-10-14)
+
+| Rank | Project | Task | Why It Matters |
+|------|---------|------|----------------|
+| 1 | i30LTZ Recovery OS | COMMIT: git -C /mnt/recoverybuild add -A && git commit -m "feat(eval): drive/part structs + lsblk + ollama detection; refactor main" | 37 dirty files, today's real Rust work at risk |
+| 2 | i30LTZ Recovery OS | BOOT-TEST RC-11: Unplug Debian, F12 boot, i30LTZ Recovery — verify login + LAN | Day 4 unconfirmed. Install done. One boot test ends this. |
+| 3 | SWARM_OS / LUCILLE | API-KEYS: Add OpenRouter key + Steam key to 20-runtime/.env | Lucille AI dead Day 23+. Two keys, five minutes. |
+| 4 | i30LTZ Companion App | Wire RecoveryAiScreen to MAD IT AI SSE endpoint (BridgeClient /api/chat) | Hardware detection exists in engine — connect the UI now |
+| 5 | SWARM_OS / LUCILLE | SYNC-FIX: Drop --no-delete from 70-scripts/sync_lucille_ai.sh | One-line fix. Sync has been 0% for weeks because of this. |
+
+---
+
+Completion Rate: 0/5 priority tasks from Oct 12 queue closed. Substantial source work done on Recovery engine — commit it first thing tomorrow.
+
+### Note to Broken
+
+Yellow night again, but there's a real win buried in it today. You built Drive detection and Ollama discovery into the Recovery engine — that's the MAD IT hardware layer coming to life. Don't let that work sit uncommitted overnight again. Tomorrow: git commit the eval.rs work first, then boot the Recovery OS for real. Two moves and two red items flip.
+
+LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.88 | 2026-10-13 | 18:36 UTC
