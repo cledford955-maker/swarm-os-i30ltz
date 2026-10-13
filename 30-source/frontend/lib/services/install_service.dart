@@ -53,19 +53,25 @@ class InstallService {
     return list.map((e) => InstallDisk.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// Opens the live install session for [disk]. [password] becomes the
-  /// i30ltz account password on the installed system — sent as the first
-  /// WebSocket message (a handshake, not a URL query param) so it never ends
-  /// up in server access logs or WS-URL history. Pass '' if a prior install's
-  /// password hash was preserved and none is needed (the server-side script
-  /// only asks for one when it actually has to set a fresh account).
-  /// Call [onLine] for every chunk of output as it streams in, and [onDone]
-  /// once the socket closes (the install finished, or the connection dropped).
+  /// Opens the live install session for [disk].
+  ///
+  /// [password] becomes the i30ltz account password (sudo / terminal
+  /// commands). [adminPassword] becomes the SWARM OS admin login password
+  /// used by the Flutter lock-screen for "forgot cipher" recovery — typically
+  /// the same value as [password] for a single-user system.
+  ///
+  /// Both are sent as the first WebSocket message (a handshake, not URL query
+  /// params) so they never appear in server access logs or WS-URL history.
+  /// An empty [password] is only accepted when a prior install's hash was
+  /// preserved; an empty [adminPassword] makes the installer warn and skip it.
+  /// [onLine] gets every output chunk as it streams in, [onDone] fires once
+  /// the socket closes (install finished or connection dropped).
   Future<WebSocket> startInstall({
     required String disk,
     required String rootUuid,
     required String efiUuid,
     required String password,
+    String adminPassword = '',
     required void Function(String chunk) onLine,
     required void Function() onDone,
   }) async {
@@ -78,7 +84,10 @@ class InstallService {
       uri.toString(),
       headers: {'X-Swarm-Auth': SwarmConfig.authToken},
     );
-    socket.add(jsonEncode({'password': password}));
+    socket.add(jsonEncode({
+      'password': password,
+      'adminPassword': adminPassword,
+    }));
     socket.listen(
       (data) => onLine(data is String ? data : utf8.decode(data as List<int>)),
       onDone: onDone,

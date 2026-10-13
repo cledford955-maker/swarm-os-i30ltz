@@ -146,7 +146,12 @@ func pathExists(p string) bool {
 // on the install WebSocket, sent immediately after connecting, before any
 // install output starts.
 type installHandshake struct {
+	// Password is the i30ltz user-account password (sudo / terminal commands).
 	Password string `json:"password"`
+	// AdminPassword is the SWARM OS admin login password used by the
+	// Flutter lock-screen for "forgot cipher" recovery. When empty the
+	// installer warns but continues; the user can set it later in Settings.
+	AdminPassword string `json:"adminPassword"`
 }
 
 // HandleInstallSession runs install_swarm_os.sh --root-uuid <uuid> --esp-uuid
@@ -199,6 +204,24 @@ func HandleInstallSession(conn *websocket.Conn, target InstallDisk) {
 		}
 		_ = pwFile.Close()
 		args = append(args, "--password-file", pwFile.Name())
+	}
+	if hs.AdminPassword != "" {
+		adminPwFile, err := os.CreateTemp("", "swarm-install-adminpw-*")
+		if err != nil {
+			_ = conn.WriteMessage(websocket.TextMessage, []byte("Could not stage admin password: "+err.Error()+"\n"))
+			return
+		}
+		defer os.Remove(adminPwFile.Name())
+		if err := adminPwFile.Chmod(0o600); err != nil {
+			_ = adminPwFile.Close()
+			return
+		}
+		if _, err := adminPwFile.WriteString(hs.AdminPassword); err != nil {
+			_ = adminPwFile.Close()
+			return
+		}
+		_ = adminPwFile.Close()
+		args = append(args, "--admin-password-file", adminPwFile.Name())
 	}
 
 	cmd := exec.Command("sudo", args...)

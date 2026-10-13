@@ -99,6 +99,7 @@ class _InstallSwarmOsPageState extends State<InstallSwarmOsPage> {
         rootUuid: _selected!.rootUuid,
         efiUuid: _selected!.efiUuid,
         password: _passwordController.text,
+        adminPassword: _passwordController.text,
         onLine: (chunk) {
           joined.write(chunk);
           _appendLog(chunk);
@@ -231,8 +232,10 @@ class _InstallSwarmOsPageState extends State<InstallSwarmOsPage> {
               const Text('3. Set a password for the "i30ltz" account',
                   style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              const Text('Used for sudo and terminal commands on the installed system.',
-                  style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const Text(
+                'Used for sudo, terminal commands, and lock-screen recovery (forgot cipher).',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: _passwordController,

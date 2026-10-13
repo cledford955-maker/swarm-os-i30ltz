@@ -47,6 +47,8 @@ while [[ $# -gt 0 ]]; do
     # visible to any process via /proc/<pid>/cmdline, a file only root can
     # read is not.
     --password-file) PASSWORD_FILE="$2"; shift 2 ;;
+    # Same pattern for the admin login password (lock-screen cipher reset).
+    --admin-password-file) ADMIN_PASSWORD_FILE="$2"; shift 2 ;;
     *)      shift ;;
   esac
 done
@@ -54,6 +56,11 @@ done
 if [ -n "$PASSWORD_FILE" ]; then
   SWARM_INSTALL_PASSWORD="$(cat "$PASSWORD_FILE" 2>/dev/null || true)"
   rm -f "$PASSWORD_FILE"
+fi
+
+if [ -n "${ADMIN_PASSWORD_FILE:-}" ]; then
+  SWARM_ADMIN_PASSWORD="$(cat "$ADMIN_PASSWORD_FILE" 2>/dev/null || true)"
+  rm -f "$ADMIN_PASSWORD_FILE"
 fi
 
 # ── Preflight: nothing below touches a disk until every input is confirmed ───
