@@ -6,9 +6,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-KEY_FILENAMES=("swarm_master.key" "swarm.key" ".swarm_master.key" ".swarm.key" "master.key" "lucille.key" "SWARM_MASTER.KEY" "SWARM.KEY")
-DEFAULT_TOKEN="SWARM_MASTER_KEY_V1"
-ETC_TOKEN_FILE="/etc/swarm_os/master_key.token"
+KEY_FILENAMES=("swarm_master.key" "swarm.key" ".swarm_master.key" ".swarm.key" "master.key" "lucille.key" "SWARM_MASTER.KEY" "SWARM.KEY" "MASTER.KEY")
+# Published in source (old default), so it is refused as a secret and never unlocks anything.
+PUBLIC_TOKEN="SWARM_MASTER_KEY_V1"
+# SHA-256 of the one registered secret; the lock screen reads the same file
+# (usb_master_key_service.dart keyHashFile). Only the hash, never the secret, is kept here.
+HASH_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/swarm_os/usb_master_key.sha256"
 
 log()  { echo -e "\033[1;36m[swarm-usb-key]\033[0m $*"; }
 ok()   { echo -e "\033[1;32m[+] \033[0m $*"; }
@@ -99,37 +102,67 @@ cmd_scan() {
     fi
   done < /proc/mounts
 
-  # Check mounts
+  local want=""
+  [[ -f "$HASH_FILE" ]] && want="$(tr -d '[:space:]' < "$HASH_FILE" | tr 'A-F' 'a-f')"
+  if [[ ! "$want" =~ ^[0-9a-f]{64}$ ]]; then
+    warn "No USB key is registered on this machine ($HASH_FILE), so no key file can unlock it."
+    want=""
+  fi
+
+  # Check mounts (same rules as the lock screen: real files only, no symlinks, exact KEY= line)
   for mnt in "${mounts[@]}"; do
     if is_protected "$mnt"; then continue; fi
     for kn in "${KEY_FILENAMES[@]}"; do
-      local kf="$mnt/$kn"
-      local skf="$mnt/.swarm/$kn"
-      for candidate in "$kf" "$skf"; do
-        if [[ -f "$candidate" && -s "$candidate" ]]; then
-          ok "Found Master Key: $candidate"
-          echo "    Drive mount: $mnt"
-          echo "    Key summary: $(head -n 5 "$candidate" | grep -v '^#' | head -n 2)"
+      for candidate in "$mnt/$kn" "$mnt/.swarm/$kn"; do
+        [[ -f "$candidate" && ! -L "$candidate" && ! -L "$mnt/.swarm" ]] || continue
+        if [[ -n "$want" ]] && key_file_matches "$candidate" "$want"; then
+          ok "Valid master key for this machine: $candidate"
           found=1
-          break 2
+        else
+          warn "Key file present but NOT valid for this machine: $candidate"
         fi
       done
     done
   done
 
   if [[ $found -eq 0 ]]; then
-    warn "No USB Master Key detected on active media mounts."
+    warn "No valid USB Master Key detected on active media mounts."
     return 1
   fi
   return 0
 }
 
+# key_file_matches FILE HASH: true when FILE has a KEY=<secret> line whose sha256 is HASH.
+key_file_matches() {
+  local f="$1" want="$2" line secret
+  [[ $(stat -c %s "$f") -le 4096 ]] || return 1
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line#"${line%%[![:space:]]*}"}"; line="${line%"${line##*[![:space:]]}"}"
+    [[ "$line" == KEY=* ]] || continue
+    secret="${line#KEY=}"
+    secret="${secret#"${secret%%[![:space:]]*}"}"
+    [[ -n "$secret" && "$secret" != "$PUBLIC_TOKEN" ]] || continue
+    [[ "$(printf '%s' "$secret" | sha256sum | awk '{print $1}')" == "$want" ]] && return 0
+  done < "$f"
+  return 1
+}
+
 cmd_create() {
   local target_dir="${1:-}"
-  local secret="${2:-$DEFAULT_TOKEN}"
+  local secret="${2:-}"
 
   if [[ -z "$target_dir" ]]; then
     err "Usage: $0 create <mount_path_or_device> [secret_token]"
+    exit 1
+  fi
+  if [[ $EUID -eq 0 ]]; then
+    err "Run this as your normal user: the lock screen reads the key hash from your own ~/.config."
+    exit 1
+  fi
+  if [[ -z "$secret" ]]; then
+    secret="$(od -An -tx1 -N32 /dev/urandom | tr -d ' \n')"
+  elif [[ "$secret" == "$PUBLIC_TOKEN" || ${#secret} -lt 16 || "$secret" =~ [[:space:]] ]]; then
+    err "The secret must be private, at least 16 characters, with no spaces (or leave it out for a random one)."
     exit 1
   fi
 
@@ -157,27 +190,38 @@ cmd_create() {
   fi
 
   local key_file="$target_dir/swarm_master.key"
+  if [[ -L "$key_file" || ( -e "$key_file" && ! -f "$key_file" ) ]]; then
+    err "Refusing to write: $key_file is not a regular file."
+    exit 1
+  fi
   log "Writing SWARM OS Master Key to: $key_file"
 
   local sha
-  sha=$(echo -n "$secret" | sha256sum | awk '{print $1}')
+  sha=$(printf '%s' "$secret" | sha256sum | awk '{print $1}')
 
-  cat > "$key_file" << EOF
+  (umask 077; cat > "$key_file" << EOF
 # SWARM OS HARDWARE MASTER KEY
 # Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-# Plug this flash drive into any SWARM OS device to unlock or reset the stone cipher.
+# Unlocks the lock screen of the SWARM OS machine that made it. Keep it private.
 SYSTEM=SWARM_OS
 KEY=$secret
-SHA256=$sha
 EOF
-  chmod 644 "$key_file"
+  )
+  sync -f "$key_file" 2>/dev/null || sync
+  if ! key_file_matches "$key_file" "$sha"; then
+    err "The key file did not read back correctly; the old key (if any) is still the valid one."
+    exit 1
+  fi
 
-  ok "Master Key created successfully on $target_dir!"
+  # Register it: one USB key file is valid at a time, so this retires any older stick.
+  mkdir -p "$(dirname "$HASH_FILE")"
+  printf '%s\n' "$sha" > "$HASH_FILE.tmp"
+  mv -f "$HASH_FILE.tmp" "$HASH_FILE"
+
+  ok "Master Key created on $target_dir and registered for this machine."
   echo "    File: $key_file"
-  echo "    Token: $secret"
-  echo "    SHA-256: $sha"
-  echo
-  ok "You can now use this flash drive to unlock SWARM OS or reset the cipher."
+  echo "    Registered hash: $HASH_FILE"
+  echo "    Any older USB key file no longer unlocks this machine."
 }
 
 case "${1:-}" in

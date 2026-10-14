@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Information about a detected USB hardware master key.
@@ -53,10 +55,29 @@ class UsbDriveTarget {
 /// Service to detect, verify, and provision cheap USB flash drives as hardware master keys
 /// for SWARM OS lock screen override and cipher recovery.
 class UsbMasterKeyService {
+  /// Old plaintext secret pref (before 2026-10-14). Moved to [keyHashFile] as a hash on first read.
   static const String prefKeySecret = 'usb_master_key_secret';
   static const String prefKeyAutoUnlock = 'usb_master_key_auto_unlock';
-  static const String etcKeyFile = '/etc/swarm_os/master_key.token';
+
+  /// Published in this source and written by the old one-click "make key", so it never unlocks.
   static const String defaultMagicToken = 'SWARM_MASTER_KEY_V1';
+
+  /// SHA-256 (hex) of the one registered key-file secret, shared with `swarm-usb-key create`.
+  /// Only the hash is kept here, and a hash is never accepted as a key, so reading this file does
+  /// not give anyone a working stick. No file = no USB key file can unlock this machine.
+  static String get keyHashFile {
+    if (keyHashFileOverride != null) return keyHashFileOverride!;
+    final xdg = Platform.environment['XDG_CONFIG_HOME'];
+    final base = (xdg != null && xdg.isNotEmpty) ? xdg : '${Platform.environment['HOME'] ?? ''}/.config';
+    return '$base/swarm_os/usb_master_key.sha256';
+  }
+
+  @visibleForTesting
+  static String? keyHashFileOverride;
+
+  static final RegExp _sha256Hex = RegExp(r'^[0-9a-f]{64}$');
+  static const int _maxKeyFileBytes = 4096;
+  static const int _minCustomSecretLength = 16;
 
   static const List<String> supportedKeyFiles = [
     'swarm_master.key',
@@ -116,26 +137,91 @@ class UsbMasterKeyService {
     }
   }
 
+  /// The registered key-file hash, or null when no USB key file has been made on this machine.
+  static Future<String?> readKeyHash() async {
+    await _migrateLegacySecret();
+    try {
+      final f = File(keyHashFile);
+      if (!f.existsSync()) return null;
+      final h = f.readAsStringSync().trim().toLowerCase();
+      return _sha256Hex.hasMatch(h) ? h : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The old code kept the secret itself in prefs. Hash it into [keyHashFile] (unless it is the
+  /// public default token) and drop the plaintext. The pref is only removed once that worked.
+  static Future<void> _migrateLegacySecret() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final old = prefs.getString(prefKeySecret)?.trim();
+      if (old == null) return;
+      if (old.isNotEmpty && old != defaultMagicToken && !File(keyHashFile).existsSync()) {
+        if (!_writeKeyHash(_sha256(old))) return;
+      }
+      await prefs.remove(prefKeySecret);
+    } catch (_) {}
+  }
+
+  static bool _writeKeyHash(String hash) {
+    try {
+      final f = File(keyHashFile);
+      f.parent.createSync(recursive: true);
+      final tmp = File('${f.path}.tmp');
+      tmp.writeAsStringSync('$hash\n', flush: true);
+      tmp.renameSync(f.path);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static String _sha256(String s) => sha256.convert(utf8.encode(s)).toString();
+
+  static bool _constantTimeEquals(String a, String b) {
+    if (a.length != b.length) return false;
+    var diff = 0;
+    for (var i = 0; i < a.length; i++) {
+      diff |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
+    }
+    return diff == 0;
+  }
+
+  static String _randomSecret() {
+    final rnd = Random.secure();
+    return List<int>.generate(32, (_) => rnd.nextInt(256))
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+  }
+
+  /// True only when [content] has a `KEY=<secret>` line whose SHA-256 equals [storedHash].
+  /// With no registered hash nothing passes; the public default token, the hash itself, or the
+  /// secret buried in other text never pass either.
+  static bool verifyKeyFile(String content, String? storedHash) {
+    final want = storedHash?.trim().toLowerCase();
+    if (want == null || !_sha256Hex.hasMatch(want)) return false;
+    for (final raw in const LineSplitter().convert(content)) {
+      final line = raw.trim();
+      if (!line.startsWith('KEY=')) continue;
+      final secret = line.substring(4).trim();
+      if (secret.isEmpty || secret == defaultMagicToken) continue;
+      if (_constantTimeEquals(_sha256(secret), want)) return true;
+    }
+    return false;
+  }
+
   /// Scans all attached USB drives for a valid master key file.
   /// Non-blocking, fast execution (< 250ms).
-  static Future<UsbMasterKeyInfo?> scanForMasterKey({String? expectedToken}) async {
+  static Future<UsbMasterKeyInfo?> scanForMasterKey({String? expectedKeyHash}) async {
     // The SWARM hardware key (root-verified) wins over any loose key file on other drives.
     final hw = readSwarmKeyStatus();
     if (hw != null) return hw;
 
-    // 1. Resolve expected token (from argument, SharedPreferences, or /etc file)
-    String? token = expectedToken;
-    if (token == null || token.isEmpty) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        token = prefs.getString(prefKeySecret);
-      } catch (_) {}
-    }
-    if ((token == null || token.isEmpty) && File(etcKeyFile).existsSync()) {
-      try {
-        token = File(etcKeyFile).readAsStringSync().trim();
-      } catch (_) {}
-    }
+    // 1. A loose key file can only unlock once a key was made here (its hash is registered).
+    // Without one, leave the USB drives alone: no lsblk, no auto-mounting from the lock screen.
+    final token = expectedKeyHash ?? await readKeyHash();
+    if (token == null) return null;
 
     final candidateMounts = <String, Map<String, String>>{}; // mountPath -> {device, label, model}
 
@@ -264,25 +350,23 @@ class UsbMasterKeyService {
   }
 
   /// Checks a single mount directory (root and .swarm/ subfolder) for key files.
+  @visibleForTesting
+  static UsbMasterKeyInfo? checkDirectoryForKey(String mountPath, String keyHash) =>
+      _checkDirectoryForKey(mountPath: mountPath, devMeta: const {}, requiredToken: keyHash);
+
   static UsbMasterKeyInfo? _checkDirectoryForKey({
     required String mountPath,
     required Map<String, String> devMeta,
-    required String? requiredToken,
+    required String requiredToken,
   }) {
     for (final fileName in supportedKeyFiles) {
-      final candidates = [
-        File('$mountPath/$fileName'),
-        File('$mountPath/.swarm/$fileName'),
-      ];
-
-      for (final f in candidates) {
-        if (!f.existsSync()) continue;
+      for (final p in ['$mountPath/$fileName', '$mountPath/.swarm/$fileName']) {
+        if (!_isRealFileUnder(mountPath, p)) continue;
 
         try {
-          final content = f.readAsStringSync().trim();
-          if (content.isEmpty) continue;
-
-          if (_verifyContent(content, requiredToken)) {
+          final f = File(p);
+          if (f.lengthSync() > _maxKeyFileBytes) continue;
+          if (verifyKeyFile(f.readAsStringSync(), requiredToken)) {
             return UsbMasterKeyInfo(
               filePath: f.path,
               mountPath: mountPath,
@@ -290,7 +374,7 @@ class UsbMasterKeyService {
               driveLabel: devMeta['label']?.isNotEmpty == true
                   ? devMeta['label']!
                   : devMeta['model'] ?? 'USB Flash Drive',
-              keyContent: content,
+              keyContent: '', // the secret stays on the stick
               detectedAt: DateTime.now(),
             );
           }
@@ -300,32 +384,16 @@ class UsbMasterKeyService {
     return null;
   }
 
-  /// Verifies file contents against either a configured secret or default signature.
-  static bool _verifyContent(String content, String? requiredToken) {
-    // If a custom token is configured:
-    if (requiredToken != null && requiredToken.trim().isNotEmpty) {
-      final cleanRequired = requiredToken.trim();
-      if (content == cleanRequired || content.contains(cleanRequired)) return true;
-
-      // Also check SHA-256 match
-      final contentSha = sha256.convert(utf8.encode(cleanRequired)).toString();
-      if (content.contains(contentSha)) return true;
-      return false;
+  /// [path] and every folder between it and [mountPath] must be real, not symlinks, so a stick
+  /// (ext4/btrfs can hold links) cannot point the lock screen at a file elsewhere on this machine.
+  static bool _isRealFileUnder(String mountPath, String path) {
+    if (FileSystemEntity.typeSync(path, followLinks: false) != FileSystemEntityType.file) return false;
+    var dir = File(path).parent.path;
+    while (dir.length > mountPath.length) {
+      if (FileSystemEntity.typeSync(dir, followLinks: false) != FileSystemEntityType.directory) return false;
+      dir = Directory(dir).parent.path;
     }
-
-    // If no custom token is configured, accept any file containing standard master signatures
-    // or standard KEY= variable, or valid non-empty key text.
-    final upper = content.toUpperCase();
-    if (upper.contains('SWARM_MASTER_KEY') ||
-        upper.contains('SWARM-MASTER-KEY') ||
-        upper.contains('LUCILLE-MASTER-KEY') ||
-        upper.contains('LUCILLE_KEY') ||
-        upper.contains('KEY=') ||
-        content.length >= 6) {
-      return true;
-    }
-
-    return false;
+    return true;
   }
 
   /// Checks if a mount path belongs to a protected system mount.
@@ -412,7 +480,9 @@ class UsbMasterKeyService {
     return targets;
   }
 
-  /// Writes the Master Key file (`swarm_master.key`) to the specified USB drive root.
+  /// Writes `swarm_master.key` with a fresh random secret (or [customSecret], at least 16 chars)
+  /// and registers its hash. One USB key file is valid at a time: making a new stick retires the
+  /// previous one. Callers must only offer this to someone already authenticated.
   static Future<bool> writeMasterKeyToDrive(
     String mountPath, {
     String? customSecret,
@@ -420,35 +490,40 @@ class UsbMasterKeyService {
     if (_isProtectedMount(mountPath)) {
       throw Exception('Refusing to write to protected system mount: $mountPath');
     }
+    final custom = customSecret?.trim() ?? '';
+    if (custom == defaultMagicToken || (custom.isNotEmpty && custom.length < _minCustomSecretLength)) {
+      throw ArgumentError('Key secret must be private and at least $_minCustomSecretLength characters');
+    }
 
     try {
-      final secret = customSecret?.trim().isNotEmpty == true
-          ? customSecret!.trim()
-          : defaultMagicToken;
+      final secret = custom.isNotEmpty ? custom : _randomSecret();
+      final hash = _sha256(secret);
 
       final keyFile = File('$mountPath/swarm_master.key');
+      // Never write through a link that already sits on the stick.
+      final existing = FileSystemEntity.typeSync(keyFile.path, followLinks: false);
+      if (existing != FileSystemEntityType.notFound && existing != FileSystemEntityType.file) {
+        throw Exception('Refusing to write: ${keyFile.path} is not a regular file');
+      }
       final content = StringBuffer()
         ..writeln('# SWARM OS HARDWARE MASTER KEY')
         ..writeln('# Created: ${DateTime.now().toUtc().toIso8601String()}')
-        ..writeln('# Plug this flash drive into any SWARM OS device to unlock or reset the cipher.')
+        ..writeln('# Unlocks the lock screen of the SWARM OS machine that made it. Keep it private.')
         ..writeln('SYSTEM=SWARM_OS')
         ..writeln('KEY=$secret')
-        ..writeln('SHA256=${sha256.convert(utf8.encode(secret))}')
         ..writeln();
 
       await keyFile.writeAsString(content.toString(), flush: true);
 
-      // Save secret to SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(prefKeySecret, secret);
+      // Read it back so a full or failing stick is caught before the old key is retired.
+      if (!verifyKeyFile(await keyFile.readAsString(), hash)) {
+        throw Exception('Key file did not read back correctly');
+      }
+      if (!_writeKeyHash(hash)) throw Exception('Could not save the key hash to $keyHashFile');
 
-      // Also persist to /etc/swarm_os/master_key.token if writable
       try {
-        final etcDir = Directory('/etc/swarm_os');
-        if (await etcDir.exists()) {
-          final etcFile = File(etcKeyFile);
-          await etcFile.writeAsString(secret, flush: true);
-        }
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(prefKeySecret);
       } catch (_) {}
 
       return true;

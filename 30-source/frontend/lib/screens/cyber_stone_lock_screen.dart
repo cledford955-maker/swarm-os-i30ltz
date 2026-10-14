@@ -267,6 +267,22 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   }
 
   Future<void> _openCreateMasterKeyDialog() async {
+    // A new key unlocks this screen, so on the live lock screen making one needs proof first: a
+    // key that already works (SWARM hardware key or a registered stick) or the admin password as
+    // LucyServer checks it. During cipher setup the user has just got in (or it is first boot).
+    if (!_isSettingUpNewPattern) {
+      final proven = await UsbMasterKeyService.scanForMasterKey() != null ||
+          await _promptAdminPassword(
+            title: 'Make USB Master Key',
+            message: 'Enter your admin login password to make a new USB key.',
+            allowShortcuts: false,
+          );
+      if (!mounted) return;
+      if (!proven) {
+        _voice.speak('Master key creation cancelled.');
+        return;
+      }
+    }
     _screenFocusNode.unfocus();
     List<UsbDriveTarget> targets = [];
     bool loading = true;
@@ -315,7 +331,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Insert any cheap USB flash drive (FAT32, exFAT, etc.). SWARM OS will write a master key file (swarm_master.key) that will unlock the system or reset the stone cipher whenever plugged in.',
+                      'Insert any cheap USB flash drive (FAT32, exFAT, etc.). SWARM OS will write a master key file (swarm_master.key) with a new random secret; it unlocks this machine or resets the stone cipher whenever plugged in. Making a new key retires any older USB key. Keep the stick private.',
                       style: TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     const SizedBox(height: 16),
@@ -901,7 +917,10 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
       }
       return true;
     } catch (_) {
-      return false;
+      // LucyServer down or slow (e.g. still starting at boot) is "unknown", not "no password":
+      // returning false here gave anyone a free cipher reset. The password prompt that follows
+      // then fails closed with "Recovery service unavailable".
+      return true;
     }
   }
 
@@ -1024,7 +1043,13 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
 
   /// Shared admin-password dialog for both recovery unlock and cipher reset.
   /// Returns true on an explicit LucyServer accept, or if user resets when no password is set.
-  Future<bool> _promptAdminPassword({required String title, required String message}) async {
+  /// [allowShortcuts] false hides "Bypass with Master Key" and "Reset Cipher Now" (both return
+  /// true), so only a password LucyServer accepts gets through.
+  Future<bool> _promptAdminPassword({
+    required String title,
+    required String message,
+    bool allowShortcuts = true,
+  }) async {
     _screenFocusNode.unfocus();
     final controller = TextEditingController();
     final textFocusNode = FocusNode();
@@ -1049,8 +1074,10 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                 setDialogState(() {
                   verifying = false;
                   if (_lastRecoveryError == 'No login password configured') {
-                    noPasswordConfigured = true;
-                    errorText = 'No admin password configured on this system. Tap below to reset directly.';
+                    noPasswordConfigured = allowShortcuts;
+                    errorText = allowShortcuts
+                        ? 'No admin password configured on this system. Tap below to reset directly.'
+                        : 'No admin password is set on this system. Make the key during cipher setup instead.';
                   } else {
                     errorText = _lastRecoveryError ?? 'Incorrect password.';
                   }
@@ -1069,7 +1096,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_detectedUsbKey != null) ...[
+                  if (_detectedUsbKey != null && allowShortcuts) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(10),
@@ -1118,7 +1145,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
                   onPressed: verifying ? null : () => Navigator.of(dialogContext).pop(false),
                   child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
                 ),
-                if (_detectedUsbKey != null)
+                if (_detectedUsbKey != null && allowShortcuts)
                   ElevatedButton.icon(
                     onPressed: () => Navigator.of(dialogContext).pop(true),
                     style: ElevatedButton.styleFrom(
