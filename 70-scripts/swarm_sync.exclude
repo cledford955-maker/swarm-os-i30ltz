@@ -7,6 +7,8 @@
 # only exists on one side by design, stays out, so it can neither flow into the source tree nor be mistaken for a deletion.
 
 ## housekeeping
+# Claude Code worktrees: full repo copies of other sessions' branches (GBs), never part of either tree
+/.claude/
 lost+found/
 .Trash-*/
 .swarm-build.lock

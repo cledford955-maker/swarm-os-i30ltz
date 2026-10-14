@@ -523,24 +523,15 @@ grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=SWARM
 cat > /etc/grub.d/40_custom <<'CUSTOMEOF'
 #!/bin/sh
 exec tail -n +3 \$0
-menuentry "CachyOS (chainload)" --class cachyos --class gnu-linux --class os {
-  search --no-floppy --fs-uuid --set=root A367-87E3
-  chainloader /EFI/cachyos/grubx64.efi
+### SWARM-DEBIAN-CHAINLOAD-BEGIN ###
+menuentry "Debian GNU/Linux" --class debian --class gnu-linux --class os {
+  insmod part_gpt
+  insmod fat
+  insmod chain
+  search --no-floppy --fs-uuid --set=root 362A-E48F
+  chainloader /EFI/debian/shimx64.efi
 }
-    menuentry "EndeavourOS" --class endeavouros {
-        insmod btrfs
-        search --no-floppy --fs-uuid --set=other_os 0ac123f1-bbd1-4ea6-8fdd-930bd0d45e18
-        configfile (\$other_os)/@/boot/grub/grub.cfg
-    }
-    menuentry "Ventoy" --class ventoy {
-        insmod fat
-        insmod chain
-        search --no-floppy --fs-uuid --set=ventoy_efi E039-AD96
-        chainloader (\$ventoy_efi)/EFI/BOOT/BOOTX64.EFI
-    }
-menuentry "UEFI Firmware Settings" --class firmware {
-    fwsetup
-}
+### SWARM-DEBIAN-CHAINLOAD-END ###
 menuentry "Reboot" --class reboot {
     reboot
 }
@@ -552,9 +543,21 @@ chmod +x /etc/grub.d/40_custom
 
 echo 'GRUB_FONT="/boot/grub/themes/swarm_os/menu.pf2"' >> /etc/default/grub
 
+# Menu says "SWARM OS", not "Arch Linux". 10_linux builds the title as
+# "<GRUB_DISTRIBUTOR> Linux", so the suffix is dropped too; the first word also
+# picks the theme icon class (swarm). A grub package upgrade can restore the
+# stock 10_linux (title then reads "SWARM OS Linux"): re-run
+# 70-scripts/tidy_swarm_grub_menu.sh.
+sed -i 's|^GRUB_DISTRIBUTOR=.*|GRUB_DISTRIBUTOR="SWARM OS"|' /etc/default/grub
+grep -q '^GRUB_DISTRIBUTOR=' /etc/default/grub || echo 'GRUB_DISTRIBUTOR="SWARM OS"' >> /etc/default/grub
+sed -i 's|OS="\${GRUB_DISTRIBUTOR} Linux"|OS="\${GRUB_DISTRIBUTOR}"|' /etc/grub.d/10_linux
+
 # Install snap-pac & grub-btrfs for automated rollback snapshots
 pacman -S --noconfirm --needed snap-pac grub-btrfs inotify-tools btrfs-progs || true
 systemctl enable grub-btrfsd || true
+if [ -f /etc/default/grub-btrfs/config ]; then
+  sed -i 's|^#\?GRUB_BTRFS_SUBMENUNAME=.*|GRUB_BTRFS_SUBMENUNAME="SWARM OS snapshots"|' /etc/default/grub-btrfs/config
+fi
 
 # Patch GRUB default with direct root UUID, theme, and HD resolution
 sed -i 's|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX="root=UUID='"${ROOT_UUID}"' rootflags=subvol=@ rw quiet loglevel=3 apparmor=1 security=apparmor"|' /etc/default/grub || \
@@ -681,6 +684,47 @@ if [ -z "$HOST_PW_HASH" ] || [ "$HOST_PW_HASH" = "!" ] || [ "$HOST_PW_HASH" = "*
         echo "Please set a password for user 'i30ltz' (used for sudo and terminal commands):"
         arch-chroot "$MOUNT_POINT" passwd i30ltz
     fi
+fi
+
+# ── Admin login password (lock-screen recovery / cipher reset) ───────────────
+# LucyServer's /api/settings/verify_login_password bcrypt-checks this file and
+# FAILS CLOSED when it is missing, so a fresh install with no admin password
+# means a forgotten stone cipher can never be recovered (found 2026-10-10: the
+# user booted, could not match their cipher, and had no admin password). Set it
+# here, at install time. Preserved across reinstalls only if the user re-enters
+# it; an existing hash on the target root is left alone.
+ADMIN_PW_FILE="$MOUNT_POINT/etc/swarm_os/lucy/login_password.txt"
+if [ ! -s "$ADMIN_PW_FILE" ]; then
+    banner "Admin login password"
+    ADMIN_PW=""
+    if [ "$NONINTERACTIVE" -eq 1 ]; then
+        ADMIN_PW="${SWARM_ADMIN_PASSWORD:-}"
+    else
+        while true; do
+            read -r -s -p "Set the SWARM OS admin login password (lock-screen recovery): " ADMIN_PW; echo
+            read -r -s -p "Repeat it: " ADMIN_PW2; echo
+            [ -n "$ADMIN_PW" ] && [ "$ADMIN_PW" = "$ADMIN_PW2" ] && break
+            warn "Empty or mismatched - try again."
+        done
+        unset ADMIN_PW2
+    fi
+    if [ -n "$ADMIN_PW" ]; then
+        mkdir -p "$(dirname "$ADMIN_PW_FILE")"
+        # Password goes in on stdin, never argv (visible in /proc/*/cmdline).
+        if printf '%s' "$ADMIN_PW" | arch-chroot "$MOUNT_POINT" python3 -c \
+            'import sys,bcrypt;sys.stdout.buffer.write(bcrypt.hashpw(sys.stdin.buffer.read(),bcrypt.gensalt()))' \
+            > "$ADMIN_PW_FILE" 2>/dev/null && [ -s "$ADMIN_PW_FILE" ]; then
+            chmod 600 "$ADMIN_PW_FILE"
+            arch-chroot "$MOUNT_POINT" chown i30ltz:i30ltz /etc/swarm_os/lucy/login_password.txt 2>/dev/null || true
+            info "Admin login password saved (bcrypt hash only)"
+        else
+            rm -f "$ADMIN_PW_FILE"
+            warn "Could not hash the admin password (python-bcrypt missing in target). Set it after first login: Settings > Login password."
+        fi
+    else
+        warn "No admin password set. Set it after first login: Settings > Login password."
+    fi
+    unset ADMIN_PW
 fi
 
 banner "Cleaning up..."

@@ -3,7 +3,10 @@
 # the INSTALLED SWARM OS root (nvme0n1p2, label swarm-root) from another OS,
 # without rebooting or reformatting anything.
 #
-#   deploy_to_installed.sh [--dry-run] [--no-snapshot-check]
+#   deploy_to_installed.sh [--dry-run] [--no-snapshot-check] [--flutter-only]
+#
+#   --flutter-only   update just the Flutter shell bundle; leave gaming-agent, lucy-server and
+#                    swarm-memory exactly as they are (and do not require them to be built)
 #
 # What it updates (built on /mnt/swarmbuild, per CLAUDE.md):
 #   opt/swarm_os/swarm_flutter/   Flutter shell bundle
@@ -27,11 +30,12 @@
 # Roll back everything: boot the snapshot entry in GRUB, or swap @snapshots/<snap> in.
 set -euo pipefail
 
-DRY=0; SNAPCHECK=1
+DRY=0; SNAPCHECK=1; FLUTTER_ONLY=0
 for a in "$@"; do
   case "$a" in
     --dry-run) DRY=1 ;;
     --no-snapshot-check) SNAPCHECK=0 ;;
+    --flutter-only) FLUTTER_ONLY=1 ;;
     *) echo "unknown option: $a" >&2; exit 2 ;;
   esac
 done
@@ -57,18 +61,22 @@ TOP=$(findmnt -rn -S "$ROOT_DEV" -o TARGET | head -n1 || true)
 R=$TOP/@
 [ -f "$R/etc/swarm-release" ] || die "$R does not look like a SWARM OS root (no etc/swarm-release)"
 [ -d "$R/opt/swarm_os" ] || die "$R/opt/swarm_os missing"
-for d in opt/swarm_os opt/swarm_os/GamingAgent opt/swarm_os/LucyServer usr/local/bin; do
+DIRS="opt/swarm_os opt/swarm_os/GamingAgent opt/swarm_os/LucyServer usr/local/bin"
+[ "$FLUTTER_ONLY" = 1 ] && DIRS="opt/swarm_os"
+for d in $DIRS; do
   [ -d "$R/$d" ] || die "$R/$d missing"
   [ -w "$R/$d" ] || die "$R/$d is not writable as $(id -un) — re-run with sudo (nothing has been changed)"
 done
 say "target: $R  ($(grep -h SWARM_VERSION "$R/etc/swarm-release"))"
 
 # ── source checks ────────────────────────────────────────────────────────────
-for f in "$BUNDLE/swarm_flutter" "$BUNDLE/lib/libapp.so" "$GAMING" "$LUCY" "$MEMORY"; do
+GO_BINS=("$GAMING" "$LUCY" "$MEMORY")
+[ "$FLUTTER_ONLY" = 1 ] && GO_BINS=()
+for f in "$BUNDLE/swarm_flutter" "$BUNDLE/lib/libapp.so" "${GO_BINS[@]}"; do
   [ -f "$f" ] || die "missing build output: $f"
 done
 [ -d "$BUNDLE/data/flutter_assets" ] || die "bundle has no data/flutter_assets"
-for f in "$GAMING" "$LUCY" "$MEMORY" "$BUNDLE/swarm_flutter"; do
+for f in "${GO_BINS[@]}" "$BUNDLE/swarm_flutter"; do
   [ "$(head -c4 "$f" | od -An -c | tr -d ' ')" = '177ELF' ] || die "$f is not an ELF binary"
 done
 
@@ -94,7 +102,7 @@ done
 [ "$missing" = 0 ] || die "the new shell needs libraries the installed system does not have"
 have_glibc=$(strings "$R/usr/lib/libc.so.6" | sed -n 's/.*GNU C Library.*version \([0-9.]*\).*/\1/p' | head -n1)
 have_glibc=${have_glibc%.}
-need_glibc=$( { for f in "$BUNDLE/swarm_flutter" "$BUNDLE"/lib/*.so "$GAMING" "$LUCY" "$MEMORY"; do objdump -T "$f" 2>/dev/null | grep -o 'GLIBC_[0-9.]*'; done; } | sed 's/GLIBC_//' | sort -uV | tail -n1)
+need_glibc=$( { for f in "$BUNDLE/swarm_flutter" "$BUNDLE"/lib/*.so "${GO_BINS[@]}"; do objdump -T "$f" 2>/dev/null | grep -o 'GLIBC_[0-9.]*'; done; } | sed 's/GLIBC_//' | sort -uV | tail -n1)
 [ -n "$have_glibc" ] && [ -n "$need_glibc" ] || die "could not read glibc versions"
 [ "$(printf '%s\n%s\n' "$need_glibc" "$have_glibc" | sort -V | tail -n1)" = "$have_glibc" ] || die "new binaries need glibc $need_glibc, target has $have_glibc"
 say "libraries ok; glibc need $need_glibc <= target $have_glibc"
@@ -120,17 +128,23 @@ swap_file() {  # <source file> <dest file>
 echo "deploying ($([ "$DRY" = 1 ] && echo dry-run || echo real)) ..."
 swap_dir  "$BUNDLE" "$R/opt/swarm_os/swarm_flutter"
 run chmod +x "$R/opt/swarm_os/swarm_flutter/swarm_flutter"
-run mkdir -p "$R/opt/swarm_os/GamingAgent" "$R/opt/swarm_os/LucyServer"
-swap_file "$GAMING" "$R/opt/swarm_os/GamingAgent/gaming-agent"
-swap_file "$LUCY"   "$R/opt/swarm_os/LucyServer/lucy-server"
-swap_file "$MEMORY" "$R/usr/local/bin/swarm-memory"
+if [ "$FLUTTER_ONLY" = 0 ]; then
+  run mkdir -p "$R/opt/swarm_os/GamingAgent" "$R/opt/swarm_os/LucyServer"
+  swap_file "$GAMING" "$R/opt/swarm_os/GamingAgent/gaming-agent"
+  swap_file "$LUCY"   "$R/opt/swarm_os/LucyServer/lucy-server"
+  swap_file "$MEMORY" "$R/usr/local/bin/swarm-memory"
+else
+  say "gaming-agent, lucy-server, swarm-memory: left as they are (--flutter-only)"
+fi
 
 # ── verify what landed ───────────────────────────────────────────────────────
 if [ "$DRY" = 0 ]; then
   diff -rq "$BUNDLE" "$R/opt/swarm_os/swarm_flutter" >/dev/null || die "shell bundle on target differs from the build"
-  cmp -s "$GAMING" "$R/opt/swarm_os/GamingAgent/gaming-agent"    || die "gaming-agent differs from the build"
-  cmp -s "$LUCY"   "$R/opt/swarm_os/LucyServer/lucy-server"      || die "lucy-server differs from the build"
-  cmp -s "$MEMORY" "$R/usr/local/bin/swarm-memory"               || die "swarm-memory differs from the build"
+  if [ "$FLUTTER_ONLY" = 0 ]; then
+    cmp -s "$GAMING" "$R/opt/swarm_os/GamingAgent/gaming-agent"    || die "gaming-agent differs from the build"
+    cmp -s "$LUCY"   "$R/opt/swarm_os/LucyServer/lucy-server"      || die "lucy-server differs from the build"
+    cmp -s "$MEMORY" "$R/usr/local/bin/swarm-memory"               || die "swarm-memory differs from the build"
+  fi
   printf 'deployed %s from %s\n' "$STAMP" "$SRC" >> "$R/opt/swarm_os/.deploy-log"
   echo "verified: every file on the target matches the build."
 fi
