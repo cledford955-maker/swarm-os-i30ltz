@@ -1294,3 +1294,10 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 
 *Last updated: 2026-10-14 — SWARM sudo key built and tested, awaiting sudo run; login/controller integration partial.*
 
+### UPDATE — SWARM sudo key provisioned; multi-key; ownership finding (2026-10-14)
+- Key #1 provisioned on the former Ventoy stick (`SWK-X54Z3-4UG4G-3KXA4-NJ272`). Registry moved to root-only `/etc/swarm_key/keys.d/<serial>.conf` (one file per key; `/etc/swarm_os` is re-chowned to the service user by `gaming-agent.service` on every start, so it is unsuitable). `swarm-key-sudo-auth` accepts any registered key; `provision_swarm_key.sh` gained `--device/--list/--list-sticks/--revoke/--revoke-all/--upgrade`. 20 helper tests pass; the stick-writing path was exercised for real once (a read-back bug was fixed after the first attempt).
+- **Security finding:** SWARM's installed root has user-owned system dirs (`/etc`, `/etc/pam.d`, `/etc/sudoers.d`, `/usr/bin`, `/usr/lib`, `/boot`, `/opt`) — see `fix_swarm_root_ownership.sh`. Not yet applied; the installer (`install_swarm_os.sh`, `cp -a` of airootfs) should chown to root.
+- Not yet: backup keys behind phone biometrics; lock-screen use of the stick; login/controller work.
+
+*Last updated: 2026-10-14 — key #1 live, multi-key built, ownership problem found.*
+

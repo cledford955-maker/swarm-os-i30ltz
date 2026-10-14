@@ -235,3 +235,12 @@ User: nothing should use LUKS anymore (only the 21 GB `slick` partition, nvme0n1
 | 2026-10-14 | v6.2.88 | **[CRITICAL]** | Login: auto-login straight to the lock screen, usable with a controller and the key | 🟡 PARTIAL. Desktop already starts with no login prompt (`swarm-ui.service`); lock screen has arrow/A/Y keys and a `GamepadService` exists. **Not done:** show the new stick as a lock-screen key (its secret is on a raw partition the app can't read), confirm the pad really drives the lock screen on SWARM hardware. Web preview built for viewing |
 | 2026-10-14 | v6.2.88 | HIGH | Lock screen accepts ANY file ≥6 chars named like a master key on any USB when no token is configured (`usb_master_key_service.dart` `_verifyContent`) | ⚠ FLAGGED, untouched |
 
+### Project A — key provisioned, multi-key, root ownership (2026-10-14, evening)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | SWARM hardware sudo key #1 on the old Ventoy stick | ✅ DONE (user ran `--apply`): key `SWK-X54Z3-4UG4G-3KXA4-NJ272`, PAM line in SWARM `/etc/pam.d/sudo`, helper + registry installed. **Proof still pending:** boot SWARM, `sudo -k; sudo true` stick in/out |
+| 2026-10-14 | v6.2.88 | **[HIGH]** | More keys: `provision_swarm_key.sh --device <by-id> --apply`, `--list`, `--revoke SERIAL`, `--list-sticks`; helper accepts ANY registered key (20 tests) | 🟡 BUILT, on branch. The installed helper/registry are still the first generation: run `sudo 70-scripts/provision_swarm_key.sh --upgrade` once (from main after merge) |
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | SWARM root has hundreds of system paths owned by the normal user (uid 1000): `/`, `/etc`, `/etc/pam.d`, `/etc/sudoers.d`, `/usr/bin`, `/usr/lib`, `/boot`, `/opt` — anything running as that user can swap PAM/sudoers/binaries, defeating sudo AND the key. Root cause: installer `cp -a` keeps repo ownership | 🟡 `70-scripts/fix_swarm_root_ownership.sh` written (dry-run default, undo list, skips `/etc/swarm_os` + models); NOT run. Installer still needs a fix so new installs are root-owned |
+| 2026-10-14 | v6.2.88 | **[HIGH]** | Backup keys on the external drives, usable only after biometric approval on a paired phone | ⏸ DESIGN — see conversation; reuses the existing phone HITL (`BiometricPrompt` in `HitlApprovalActivity`, lucille-core :9091). Needs decisions |
+

@@ -36,7 +36,10 @@ class KeyHelperTest(unittest.TestCase):
         self.dev.write_bytes(RECORD + b"\0" * 1000)
         os.symlink(self.dev, self.partdir / PARTUUID)
         self.udev_bus, self.udev_serial, self.udev_pu = "usb", HWSERIAL, PARTUUID
-        self.registry = self.d / "sudo_key.conf"
+        self.keys = self.d / "keys.d"
+        self.keys.mkdir(mode=0o755)
+        os.chmod(self.keys, 0o755)
+        self.registry = self.keys / "SWK-TEST.conf"
         self.write_registry()
         self.write_udevadm()
 
@@ -57,7 +60,7 @@ class KeyHelperTest(unittest.TestCase):
         self.stub = str(stub)
 
     def check(self, **kw):
-        args = dict(registry=str(self.registry), partuuid_dir=str(self.partdir),
+        args = dict(keys_dir=str(self.keys), partuuid_dir=str(self.partdir),
                     udevadm=self.stub, require_block=False, require_root=False)
         args.update(kw)
         return helper.verify(**args)
@@ -111,6 +114,7 @@ class KeyHelperTest(unittest.TestCase):
     def test_registry_missing_or_malformed_rejected(self):
         self.registry.unlink()
         self.assertFalse(self.check())
+        self.assertFalse(self.check(keys_dir=str(self.d / "nope")))
         self.registry.write_text("PARTUUID=not-a-uuid\n")
         os.chmod(self.registry, 0o600)
         self.assertFalse(self.check())
@@ -122,6 +126,51 @@ class KeyHelperTest(unittest.TestCase):
         self.registry.unlink()
         os.symlink(real, self.registry)
         self.assertFalse(self.check())
+
+    def add_second_key(self, secret="cd" * 32, serial="SECOND-1"):
+        pu = "7e6d5c4b-3a29-4180-9f7e-6d5c4b3a2918"
+        dev2 = self.d / "sdd1"
+        dev2.write_bytes(("SWK1:%s\n" % secret).encode() + b"\0" * 100)
+        os.symlink(dev2, self.partdir / pu)
+        (self.keys / "SWK-TWO.conf").write_text(
+            "PARTUUID=%s\nHWSERIAL=%s\nSECRET_SHA256=%s\n"
+            % (pu, serial, hashlib.sha256(secret.encode()).hexdigest()))
+        os.chmod(self.keys / "SWK-TWO.conf", 0o600)
+        stub = self.d / "udevadm"
+        stub.write_text("#!/bin/sh\ncase \"$3\" in *sdd1) echo ID_BUS=usb; echo ID_SERIAL_SHORT=%s; echo ID_PART_ENTRY_UUID=%s;; *) echo ID_BUS=usb; echo ID_SERIAL_SHORT=%s; echo ID_PART_ENTRY_UUID=%s;; esac\n"
+                        % (serial, pu, HWSERIAL, PARTUUID))
+        stub.chmod(0o755)
+
+    def test_spare_key_works_alone_and_first_key_still_works(self):
+        self.add_second_key()
+        self.assertTrue(self.check())  # key 1 present (key 2 device also present)
+        os.unlink(self.partdir / PARTUUID)  # key 1 unplugged
+        self.assertTrue(self.check())       # key 2 alone unlocks
+
+    def test_revoking_one_key_leaves_the_other(self):
+        self.add_second_key()
+        (self.keys / "SWK-TEST.conf").unlink()
+        os.unlink(self.partdir / "3f2b8c1e-5d4a-4e7b-9a60-1c2d3e4f5a6b")
+        self.assertTrue(self.check())  # spare still works
+        (self.keys / "SWK-TWO.conf").unlink()
+        self.assertFalse(self.check())
+
+    def test_one_broken_entry_does_not_hide_a_good_one(self):
+        (self.keys / "AAA-broken.conf").write_text("garbage")
+        os.chmod(self.keys / "AAA-broken.conf", 0o600)
+        self.assertTrue(self.check())
+
+    def test_keys_dir_must_not_be_writable_by_others(self):
+        os.chmod(self.keys, 0o777)
+        self.assertFalse(self.check())
+        os.chmod(self.keys, 0o775)
+        self.assertFalse(self.check())
+
+    def test_stick_without_usb_serial_uses_none_marker(self):
+        self.write_registry(serial="NONE")
+        self.udev_serial = ""
+        self.write_udevadm()
+        self.assertTrue(self.check())
 
     def test_requires_root_in_production_mode(self):
         if os.geteuid() != 0:
