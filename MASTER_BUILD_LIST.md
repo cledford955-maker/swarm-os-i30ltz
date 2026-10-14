@@ -206,3 +206,12 @@
 | 2026-10-14 | v6.2.88 | **[CRITICAL]** | API-KEY (OpenRouter) | ⏸ NEEDS USER — real key |
 | 2026-10-14 | v6.2.88 | MEDIUM | `sync_lucille_ai.sh` `RECOVERY_BIN` points at a path that no longer exists on Lucy | NEW |
 
+### Project A — second pass (2026-10-14, later)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | MEDIUM | `sync_lucille_ai.sh` `RECOVERY_BIN` stale path | ✅ FIXED on branch — now `/mnt/recoverybuild/30-source/i30ltz-recovery/target/release/i30ltz-recovery` (override `RECOVERY_BIN`); tracker append only when something synced and the tracker exists |
+| 2026-10-14 | v6.2.88 | **[HIGH]** | LUKS-ALERT | 🟡 BUILT on branch, unit tests only: `70-scripts/luks_lock_reminder.sh` + `luks-lock-reminder.service` (user unit, once per login, silent when the T7 is absent or unlocked). **Not installed** — after merge run `/mnt/Lucy/70-scripts/luks_lock_reminder.sh --install` as your user. Tested for real only against slick's locked LUKS; lucy-master (T7) is not attached |
+| 2026-10-09 | v0.3.0-alpha | HIGH | INF-02 fstab | ℹ Debian `/etc/fstab` already uses UUIDs and `/mnt/downloads` is well-formed. Remaining: `/mnt/lucilleassistant` (by-id) should be `/mnt/lucillebuild` by UUID, and the `/mnt/recoveryos` line pins `96969ed2…`, which matches neither doc UUID (`71287bbf…`, `490b9e60…`). Needs sudo + the T7 attached — NOT touched |
+| 2026-10-14 | v6.2.88 | LOW | `update_build_tracker.sh` still uses the old `i30ltz-recovery(seperate-related-project)` path | NEW |
+

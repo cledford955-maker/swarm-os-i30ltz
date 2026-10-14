@@ -1274,3 +1274,10 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 
 *Last updated: 2026-10-14 — sync_lucille_ai.sh fixed (invalid `--no-delete` removed, excludes added); untested against a real drive.*
 
+### DONE — Project A second pass: recovery path + LUKS lock reminder (2026-10-14)
+- `sync_lucille_ai.sh`: `RECOVERY_BIN` now points at `/mnt/recoverybuild/30-source/i30ltz-recovery/…` (the old `(seperate-related-project)` dir no longer exists on Lucy, so that leg always skipped). Tracker append now requires a successful sync and an existing tracker file.
+- New `70-scripts/luks_lock_reminder.sh` + `luks-lock-reminder.service` (user unit): notifies once per login only when the lucy-master LUKS volume (by UUID) is attached but locked. `--status`, `--install` supported. Tested: slick (real locked LUKS) → "locked", notification path via stubbed `notify-send`, absent → silent, `--install` into a fake HOME. **Not installed or enabled anywhere; lucy-master itself untested (not attached).** Interim aid until TPM auto-unlock.
+- Not touched: INF-02 fstab (needs sudo + T7), ISO rebuild, API key.
+
+*Last updated: 2026-10-14 — recovery path fixed, LUKS lock reminder added (untested on lucy-master).*
+

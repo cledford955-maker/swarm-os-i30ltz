@@ -17,7 +17,7 @@ set -euo pipefail
 #     (see MIRROR_EXCLUDES below); .git IS mirrored.
 #
 #  2. DR. I30LTZ Recovery binary sync:
-#     /mnt/Lucy/30-source/i30ltz-recovery(seperate-related-project)/target/release/i30ltz-recovery
+#     /mnt/recoverybuild/30-source/i30ltz-recovery/target/release/i30ltz-recovery (override: RECOVERY_BIN)
 #     →  {mount}/I30LTZ-Recovery/
 #     Includes sha256 manifest. Runs on every OS that mounts sdb8 or sda4.
 #
@@ -31,11 +31,11 @@ set -euo pipefail
 SRC="/mnt/Lucy"
 LUCILLE_FOLDER="Lucille-AI"
 RECOVERY_FOLDER="I30LTZ-Recovery"
-# Project dir carries a "(seperate-related-project)" suffix (renamed
-# 2026-09-18) — this path went stale then and was found broken 2026-09-19
-# via the build tracker showing all-dashes for this component; same bug
-# existed here and in update_build_tracker.sh, fixed in the same pass.
-RECOVERY_BIN="$SRC/30-source/i30ltz-recovery(seperate-related-project)/target/release/i30ltz-recovery"
+# The DR. I30LTZ Recovery program moved to the Recovery OS build partition
+# (/mnt/recoverybuild, product B) and no longer exists under /mnt/Lucy; the old
+# "(seperate-related-project)" path made this leg log SKIP on every run. Override
+# with RECOVERY_BIN=... if it moves again. A missing file is a SKIP, never a failure.
+RECOVERY_BIN="${RECOVERY_BIN:-/mnt/recoverybuild/30-source/i30ltz-recovery/target/release/i30ltz-recovery}"
 
 LOG_DIR="$SRC/logs"
 LOG_FILE="$LOG_DIR/sync_lucille_ai.log"
@@ -103,7 +103,7 @@ sync_recovery() {
     fi
     if [ ! -f "$RECOVERY_BIN" ]; then
         log "SKIP DR. I30LTZ Recovery $label — binary not built at $RECOVERY_BIN"
-        log "     Run: cd \"$SRC/30-source/i30ltz-recovery(seperate-related-project)\" && cargo build --release"
+        log "     Run: cd /mnt/recoverybuild/30-source/i30ltz-recovery && cargo build --release"
         return
     fi
     mkdir -p "$dest"
@@ -141,7 +141,9 @@ sync_recovery() {
 
 # ── Update the project-root build tracker ────────────────────────────────
 update_tracker() {
-    if [ ! -f "$RECOVERY_BIN" ]; then
+    # Only record a sync that happened, and only in an existing tracker (none on
+    # Lucy since the project moved), so hourly runs never append empty entries.
+    if [ "$ok" -eq 0 ] || [ ! -f "$TRACKER" ] || [ ! -f "$RECOVERY_BIN" ]; then
         return
     fi
     local sha256

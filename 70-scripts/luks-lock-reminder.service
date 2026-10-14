@@ -1,0 +1,11 @@
+[Unit]
+Description=SWARM OS - remind me when the lucy-master LUKS volume is attached but locked
+# Optional dev-drive helper: no Requires=, silently does nothing without the drive.
+ConditionPathExists=@SCRIPT@
+
+[Service]
+Type=oneshot
+ExecStart=@SCRIPT@
+
+[Install]
+WantedBy=default.target
