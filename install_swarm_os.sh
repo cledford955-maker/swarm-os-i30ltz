@@ -330,9 +330,10 @@ if [ -n "$ROOTFS_ARCHIVE" ] || [ -d "$PROFILE_ROOT/airootfs/" ]; then
     cp -a "$MOUNT_POINT/etc/crypttab" "$MOUNT_POINT/etc/crypttab.sys" 2>/dev/null || true
 
     if [ -n "$ROOTFS_ARCHIVE" ]; then
-      tar -xpf "$ROOTFS_ARCHIVE" -C "$MOUNT_POINT"
+      # system files must end up root-owned: the sources are owned by whoever built them (uid 1000)
+      tar -xpf "$ROOTFS_ARCHIVE" --no-same-owner -C "$MOUNT_POINT"
     else
-      cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
+      cp -a --no-preserve=ownership "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
     fi
 
     # Restore pristine system auth files (so users and render groups exist)

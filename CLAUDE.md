@@ -193,6 +193,10 @@ Run `70-scripts/setup-dev-deps.sh` on any new machine after mounting LUCILLE.
 
 ---
 
+## "Do not touch" means: ask first — the user says "touch" or "no" (user, 2026-10-14)
+
+Every "do not touch / do not modify" in this file and in the docs (`30-source/lucille-core/`, `30-source/GamingAgent/`, the orphaned dirs, the phone apps on partitions C and D, and so on) is a lock the **user** holds, not a permanent ban. Leave those things unchanged **until the user says "touch"** about that specific thing; "no" (or silence) keeps it locked. When a task needs one, ask once, plainly: *"Touch <thing> to do <change>? touch / no."* A "touch" covers that thing for that change only. Do not hunt for ways around a lock (a workaround that changes a locked thing's behaviour is touching it).
+
 ## Hard rules — do not break these
 
 - **Never write to `/run/media/i30ltz/lucy-master/`** — read-only reference mount. All writes go to `/mnt/Lucy/`. No sync job targets lucy-master or `/mnt/archive` (`lucy-master-bak`, c400a0ee): the Lucy ↔ lucy-master two-way sync (`sync_lucy_master.sh`) was removed on 2026-10-11 at the user's request. The one remaining writer is the older, additive `70-scripts/sync_lucille_ai.sh` (runs from the ISO's `lucille-ai-sync` unit; its sda4 leg only runs if the LUKS volume is already unlocked).

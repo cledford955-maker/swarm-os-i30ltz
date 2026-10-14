@@ -103,14 +103,14 @@ say "libraries ok; glibc need $need_glibc <= target $have_glibc"
 swap_dir() {   # <source dir> <dest dir>
   local src=$1 dest=$2
   run rm -rf "$dest.new-$STAMP"
-  run cp -a "$src" "$dest.new-$STAMP"
+  run cp -a --no-preserve=ownership "$src" "$dest.new-$STAMP"   # never carry the builder's uid onto the installed root
   if [ -e "$dest" ]; then run mv "$dest" "$dest.bak-$STAMP"; fi
   run mv "$dest.new-$STAMP" "$dest"
   say "$(basename "$dest"): updated (old kept as $(basename "$dest").bak-$STAMP)"
 }
 swap_file() {  # <source file> <dest file>
   local src=$1 dest=$2
-  run cp -pf "$src" "$dest.new-$STAMP"
+  run cp -f --preserve=mode,timestamps "$src" "$dest.new-$STAMP"
   run chmod +x "$dest.new-$STAMP"
   if [ -e "$dest" ]; then run mv "$dest" "$dest.bak-$STAMP"; fi
   run mv "$dest.new-$STAMP" "$dest"
