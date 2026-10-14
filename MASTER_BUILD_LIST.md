@@ -123,3 +123,45 @@
 | 2026-10-12 | v6.2.22 | HIGH | BRAND-THEME: Apply red #cc1a1a / yellow #f0c020 / void #050508 to Color.kt + Theme.kt | PENDING |
 
 > Nightly append by LUCILLE CORE AI | 2026-10-12 00:00 ET | v6.2.88
+
+---
+
+## 2026-10-14 | Automated Health Check Audit | v6.2.88
+
+### Code Bugs Fixed This Run
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | **[HIGH]** | SYNC-FIX: Dropped `--no-delete` flag from `70-scripts/sync_lucille_ai.sh` (unsupported on rsync 3.5.0 — root cause of INC-5 / ok=0 every run) | ✅ FIXED |
+| 2026-10-14 | v6.2.88 | **[HIGH]** | LLM-DEFAULT: Fixed `30-source/LucyServer-go/services/llm.go` default model — was `nvidia/llama-3.3-nemotron-super-49b-v1` (RETIRED, HTTP 410 since 2026-09-20); now `moonshotai/kimi-k2.5` (active OpenRouter model) | ✅ FIXED |
+
+### Ongoing Active Incidents (unresolved, requires user action)
+
+| Incident | Severity | Description | Day | Fix |
+|---------|---------|-------------|-----|-----|
+| INC-1 | 🔴 CRITICAL | OpenRouter API key 401 — Lucille chat DEAD | Day 24+ | Add new OpenRouter key to `20-runtime/.env` |
+| INC-2 | 🟠 HIGH | Steam Web API key 403 | Day 24+ | Regen at steamcommunity.com/dev/apikey |
+| INC-3 | 🟠 HIGH | swarm-ui.service crash on live ISO — drops to tty1 | Day 28+ | Rebuild ISO after sync to /mnt/swarmbuild |
+| INC-4 | 🔴 CRITICAL | /mnt/archive 100% full | Day 7+ | `python3 dedupe_archive.py` or manual rotation |
+| INC-5 | 🟠 HIGH | rsync `--no-delete` flag → sync ok=0 | ✅ FIXED | Fixed in this run |
+| INC-6 | 🟡 MEDIUM | sda4 LUKS locked — AI sync skips every run | Ongoing | `sudo cryptsetup open /dev/sda4 luks-a24202ce-...` |
+| INC-7 | 🟡 MEDIUM | ai-board.tsv uncommitted in recoverybuild | Ongoing | `git add ai-board.tsv && git commit` |
+
+### Mocked / Unwired Items Requiring Future Work
+
+| Service | Location | Status |
+|---------|---------|--------|
+| RecoveryAiScreen | `lucille-companion/…/ui/screen/` | **NOT WIRED** — UI exists but no BridgeClient `/api/chat` connection |
+| AppAnalytics DAU/MAU | `LucyServer-go/services/virtualization.go` | **ZERO PLACEHOLDER** — hardcoded fake values (2150 DAU) removed; real telemetry pipeline does not exist |
+| Marketplace analytics | `LucyServer-go/services/devplatform.go` | **EMPTY** — fake revenue/template seed data removed; no real pipeline |
+| SWARM_AUTH_TOKEN | `LucyServer-go/main.go:swarmAuthMiddleware` | **DEFAULT "swarm-token-2026"** — known public fallback; rotate before exposing on LAN |
+
+### Improvement Suggestions
+
+1. **Add startup key-check to GamingAgent** — `services/lucille_service.go` silently fails at chat time when `OPENROUTER_API_KEY` is empty; log a `WARN` at service init, same pattern used for `STEAM_API_KEY`
+2. **LUKS unlock notifier** — create a lightweight systemd oneshot (or `.desktop` autostart) that fires a desktop notification via `notify-send` when sda4 (`a24202ce-...`) is locked at login; unblocks the nightly AI sync
+3. **Rate-limiter memory leak** — `rateLimiter` in `LucyServer-go/main.go` never evicts IP buckets; fine for a personal device but add periodic GC if uptime extends past a week (comment already notes this)
+4. **ISO rebuild** — `swarm-ui.service` crash fix is staged but never tested; rebuild ISO and boot via Ventoy to close this Day 28 incident
+5. **Telemetry pipeline** — AppAnalytics and Marketplace analytics both return zeros/empty; wire real usage counters or document explicitly as "not implemented" so the dashboard shows honest state
+
+> Automated health audit by Claude Code | 2026-10-14 | v6.2.88

@@ -57,7 +57,7 @@ sync_lucille() {
     fi
     mkdir -p "$dest"
     log "START Lucille-AI $label → $dest"
-    if rsync -a --checksum --no-delete --human-readable --info=stats1 \
+    if rsync -a --checksum --human-readable --info=stats1 \
         "$SRC/" "$dest/" >> "$LOG_FILE" 2>&1; then
         log "OK    Lucille-AI $label (checksum-verified)"
         ((ok++)) || true

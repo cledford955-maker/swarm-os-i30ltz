@@ -1245,3 +1245,6 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 *Last updated: 2026-10-10 — swarm-grub Debian GRUB theme and refreshed multi-OS menu entries (`--with-entries`) built and verified in QEMU; install + a real boot test of each entry pending the user's sudo; Orbitron font still open.*
 
 *Last updated: 2026-10-11 — Lucy ↔ lucy-master sync removed (script, test, rule exception); engine upgrades kept; all project repos committed.*
+
+
+*Last updated: 2026-10-14 — Automated health audit. Two code bugs fixed: (1) `70-scripts/sync_lucille_ai.sh` -- dropped `--no-delete` flag (unsupported on rsync 3.5.0 -- was silently failing every backup run, root cause of INC-5); (2) `30-source/LucyServer-go/services/llm.go` -- fixed fallback model (`nvidia/llama-3.3-nemotron-super-49b-v1` retired by NVIDIA since 2026-09-20 HTTP 410, replaced with `moonshotai/kimi-k2.5`). Active incidents still requiring user action: INC-1 OpenRouter key 401 (Lucille chat dead Day 24+); INC-2 Steam key 403 (Day 24+); INC-3 swarm-ui.service crash/no ISO rebuild (Day 28+); INC-4 /mnt/archive 100% full (Day 7+). Mocks still unwired: RecoveryAiScreen not connected to BridgeClient /api/chat; AppAnalytics DAU/MAU pipeline does not exist (zeros reported); Marketplace analytics empty. Suggestions logged in MASTER_BUILD_LIST.md 2026-10-14 section.*
