@@ -215,3 +215,15 @@
 | 2026-10-09 | v0.3.0-alpha | HIGH | INF-02 fstab | ℹ Debian `/etc/fstab` already uses UUIDs and `/mnt/downloads` is well-formed. Remaining: `/mnt/lucilleassistant` (by-id) should be `/mnt/lucillebuild` by UUID, and the `/mnt/recoveryos` line pins `96969ed2…`, which matches neither doc UUID (`71287bbf…`, `490b9e60…`). Needs sudo + the T7 attached — NOT touched |
 | 2026-10-14 | v6.2.88 | LOW | `update_build_tracker.sh` still uses the old `i30ltz-recovery(seperate-related-project)` path | NEW |
 
+### Project A — direction change (user, 2026-10-14)
+
+User: nothing should use LUKS anymore (only the 21 GB `slick` partition, nvme0n1p6, still does); Ventoy and ISOs are retired; SWARM OS and Debian are updated live, not by rebuilding ISOs.
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | **[HIGH]** | SLICK: remove LUKS from `nvme0n1p6` (21 GB, UUID 019a3cd8…). It backs Lucille's hidden `/lucy/unfiltered` mode (`LucyServer-go`), `70-scripts/unlock_slick.sh`, the ISO crypttab/fstab and `install_swarm_os.sh`. Wiping destroys whatever is on it; **waiting on the user: reformat plain ext4 vs. keep the data** | ⏸ NEEDS USER |
+| 2026-10-14 | v6.2.88 | — | LUKS-ALERT (`luks_lock_reminder.sh` and its unit) | ❌ REMOVED — LUKS retired |
+| 2026-10-14 | v6.2.88 | — | Secure Boot + TPM auto-unlock of lucy-master | ❌ OBSOLETE — lucy-master LUKS no longer exists |
+| 2026-10-14 | v6.2.88 | — | ISO-REBUILD, Ventoy retention/boot tests | ❌ OBSOLETE — live updates from SWARM and Debian replace ISOs. `build_swarm_iso.sh` and `ISO_RELEASE_POLICY.md` are left as-is, not yet retired. The Ventoy stick (sdc, 59 GB, 23 GB of ISOs) is still attached and untouched |
+| 2026-10-14 | v6.2.88 | MEDIUM | `sync_lucille_ai.sh` sda4/LUKS leg now dead code; `swarm-snapshot`/Debian live-update path not yet defined | NEW |
+

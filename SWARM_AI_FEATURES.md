@@ -1276,8 +1276,14 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 
 ### DONE — Project A second pass: recovery path + LUKS lock reminder (2026-10-14)
 - `sync_lucille_ai.sh`: `RECOVERY_BIN` now points at `/mnt/recoverybuild/30-source/i30ltz-recovery/…` (the old `(seperate-related-project)` dir no longer exists on Lucy, so that leg always skipped). Tracker append now requires a successful sync and an existing tracker file.
-- New `70-scripts/luks_lock_reminder.sh` + `luks-lock-reminder.service` (user unit): notifies once per login only when the lucy-master LUKS volume (by UUID) is attached but locked. `--status`, `--install` supported. Tested: slick (real locked LUKS) → "locked", notification path via stubbed `notify-send`, absent → silent, `--install` into a fake HOME. **Not installed or enabled anywhere; lucy-master itself untested (not attached).** Interim aid until TPM auto-unlock.
+- (**Removed 2026-10-14**, LUKS retired by the user.) `70-scripts/luks_lock_reminder.sh` + `luks-lock-reminder.service` (user unit): notifies once per login only when the lucy-master LUKS volume (by UUID) is attached but locked. `--status`, `--install` supported. Tested: slick (real locked LUKS) → "locked", notification path via stubbed `notify-send`, absent → silent, `--install` into a fake HOME. **Not installed or enabled anywhere; lucy-master itself untested (not attached).** Interim aid until TPM auto-unlock.
 - Not touched: INF-02 fstab (needs sudo + T7), ISO rebuild, API key.
 
 *Last updated: 2026-10-14 — recovery path fixed, LUKS lock reminder added (untested on lucy-master).*
+
+### DECISION — LUKS and Ventoy/ISOs retired; live updates (user, 2026-10-14)
+- Nothing should use LUKS. The only LUKS left is `slick` (nvme0n1p6, 21 GB); its removal is pending the user's choice (it holds Lucille's `/lucy/unfiltered` data). The lucy-master LUKS volume no longer exists on the T7. LUKS reminder removed; Secure Boot/TPM-unlock plan is moot.
+- Ventoy and ISO releases are retired; SWARM OS and Debian are updated live. `build_swarm_iso.sh`, `ISO_RELEASE_POLICY.md` and the CLAUDE.md ISO sections are now stale but not yet rewritten.
+
+*Last updated: 2026-10-14 — LUKS/Ventoy/ISO retirement recorded.*
 
