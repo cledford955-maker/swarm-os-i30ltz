@@ -1308,3 +1308,10 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 
 *Last updated: 2026-10-14 — backup keys built and tested in sandboxes; not provisioned; SWARM lucille-core unit broken.*
 
+### DECISION — no backup-key tier; read-only copy on slick instead (user, 2026-10-14)
+- Removed: helper backup tier, `swarm-backup-arm`, backup provisioning, and the `lucille-core` `request_approval` command (reverted; lucille-core is untouched again). Stick keys (any number) remain; helper tests 20/20.
+- Added: `provision_swarm_key.sh --save-copy <KEY-SERIAL>` (verified against the registered hash; `/mnt/slick/swarm-keys/<serial>.secret`, root 0400 + `chattr +i`) and `--from-slick <KEY-SERIAL>` to rebuild a stick from it. Sandbox-tested only.
+- Still open: ownership fix on SWARM, `--upgrade` run, sudo-key proof on SWARM boot, login/controller.
+
+*Last updated: 2026-10-14 — backup tier dropped; slick copy built.*
+

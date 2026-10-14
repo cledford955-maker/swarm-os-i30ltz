@@ -7,9 +7,10 @@
 #   sudo provision_swarm_key.sh --device <by-id path> --apply ERASES that stick and makes it a key
 #   sudo provision_swarm_key.sh --revoke <KEY-SERIAL>         unregister ONE key (others keep working)
 #   sudo provision_swarm_key.sh --revoke-all
-#   sudo provision_swarm_key.sh --backup-key <name> --drive <by-id path> [--apply]
-#                                                              BACKUP key: secret kept in unlocked /mnt/slick, tied to that
-#                                                              external drive, usable only after phone approval (nothing is erased)
+#   sudo provision_swarm_key.sh --save-copy <KEY-SERIAL>      keep a READ-ONLY copy of that key's secret in unlocked slick
+#                                                              (key stick plugged in; slick unlocked first: unlock_slick.sh)
+#   sudo provision_swarm_key.sh --device <by-id> --from-slick <KEY-SERIAL> [--apply]
+#                                                              make a NEW stick from a saved copy (same secret, new stick)
 #   sudo provision_swarm_key.sh --upgrade                     migrate older registrations + reinstall the helper (erases nothing)
 #
 # Any registered key lets 'sudo' skip the password on SWARM OS; the password always still works.
@@ -41,8 +42,8 @@ HELPER_SRC="$HERE/../40-iso-profile/swarm_os_iso_profile/airootfs/usr/lib/swarm/
 PAM_LINE="auth        sufficient    pam_exec.so quiet seteuid /usr/lib/swarm/swarm-key-sudo-auth"
 MIN_BYTES=$((1 * 1000 * 1000 * 1000)); MAX_BYTES=$((256 * 1000 * 1000 * 1000))
 
-MODE=dry; ACTION=make; DEVICE=""; REVOKE_ID=""; BK_NAME=""; BK_DRIVE=""
-SLICK="/mnt/slick"; ARM_SRC="$HERE/../40-iso-profile/swarm_os_iso_profile/airootfs/usr/local/bin/swarm-backup-arm"
+MODE=dry; ACTION=make; DEVICE=""; REVOKE_ID=""; COPY_ID=""; FROM_SLICK=""
+SLICK="/mnt/slick"; BYPART_DIR="/dev/disk/by-partuuid"
 while [ $# -gt 0 ]; do
     case "$1" in
         --apply) MODE=apply ;;
@@ -50,9 +51,10 @@ while [ $# -gt 0 ]; do
         --list) ACTION=list ;;
         --list-sticks) ACTION=sticks ;;
         --upgrade) ACTION=upgrade ;;
-        --backup-key) ACTION=backup; BK_NAME="${2:?name}"; shift ;;
-        --drive) BK_DRIVE="${2:?by-id path}"; shift ;;
+        --save-copy) ACTION=savecopy; COPY_ID="${2:?key serial}"; shift ;;
+        --from-slick) FROM_SLICK="${2:?key serial}"; shift ;;
         --slick) SLICK="${2:?path}"; shift ;;
+        --partuuid-dir) BYPART_DIR="${2:?path}"; shift ;;
         --revoke) ACTION=revoke; REVOKE_ID="${2:?key serial}"; shift ;;
         --revoke-all) ACTION=revoke-all ;;
         --swarm-root) SWARM_ROOT="${2:?path}"; shift ;;
@@ -71,15 +73,18 @@ KEYS_DIR="$SWARM_ROOT/etc/swarm_key/keys.d"
 
 field() { sed -n "s/^$2=//p" "$1" | head -1; }
 
+# Slick is only usable when it is a REAL mounted filesystem; systemd's automount placeholder does not count.
+require_slick() {
+    local top
+    top="$(findmnt -nro SOURCE,FSTYPE -M "$SLICK" 2>/dev/null | tail -1 || true)"
+    case "$top" in ""|systemd-1*|*" autofs") die "slick is not unlocked and mounted at $SLICK. Unlock it first: sudo $HERE/unlock_slick.sh";; esac
+    ls "$SLICK" >/dev/null 2>&1 || die "slick at $SLICK is not readable (still locked?). Unlock it first: sudo $HERE/unlock_slick.sh"
+}
+
 case "$ACTION" in
 list)
     ls "$KEYS_DIR"/*.conf >/dev/null 2>&1 || { say "no keys registered"; exit 0; }
     for f in "$KEYS_DIR"/*.conf; do
-        if [ "$(field "$f" TIER)" = backup ]; then
-            printf '  %-28s BACKUP  drive usb-serial %s  secret in slick/%s  %s\n' "BK-$(field "$f" KEY_NAME)" \
-                "$(field "$f" BIND_USB_SERIAL)" "$(field "$f" SECRET_FILE)" "$(field "$f" CREATED)"
-            continue
-        fi
         printf '  %-28s partuuid %s  usb-serial %s  %s\n' "$(field "$f" KEY_SERIAL)" "$(field "$f" PARTUUID)" \
             "$(field "$f" HWSERIAL)" "$(field "$f" CREATED)"
         if [ -e "/dev/disk/by-partuuid/$(field "$f" PARTUUID)" ]; then echo "      ^ plugged in now"; fi
@@ -88,20 +93,36 @@ list)
 revoke)
     f="$KEYS_DIR/$REVOKE_ID.conf"
     [ -e "$f" ] || die "no such key: $REVOKE_ID (see --list)"
-    if [ "$(field "$f" TIER)" = backup ]; then
-        sf="$SLICK/swarm-keys/$(field "$f" SECRET_FILE)"
-        if [ -e "$sf" ]; then shred -u "$sf" 2>/dev/null || rm -f "$sf"; say "removed its secret from slick"
-        else say "note: slick is not unlocked, so the secret file was left in the vault (harmless without the registration)"; fi
-    fi
     shred -u "$f" 2>/dev/null || rm -f "$f"; say "revoked $REVOKE_ID; other keys are unaffected"; exit 0 ;;
 revoke-all)
     n=0; for f in "$KEYS_DIR"/*.conf; do [ -e "$f" ] || continue; shred -u "$f" 2>/dev/null || rm -f "$f"; n=$((n+1)); done
     say "revoked $n key(s). sudo now needs the password."; exit 0 ;;
+savecopy)
+    f="$KEYS_DIR/$COPY_ID.conf"
+    [ -e "$f" ] || die "no such key: $COPY_ID (see --list)"
+    pu="$(field "$f" PARTUUID | tr 'A-Z' 'a-z')"; want="$(field "$f" SECRET_SHA256)"
+    [ -b "$BYPART_DIR/$pu" ] || [ "$BYPART_DIR" != /dev/disk/by-partuuid ] && [ -e "$BYPART_DIR/$pu" ] \
+        || die "the key stick is not plugged in (partuuid $pu). Plug it in and retry."
+    require_slick
+    DIRECT=""; [ -b "$BYPART_DIR/$pu" ] && DIRECT="iflag=direct"      # block devices need sector-aligned, uncached reads
+    rec="$(dd if="$BYPART_DIR/$pu" bs=512 count=1 $DIRECT status=none | head -c 70)"
+    [[ "$rec" =~ ^SWK1:[0-9a-f]{64}$ ]] || die "the stick does not hold a SWARM key record"
+    [ "$(printf '%s' "${rec#SWK1:}" | sha256sum | cut -d' ' -f1)" = "$want" ] || die "the stick's secret does not match the registration; not saving"
+    VAULT="$SLICK/swarm-keys"; DEST="$VAULT/$COPY_ID.secret"
+    [ ! -e "$DEST" ] || die "a copy already exists at $DEST (it is read-only; to replace it: chattr -i, remove, rerun)"
+    if [ "$MODE" = dry ]; then say "DRY RUN: would save a verified copy of $COPY_ID to $DEST (root 0400, immutable). Add --apply."; exit 0; fi
+    install -d -m 0700 -o root -g root "$VAULT"
+    ( umask 277; printf '%s\n' "$rec" > "$DEST" ); chown root:root "$DEST"; chmod 0400 "$DEST"
+    [ "$(tr -d '\n' < "$DEST")" = "$rec" ] || die "read-back of the saved copy failed"
+    if chattr +i "$DEST" 2>/dev/null; then say "saved $DEST (root 0400 + immutable: not even root can change it until 'chattr -i')"
+    else say "saved $DEST (root 0400; this filesystem does not support the immutable flag)"; fi
+    unset rec
+    say "To make a new stick from it:  sudo $0 --device <by-id> --from-slick $COPY_ID --apply"
+    exit 0 ;;
 upgrade)
     # Move the first-generation registry into keys.d and install the current helper; erases nothing.
     install -D -m 0755 -o root -g root "$HELPER_SRC" "$SWARM_ROOT/usr/lib/swarm/swarm-key-sudo-auth"
     install -d -m 0755 -o root -g root "$SWARM_ROOT/etc/swarm_key" "$KEYS_DIR"
-    install -D -m 0755 -o root -g root "$ARM_SRC" "$SWARM_ROOT/usr/local/bin/swarm-backup-arm"
     LEGACY="$SWARM_ROOT/etc/swarm_os/sudo_key.conf"
     if [ -e "$LEGACY" ]; then
         lk="$(field "$LEGACY" KEY_SERIAL)"; [ -n "$lk" ] || die "legacy registry has no KEY_SERIAL; left as is"
@@ -111,53 +132,6 @@ upgrade)
         say "no first-generation registry to migrate"
     fi
     say "helper reinstalled. Keys: $(ls "$KEYS_DIR" 2>/dev/null | wc -l). Run with --list to see them."
-    exit 0 ;;
-backup)
-    [[ "$BK_NAME" =~ ^[A-Za-z0-9_.-]{1,40}$ ]] || die "key name: letters, digits, _ . - only (max 40)"
-    [ -n "$BK_DRIVE" ] || die "add --drive /dev/disk/by-id/usb-...  (the external drive this key is tied to)"
-    case "$BK_DRIVE" in /dev/disk/by-id/usb-*) ;; *) die "--drive must be a /dev/disk/by-id/usb-* path";; esac
-    case "$BK_DRIVE" in *-part[0-9]*) die "give the whole drive, not a partition";; esac
-    [ -e "$BK_DRIVE" ] || die "drive not attached: $BK_DRIVE"
-    BDEV="$(readlink -f "$BK_DRIVE")"
-    [ "$(lsblk -dno TRAN "$BDEV")" = usb ] || die "$BDEV is not a USB device"
-    BSERIAL="$(udevadm info --query=property --name="$BDEV" | sed -n 's/^ID_SERIAL_SHORT=//p')"
-    [ -n "$BSERIAL" ] || die "this drive reports no USB serial, so a key cannot be tied to it"
-    # systemd's automount placeholder (autofs / systemd-1) is NOT the vault: require a real, readable mount
-    top="$(findmnt -nro SOURCE,FSTYPE -M "$SLICK" 2>/dev/null | tail -1)"
-    case "$top" in ""|systemd-1*|*" autofs") die "slick is not unlocked and mounted at $SLICK. Unlock it first: sudo $HERE/unlock_slick.sh";; esac
-    ls "$SLICK" >/dev/null 2>&1 || die "slick at $SLICK is not readable (still locked?). Unlock it first: sudo $HERE/unlock_slick.sh"
-    VAULT="$SLICK/swarm-keys"; SECRET_FILE="$BK_NAME.key"; CONF="$KEYS_DIR/BK-$BK_NAME.conf"
-    [ ! -e "$CONF" ] || die "backup key '$BK_NAME' already exists; revoke it first: --revoke BK-$BK_NAME"
-    say "backup key '$BK_NAME': tied to $BDEV ($(lsblk -dno MODEL "$BDEV" | sed 's/ *$//'), USB serial $BSERIAL)"
-    say "plan: random 256-bit secret -> $VAULT/$SECRET_FILE (root 0600, nothing else in slick is touched)"
-    say "plan: register $CONF; install swarm-backup-arm and the current helper in $SWARM_ROOT; ensure the PAM line"
-    if [ "$MODE" = dry ]; then say "DRY RUN — nothing changed. Add --apply."; exit 0; fi
-    install -d -m 0700 -o root -g root "$VAULT"
-    SECRET="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"; [ "${#SECRET}" -eq 64 ] || die "secret generation failed"
-    ( umask 077; printf '%s\n' "$SECRET" > "$VAULT/$SECRET_FILE" ); chown root:root "$VAULT/$SECRET_FILE"; chmod 0600 "$VAULT/$SECRET_FILE"
-    [ "$(tr -d '\n' < "$VAULT/$SECRET_FILE")" = "$SECRET" ] || die "read-back of the secret failed"
-    SHA="$(printf '%s' "$SECRET" | sha256sum | cut -d' ' -f1)"; unset SECRET
-    install -D -m 0755 -o root -g root "$HELPER_SRC" "$SWARM_ROOT/usr/lib/swarm/swarm-key-sudo-auth"
-    install -D -m 0755 -o root -g root "$ARM_SRC" "$SWARM_ROOT/usr/local/bin/swarm-backup-arm"
-    install -d -m 0755 -o root -g root "$SWARM_ROOT/etc/swarm_key" "$KEYS_DIR"
-    ( umask 077; cat > "$CONF" <<EOF
-# SWARM BACKUP sudo key registration; never commit or share.
-TIER=backup
-KEY_NAME=$BK_NAME
-BIND_USB_SERIAL=$BSERIAL
-SECRET_FILE=$SECRET_FILE
-SECRET_SHA256=$SHA
-CREATED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-EOF
-    ); chown root:root "$CONF"; chmod 0600 "$CONF"
-    PAM="$SWARM_ROOT/etc/pam.d/sudo"
-    if ! grep -qF 'swarm-key-sudo-auth' "$PAM"; then
-        cp -a "$PAM" "$PAM.bak-$(date +%Y%m%d-%H%M%S)"
-        awk -v line="$PAM_LINE" '!done && $1=="auth" && $2=="include" {print line; done=1} {print}' "$PAM" > "$PAM.new"
-        grep -qF 'swarm-key-sudo-auth' "$PAM.new" || { rm -f "$PAM.new"; die "could not place the PAM line; $PAM unchanged"; }
-        chmod --reference="$PAM" "$PAM.new"; mv "$PAM.new" "$PAM"; say "added the key line to $PAM (backup kept)"
-    fi
-    say "DONE: backup key BK-$BK_NAME. To use it: unlock slick, plug in that drive, run 'swarm-backup-arm', then 'sudo ...' and approve on your phone."
     exit 0 ;;
 sticks)
     say "USB disks (candidates). Use the by-id path with --device:"
@@ -209,6 +183,10 @@ KEY_SERIAL="SWK-$(head -c 20 /dev/urandom | base32 | tr -d '=' | cut -c1-20 | se
 P1_UUID="$(rnd_uuid)"; P2_UUID="$(rnd_uuid)"; DISK_GUID="$(rnd_uuid)"; FS_UUID="$(rnd_uuid)"
 say "plan: p1 SWARM-KEY-SECRET partuuid=$P1_UUID | p2 SWARM-KEY fs-uuid=$FS_UUID | key serial $KEY_SERIAL"
 say "plan: install helper, register key in $KEYS_DIR, ensure 1 PAM line in $SWARM_ROOT/etc/pam.d/sudo (backups kept)"
+if [ -n "$FROM_SLICK" ]; then
+    require_slick; [ -r "$SLICK/swarm-keys/$FROM_SLICK.secret" ] || die "no saved copy for $FROM_SLICK in slick"
+    say "plan: the secret comes from the saved copy of $FROM_SLICK, not a new random one"
+fi
 if [ "$MODE" = dry ]; then
     say "DRY RUN — nothing changed. Add --apply to erase the stick and write the key."; exit 0
 fi
@@ -238,7 +216,15 @@ for _ in $(seq 1 20); do [ -b "$P1" ] && [ -b "$P2" ] && break; sleep 0.5; done
 [ -b "$P1" ] && [ -b "$P2" ] || die "new partitions did not appear"
 
 # ── secret: write, read back (sector-aligned, bypassing the cache), verify ───────────────────
-SECRET="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+if [ -n "$FROM_SLICK" ]; then
+    SRC_COPY="$SLICK/swarm-keys/$FROM_SLICK.secret"
+    [ -r "$SRC_COPY" ] || die "no saved copy at $SRC_COPY (slick unlocked? serial right?)"
+    SECRET="$(tr -d '\n' < "$SRC_COPY")"; SECRET="${SECRET#SWK1:}"
+    [[ "$SECRET" =~ ^[0-9a-f]{64}$ ]] || die "the saved copy is malformed"
+    say "using the saved copy of $FROM_SLICK (same secret on the new stick)"
+else
+    SECRET="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+fi
 [ "${#SECRET}" -eq 64 ] || die "secret generation failed"
 printf 'SWK1:%s\n' "$SECRET" | dd of="$P1" bs=70 count=1 conv=fsync status=none
 sync

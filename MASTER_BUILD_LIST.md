@@ -256,3 +256,13 @@ User: nothing should use LUKS anymore (only the 21 GB `slick` partition, nvme0n1
 
 Weak spots to remember: approval = whoever holds `SWARM_AUTH_TOKEN` can answer for the phone, and the phone app also accepts the screen PIN, not only biometrics (phone app untouched).
 
+### Project A — backup keys DROPPED, copy on slick instead (user, 2026-10-14)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | — | Phone-approved backup keys (Micron/T7), `swarm-backup-arm`, helper backup tier | ❌ REMOVED at the user's word ("forget the back up key"); rows above are history |
+| 2026-10-14 | v6.2.88 | — | `lucille-core` `request_approval` IPC command | ❌ REVERTED — lucille-core is back to its original code (the earlier "touch" no longer applies) |
+| 2026-10-14 | v6.2.88 | **[HIGH]** | Read-only copy of key #1's secret in unlocked slick: `sudo unlock_slick.sh`, then `sudo provision_swarm_key.sh --save-copy SWK-X54Z3-4UG4G-3KXA4-NJ272 --apply` (verifies it against the registered hash first; saves `/mnt/slick/swarm-keys/<serial>.secret`, root 0400 + immutable) | 🟡 BUILT + sandbox-tested; NOT run (needs the stick plugged in, slick unlocked, your sudo) |
+| 2026-10-14 | v6.2.88 | MEDIUM | Rebuild a lost stick from the copy: `--device <by-id> --from-slick <serial> --apply` (same secret, new stick) | 🟡 BUILT, not exercised on a real stick |
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | Installed SWARM `lucille-core.service` `User=swarm` (no such account) | ℹ no longer blocks key work (backup keys dropped); still a broken service on SWARM |
+

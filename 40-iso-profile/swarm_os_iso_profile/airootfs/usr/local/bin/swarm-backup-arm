@@ -1,9 +1,0 @@
-#!/bin/sh
-# swarm-backup-arm — arm a SWARM backup key for ONE sudo in the next 2 minutes.
-# Run this as yourself (no sudo), then run `sudo <command>`. sudo will ask your phone to approve
-# (biometric / screen lock); if slick is locked, the drive is unplugged or you do not approve,
-# sudo just asks for the password as usual. Only does anything if a backup key is registered.
-d="/run/user/$(id -u)"
-[ -d "$d" ] || { echo "swarm-backup-arm: $d does not exist (no login session?)" >&2; exit 1; }
-: > "$d/swarm-backup-arm" || exit 1
-echo "Backup key armed for 2 minutes (one use). Now run sudo and approve on your phone."

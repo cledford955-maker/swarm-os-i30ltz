@@ -19,27 +19,15 @@ sudo, so a spare key is just another file (provision_swarm_key.sh --add-key). Th
 readable by anyone and can be copied; they only narrow the search. Only the
 secret is the proof. Fails closed, prints nothing, no environment overrides,
 no arguments (python -I also ignores PYTHON* variables and the cwd).
-
-BACKUP keys (TIER=backup in keys.d) are a second, slower path, tried only when the
-user has ARMED one (`swarm-backup-arm`, valid 2 minutes, used once) and no stick matched.
-All of these must hold: the secret file in /mnt/slick/swarm-keys/ (slick unlocked; root
-0600) hashes to the registered value; the bound external drive is attached (USB serial);
-and the paired phone approves the request (lucille-core HITL: biometric or screen lock on
-the phone, no answer = denied). Rate limited. If anything is missing, sudo asks for the
-password as usual.
 """
 import hashlib
 import hmac
-import json
 import os
-import pwd
 import re
 import signal
-import socket
 import stat
 import subprocess
 import sys
-import time
 
 KEYS_DIR = "/etc/swarm_key/keys.d"
 PARTUUID_DIR = "/dev/disk/by-partuuid"
@@ -50,15 +38,6 @@ UUID_RE = re.compile(r"\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 SERIAL_RE = re.compile(r"\A[A-Za-z0-9_.:-]{1,64}\Z")  # "NONE" = stick reports no USB serial
 SHA_RE = re.compile(r"\A[0-9a-f]{64}\Z")
 TIMEOUT_S = 3
-SLICK_KEYS_DIR = "/mnt/slick/swarm-keys"
-LUCILLE_SOCK = "/run/lucille/ipc.sock"
-RUN_USER_DIR = "/run/user"
-ARM_NAME = "swarm-backup-arm"
-ARM_MAX_AGE_S = 120
-APPROVAL_TIMEOUT_S = 45
-RATE_FILE = "/run/swarm_key/last-attempt"
-RATE_MIN_S = 15
-BACKUP_NAME_RE = re.compile(r"\A[A-Za-z0-9_.-]{1,40}\Z")
 
 
 class _Timeout(Exception):
@@ -150,119 +129,10 @@ def _verify_key(registry, partuuid_dir, udevadm, require_block, require_root):
     return hmac.compare_digest(got_sha, want_sha)
 
 
-
-def _read_conf(path, require_root):
-    st = os.lstat(path)
-    if not stat.S_ISREG(st.st_mode) or (require_root and st.st_uid != 0) or st.st_mode & 0o077:
-        return None
-    vals = {}
-    with open(path, "r", encoding="ascii") as fh:
-        for line in fh:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                vals[k.strip()] = v.strip()
-    return vals
-
-
-def _consume_arm(ruser, run_user_dir, require_root):
-    """The user armed a backup key within the last 2 minutes (file in their own /run/user dir). One use."""
-    try:
-        pw = pwd.getpwnam(ruser)
-    except (KeyError, TypeError):
-        return False
-    path = os.path.join(run_user_dir, str(pw.pw_uid), ARM_NAME)
-    try:
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
-    except OSError:
-        return False
-    try:
-        st = os.fstat(fd)
-        fresh = 0 <= time.time() - st.st_mtime <= ARM_MAX_AGE_S
-        ok = stat.S_ISREG(st.st_mode) and st.st_uid == pw.pw_uid and fresh
-    finally:
-        os.close(fd)
-    try:
-        os.unlink(path)  # single use, whatever the outcome
-    except OSError:
-        pass
-    return ok
-
-
-def _drive_attached(serial, udevadm, byid_dir="/dev/disk/by-id"):
-    for name in os.listdir(byid_dir):
-        if not name.startswith("usb-") or "-part" in name or ("_%s-" % serial) not in name:
-            continue
-        props = _udev_props(udevadm, os.path.realpath(os.path.join(byid_dir, name)))
-        if props.get("ID_BUS") == "usb" and props.get("ID_SERIAL_SHORT") == serial:
-            return True
-    return False
-
-
-def _rate_ok(rate_file, now):
-    try:
-        last = os.stat(rate_file).st_mtime
-        if 0 <= now - last < RATE_MIN_S:
-            return False
-    except FileNotFoundError:
-        pass
-    d = os.path.dirname(rate_file)
-    os.makedirs(d, mode=0o755, exist_ok=True)
-    with open(rate_file, "w"):
-        pass
-    return True
-
-
-def _ask_phone(sock_path, text, timeout_s):
-    c = socket.socket(socket.AF_UNIX)
-    c.settimeout(timeout_s + 5)
-    try:
-        c.connect(sock_path)
-        # lucille-core's IPC parser only understands compact JSON
-        c.sendall((json.dumps({"command": "request_approval", "text": text, "timeout_sec": timeout_s},
-                              separators=(",", ":")) + "\n").encode())
-        out = b""
-        while not out.endswith(b"\n") and len(out) < 4096:
-            chunk = c.recv(1024)
-            if not chunk:
-                break
-            out += chunk
-    finally:
-        c.close()
-    return json.loads(out).get("approved") is True
-
-
-def _verify_backup(conf_path, udevadm, slick_dir, require_root, byid_dir="/dev/disk/by-id"):
-    v = _read_conf(conf_path, require_root)
-    if not v or v.get("TIER") != "backup":
-        return None  # not a backup entry
-    name = v.get("KEY_NAME", "")
-    serial = v.get("BIND_USB_SERIAL", "")
-    want = v.get("SECRET_SHA256", "").lower()
-    fname = v.get("SECRET_FILE", "")
-    if not (BACKUP_NAME_RE.match(name) and SERIAL_RE.match(serial) and SHA_RE.match(want)
-            and BACKUP_NAME_RE.match(fname)):
-        return False
-    if not _drive_attached(serial, udevadm, byid_dir):
-        return False
-    path = os.path.join(slick_dir, fname)
-    if os.path.realpath(path) != path:  # no symlinks / path tricks inside the vault
-        return False
-    st = os.lstat(path)
-    if not stat.S_ISREG(st.st_mode) or (require_root and st.st_uid != 0) or st.st_mode & 0o077 or st.st_size > 256:
-        return False
-    with open(path, "rb") as fh:
-        secret = fh.read(300).strip()
-    return hmac.compare_digest(hashlib.sha256(secret).hexdigest(), want)
-
-
 def verify(keys_dir=KEYS_DIR, partuuid_dir=PARTUUID_DIR, udevadm=UDEVADM,
-           require_block=True, require_root=True, ruser=None, run_user_dir=RUN_USER_DIR,
-           slick_dir=SLICK_KEYS_DIR, lucille_sock=LUCILLE_SOCK, rate_file=RATE_FILE,
-           approval_timeout=APPROVAL_TIMEOUT_S, byid_dir="/dev/disk/by-id"):
-    """True if ANY registered stick key is plugged in and genuine, or an ARMED backup key
-    passes all its checks and the phone approves. Parameters exist for the tests; the PAM
-    entry point below always uses the production defaults."""
+           require_block=True, require_root=True):
+    """True if ANY registered key is plugged in and genuine. Parameters exist
+    for the tests; the PAM entry point below always uses the production defaults."""
     try:
         if require_root and os.geteuid() != 0:
             return False
@@ -271,28 +141,15 @@ def verify(keys_dir=KEYS_DIR, partuuid_dir=PARTUUID_DIR, udevadm=UDEVADM,
             return False
         if require_root and st.st_uid != 0:
             return False
-        names = [n for n in sorted(os.listdir(keys_dir)) if n.endswith(".conf")]
-        for name in names:
+        for name in sorted(os.listdir(keys_dir)):
+            if not name.endswith(".conf"):
+                continue
             try:
                 if _verify_key(os.path.join(keys_dir, name), partuuid_dir, udevadm,
                                require_block, require_root):
                     return True
             except Exception:  # one broken entry must not hide a good one
                 continue
-        # Stage 2: backup keys, only on request (armed) and only after the quick path failed.
-        if not _consume_arm(ruser, run_user_dir, require_root):
-            return False
-        for name in names:
-            try:
-                ok = _verify_backup(os.path.join(keys_dir, name), udevadm, slick_dir, require_root, byid_dir)
-            except Exception:
-                continue
-            if ok:
-                if not _rate_ok(rate_file, time.time()):
-                    return False
-                text = "SWARM backup key '%s': allow sudo for %s?" % (
-                    _read_conf(os.path.join(keys_dir, name), require_root).get("KEY_NAME", "?"), ruser)
-                return _ask_phone(lucille_sock, text, approval_timeout)
         return False
     except BaseException:  # fail closed on ANY error, including timeouts
         return False
@@ -301,7 +158,7 @@ def verify(keys_dir=KEYS_DIR, partuuid_dir=PARTUUID_DIR, udevadm=UDEVADM,
 def main():
     if os.environ.get("PAM_TYPE") != "auth" or os.environ.get("PAM_SERVICE") != "sudo":
         return 1
-    return 0 if verify(ruser=os.environ.get("PAM_RUSER")) else 1
+    return 0 if verify() else 1
 
 
 if __name__ == "__main__":
