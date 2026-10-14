@@ -3,6 +3,8 @@
 #
 #   sudo provision_swarm_key.sh --list-sticks                 show attached USB disks you could turn into a key
 #   sudo provision_swarm_key.sh --list                        show registered keys (no secrets)
+#   sudo provision_swarm_key.sh --verify [KEY-SERIAL]         READ-ONLY: does each plugged-in key stick still hold
+#                                                              the secret SWARM has registered? (changes nothing)
 #   sudo provision_swarm_key.sh --device <by-id path>         DRY RUN for a new key on that stick, changes nothing
 #   sudo provision_swarm_key.sh --device <by-id path> --apply ERASES that stick and makes it a key
 #   sudo provision_swarm_key.sh --revoke <KEY-SERIAL>         unregister ONE key (others keep working)
@@ -42,13 +44,14 @@ HELPER_SRC="$HERE/../40-iso-profile/swarm_os_iso_profile/airootfs/usr/lib/swarm/
 PAM_LINE="auth        sufficient    pam_exec.so quiet seteuid /usr/lib/swarm/swarm-key-sudo-auth"
 MIN_BYTES=$((1 * 1000 * 1000 * 1000)); MAX_BYTES=$((256 * 1000 * 1000 * 1000))
 
-MODE=dry; ACTION=make; DEVICE=""; REVOKE_ID=""; COPY_ID=""; FROM_SLICK=""
+MODE=dry; ACTION=make; DEVICE=""; REVOKE_ID=""; COPY_ID=""; FROM_SLICK=""; VERIFY_ID=""
 SLICK="/mnt/slick"; BYPART_DIR="/dev/disk/by-partuuid"
 while [ $# -gt 0 ]; do
     case "$1" in
         --apply) MODE=apply ;;
         --device) DEVICE="${2:?by-id path}"; shift ;;
         --list) ACTION=list ;;
+        --verify) ACTION=verify; if [ $# -gt 1 ] && [ "${2#--}" = "$2" ]; then VERIFY_ID="$2"; shift; fi ;;
         --list-sticks) ACTION=sticks ;;
         --upgrade) ACTION=upgrade ;;
         --save-copy) ACTION=savecopy; COPY_ID="${2:?key serial}"; shift ;;
@@ -58,7 +61,7 @@ while [ $# -gt 0 ]; do
         --revoke) ACTION=revoke; REVOKE_ID="${2:?key serial}"; shift ;;
         --revoke-all) ACTION=revoke-all ;;
         --swarm-root) SWARM_ROOT="${2:?path}"; shift ;;
-        -h|--help) sed -n "2,34p" "$0"; exit 0 ;;
+        -h|--help) sed -n "2,37p" "$0"; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
     shift
@@ -97,7 +100,42 @@ require_slick() {
     ls "$SLICK" >/dev/null 2>&1 || die "slick at $SLICK is not readable (still locked?). Unlock it first: sudo $HERE/unlock_slick.sh"
 }
 
+# Read-only: does the stick registered in conf $1 still hold its secret? Prints one line;
+# returns 0 on a match, 2 when the stick is not plugged in, 1 when it is plugged in but broken.
+check_stick() {
+    local f="$1" id pu want dev rec direct="" hw got
+    id="$(field "$f" KEY_SERIAL)"; pu="$(field "$f" PARTUUID | tr 'A-Z' 'a-z')"; want="$(field "$f" SECRET_SHA256)"
+    dev="$BYPART_DIR/$pu"
+    [ -e "$dev" ] || { say "$id: not plugged in (partuuid $pu)"; return 2; }
+    [ -b "$dev" ] && direct="iflag=direct"
+    rec="$(dd if="$dev" bs=512 count=1 $direct status=none | tr -d '\000' | head -c 70)" \
+        || { say "$id: BROKEN - could not read its secret partition"; return 1; }
+    [[ "$rec" =~ ^SWK1:[0-9a-f]{64}$ ]] \
+        || { say "$id: BROKEN - its secret partition no longer holds a SWARM key record (overwritten or wiped)"; return 1; }
+    [ "$(printf '%s' "${rec#SWK1:}" | sha256sum | cut -d' ' -f1)" = "$want" ] \
+        || { say "$id: BROKEN - the secret on the stick does not match what SWARM has registered"; return 1; }
+    hw="$(field "$f" HWSERIAL)"
+    if [ -b "$dev" ] && [ "$hw" != NONE ]; then
+        got="$(udevadm info --query=property --name="$dev" 2>/dev/null | sed -n 's/^ID_SERIAL_SHORT=//p' | head -1)"
+        [ "$got" = "$hw" ] || { say "$id: BROKEN - on a stick with USB serial '${got:-?}', registered for '$hw'"; return 1; }
+    fi
+    say "$id: OK - the stick's secret matches SWARM's registration; this key works for sudo"
+}
+
 case "$ACTION" in
+verify)
+    n=0; plugged=0; bad=0
+    for f in "$KEYS_DIR"/*.conf $LEGACY; do
+        [ -e "$f" ] || continue
+        [ -z "$VERIFY_ID" ] || [ "$(field "$f" KEY_SERIAL)" = "$VERIFY_ID" ] || continue
+        n=$((n+1)); rc=0; check_stick "$f" || rc=$?
+        [ "$rc" = 2 ] || plugged=$((plugged+1))
+        [ "$rc" = 1 ] && bad=$((bad+1))
+    done
+    [ "$n" -gt 0 ] || die "no registered key${VERIFY_ID:+ called $VERIFY_ID} (see --list)"
+    [ "$bad" = 0 ] || exit 1
+    [ "$plugged" -gt 0 ] || exit 2
+    exit 0 ;;
 list)
     ls "$KEYS_DIR"/*.conf >/dev/null 2>&1 || [ -e "$LEGACY" ] || { say "no keys registered"; exit 0; }
     for f in "$KEYS_DIR"/*.conf $LEGACY; do
