@@ -145,7 +145,10 @@ if [ "$DRY" = 0 ]; then
     cmp -s "$LUCY"   "$R/opt/swarm_os/LucyServer/lucy-server"      || die "lucy-server differs from the build"
     cmp -s "$MEMORY" "$R/usr/local/bin/swarm-memory"               || die "swarm-memory differs from the build"
   fi
-  printf 'deployed %s from %s\n' "$STAMP" "$SRC" >> "$R/opt/swarm_os/.deploy-log"
   echo "verified: every file on the target matches the build."
+  # History line only; the deploy is already verified. An earlier sudo deploy can leave this
+  # file root-owned, which must not turn a good deploy into a failed run.
+  { printf 'deployed %s from %s\n' "$STAMP" "$SRC" >> "$R/opt/swarm_os/.deploy-log"; } 2>/dev/null \
+    || echo "  note: could not append to $R/opt/swarm_os/.deploy-log (owned by $(stat -c %U "$R/opt/swarm_os/.deploy-log" 2>/dev/null || echo '?'))"
 fi
 echo "done. Old versions are the *.bak-$STAMP next to each component."
