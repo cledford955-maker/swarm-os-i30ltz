@@ -1315,3 +1315,10 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 
 *Last updated: 2026-10-14 — backup tier dropped; slick copy built.*
 
+### DONE (code + tests; not deployed to SWARM) — lock screen: controller + SWARM key (2026-10-14)
+- `lib/services/pad_navigator.dart` (pure js_event → actions, edge-triggered, ignores init replay) + `GamepadService.padActions` stream; `GamepadService.initialize()` now accepts callbacks late. Lock screen and splash start it; lock screen maps D-pad/left stick to tile focus, A select, B clear, Y shuffle, Start = unlock with key; splash skips on any pad button/key/click. Needs `/dev/input/js0` (the unit already adds the `input` group; `joydev` must be loaded).
+- SWARM key on the lock screen: `usr/lib/swarm/swarm-key-status` (root; reuses the sudo helper's checks) + `swarm-key-status.service` + `99-swarm-key.rules` write `/run/swarm_key/status`; `UsbMasterKeyService.readSwarmKeyStatus` reads it first. Tests: 111 Flutter, 25 Python (helper + status).
+- Deploy still needed: Flutter bundle build/deploy, `provision_swarm_key.sh --upgrade`, SWARM ownership fix.
+
+*Last updated: 2026-10-14 — controller + key on the lock screen built; deploy pending.*
+

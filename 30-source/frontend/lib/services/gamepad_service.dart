@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'pad_navigator.dart';
 
 /// Gamepad & Controller Virtual Mouse Service
 ///
@@ -48,6 +49,22 @@ class GamepadService extends ChangeNotifier {
 
   bool _initialized = false;
 
+  // Menu actions (D-pad / stick / A / B / Y / Start) for screens that run before the desktop
+  // shell, such as the lock screen. Broadcast: any number of screens may listen.
+  final PadNavigator _pad = PadNavigator();
+  final StreamController<PadAction> _padActions = StreamController<PadAction>.broadcast();
+  Stream<PadAction> get padActions => _padActions.stream;
+
+  /// Test hook: feed raw js_event bytes exactly as read from /dev/input/js0.
+  @visibleForTesting
+  void feedJoystickBytes(List<int> bytes) => _emitPadActions(bytes);
+
+  void _emitPadActions(List<int> bytes) {
+    for (final a in _pad.feedBytes(bytes)) {
+      _padActions.add(a);
+    }
+  }
+
   void updateScreenSize(Size size) {
     _screenSize = size;
   }
@@ -57,12 +74,13 @@ class GamepadService extends ChangeNotifier {
     VoidCallback? toggleRight,
     VoidCallback? closeDrawers,
   }) {
+    // Callbacks may arrive later than the first start (the lock screen starts the service
+    // with none; the desktop shell adds its drawer handlers after unlock).
+    if (toggleLeft != null) onToggleLeftDrawer = toggleLeft;
+    if (toggleRight != null) onToggleRightDrawer = toggleRight;
+    if (closeDrawers != null) onCloseDrawers = closeDrawers;
     if (_initialized) return;
     _initialized = true;
-
-    onToggleLeftDrawer = toggleLeft;
-    onToggleRightDrawer = toggleRight;
-    onCloseDrawers = closeDrawers;
 
     // Listen to hardware keyboard / gamepad keys via Flutter Services
     HardwareKeyboard.instance.addHandler(_handleKeyEvent);
@@ -106,6 +124,7 @@ class GamepadService extends ChangeNotifier {
   }
 
   void _parseJsEvents(List<int> bytes) {
+    _emitPadActions(bytes);
     // Linux js_event: 8 bytes
     // uint32 time (4 bytes), int16 value (2 bytes), uint8 type (1 byte), uint8 number (1 byte)
     final byteData = ByteData.sublistView(Uint8List.fromList(bytes));

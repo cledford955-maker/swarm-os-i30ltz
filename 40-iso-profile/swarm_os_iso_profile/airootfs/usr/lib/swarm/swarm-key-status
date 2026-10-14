@@ -1,0 +1,71 @@
+#!/usr/bin/python3 -I
+"""swarm-key-status: publish whether a registered SWARM hardware key is plugged in.
+
+Run as root by swarm-key-status.service (at boot, and from udev when the key's partition
+appears or disappears). Writes /run/swarm_key/status, world-readable but root-written, so the
+lock screen (which cannot read the raw partition) can show "key present" without being able
+to forge it. The file holds no secret: only a key serial.
+
+    {"present": true, "serial": "SWK-XXXXX-..."}   or   {"present": false}
+
+Reuses the checks of swarm-key-sudo-auth (PARTUUID, USB bus + serial, secret hash).
+"""
+import importlib.machinery
+import importlib.util
+import json
+import os
+import sys
+
+HELPER = "/usr/lib/swarm/swarm-key-sudo-auth"
+OUT_DIR = "/run/swarm_key"
+OUT = OUT_DIR + "/status"
+
+
+def load_helper(path=HELPER):
+    loader = importlib.machinery.SourceFileLoader("swarm_key_sudo_auth", path)
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+def present_serial(h, keys_dir=None, **kw):
+    """Serial of the first genuine, plugged-in key, or None."""
+    keys_dir = keys_dir or h.KEYS_DIR
+    try:
+        if not os.path.isdir(keys_dir):
+            return None
+        for name in sorted(os.listdir(keys_dir)):
+            if not name.endswith(".conf"):
+                continue
+            path = os.path.join(keys_dir, name)
+            try:
+                if h._verify_key(path, kw.get("partuuid_dir", h.PARTUUID_DIR), kw.get("udevadm", h.UDEVADM),
+                                 kw.get("require_block", True), kw.get("require_root", True)):
+                    return name[:-5]
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return None
+
+
+def write_status(serial, out=OUT):
+    os.makedirs(os.path.dirname(out), mode=0o755, exist_ok=True)
+    body = json.dumps({"present": True, "serial": serial} if serial else {"present": False})
+    tmp = out + ".tmp"
+    with open(tmp, "w") as fh:
+        fh.write(body + "\n")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, out)  # atomic: readers never see half a file
+
+
+def main():
+    if os.geteuid() != 0:
+        return 1
+    write_status(present_serial(load_helper()))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

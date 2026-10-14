@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/lucille_voice_service.dart';
 import '../services/swarm_config.dart';
 import '../services/usb_master_key_service.dart';
+import '../services/gamepad_service.dart';
+import '../services/pad_navigator.dart';
 import '../theme/swarm_text_styles.dart';
 
 /// Stone glyph representation
@@ -109,6 +111,7 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
   Timer? _usbScanTimer;
   UsbMasterKeyInfo? _detectedUsbKey;
   bool _isScanningUsb = false;
+  StreamSubscription<PadAction>? _padSub;
 
   late List<StoneGlyph> _displayedStones;
   late final FocusNode _screenFocusNode;
@@ -143,10 +146,14 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
     _checkTotpStatus();
     _startAutoShuffle();
     _startUsbKeyScan();
+    // Controller: start reading the pad now (the desktop shell only starts it after unlock).
+    GamepadService().initialize();
+    _padSub = GamepadService().padActions.listen(_onPad);
   }
 
   @override
   void dispose() {
+    _padSub?.cancel();
     _usbScanTimer?.cancel();
     _shuffleTimer?.cancel();
     _screenFocusNode.dispose();
@@ -1347,6 +1354,22 @@ class _CyberStoneLockScreenState extends State<CyberStoneLockScreen>
         ),
       ),
     );
+  }
+
+  /// Controller input (see PadNavigator): same moves as the arrow keys / Enter / Backspace.
+  void _onPad(PadAction a) {
+    if (!mounted) return;
+    if (ModalRoute.of(context)?.isCurrent == false) return; // a dialog is open on top: leave the pad to it
+    switch (a) {
+      case PadAction.right:   setState(() => _focusedIndex = (_focusedIndex + 1) % 12); break;
+      case PadAction.left:    setState(() => _focusedIndex = (_focusedIndex - 1 + 12) % 12); break;
+      case PadAction.down:    setState(() => _focusedIndex = (_focusedIndex + 3) % 12); break;
+      case PadAction.up:      setState(() => _focusedIndex = (_focusedIndex - 3 + 12) % 12); break;
+      case PadAction.select:  _onStoneTapped(_focusedIndex, _displayedStones[_focusedIndex]); break;
+      case PadAction.back:    _clearInput(); break;
+      case PadAction.shuffle: _doAutoShuffle(); break;
+      case PadAction.useKey:  if (_detectedUsbKey != null) _unlockWithUsbKey(); break;
+    }
   }
 
   void _handleKey(KeyEvent event) {

@@ -266,3 +266,12 @@ Weak spots to remember: approval = whoever holds `SWARM_AUTH_TOKEN` can answer f
 | 2026-10-14 | v6.2.88 | MEDIUM | Rebuild a lost stick from the copy: `--device <by-id> --from-slick <serial> --apply` (same secret, new stick) | 🟡 BUILT, not exercised on a real stick |
 | 2026-10-14 | v6.2.88 | **[CRITICAL]** | Installed SWARM `lucille-core.service` `User=swarm` (no such account) | ℹ no longer blocks key work (backup keys dropped); still a broken service on SWARM |
 
+### Project A — login: controller + key on the lock screen (2026-10-14, night)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | Login = auto-start → splash → lock screen, usable with a controller and the key | 🟡 CODE DONE + TESTED, NOT DEPLOYED. Found: the controller only started AFTER unlock (in `swarm_shell.dart`), had no D-pad/stick, and its synthesized keys never reached the lock screen. Now: `pad_navigator.dart` (D-pad/left stick move, A select, B clear, Y shuffle, Start = use key), started by splash + lock screen; any pad button/key/click skips the 11 s splash. 111 frontend tests pass. Not run with a real controller |
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | The SWARM key on the lock screen | 🟡 CODE DONE + TESTED, NOT DEPLOYED: root service `swarm-key-status` (+ udev rule + unit) publishes `/run/swarm_key/status` (no secret); lock screen reads it, shows the key banner, Start/[UNLOCK] uses it. `provision_swarm_key.sh --upgrade` installs the pieces on SWARM |
+| 2026-10-14 | v6.2.88 | **[HIGH]** | Deploy: new Flutter bundle to SWARM (build on swarmbuild/A, `70-scripts/deploy_to_installed.sh`) so the lock screen changes actually run there | ⏸ NOT DONE |
+| 2026-10-14 | v6.2.88 | MEDIUM | Lock screen still accepts ANY key file ≥6 chars on any USB when no token is configured (`_verifyContent`); not changed | ⚠ FLAGGED |
+

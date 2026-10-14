@@ -89,9 +89,40 @@ class UsbMasterKeyService {
   /// Tracks mounts that this service automatically mounted so we can unmount non-matching ones.
   static final Set<String> _autoMountedDevices = {};
 
+  /// Written by the root service `swarm-key-status` when a registered SWARM hardware key (the
+  /// stick made by provision_swarm_key.sh) is plugged in. The app cannot read that stick's raw
+  /// secret partition itself, and cannot forge this root-written file; it holds no secret.
+  static const String swarmKeyStatusFile = '/run/swarm_key/status';
+
+  /// Reads [swarmKeyStatusFile]: info when a SWARM hardware key is present, else null.
+  static UsbMasterKeyInfo? readSwarmKeyStatus({String path = swarmKeyStatusFile}) {
+    try {
+      final f = File(path);
+      if (!f.existsSync()) return null;
+      final j = jsonDecode(f.readAsStringSync());
+      if (j is! Map || j['present'] != true) return null;
+      final serial = j['serial'];
+      if (serial is! String || !RegExp(r'^[A-Za-z0-9-]{1,64}$').hasMatch(serial)) return null;
+      return UsbMasterKeyInfo(
+        filePath: path,
+        mountPath: '',
+        devicePath: '',
+        driveLabel: 'SWARM key $serial',
+        keyContent: '',
+        detectedAt: DateTime.now(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Scans all attached USB drives for a valid master key file.
   /// Non-blocking, fast execution (< 250ms).
   static Future<UsbMasterKeyInfo?> scanForMasterKey({String? expectedToken}) async {
+    // The SWARM hardware key (root-verified) wins over any loose key file on other drives.
+    final hw = readSwarmKeyStatus();
+    if (hw != null) return hw;
+
     // 1. Resolve expected token (from argument, SharedPreferences, or /etc file)
     String? token = expectedToken;
     if (token == null || token.isEmpty) {

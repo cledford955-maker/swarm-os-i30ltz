@@ -72,6 +72,16 @@ KEYS_DIR="$SWARM_ROOT/etc/swarm_key/keys.d"
 [ -d "$SWARM_ROOT/etc/pam.d" ] || die "SWARM root not found at $SWARM_ROOT (mount it, or pass --swarm-root)"
 
 field() { sed -n "s/^$2=//p" "$1" | head -1; }
+# Everything SWARM needs at runtime for the key: sudo helper, lock-screen status publisher, its unit and udev rule.
+install_bits() {
+    local A="$HERE/../40-iso-profile/swarm_os_iso_profile/airootfs"
+    install -D -m 0755 -o root -g root "$HELPER_SRC" "$SWARM_ROOT/usr/lib/swarm/swarm-key-sudo-auth"
+    install -D -m 0755 -o root -g root "$A/usr/lib/swarm/swarm-key-status" "$SWARM_ROOT/usr/lib/swarm/swarm-key-status"
+    install -D -m 0644 -o root -g root "$A/etc/systemd/system/swarm-key-status.service" "$SWARM_ROOT/etc/systemd/system/swarm-key-status.service"
+    install -D -m 0644 -o root -g root "$A/etc/udev/rules.d/99-swarm-key.rules" "$SWARM_ROOT/etc/udev/rules.d/99-swarm-key.rules"
+    install -d -m 0755 -o root -g root "$SWARM_ROOT/etc/systemd/system/multi-user.target.wants"
+    ln -sf /etc/systemd/system/swarm-key-status.service "$SWARM_ROOT/etc/systemd/system/multi-user.target.wants/swarm-key-status.service"
+}
 # The first key was registered in the older single-file registry; find a key's file in either place.
 LEGACY="$SWARM_ROOT/etc/swarm_os/sudo_key.conf"
 conf_for() {
@@ -129,7 +139,7 @@ savecopy)
     exit 0 ;;
 upgrade)
     # Move the first-generation registry into keys.d and install the current helper; erases nothing.
-    install -D -m 0755 -o root -g root "$HELPER_SRC" "$SWARM_ROOT/usr/lib/swarm/swarm-key-sudo-auth"
+    install_bits
     install -d -m 0755 -o root -g root "$SWARM_ROOT/etc/swarm_key" "$KEYS_DIR"
     LEGACY="$SWARM_ROOT/etc/swarm_os/sudo_key.conf"
     if [ -e "$LEGACY" ]; then
@@ -257,7 +267,7 @@ EOF
 umount "$T"; rmdir "$T"
 
 # ── wire SWARM: helper, registry, PAM line ───────────────────────────────────────────────────
-install -D -m 0755 -o root -g root "$HELPER_SRC" "$SWARM_ROOT/usr/lib/swarm/swarm-key-sudo-auth"
+install_bits
 install -d -m 0755 -o root -g root "$SWARM_ROOT/etc/swarm_key" "$KEYS_DIR"
 # drop registrations of the partitions we just erased (re-keying a stick), and migrate the first-generation file
 for f in "$KEYS_DIR"/*.conf; do

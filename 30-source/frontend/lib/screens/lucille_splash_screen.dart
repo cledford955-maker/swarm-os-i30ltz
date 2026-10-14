@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'dart:io' hide Platform;
 import '../platform/platform.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../services/gamepad_service.dart';
+import '../services/pad_navigator.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -40,6 +44,7 @@ class _LucilleSplashScreenState extends State<LucilleSplashScreen>
   bool _completed = false;
   StreamSubscription? _completedSub;
   StreamSubscription? _errorSub;
+  StreamSubscription<PadAction>? _padSub;
 
   static const Color _cyan = Color(0xFF00E5FF);
   static const Color _blue = Color(0xFF0066FF);
@@ -71,6 +76,12 @@ class _LucilleSplashScreenState extends State<LucilleSplashScreen>
     _videoController = VideoController(_player);
 
     _initVideo();
+
+    // Skip straight to the lock screen with any controller button, key or click.
+    GamepadService().initialize();
+    _padSub = GamepadService().padActions.listen((_) => _finish());
+    HardwareKeyboard.instance.addHandler(_onSkipKey);
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_onSkipPointer);
 
     // Fallback auto-complete if everything fails
     _fallbackTimer = Timer(widget.duration + const Duration(seconds: 3), () {
@@ -140,6 +151,15 @@ class _LucilleSplashScreenState extends State<LucilleSplashScreen>
     }
   }
 
+  bool _onSkipKey(KeyEvent e) {
+    if (e is KeyDownEvent) _finish();
+    return false;
+  }
+
+  void _onSkipPointer(PointerEvent e) {
+    if (e is PointerDownEvent) _finish();
+  }
+
   void _finish() {
     if (_completed) return;
     _completed = true;
@@ -149,6 +169,9 @@ class _LucilleSplashScreenState extends State<LucilleSplashScreen>
 
   @override
   void dispose() {
+    _padSub?.cancel();
+    HardwareKeyboard.instance.removeHandler(_onSkipKey);
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onSkipPointer);
     _fallbackTimer?.cancel();
     _completedSub?.cancel();
     _errorSub?.cancel();
