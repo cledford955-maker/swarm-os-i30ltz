@@ -1264,4 +1264,13 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 
 *Last updated: 2026-10-12 — Hardware USB master key engine for cheap flash sticks implemented, tested, compiled, and deployed.*
 
+### DONE — Project A build list: SYNC-FIX for `sync_lucille_ai.sh` (2026-10-14)
+- **Root cause:** the Lucille-AI mirror passed `rsync --no-delete`, which does not exist (rsync 3.5.0: "unknown option", exit 1). Every run with a target attached failed from 2026-09-22; since then runs have only been `ok=0` because no target was attached. The mirror has never logged a success.
+- **Fix (`70-scripts/sync_lucille_ai.sh`):** dropped the flag (rsync is additive without `--delete`, so "nothing is ever deleted" still holds). Added `MIRROR_EXCLUDES` (`.claude/`, build output, `flutter-sdk`, `LucilleAssistant/`, `logs/`, `*.iso` etc.; **`.git` is kept**), cutting the mirror from ~62 GB to ~14 GB. Hourly check is now size+mtime; byte-exact `--checksum` is opt-in via `SYNC_CHECKSUM=1`. rsync exit 24 (file vanished) counts as OK. LUKS unlock hint now uses `/dev/disk/by-uuid/a24202ce-…` instead of `/dev/sda4` (letters swap).
+- **Verified:** `bash -n`; the real `sync_lucille` function run against scratch dirs (transfer OK, `target/`/`.claude/`/`.iso` skipped, `.git` copied, a source file deleted afterwards survived in the destination). **Not verified against a real target** — boltz (689e6547) and the lucy-master LUKS volume were not attached.
+- **Takes effect** when merged to `main` (`lucille-ai-sync.service` runs the script from `/mnt/Lucy` directly; no ISO rebuild needed). First real run is a full ~14 GB initial copy.
+- **Known leftover:** `RECOVERY_BIN` still points at the old `30-source/i30ltz-recovery(seperate-related-project)/` path, which no longer exists on Lucy (Recovery OS moved to `/mnt/recoverybuild`), so the binary leg always logs SKIP.
+- **Not done from the Project A list:** LUKS-ALERT (SWARM image has no notification daemon; overlaps the TPM auto-unlock plan), ISO-REBUILD (needs sudo, Ventoy, physical boot test), API-KEYS (needs the user's key).
+
+*Last updated: 2026-10-14 — sync_lucille_ai.sh fixed (invalid `--no-delete` removed, excludes added); untested against a real drive.*
 

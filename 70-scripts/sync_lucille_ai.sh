@@ -8,7 +8,13 @@ set -euo pipefail
 #
 #  1. Lucille-AI full mirror:
 #     /mnt/Lucy  →  {mount}/Lucille-AI/
-#     Additive only (no --delete). --checksum for byte-exact verification.
+#     Additive only: rsync never deletes without --delete, and none is passed.
+#     (There is no "--no-delete" option; rsync 3.5.0 rejects it with a usage
+#     error, which made every run fail from 2026-09-22 until fixed 2026-10-14.)
+#     Hourly runs compare size+mtime. Set SYNC_CHECKSUM=1 for a byte-exact
+#     pass (reads ~14 GB on each side, so it is opt-in, not hourly).
+#     Build output, .claude/ worktrees and other rebuildable data are skipped
+#     (see MIRROR_EXCLUDES below); .git IS mirrored.
 #
 #  2. DR. I30LTZ Recovery binary sync:
 #     /mnt/Lucy/30-source/i30ltz-recovery(seperate-related-project)/target/release/i30ltz-recovery
@@ -41,6 +47,23 @@ SDB8_MOUNT="/mnt/boltz"
 SDA4_MAPPER="luks-a24202ce-4d76-4eb7-8923-8e8ddbacdaa7"
 SDA4_MOUNT="/mnt/lucy-master-backup"
 
+# Rebuildable or machine-local data that must not be mirrored (62 GB -> ~14 GB).
+# Mirrors the build-output rules of 70-scripts/swarm_sync.exclude, but unlike
+# that file this keeps .git, since this is a backup.
+MIRROR_EXCLUDES=(
+    --exclude=/.claude/ --exclude=/.sync-trash/ --exclude=/.swarm-sync/
+    --exclude=/swarm_os_build_work/ --exclude=/install-env/ --exclude=/swarm_os_out/
+    --exclude=/30-source/flutter-sdk/ --exclude=/30-source/LucilleAssistant/
+    --exclude=/logs/ --exclude=lost+found/ --exclude='.Trash-*/'
+    --exclude='**/target/' --exclude='**/node_modules/' --exclude='**/.dart_tool/'
+    --exclude='**/.gradle/' --exclude='**/__pycache__/' --exclude='**/ephemeral/'
+    --exclude=/30-source/frontend/build/ --exclude=/30-source/lucille-core/build/
+    --exclude='/30-source/*/obj/' --exclude=/grub_themes/backups/
+    --exclude='*.iso' --exclude='*.sfs' --exclude='*.qcow2' --exclude='*.img'
+)
+RSYNC_VERIFY=()
+[ "${SYNC_CHECKSUM:-0}" = "1" ] && RSYNC_VERIFY=(--checksum)
+
 ok=0
 fail=0
 
@@ -57,12 +80,15 @@ sync_lucille() {
     fi
     mkdir -p "$dest"
     log "START Lucille-AI $label → $dest"
-    if rsync -a --checksum --no-delete --human-readable --info=stats1 \
-        "$SRC/" "$dest/" >> "$LOG_FILE" 2>&1; then
-        log "OK    Lucille-AI $label (checksum-verified)"
+    local rc=0
+    rsync -a "${RSYNC_VERIFY[@]}" "${MIRROR_EXCLUDES[@]}" --human-readable --info=stats1 \
+        "$SRC/" "$dest/" >> "$LOG_FILE" 2>&1 || rc=$?
+    # 24 = a source file vanished mid-run (the live tree is being edited); not a failure.
+    if [ "$rc" -eq 0 ] || [ "$rc" -eq 24 ]; then
+        log "OK    Lucille-AI $label (${RSYNC_VERIFY[*]:-size+mtime} check, rsync exit $rc)"
         ((ok++)) || true
     else
-        log "FAIL  Lucille-AI $label (exit $?)"
+        log "FAIL  Lucille-AI $label (rsync exit $rc)"
         ((fail++)) || true
     fi
 }
@@ -165,7 +191,7 @@ if ! mountpoint -q "$SDA4_MOUNT"; then
             || log "WARN: failed to mount sda4"
     else
         log "SKIP sda4 (lucy-master) — LUKS not unlocked"
-        log "     Unlock: sudo cryptsetup open /dev/sda4 $SDA4_MAPPER"
+        log "     Unlock: sudo cryptsetup open /dev/disk/by-uuid/a24202ce-4d76-4eb7-8923-8e8ddbacdaa7 $SDA4_MAPPER"
     fi
 fi
 sync_lucille "$SDA4_MOUNT" "sda4 (lucy-master)"

@@ -193,3 +193,16 @@
 | 2026-10-14 | v6.2.88 | **[HIGH]** | SYNC-FIX: Drop --no-delete flag from 70-scripts/sync_lucille_ai.sh (one line) | PENDING |
 
 > *Nightly append by LUCILLE CORE AI | 2026-10-14 00:00 ET | v6.2.88*
+
+---
+
+## 2026-10-14 | Project A (SWARM OS) session | v6.2.88
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | **[HIGH]** | SYNC-FIX: `--no-delete` removed from `70-scripts/sync_lucille_ai.sh`; mirror excludes added (62 GB → ~14 GB); checksum now opt-in (`SYNC_CHECKSUM=1`) | 🟡 FIXED on branch `LUCILLE/projecta-build-list-ecbd47`, scratch-tested; NOT yet merged to main, NOT tested on a real drive |
+| 2026-10-14 | v6.2.88 | **[HIGH]** | LUKS-ALERT | ⏸ DEFERRED — no notification daemon in the SWARM image; overlaps the Secure Boot/TPM auto-unlock plan |
+| 2026-10-14 | v6.2.88 | **[HIGH]** | ISO-REBUILD | ⏸ NEEDS USER — sudo for mkarchiso, Ventoy write, physical boot test |
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | API-KEY (OpenRouter) | ⏸ NEEDS USER — real key |
+| 2026-10-14 | v6.2.88 | MEDIUM | `sync_lucille_ai.sh` `RECOVERY_BIN` points at a path that no longer exists on Lucy | NEW |
+
