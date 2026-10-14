@@ -227,3 +227,11 @@ User: nothing should use LUKS anymore (only the 21 GB `slick` partition, nvme0n1
 | 2026-10-14 | v6.2.88 | — | ISO-REBUILD, Ventoy retention/boot tests | ❌ OBSOLETE — live updates from SWARM and Debian replace ISOs. `build_swarm_iso.sh` and `ISO_RELEASE_POLICY.md` are left as-is, not yet retired. The Ventoy stick (sdc, 59 GB, 23 GB of ISOs) is still attached and untouched |
 | 2026-10-14 | v6.2.88 | MEDIUM | `sync_lucille_ai.sh` sda4/LUKS leg now dead code; `swarm-snapshot`/Debian live-update path not yet defined | NEW |
 
+### Project A — SWARM hardware key + login (2026-10-14, later)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | Old Ventoy stick (sdc, USB serial 3664251034070005592) → SWARM sudo key | 🟡 BUILT + TESTED, **NOT RUN** (needs your sudo). `sudo 70-scripts/provision_swarm_key.sh` (dry run, verified against the real stick), then `--apply`. Helper `swarm-key-sudo-auth` 15/15 tests; PAM line goes in SWARM's `/etc/pam.d/sudo` only; real proof = `sudo -k; sudo true` on SWARM with the stick in/out |
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | Login: auto-login straight to the lock screen, usable with a controller and the key | 🟡 PARTIAL. Desktop already starts with no login prompt (`swarm-ui.service`); lock screen has arrow/A/Y keys and a `GamepadService` exists. **Not done:** show the new stick as a lock-screen key (its secret is on a raw partition the app can't read), confirm the pad really drives the lock screen on SWARM hardware. Web preview built for viewing |
+| 2026-10-14 | v6.2.88 | HIGH | Lock screen accepts ANY file ≥6 chars named like a master key on any USB when no token is configured (`usb_master_key_service.dart` `_verifyContent`) | ⚠ FLAGGED, untouched |
+

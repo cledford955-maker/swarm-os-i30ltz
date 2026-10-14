@@ -1287,3 +1287,10 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 
 *Last updated: 2026-10-14 — LUKS/Ventoy/ISO retirement recorded.*
 
+### IN PROGRESS — SWARM hardware sudo key (2026-10-14)
+- `40-iso-profile/.../usr/lib/swarm/swarm-key-sudo-auth` (python -I, pam_exec `seteuid`, sudo-only, fails closed, no args/env overrides) + `70-scripts/tests/test_swarm_key_sudo_auth.py` (15 pass) + `70-scripts/provision_swarm_key.sh` (dry-run default; erases only the known stick after typing its serial; GPT with random disk GUID, `SWARM-KEY-SECRET` raw partition with 256-bit secret read back and verified, `SWARM-KEY` ext4 with random UUID and a key-serial file, registry `/etc/swarm_os/sudo_key.conf` 0600 on SWARM root, one PAM line; `--revoke`).
+- Dry run verified against the real stick; `--apply` NOT run (needs sudo). Hardware serial is fixed by the stick; UUIDs/serial are copyable, only the secret is the credential.
+- Web view of the Flutter shell: `flutter build web -t lib/main_web.dart` (60 s) works; lock route `#/lock`.
+
+*Last updated: 2026-10-14 — SWARM sudo key built and tested, awaiting sudo run; login/controller integration partial.*
+
