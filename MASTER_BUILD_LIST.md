@@ -244,3 +244,15 @@ User: nothing should use LUKS anymore (only the 21 GB `slick` partition, nvme0n1
 | 2026-10-14 | v6.2.88 | **[CRITICAL]** | SWARM root has hundreds of system paths owned by the normal user (uid 1000): `/`, `/etc`, `/etc/pam.d`, `/etc/sudoers.d`, `/usr/bin`, `/usr/lib`, `/boot`, `/opt` — anything running as that user can swap PAM/sudoers/binaries, defeating sudo AND the key. Root cause: installer `cp -a` keeps repo ownership | 🟡 `70-scripts/fix_swarm_root_ownership.sh` written (dry-run default, undo list, skips `/etc/swarm_os` + models); NOT run. Installer still needs a fix so new installs are root-owned |
 | 2026-10-14 | v6.2.88 | **[HIGH]** | Backup keys on the external drives, usable only after biometric approval on a paired phone | ⏸ DESIGN — see conversation; reuses the existing phone HITL (`BiometricPrompt` in `HitlApprovalActivity`, lucille-core :9091). Needs decisions |
 
+### Project A — backup keys with phone approval (2026-10-14, night; user said "touch lucille-core")
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | **[HIGH]** | `lucille-core` `request_approval` IPC command (the ONLY change; user: "touch lucille-core ... nothing else") | ✅ built + tested: 186 engine tests pass; `70-scripts/tests/e2e_request_approval.py` 7/7 with a stand-in phone (approve / reject / no phone / odd input / wrong token). Not yet deployed to SWARM; not tried with the real phone |
+| 2026-10-14 | v6.2.88 | **[HIGH]** | Backup keys (one per external drive: Micron, T7): secret in unlocked `/mnt/slick/swarm-keys/`, tied to the drive's USB serial, armed with `swarm-backup-arm`, phone approves | ✅ BUILT + tested (helper 36 tests; provisioning proven in a sandbox incl. real Micron serial check). **Not provisioned**: `sudo unlock_slick.sh`, then `sudo 70-scripts/provision_swarm_key.sh --backup-key micron --drive /dev/disk/by-id/usb-Micron_CT2000X9SSD9_2523E8D92055-0:0 --apply` and `--backup-key t7 --drive /dev/disk/by-id/usb-Samsung_PSSD_T7_S5SXNJ0NB07155M-0:0 --apply` |
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | Installed SWARM `lucille-core.service` has `User=swarm` but no `swarm` account exists → it cannot start, so no phone approvals on SWARM; installed `/usr/bin/lucille-core` is the old Oct-6 build without the new command | 🔴 FOUND, not fixed (needs: unit → `User=i30ltz` like the other units, new binary built on swarmbuild/A, `SWARM_AUTH_TOKEN` present, phone connected) |
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | Run `sudo 70-scripts/fix_swarm_root_ownership.sh` (dry run first, review) — SWARM system dirs user-owned. Installers (`install_swarm_os.sh` ×2, `deploy_to_installed.sh`) now write root-owned | 🟡 installers fixed; SWARM itself NOT yet fixed |
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | Login: auto-login to lock screen usable with controller + key | ⏸ NOT STARTED this pass (see earlier row) |
+
+Weak spots to remember: approval = whoever holds `SWARM_AUTH_TOKEN` can answer for the phone, and the phone app also accepts the screen PIN, not only biometrics (phone app untouched).
+

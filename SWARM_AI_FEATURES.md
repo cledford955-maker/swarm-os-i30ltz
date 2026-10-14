@@ -1301,3 +1301,10 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 
 *Last updated: 2026-10-14 — key #1 live, multi-key built, ownership problem found.*
 
+### DONE (untested on hardware) — backup sudo keys with phone approval (2026-10-14)
+- `lucille-core`: new IPC command `{"command":"request_approval","text":"…","timeout_sec":45}` → `{"status":"ok","approved":bool}`; reuses `request_human_approval` (HITL → paired phone, biometric/screen lock there). Compact JSON only (existing parser). 186 tests + `70-scripts/tests/e2e_request_approval.py`.
+- `swarm-key-sudo-auth` backup tier: only when armed (`swarm-backup-arm`, 2 min, one use) and no stick matched; needs slick-vault secret (`/mnt/slick/swarm-keys/<name>.key`, root 0600, hash in `/etc/swarm_key/keys.d/BK-<name>.conf`), the bound external drive's USB serial attached, and phone approval; rate-limited 15 s; denies on any failure → password prompt. `provision_swarm_key.sh --backup-key NAME --drive BYID [--apply]`.
+- Blockers on SWARM: `lucille-core.service` `User=swarm` (no such user); old installed binary; SWARM root ownership.
+
+*Last updated: 2026-10-14 — backup keys built and tested in sandboxes; not provisioned; SWARM lucille-core unit broken.*
+
