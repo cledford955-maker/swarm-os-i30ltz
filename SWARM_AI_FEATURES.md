@@ -1322,3 +1322,8 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 
 *Last updated: 2026-10-14 — controller + key on the lock screen built; deploy pending.*
 
+### DONE — SWARM system folders handed back to root (2026-10-14)
+`fix_swarm_root_ownership.sh --only etc,usr,boot --apply` (user ran it from Debian): every uid-1000 entry under `/`, `/etc` (except `/etc/swarm_os`), `/usr`, `/boot` is root:root; undo list in SWARM `/root/`. The installers already write root-owned files, so a live update should not bring it back (re-run the dry run after the next deploy to confirm). `/opt` still user-owned (low risk: its services run as the user).
+
+*Last updated: 2026-10-14 — SWARM root ownership fixed for etc/usr/boot.*
+
