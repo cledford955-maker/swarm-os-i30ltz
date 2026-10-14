@@ -72,6 +72,12 @@ KEYS_DIR="$SWARM_ROOT/etc/swarm_key/keys.d"
 [ -d "$SWARM_ROOT/etc/pam.d" ] || die "SWARM root not found at $SWARM_ROOT (mount it, or pass --swarm-root)"
 
 field() { sed -n "s/^$2=//p" "$1" | head -1; }
+# The first key was registered in the older single-file registry; find a key's file in either place.
+LEGACY="$SWARM_ROOT/etc/swarm_os/sudo_key.conf"
+conf_for() {
+    if [ -e "$KEYS_DIR/$1.conf" ]; then echo "$KEYS_DIR/$1.conf"
+    elif [ -e "$LEGACY" ] && [ "$(field "$LEGACY" KEY_SERIAL)" = "$1" ]; then echo "$LEGACY"; fi
+}
 
 # Slick is only usable when it is a REAL mounted filesystem; systemd's automount placeholder does not count.
 require_slick() {
@@ -83,23 +89,25 @@ require_slick() {
 
 case "$ACTION" in
 list)
-    ls "$KEYS_DIR"/*.conf >/dev/null 2>&1 || { say "no keys registered"; exit 0; }
-    for f in "$KEYS_DIR"/*.conf; do
+    ls "$KEYS_DIR"/*.conf >/dev/null 2>&1 || [ -e "$LEGACY" ] || { say "no keys registered"; exit 0; }
+    for f in "$KEYS_DIR"/*.conf $LEGACY; do
+        [ -e "$f" ] || continue
+        [ "$f" != "$LEGACY" ] || say "(first key, still in the old registry: run --upgrade to move it)"
         printf '  %-28s partuuid %s  usb-serial %s  %s\n' "$(field "$f" KEY_SERIAL)" "$(field "$f" PARTUUID)" \
             "$(field "$f" HWSERIAL)" "$(field "$f" CREATED)"
         if [ -e "/dev/disk/by-partuuid/$(field "$f" PARTUUID)" ]; then echo "      ^ plugged in now"; fi
     done
     exit 0 ;;
 revoke)
-    f="$KEYS_DIR/$REVOKE_ID.conf"
-    [ -e "$f" ] || die "no such key: $REVOKE_ID (see --list)"
+    f="$(conf_for "$REVOKE_ID")"
+    [ -n "$f" ] || die "no such key: $REVOKE_ID (see --list)"
     shred -u "$f" 2>/dev/null || rm -f "$f"; say "revoked $REVOKE_ID; other keys are unaffected"; exit 0 ;;
 revoke-all)
     n=0; for f in "$KEYS_DIR"/*.conf; do [ -e "$f" ] || continue; shred -u "$f" 2>/dev/null || rm -f "$f"; n=$((n+1)); done
     say "revoked $n key(s). sudo now needs the password."; exit 0 ;;
 savecopy)
-    f="$KEYS_DIR/$COPY_ID.conf"
-    [ -e "$f" ] || die "no such key: $COPY_ID (see --list)"
+    f="$(conf_for "$COPY_ID")"
+    [ -n "$f" ] || die "no such key: $COPY_ID (see --list)"
     pu="$(field "$f" PARTUUID | tr 'A-Z' 'a-z')"; want="$(field "$f" SECRET_SHA256)"
     [ -b "$BYPART_DIR/$pu" ] || [ "$BYPART_DIR" != /dev/disk/by-partuuid ] && [ -e "$BYPART_DIR/$pu" ] \
         || die "the key stick is not plugged in (partuuid $pu). Plug it in and retry."
