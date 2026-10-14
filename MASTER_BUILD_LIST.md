@@ -221,7 +221,7 @@ User: nothing should use LUKS anymore (only the 21 GB `slick` partition, nvme0n1
 
 | Date | Version | Priority | Task | Status |
 |------|---------|----------|------|--------|
-| 2026-10-14 | v6.2.88 | **[HIGH]** | SLICK: remove LUKS from `nvme0n1p6` (21 GB, UUID 019a3cd8…). It backs Lucille's hidden `/lucy/unfiltered` mode (`LucyServer-go`), `70-scripts/unlock_slick.sh`, the ISO crypttab/fstab and `install_swarm_os.sh`. Wiping destroys whatever is on it; **waiting on the user: reformat plain ext4 vs. keep the data** | ⏸ NEEDS USER |
+| 2026-10-14 | v6.2.88 | — | SLICK: (was: remove LUKS from `nvme0n1p6` (21 GB, UUID 019a3cd8…). It backs Lucille's hidden `/lucy/unfiltered` mode (`LucyServer-go`), `70-scripts/unlock_slick.sh`, the ISO crypttab/fstab and `install_swarm_os.sh`; wiping would destroy whatever is on it; **User decided 2026-10-14: KEEP slick as it is (still LUKS, untouched).** | ✅ DECIDED — no action; the one LUKS exception |
 | 2026-10-14 | v6.2.88 | — | LUKS-ALERT (`luks_lock_reminder.sh` and its unit) | ❌ REMOVED — LUKS retired |
 | 2026-10-14 | v6.2.88 | — | Secure Boot + TPM auto-unlock of lucy-master | ❌ OBSOLETE — lucy-master LUKS no longer exists |
 | 2026-10-14 | v6.2.88 | — | ISO-REBUILD, Ventoy retention/boot tests | ❌ OBSOLETE — live updates from SWARM and Debian replace ISOs. `build_swarm_iso.sh` and `ISO_RELEASE_POLICY.md` are left as-is, not yet retired. The Ventoy stick (sdc, 59 GB, 23 GB of ISOs) is still attached and untouched |

@@ -1282,7 +1282,7 @@ Separately confirmed while investigating: the stale `.git/index.lock` (removed e
 *Last updated: 2026-10-14 — recovery path fixed, LUKS lock reminder added (untested on lucy-master).*
 
 ### DECISION — LUKS and Ventoy/ISOs retired; live updates (user, 2026-10-14)
-- Nothing should use LUKS. The only LUKS left is `slick` (nvme0n1p6, 21 GB); its removal is pending the user's choice (it holds Lucille's `/lucy/unfiltered` data). The lucy-master LUKS volume no longer exists on the T7. LUKS reminder removed; Secure Boot/TPM-unlock plan is moot.
+- Nothing should use LUKS. The only LUKS left is `slick` (nvme0n1p6, 21 GB), which the user decided to **keep as is** (2026-10-14); it holds Lucille's `/lucy/unfiltered` data and its scripts/units stay. The lucy-master LUKS volume no longer exists on the T7. LUKS reminder removed; Secure Boot/TPM-unlock plan is moot.
 - Ventoy and ISO releases are retired; SWARM OS and Debian are updated live. `build_swarm_iso.sh`, `ISO_RELEASE_POLICY.md` and the CLAUDE.md ISO sections are now stale but not yet rewritten.
 
 *Last updated: 2026-10-14 — LUKS/Ventoy/ISO retirement recorded.*
