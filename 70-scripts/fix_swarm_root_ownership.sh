@@ -3,6 +3,7 @@
 #
 #   sudo fix_swarm_root_ownership.sh             # dry run: counts and samples, changes nothing
 #   sudo fix_swarm_root_ownership.sh --apply     # chown root:root, writes an undo list first
+#   sudo fix_swarm_root_ownership.sh --only etc,usr,boot [--apply]   # just those folders (plus "/" itself); skip /opt for now
 #
 # Why (found 2026-10-14): on the installed SWARM root (/mnt/swarm/@) hundreds of system entries are owned
 # by uid 1000 (the normal user): /, /etc, /etc/pam.d, /etc/sudoers.d, /usr/bin, /usr/lib, /boot, /opt...
@@ -16,12 +17,13 @@
 set -euo pipefail
 export PATH="/usr/sbin:/sbin:/usr/bin:/bin"
 
-ROOT="/mnt/swarm/@"; UID_FROM=1000; MODE=dry
+ROOT="/mnt/swarm/@"; UID_FROM=1000; MODE=dry; ONLY="etc usr boot opt"
 while [ $# -gt 0 ]; do
     case "$1" in
         --apply) MODE=apply ;;
         --root) ROOT="${2:?path}"; shift ;;
         --uid) UID_FROM="${2:?uid}"; shift ;;
+        --only) ONLY="$(echo "${2:?etc,usr,boot,opt}" | tr ',' ' ')"; shift ;;
         -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
@@ -36,7 +38,8 @@ echo "uid $UID_FROM on $ROOT is '$nm'"
 
 LIST="$(mktemp)"; trap 'rm -f "$LIST"' EXIT
 find "$ROOT" -maxdepth 0 \( -uid "$UID_FROM" -o -gid "$UID_FROM" \) -print0 >> "$LIST" || true
-for d in etc usr boot opt; do
+for d in $ONLY; do
+    case "$d" in etc|usr|boot|opt) ;; *) echo "--only: unknown folder '$d' (etc, usr, boot, opt)" >&2; exit 2;; esac
     [ -d "$ROOT/$d" ] || continue
     find "$ROOT/$d" -xdev \
         \( -path "$ROOT/etc/swarm_os" -o -path "$ROOT/etc/swarm_os/*" -o -path "$ROOT/opt/swarm_os/models" -o -path "$ROOT/opt/swarm_os/models/*" \) -prune -o \
@@ -44,7 +47,7 @@ for d in etc usr boot opt; do
 done
 total="$(tr -cd '\0' < "$LIST" | wc -c)"
 echo "entries to hand back to root: $total"
-for d in etc usr boot opt; do
+for d in $ONLY; do
     printf '  %-5s %s\n' "$d" "$(tr '\0' '\n' < "$LIST" | grep -c "^$ROOT/$d\(/\|$\)" || true)"
 done
 echo "sample:"; tr '\0' '\n' < "$LIST" | head -8 | sed 's/^/  /'

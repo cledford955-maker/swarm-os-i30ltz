@@ -275,3 +275,10 @@ Weak spots to remember: approval = whoever holds `SWARM_AUTH_TOKEN` can answer f
 | 2026-10-14 | v6.2.88 | **[HIGH]** | Deploy: new Flutter bundle to SWARM (build on swarmbuild/A, `70-scripts/deploy_to_installed.sh`) so the lock screen changes actually run there | ⏸ NOT DONE |
 | 2026-10-14 | v6.2.88 | MEDIUM | Lock screen still accepts ANY key file ≥6 chars on any USB when no token is configured (`_verifyContent`); not changed | ⚠ FLAGGED |
 
+### Project A — ownership dry run reviewed (2026-10-14, night)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-14 | v6.2.88 | **[CRITICAL]** | `fix_swarm_root_ownership.sh` real dry run (user): 9,631 entries — etc 134, usr 27, boot 36, opt 9,433 (android-studio 4,923; swarm_os 4,530 of which two Flutter bundles ≈4,465). Plan: apply `--only etc,usr,boot` first; `/opt` later (its services run as the user; `GoogleWorkspaceService/google_tokens` is re-chowned to the user by its unit) | ⏸ waiting for the user to run `--apply` (new `--only` option on branch) |
+| 2026-10-14 | v6.2.88 | — | `provision_swarm_key.sh --upgrade` (user ran): helper + status pieces installed, 1 key registered | ✅ DONE |
+
