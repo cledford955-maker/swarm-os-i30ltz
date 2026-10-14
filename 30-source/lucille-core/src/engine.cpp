@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <filesystem>
 #include <chrono>
+#include <cstdlib>
 
 namespace fs = std::filesystem;
 
@@ -415,6 +416,24 @@ std::string LucilleEngine::handle_ipc_command(const std::string& raw_request) {
                 return "{\"status\":\"ok\",\"pid\":" + std::to_string(pid) + ",\"agent\":\"" + agent + "\"}\n";
             }
             return "{\"status\":\"error\",\"message\":\"dispatch failed for " + agent + "\"}\n";
+        }
+
+        // {"command":"request_approval","text":"...","timeout_sec":45} — raise a HITL challenge on the
+        // paired phone and wait for its answer. Used by the SWARM backup-key sudo helper. Denied when
+        // the companion socket is off, on timeout, or on rejection (request_human_approval handles all three).
+        if (cmd == "request_approval") {
+            std::string text = json_str(req, "text");
+            if (text.empty())
+                return "{\"status\":\"error\",\"message\":\"request_approval requires text\"}\n";
+            if (text.size() > 300) text.resize(300);
+            uint32_t timeout = 45;
+            auto tpos = req.find("\"timeout_sec\":");
+            if (tpos != std::string::npos) {
+                unsigned long v = std::strtoul(req.c_str() + tpos + 14, nullptr, 10);
+                if (v >= 10 && v <= 120) timeout = static_cast<uint32_t>(v);
+            }
+            bool approved = request_human_approval(text, timeout);
+            return std::string("{\"status\":\"ok\",\"approved\":") + (approved ? "true" : "false") + "}\n";
         }
 
         return "{\"status\":\"error\",\"message\":\"unknown JSON command: " + cmd + "\"}\n";
