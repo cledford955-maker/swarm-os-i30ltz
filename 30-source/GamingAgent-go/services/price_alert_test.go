@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 
@@ -175,6 +176,23 @@ func TestStartStop_Idempotent(t *testing.T) {
 	d.Start() // second call is a no-op — must not panic on channel reuse
 	d.Stop()
 	d.Stop() // second stop must not panic
+}
+
+func TestParsePaceDelayEnv(t *testing.T) {
+	os.Unsetenv("PRICE_ALERT_PACE_MS")
+	if got := parsePaceDelayEnv(); got != 150*time.Millisecond {
+		t.Errorf("default pace delay = %v, want 150ms", got)
+	}
+
+	t.Setenv("PRICE_ALERT_PACE_MS", "50")
+	if got := parsePaceDelayEnv(); got != 50*time.Millisecond {
+		t.Errorf("50ms pace delay = %v, want 50ms", got)
+	}
+
+	t.Setenv("PRICE_ALERT_PACE_MS", "invalid")
+	if got := parsePaceDelayEnv(); got != 150*time.Millisecond {
+		t.Errorf("invalid pace delay = %v, want 150ms", got)
+	}
 }
 
 // tiny helper — avoids pulling in io just for one call.

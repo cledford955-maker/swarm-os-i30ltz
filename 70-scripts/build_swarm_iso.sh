@@ -7,7 +7,7 @@ echo "[swarm-build] commit=$COMMIT"
 # 🚀 build_swarm_iso.sh (Auto-Version Bump Engine)
 # Automatically bumps the version (e.g. v6.2.1 -> v6.2.2 -> v6.2.3...) on
 # every single build, syncs version labels across all apps and profiles,
-# and writes ISOs ONLY to /mnt/ventoy/ISO/SWARM_OS/.
+# keeps one current ISO in the project. Normal changes go to the running system.
 #
 # Run WITHOUT sudo:  ./build_swarm_iso.sh
 # (it will ask for sudo password only when mkarchiso runs)
@@ -52,20 +52,20 @@ SOURCE_DIR="$LUCY/30-source"
 LUCY_SERVER_GO_DIR="$SOURCE_DIR/LucyServer-go"
 GOOGLE_WORKSPACE_DIR="$SOURCE_DIR/GoogleWorkspaceService"
 WORK_DIR="$LUCY/swarm_os_build_work"
-RELEASE_DIR="/mnt/ventoy/ISO/SWARM_OS"
+RELEASE_DIR="/mnt/Lucy/10-releases"
 ISO_MANAGER="$LUCY/70-scripts/swarm_iso_manager.py"
-# Fail before bumping VERSION if the real Ventoy drive is absent.
+# Fail before bumping VERSION if the project release directory is unavailable.
 python3 "$ISO_MANAGER" check
 exec 8>"$LUCY/70-scripts/.swarm-build.lock"
 flock -n 8 || { echo 'A SWARM ISO build is already running.' >&2; exit 1; }
 # Fail before version stamping or privileged work if tty ownership or runtime
 # executable modes would recreate the desktop boot regression.
 python3 "$LUCY/70-scripts/tests/test_desktop_boot_contract.py"
-sudo mkdir -p "$RELEASE_DIR/.incoming"
+mkdir -p "$RELEASE_DIR/.incoming"
 # The build lock above proves no canonical build is active. Remove orphaned ISO
 # output from interrupted runs before creating this run's one temporary image.
-sudo find "$RELEASE_DIR/.incoming" -mindepth 2 -maxdepth 2 -type f -iname '*.iso' -delete
-OUT_DIR=$(sudo mktemp -d "$RELEASE_DIR/.incoming/build.XXXXXXXX")
+find "$RELEASE_DIR/.incoming" -mindepth 2 -maxdepth 2 -type f -iname '*.iso' -delete
+OUT_DIR=$(mktemp -d "$RELEASE_DIR/.incoming/build.XXXXXXXX")
 cleanup_build() {
  # Only this run's temporary output. No published release is touched here.
  if [[ -n ${OUT_DIR:-} && $OUT_DIR == "$RELEASE_DIR/.incoming/build."* ]]; then
@@ -157,6 +157,8 @@ if [ -f "$COMPANION_GRADLE" ]; then
     sed -i "s|versionName = \".*\"|versionName = \"${NEW_VER}\"|" "$COMPANION_GRADLE"
     sed -i "s|versionCode = [0-9]\+|versionCode = $((60 + NEW_PATCH))|" "$COMPANION_GRADLE"
 fi
+
+# Electron is a Debian-only test harness and is not version-stamped or staged in SWARM OS.
 
 echo -e "  ${GREEN}✓ All application badges and ISO profiles stamped with v${NEW_VER}.${NC}"
 
@@ -459,7 +461,7 @@ else
     sudo SYSTEMD_LOG_LEVEL=err "$LUCY/70-scripts/mkarchiso-docker.sh" -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
 fi
 
-# Step 6: only accept an ISO produced in this run's unique Ventoy directory.
+# Step 6: only accept an ISO produced in this run's unique incoming directory.
 mapfile -d '' BUILT_IMAGES < <(find "$OUT_DIR" -maxdepth 1 -type f -name '*.iso' -print0)
 [[ ${#BUILT_IMAGES[@]} == 1 ]] || { echo 'Expected exactly one new ISO.' >&2; exit 1; }
 TARGET_ISO=${BUILT_IMAGES[0]}
@@ -474,9 +476,13 @@ else
   RESULT=failed
  fi
 fi
-# exFAT uses latest.txt, not symlinks or duplicate multi-GB latest/fallback ISOs.
-sudo python3 "$ISO_MANAGER" publish "$TARGET_ISO" "swarm-os-v${NEW_VER}-${COMMIT}.iso" --result "$RESULT"
-echo "ISO stored ONLY in $RELEASE_DIR; newest five SWARM ISOs retained (Recovery OS keeps its own five in ISO/recovery-os)."
+# mkarchiso runs as root and may leave the image root-owned. Hand ownership back
+# before publishing so the release store and manager lock stay user-writable.
+sudo chown "$(id -u):$(id -g)" "$TARGET_ISO"
+# Keep one project ISO and a small latest.txt pointer; no full-size aliases.
+python3 "$ISO_MANAGER" publish "$TARGET_ISO" "swarm-os-v${NEW_VER}-${COMMIT}.iso" --result "$RESULT"
+TARGET_ISO="$RELEASE_DIR/swarm-os-v${NEW_VER}-${COMMIT}.iso"
+echo "One current ISO stored in $RELEASE_DIR; normal updates are deployed live."
 if [[ $RESULT == failed ]]; then
  echo 'Boot gate failed. The previous latest pointer was not promoted to this build.' >&2
  exit 1
@@ -484,8 +490,8 @@ fi
 echo "Build complete ($RESULT). Stable status requires an explicit user decision."
 
 # ── SHA-256 checksum + optional GPG signature ────────────────────────────────
-# Generated immediately after a successful publish so downstream consumers
-# (Ventoy flash tooling, Companion integrity checks) can verify the image.
+# Generated immediately after a successful publish so VM and live-update
+# consumers can verify the image.
 # GPG signing is skipped if no signing key is configured — checksums alone
 # already protect against silent bit-rot and corrupted flashes.
 # (daily-audit upgrade #2, 2026-09-24)

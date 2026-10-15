@@ -22,6 +22,32 @@ class HubPage extends ConsumerStatefulWidget {
   ConsumerState<HubPage> createState() => _HubPageState();
 }
 
+/// Direct agent route target used by registry tiles and `/agent/:id` links.
+class AgentDetailRoute extends StatelessWidget {
+  final String agentId;
+
+  const AgentDetailRoute({super.key, required this.agentId});
+
+  @override
+  Widget build(BuildContext context) {
+    final agent = getAgent(agentId);
+    if (agent == null) {
+      return Scaffold(
+        backgroundColor: SwarmColors.bgBase,
+        body: Center(child: Text('Agent "$agentId" was not found.')),
+      );
+    }
+    return Scaffold(
+      backgroundColor: SwarmColors.bgBase,
+      appBar: AppBar(
+        title: Text(agent.name),
+        backgroundColor: SwarmColors.bgSurface,
+      ),
+      body: AgentWindowContent(agent: agent),
+    );
+  }
+}
+
 class _HubPageState extends ConsumerState<HubPage> {
   bool _showOrc = false;
 
@@ -49,6 +75,10 @@ class _HubPageState extends ConsumerState<HubPage> {
           AgentGrid(
             agents: agents,
             onAgentTap: (agent) {
+              if (agent.id == 'apex') {
+                context.go('/apex');
+                return;
+              }
               if (agent.id == 'forge') {
                 context.go('/forge');
                 return;
@@ -62,14 +92,16 @@ class _HubPageState extends ConsumerState<HubPage> {
                 return;
               }
               ref.read(windowProvider.notifier).openWindow(
-                AppWindow(
-                  id: 'agent_${agent.id}',
-                  title: '${agent.name} · ${agent.role}',
-                  position: const Offset(100, 50),
-                  size: agent.id == 'forge' ? const Size(900, 650) : const Size(700, 500),
-                  content: AgentWindowContent(agent: agent),
-                ),
-              );
+                    AppWindow(
+                      id: 'agent_${agent.id}',
+                      title: '${agent.name} · ${agent.role}',
+                      position: const Offset(100, 50),
+                      size: agent.id == 'forge'
+                          ? const Size(900, 650)
+                          : const Size(700, 500),
+                      content: AgentWindowContent(agent: agent),
+                    ),
+                  );
             },
           ),
           DesktopAppsGrid(), // OS APPS RENDERED HERE
@@ -92,7 +124,8 @@ class _AgentWindowContentState extends State<AgentWindowContent>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
 
-  bool get _isVault => ['document_manager', 'vault', 'coder', 'droid'].contains(widget.agent.id);
+  bool get _isVault =>
+      ['document_manager', 'vault', 'coder', 'droid'].contains(widget.agent.id);
   bool get _isForge => widget.agent.id == 'forge';
 
   @override
@@ -125,7 +158,8 @@ class _AgentWindowContentState extends State<AgentWindowContent>
             ),
             child: Row(
               children: [
-                const Icon(Icons.android_rounded, size: 16, color: SwarmColors.agentCyan),
+                const Icon(Icons.android_rounded,
+                    size: 16, color: SwarmColors.agentCyan),
                 const SizedBox(width: 8),
                 Text(
                   'DROID AT LUCILLE\'S CORE',
@@ -137,11 +171,13 @@ class _AgentWindowContentState extends State<AgentWindowContent>
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: SwarmColors.agentCyan.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: SwarmColors.agentCyan.withValues(alpha: 0.4)),
+                    border: Border.all(
+                        color: SwarmColors.agentCyan.withValues(alpha: 0.4)),
                   ),
                   child: const Text(
                     'AI CODER',
@@ -172,9 +208,13 @@ class _AgentWindowContentState extends State<AgentWindowContent>
             ),
             tabs: [
               const Tab(icon: Icon(Icons.chat_rounded, size: 14), text: 'CHAT'),
-              const Tab(icon: Icon(Icons.terminal_rounded, size: 14), text: 'TERMINAL'),
+              const Tab(
+                  icon: Icon(Icons.terminal_rounded, size: 14),
+                  text: 'TERMINAL'),
               if (_isVault)
-                const Tab(icon: Icon(Icons.folder_open_rounded, size: 14), text: 'FILES'),
+                const Tab(
+                    icon: Icon(Icons.folder_open_rounded, size: 14),
+                    text: 'FILES'),
             ],
           ),
         ),
@@ -189,8 +229,7 @@ class _AgentWindowContentState extends State<AgentWindowContent>
                 agentName: widget.agent.name,
                 accentColor: widget.agent.accent,
               ),
-              if (_isVault)
-                const VaultFileBrowser(),
+              if (_isVault) const VaultFileBrowser(),
             ],
           ),
         ),

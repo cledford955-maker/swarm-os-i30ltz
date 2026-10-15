@@ -9,19 +9,14 @@ After=lucy-server.service
 Type=simple
 User=swarm
 WorkingDirectory=/opt/swarm_os/GoogleWorkspaceService
-# google_tokens/ holds OAuth credentials written after the user's first
-# Google login — it doesn't exist in the ISO image, so create it here
-# (same pattern as gaming-agent.service/lucy-server.service provisioning
-# /etc/swarm_os) instead of baking permissions for a path that isn't there
-# yet at build time.
-ExecStartPre=+/usr/bin/mkdir -p /opt/swarm_os/GoogleWorkspaceService/google_tokens
-ExecStartPre=+/usr/bin/chown swarm:swarm /opt/swarm_os/GoogleWorkspaceService/google_tokens
-ExecStartPre=+/usr/bin/chmod 750 /opt/swarm_os/GoogleWorkspaceService/google_tokens
+ExecStartPre=+/usr/bin/install -d -o swarm -g swarm -m 0700 /var/lib/swarm/google-workspace
 ExecStart=/usr/bin/dotnet /opt/swarm_os/GoogleWorkspaceService/GoogleWorkspaceService.dll
 Restart=on-failure
 RestartSec=5
 Environment=ASPNETCORE_ENVIRONMENT=Production
-Environment=ASPNETCORE_URLS=http://0.0.0.0:8399
+Environment=ASPNETCORE_URLS=http://127.0.0.1:8399
+Environment=SWARM_GOOGLE_DATA_DIR=/var/lib/swarm/google-workspace
+UMask=0077
 # Secrets live only in tmpfs, unsealed at boot by swarm-secrets.service.
 # The leading '-' is deliberate: an ISO built with no keys, or one where
 # the passphrase was skipped, still starts — the service reports AI

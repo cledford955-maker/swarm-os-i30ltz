@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#5a189a"/>
+      <stop offset="100%" stop-color="#090212"/>
+    </radialGradient>
+    
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="256" height="256" rx="50" fill="url(#bgGlow)" stroke="#b52bfa" stroke-width="4"/>
+
+  <path d="M170 20 L90 130 L140 130 L80 240 L210 110 L150 110 Z" fill="#b52bfa" filter="url(#glow)" opacity="0.7"/>
+  
+  <path d="M100 40 L40 140 L90 140 L50 220 L160 120 L100 120 Z" fill="#4d4dff" filter="url(#glow)" opacity="0.5"/>
+
+  <text x="128" y="190" font-family="'Segoe UI', Tahoma, sans-serif" font-size="150" font-weight="900" fill="#ffffff" text-anchor="middle" filter="url(#glow)">L</text>
+</svg>

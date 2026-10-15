@@ -71,11 +71,15 @@ class SystemLauncher {
               backgroundColor: SwarmColors.bgElevated,
               content: Row(
                 children: [
-                  const Icon(Icons.rocket_launch, color: SwarmColors.accent, size: 16),
+                  const Icon(Icons.rocket_launch,
+                      color: SwarmColors.accent, size: 16),
                   const SizedBox(width: 8),
                   Text(
-                    displayName != null ? '🚀 Launched $displayName' : '🚀 Launched $command',
-                    style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12),
+                    displayName != null
+                        ? '🚀 Launched $displayName'
+                        : '🚀 Launched $command',
+                    style: const TextStyle(
+                        color: SwarmColors.textPrimary, fontSize: 12),
                   ),
                 ],
               ),
@@ -111,17 +115,24 @@ class SystemLauncher {
   // that doesn't exist. firejail auto-selects its bundled per-app profile
   // (e.g. /etc/firejail/firefox.profile) when the wrapped binary name matches
   // one, and falls back to its generic default profile otherwise.
-  static const String _fj = r'$(command -v firejail >/dev/null 2>&1 && echo firejail)';
+  static const String _fj =
+      r'$(command -v firejail >/dev/null 2>&1 && echo firejail)';
 
   // Pre-configured fallback commands for core OS apps
-  static const String terminalCmd = 'alacritty || foot || xterm || konsole || tilix || xfce4-terminal';
-  static const String browserCmd = '$_fj firefox || $_fj chromium || $_fj google-chrome-stable || $_fj epiphany';
-  static const String fileManagerCmd = 'thunar || pcmanfm || dolphin || nautilus';
-  static const String monitorCmd = 'foot -e btop || alacritty -e btop || xterm -e htop || alacritty -e htop || foot -e htop || btop || htop';
-  static const String antigravityIdeCmd = 'antigravity || "/run/media/i30ltz/lucy-master/Antigravity-x64/antigravity" || code';
+  static const String terminalCmd =
+      'alacritty || foot || xterm || konsole || tilix || xfce4-terminal';
+  static const String browserCmd =
+      '$_fj firefox || $_fj chromium || $_fj google-chrome-stable || $_fj epiphany';
+  static const String fileManagerCmd =
+      'thunar || pcmanfm || dolphin || nautilus';
+  static const String monitorCmd =
+      'foot -e btop || alacritty -e btop || xterm -e htop || alacritty -e htop || foot -e htop || btop || htop';
+  static const String antigravityIdeCmd =
+      'antigravity || "/run/media/i30ltz/lucy-master/Antigravity-x64/antigravity" || code';
   // chromium is the installed browser on SWARM OS (not google-chrome-stable) —
   // always try chromium before google-chrome-stable to avoid a silent fallback gap.
-  static const String claudeDesktopCmd = 'claude-desktop || $_fj chromium --app=https://claude.ai || $_fj google-chrome-stable --app=https://claude.ai || $_fj firefox --new-window https://claude.ai';
+  static const String claudeDesktopCmd =
+      'claude-desktop || $_fj chromium --app=https://claude.ai || $_fj google-chrome-stable --app=https://claude.ai || $_fj firefox --new-window https://claude.ai';
   // The `claude` CLI isn't a pacman/AUR package — it's installed per-user via
   // `npm install -g @anthropic-ai/claude-code`. Check for it on PATH first so
   // a missing install surfaces a real, actionable message in a terminal
@@ -143,11 +154,40 @@ class SystemLauncher {
   // ChatGPT: no official Linux desktop app exists, so launch any native
   // wrapper first, then fall back to a Chromium --app window (chromeless,
   // looks like a desktop app) and finally a plain browser window.
-  static const String chatGptCmd =
-      'chatgpt-desktop || chatgpt-desktop-git || '
+  static const String chatGptCmd = 'chatgpt-desktop || chatgpt-desktop-git || '
       '$_fj chromium --app=https://chatgpt.com || '
       '$_fj google-chrome-stable --app=https://chatgpt.com || '
       '$_fj firefox --new-window https://chatgpt.com || xdg-open https://chatgpt.com';
+
+  /// Opens a command in a real terminal window and leaves the result visible
+  /// until the user dismisses it. Use for CLI actions launched from app tiles:
+  /// `launch()` intentionally detaches GUI apps and discards their stdio.
+  static String terminalCommand(String command) {
+    final script = 'set +e\n$command\n'
+        r'status=$?; echo; echo "Command finished with exit code $status."; '
+        r'read -r -p "Press Enter to close this terminal..." _; exit "$status"';
+    final quotedScript = shellQuote(script);
+    return 'alacritty -e bash -lc $quotedScript || '
+        'foot -e bash -lc $quotedScript || '
+        'xterm -e bash -lc $quotedScript || '
+        'konsole -e bash -lc $quotedScript || '
+        'tilix -e bash -lc $quotedScript';
+  }
+
+  /// POSIX-shell single-quote escaping for a single argument.
+  static String shellQuote(String value) =>
+      "'${value.replaceAll("'", "'\\''")}'";
+
+  static Future<bool> launchTerminalCommand(
+    BuildContext? context,
+    String command, {
+    String? displayName,
+  }) =>
+      launch(
+        context,
+        terminalCommand(command),
+        displayName: displayName ?? command,
+      );
 
   static Future<bool> launchAntigravity(BuildContext? context) {
     return launch(context, antigravityIdeCmd, displayName: 'Antigravity IDE');

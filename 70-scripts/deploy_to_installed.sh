@@ -13,7 +13,8 @@
 #   opt/swarm_os/GamingAgent/     gaming-agent
 #   opt/swarm_os/LucyServer/      lucy-server
 #   usr/local/bin/swarm-memory
-# It does NOT touch the Arch system packages, /etc, fstab, users or home dirs.
+# It does NOT touch Arch packages, fstab, users or home dirs. After verifying
+# the payloads it updates /etc/swarm-release so the installed version is honest.
 #
 # Safety, in this order — nothing is written until every check has passed:
 #   * the target must be the swarm-root partition, mounted, not the running root;
@@ -61,7 +62,7 @@ TOP=$(findmnt -rn -S "$ROOT_DEV" -o TARGET | head -n1 || true)
 R=$TOP/@
 [ -f "$R/etc/swarm-release" ] || die "$R does not look like a SWARM OS root (no etc/swarm-release)"
 [ -d "$R/opt/swarm_os" ] || die "$R/opt/swarm_os missing"
-DIRS="opt/swarm_os opt/swarm_os/GamingAgent opt/swarm_os/LucyServer usr/local/bin"
+DIRS="etc opt/swarm_os opt/swarm_os/GamingAgent opt/swarm_os/LucyServer usr/local/bin"
 [ "$FLUTTER_ONLY" = 1 ] && DIRS="opt/swarm_os"
 for d in $DIRS; do
   [ -d "$R/$d" ] || die "$R/$d missing"
@@ -150,5 +151,29 @@ if [ "$DRY" = 0 ]; then
   # file root-owned, which must not turn a good deploy into a failed run.
   { printf 'deployed %s from %s\n' "$STAMP" "$SRC" >> "$R/opt/swarm_os/.deploy-log"; } 2>/dev/null \
     || echo "  note: could not append to $R/opt/swarm_os/.deploy-log (owned by $(stat -c %U "$R/opt/swarm_os/.deploy-log" 2>/dev/null || echo '?'))"
+fi
+
+# Record the source version only after all deployed payloads match. Dirty source
+# trees are labelled explicitly rather than pretending the binaries are a commit.
+VERSION_FILE="${SWARM_BUILD_ROOT:-/mnt/swarmbuild}/VERSION"
+[ -s "$VERSION_FILE" ] || die "missing source version file: $VERSION_FILE"
+SWARM_VERSION=$(tr -d '[:space:]' < "$VERSION_FILE")
+[[ "$SWARM_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "invalid source version: $SWARM_VERSION"
+SWARM_COMMIT=$(git -C "${SWARM_BUILD_ROOT:-/mnt/swarmbuild}" rev-parse --short=8 HEAD 2>/dev/null || echo unknown)
+if [ -n "$(git -C "${SWARM_BUILD_ROOT:-/mnt/swarmbuild}" status --porcelain 2>/dev/null)" ]; then
+  SWARM_COMMIT+="-dirty"
+fi
+SWARM_DATE=$(date +%Y%m%d)
+if [ "$FLUTTER_ONLY" = 1 ]; then
+  say 'release marker left unchanged for --flutter-only deployment'
+elif [ "$DRY" = 1 ]; then
+  say "[dry-run] would set $R/etc/swarm-release to v$SWARM_VERSION ($SWARM_COMMIT, $SWARM_DATE)"
+else
+  RELEASE_TMP=$(mktemp "$R/etc/swarm-release.new.XXXXXX")
+  printf 'SWARM_VERSION=%s\nSWARM_COMMIT=%s\nSWARM_DATE=%s\n' \
+    "$SWARM_VERSION" "$SWARM_COMMIT" "$SWARM_DATE" > "$RELEASE_TMP"
+  chmod --reference="$R/etc/swarm-release" "$RELEASE_TMP"
+  mv -f "$RELEASE_TMP" "$R/etc/swarm-release"
+  say "installed version marker updated to v$SWARM_VERSION ($SWARM_COMMIT)"
 fi
 echo "done. Old versions are the *.bak-$STAMP next to each component."

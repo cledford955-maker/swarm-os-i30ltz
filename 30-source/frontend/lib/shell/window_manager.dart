@@ -11,6 +11,7 @@ class AppWindow {
   final Size size;
   final bool isFocused;
   final bool isMaximized;
+  final int desktopPage;
   final Widget content;
   final DateTime createdAt;
 
@@ -21,6 +22,7 @@ class AppWindow {
     required this.size,
     this.isFocused = true,
     this.isMaximized = false,
+    this.desktopPage = 0,
     required this.content,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
@@ -30,6 +32,7 @@ class AppWindow {
     Size? size,
     bool? isFocused,
     bool? isMaximized,
+    int? desktopPage,
     Widget? content,
   }) {
     return AppWindow(
@@ -39,6 +42,7 @@ class AppWindow {
       size: size ?? this.size,
       isFocused: isFocused ?? this.isFocused,
       isMaximized: isMaximized ?? this.isMaximized,
+      desktopPage: desktopPage ?? this.desktopPage,
       content: content ?? this.content,
       createdAt: createdAt,
     );
@@ -47,23 +51,37 @@ class AppWindow {
 
 /// State notifier to manage the list of floating windows.
 class WindowManager extends StateNotifier<List<AppWindow>> {
-  WindowManager() : super([]);
+  final int Function() _readCurrentPage;
+  final void Function(int) _setCurrentPage;
+
+  WindowManager(this._readCurrentPage, this._setCurrentPage) : super([]);
 
   void openWindow(AppWindow window) {
     LaunchStatusRegistry.setRunning(window.id);
-    // Unfocus all other windows
-    final updated = state.map((w) => w.copyWith(isFocused: false)).toList();
+    final page = _readCurrentPage();
+    // Keep focus state on other desktops; only the current desktop gets focus.
+    final updated = state.map((w) => w.copyWith(
+      isFocused: w.desktopPage == page ? false : w.isFocused,
+    )).toList();
 
     // Check if window already exists
     final existingIndex = updated.indexWhere((w) => w.id == window.id);
     if (existingIndex >= 0) {
       final existing = updated.removeAt(existingIndex);
-      updated.add(existing.copyWith(isFocused: true)); // Move to front
+      updated.add(existing.copyWith(
+        isFocused: true,
+        desktopPage: page,
+      )); // Move the existing instance to this desktop and bring it forward
     } else {
       // Every new window starts centered between the desktop icon rails,
       // whatever position the caller asked for.
       final spot = DesktopGeometry.place(window.size, updated.length);
-      updated.add(window.copyWith(position: spot.topLeft, size: spot.size, isFocused: true));
+      updated.add(window.copyWith(
+        position: spot.topLeft,
+        size: spot.size,
+        isFocused: true,
+        desktopPage: page,
+      ));
     }
     state = updated;
   }
@@ -71,23 +89,35 @@ class WindowManager extends StateNotifier<List<AppWindow>> {
   void toggleMaximize(String id) {
     state = [
       for (final w in state)
-        if (w.id == id) w.copyWith(isMaximized: !w.isMaximized, isFocused: true) else w.copyWith(isFocused: false)
+        if (w.id == id)
+          w.copyWith(isMaximized: !w.isMaximized, isFocused: true)
+        else if (w.desktopPage == _readCurrentPage())
+          w.copyWith(isFocused: false)
+        else
+          w
     ];
   }
 
-  void closeWindow(String id) {
-    LaunchStatusRegistry.setClosed(id);
-    final updated = state.where((w) => w.id != id).toList();
-    if (updated.isNotEmpty && state.firstWhere((w) => w.id == id).isFocused) {
-      // Focus the new top window if the closed one was focused
-      final last = updated.removeLast();
-      updated.add(last.copyWith(isFocused: true));
-    }
+  void moveWindowToNextPage(String id) {
+    final index = state.indexWhere((w) => w.id == id);
+    if (index < 0) return;
+    final targetPage = state[index].desktopPage + 1;
+    final updated = state.map((w) => w.copyWith(
+      desktopPage: w.id == id ? targetPage : w.desktopPage,
+      isFocused: w.id == id ? true : (w.desktopPage == targetPage ? false : w.isFocused),
+    )).toList();
+    final moved = updated.removeAt(index);
+    updated.add(moved);
     state = updated;
+    _setCurrentPage(targetPage);
   }
 
   void focusWindow(String id) {
-    final updated = state.map((w) => w.copyWith(isFocused: w.id == id)).toList();
+    final target = state.where((w) => w.id == id).firstOrNull;
+    if (target == null) return;
+    final updated = state.map((w) => w.copyWith(
+      isFocused: w.id == id ? true : (w.desktopPage == target.desktopPage ? false : w.isFocused),
+    )).toList();
     
     final index = updated.indexWhere((w) => w.id == id);
     if (index >= 0) {
@@ -156,5 +186,12 @@ class WindowManager extends StateNotifier<List<AppWindow>> {
 
 /// Riverpod provider for the window manager system.
 final windowProvider = StateNotifierProvider<WindowManager, List<AppWindow>>((ref) {
-  return WindowManager();
+  return WindowManager(
+    () => ref.read(activeDesktopPageProvider),
+    (page) => ref.read(activeDesktopPageProvider.notifier).state = page,
+  );
 });
+
+/// The currently visible workspace. Pages are created simply by navigating
+/// forward; window instances and their contents remain in [windowProvider].
+final activeDesktopPageProvider = StateProvider<int>((ref) => 0);

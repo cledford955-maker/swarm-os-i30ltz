@@ -175,7 +175,8 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
     _slots = [];
     for (int r = 0; r < widget.rows; r++) {
       for (int c = 0; c < widget.columns; c++) {
-        if (widget.checker && (r + (widget.mirror ? widget.columns - 1 - c : c)) % 2 != 0) {
+        if (widget.checker &&
+            (r + (widget.mirror ? widget.columns - 1 - c : c)) % 2 != 0) {
           continue;
         }
         _slots.add(HexSlot(r, c));
@@ -200,7 +201,8 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
   Offset _slotCenter(int row, int col, double hexW, double hexH) {
     if (widget.checker) {
       final cellW = hexW / _checkerFill;
-      return Offset(col * cellW + cellW / 2, row * hexH * _checkerRowStep + hexH / 2);
+      return Offset(
+          col * cellW + cellW / 2, row * hexH * _checkerRowStep + hexH / 2);
     }
     final rowOffset = (row % 2 == 1) ? hexW * 0.5 : 0.0;
     final x = col * hexW + rowOffset + hexW / 2;
@@ -271,17 +273,21 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
             // Checkerboard slot shadows (omitted in wallpaper-overlay mode)
             if (widget.showSlotBackgrounds)
               ..._slots.map((slot) => Positioned(
-                left: slot.center.dx - hexW / 2,
-                top: slot.center.dy - hexH / 2,
-                child: _buildSlotBackground(slot, hexW, hexH),
-              )),
+                    left: slot.center.dx - hexW / 2,
+                    top: slot.center.dy - hexH / 2,
+                    child: _buildSlotBackground(slot, hexW, hexH),
+                  )),
 
             // Agents in slots (non-dragging, non-swapping)
             ..._slotMap.entries
-                .where((e) => e.value.id != _draggingId && e.value.id != _swapA && e.value.id != _swapB)
+                .where((e) =>
+                    e.value.id != _draggingId &&
+                    e.value.id != _swapA &&
+                    e.value.id != _swapB)
                 .map((e) {
               final agent = e.value;
-              final center = _slotCenter(agent.slotRow, agent.slotCol, hexW, hexH);
+              final center =
+                  _slotCenter(agent.slotRow, agent.slotCol, hexW, hexH);
               return Positioned(
                 left: center.dx - hexW / 2,
                 top: center.dy - hexH / 2,
@@ -304,7 +310,9 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
                 top: _dragOffset.dy - hexH / 2,
                 child: _buildHexAgent(
                   widget.agents.firstWhere((a) => a.id == _draggingId),
-                  hexW, hexH, true,
+                  hexW,
+                  hexH,
+                  true,
                 ),
               ),
           ],
@@ -332,8 +340,10 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
               size: Size(w, h),
               painter: _HexPainter(
                 fillColor: isDark
-                    ? const Color(0xFF0E0E22).withValues(alpha: isHover ? 0.9 : 0.6)
-                    : const Color(0xFF12122E).withValues(alpha: isHover ? 0.9 : 0.5),
+                    ? const Color(0xFF0E0E22)
+                        .withValues(alpha: isHover ? 0.9 : 0.6)
+                    : const Color(0xFF12122E)
+                        .withValues(alpha: isHover ? 0.9 : 0.5),
                 strokeColor: isHover
                     ? const Color(0xFF00D4FF).withValues(alpha: 0.5)
                     : const Color(0xFF1E1E44).withValues(alpha: 0.3 + pulse),
@@ -341,7 +351,8 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
               ),
             ),
             if (isEmpty && !isHover)
-              WaspNestDecoration(size: min(w, h) * 0.86, seed: slot.key.hashCode),
+              WaspNestDecoration(
+                  size: min(w, h) * 0.86, seed: slot.key.hashCode),
           ],
         );
       },
@@ -350,33 +361,44 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
 
   Widget _buildHexAgent(HexAgent agent, double w, double h, bool dragging) {
     final child = GestureDetector(
-      onTapDown: dragging ? null : (details) => triggerSwarmBurst(context, details.globalPosition),
+      onTapDown: dragging
+          ? null
+          : (details) => triggerSwarmBurst(context, details.globalPosition),
       onTap: dragging ? null : () => widget.onAgentOpen?.call(agent),
       onSecondaryTapUp: dragging
           ? null
-          : (details) => widget.onAgentContextMenu?.call(agent, details.globalPosition),
-      onLongPressStart: dragging ? null : (details) {
-        setState(() {
-          _draggingId = agent.id;
-          _dragOffset = _slotCenter(agent.slotRow, agent.slotCol, w, h);
-        });
-      },
-      onPanStart: dragging ? null : (details) {
-        setState(() {
-          _draggingId = agent.id;
-          _dragOffset = _slotCenter(agent.slotRow, agent.slotCol, w, h);
-        });
-      },
-      onPanUpdate: _draggingId == agent.id ? (details) {
-        setState(() {
-          _dragOffset += details.delta;
-          final nearest = _nearestSlot(_dragOffset, w, h);
-          _hoverSlotKey = nearest?.key;
-        });
-      } : null,
-      onPanEnd: _draggingId == agent.id ? (details) {
-        _handleDrop(agent, w, h);
-      } : null,
+          : (details) =>
+              widget.onAgentContextMenu?.call(agent, details.globalPosition),
+      onLongPressStart: dragging
+          ? null
+          : (details) {
+              setState(() {
+                _draggingId = agent.id;
+                _dragOffset = _slotCenter(agent.slotRow, agent.slotCol, w, h);
+              });
+            },
+      onPanStart: dragging
+          ? null
+          : (details) {
+              setState(() {
+                _draggingId = agent.id;
+                _dragOffset = _slotCenter(agent.slotRow, agent.slotCol, w, h);
+              });
+            },
+      onPanUpdate: _draggingId == agent.id
+          ? (details) {
+              setState(() {
+                _dragOffset += details.delta;
+                final nearest = _nearestSlot(_dragOffset, w, h);
+                _hoverSlotKey = nearest?.key;
+              });
+            }
+          : null,
+      onPanEnd: _draggingId == agent.id
+          ? (details) {
+              _handleDrop(agent, w, h);
+            }
+          : null,
       child: _HexTile(
         agent: agent,
         width: w,
@@ -417,7 +439,8 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
     });
   }
 
-  void _animateSwap(String keyA, String keyB, HexAgent a, HexAgent b, double w, double h) {
+  void _animateSwap(
+      String keyA, String keyB, HexAgent a, HexAgent b, double w, double h) {
     setState(() {
       _swapA = a.id;
       _swapB = b.id;
@@ -447,12 +470,22 @@ class HexGridState extends State<HexGrid> with TickerProviderStateMixin {
             Positioned(
               left: posA.dx - w / 2,
               top: posA.dy - h / 2,
-              child: _HexTile(agent: agentA, width: w, height: h, dragging: false, pulseAnimation: _pulseCtrl),
+              child: _HexTile(
+                  agent: agentA,
+                  width: w,
+                  height: h,
+                  dragging: false,
+                  pulseAnimation: _pulseCtrl),
             ),
             Positioned(
               left: posB.dx - w / 2,
               top: posB.dy - h / 2,
-              child: _HexTile(agent: agentB, width: w, height: h, dragging: false, pulseAnimation: _pulseCtrl),
+              child: _HexTile(
+                  agent: agentB,
+                  width: w,
+                  height: h,
+                  dragging: false,
+                  pulseAnimation: _pulseCtrl),
             ),
           ]);
         },
@@ -548,9 +581,14 @@ class _HexTile extends StatelessWidget {
                   CustomPaint(
                     size: Size(width, height),
                     painter: _HexPainter(
-                      fillColor: agent.bgColor.withValues(alpha: dragging ? 0.95 : 0.85),
-                      strokeColor: agent.color.withValues(
-                        alpha: (dragging ? 0.8 : 0.3 + pulse * 0.1) * (agent.mock ? 0.5 : 1.0)),
+                      fillColor: agent.bgColor
+                          .withValues(alpha: dragging ? 0.95 : 0.85),
+                      strokeColor: (agent.id == 'gaming'
+                              ? const Color(0xFF76B900)
+                              : agent.color)
+                          .withValues(
+                              alpha: (dragging ? 0.8 : 0.3 + pulse * 0.1) *
+                                  (agent.mock ? 0.5 : 1.0)),
                       strokeWidth: dragging ? 2.5 : 1.5,
                       glow: dragging,
                       glowColor: agent.color,
@@ -591,96 +629,108 @@ class _HexTile extends StatelessWidget {
                         ),
                       ),
                     ),
-              // Content
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // User-installed apps render their real icon file (from the
-                  // .desktop entry) instead of a generic Material glyph.
-                  if (agent.iconFilePath != null && agent.iconFilePath!.isNotEmpty)
-                    SizedBox(
-                      width: width * 0.34,
-                      height: width * 0.34,
-                      child: Image.file(
-                        File(agent.iconFilePath!),
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => AppIconOrb(
+                  // Content
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // User-installed apps render their real icon file (from the
+                      // .desktop entry) instead of a generic Material glyph.
+                      if (agent.iconFilePath != null &&
+                          agent.iconFilePath!.isNotEmpty)
+                        SizedBox(
+                          width: width * 0.34,
+                          height: width * 0.34,
+                          child: Image.file(
+                            File(agent.iconFilePath!),
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => AppIconOrb(
+                              icon: agent.icon,
+                              color: agent.color,
+                              size: width * 0.34,
+                              dimmed: agent.mock,
+                            ),
+                          ),
+                        )
+                      else
+                        // Featured agents get their animated 3-D orb; every
+                        // other tile gets the same glossy sphere treatment
+                        // around its glyph.
+                        AgentAvatar.maybeFor(
+                          agentId: agent.id,
                           icon: agent.icon,
                           color: agent.color,
                           size: width * 0.34,
                           dimmed: agent.mock,
                         ),
+                      SizedBox(height: height * 0.03),
+                      Text(
+                        agent.name,
+                        style: TextStyle(
+                          color: Colors.white
+                              .withValues(alpha: agent.mock ? 0.4 : 0.8),
+                          fontSize: width * 0.12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    )
-                  else
-                    // Featured agents get their animated 3-D orb; every
-                    // other tile gets the same glossy sphere treatment
-                    // around its glyph.
-                    AgentAvatar.maybeFor(
-                      agentId: agent.id,
-                      icon: agent.icon,
-                      color: agent.color,
-                      size: width * 0.34,
-                      dimmed: agent.mock,
-                    ),
-                  SizedBox(height: height * 0.03),
-                  Text(
-                    agent.name,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: agent.mock ? 0.4 : 0.8),
-                      fontSize: width * 0.12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.3,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    ],
                   ),
+                  // "SOON" badge — idea not wired up yet
+                  if (agent.mock)
+                    Positioned(
+                      bottom: height * 0.06,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFF0A0A18).withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              width: 0.75),
+                        ),
+                        child: Text(
+                          'SOON',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.55),
+                            fontSize: width * 0.075,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Drag indicator
+                  if (dragging)
+                    Positioned(
+                      top: height * 0.08,
+                      right: width * 0.15,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00D4FF),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                                color: const Color(0xFF00D4FF)
+                                    .withValues(alpha: 0.5),
+                                blurRadius: 6)
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
-              // "SOON" badge — idea not wired up yet
-              if (agent.mock)
-                Positioned(
-                  bottom: height * 0.06,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0A0A18).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 0.75),
-                    ),
-                    child: Text(
-                      'SOON',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.55),
-                        fontSize: width * 0.075,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ),
-                ),
-              // Drag indicator
-              if (dragging)
-                Positioned(
-                  top: height * 0.08,
-                  right: width * 0.15,
-                  child: Container(
-                    width: 8, height: 8,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00D4FF),
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: const Color(0xFF00D4FF).withValues(alpha: 0.5), blurRadius: 6)],
-                    ),
-                  ),
-                ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
-  },
-  );
   }
 }
 
@@ -776,8 +826,10 @@ class _HexPainter extends CustomPainter {
       // (bottom-right), instead of one flat color. Same technique as a
       // CSS glossy-button bevel.
       final hsl = HSLColor.fromColor(fillColor);
-      final lightColor = hsl.withLightness((hsl.lightness + 0.14).clamp(0.0, 1.0)).toColor();
-      final darkColor = hsl.withLightness((hsl.lightness - 0.10).clamp(0.0, 1.0)).toColor();
+      final lightColor =
+          hsl.withLightness((hsl.lightness + 0.14).clamp(0.0, 1.0)).toColor();
+      final darkColor =
+          hsl.withLightness((hsl.lightness - 0.10).clamp(0.0, 1.0)).toColor();
       final rect = Offset.zero & size;
       canvas.drawPath(
         path,
@@ -785,7 +837,10 @@ class _HexPainter extends CustomPainter {
           ..shader = LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [lightColor.withValues(alpha: fillColor.a), darkColor.withValues(alpha: fillColor.a)],
+            colors: [
+              lightColor.withValues(alpha: fillColor.a),
+              darkColor.withValues(alpha: fillColor.a)
+            ],
           ).createShader(rect),
       );
 
@@ -794,7 +849,8 @@ class _HexPainter extends CustomPainter {
       // when an image is about to sit on top instead.
       canvas.save();
       canvas.clipPath(path);
-      final highlightRect = Rect.fromLTWH(size.width * 0.12, -size.height * 0.28, size.width * 0.76, size.height * 0.6);
+      final highlightRect = Rect.fromLTWH(size.width * 0.12,
+          -size.height * 0.28, size.width * 0.76, size.height * 0.6);
       canvas.drawOval(
         highlightRect,
         Paint()
@@ -805,18 +861,23 @@ class _HexPainter extends CustomPainter {
     }
 
     // Stroke
-    canvas.drawPath(path, Paint()
-      ..color = strokeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeJoin = StrokeJoin.round);
+    canvas.drawPath(
+        path,
+        Paint()
+          ..color = strokeColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeJoin = StrokeJoin.round);
   }
 
   @override
   bool shouldRepaint(covariant _HexPainter old) =>
-      fillColor != old.fillColor || strokeColor != old.strokeColor ||
-      strokeWidth != old.strokeWidth || glow != old.glow ||
-      glowAlpha != old.glowAlpha || glowRadius != old.glowRadius ||
+      fillColor != old.fillColor ||
+      strokeColor != old.strokeColor ||
+      strokeWidth != old.strokeWidth ||
+      glow != old.glow ||
+      glowAlpha != old.glowAlpha ||
+      glowRadius != old.glowRadius ||
       hasImageOverlay != old.hasImageOverlay;
 }
 

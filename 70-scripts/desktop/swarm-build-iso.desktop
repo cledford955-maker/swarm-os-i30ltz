@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=SWARM OS — Build ISO
-Comment=Build directly to Ventoy; retain 10 rolling builds and stable releases
+Comment=Build one current project ISO; normal updates deploy live
 Exec=/mnt/Lucy/70-scripts/build_swarm_iso.sh
 Path=/mnt/Lucy
 Icon=media-optical

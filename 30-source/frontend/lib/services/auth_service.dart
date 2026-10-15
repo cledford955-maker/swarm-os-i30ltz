@@ -22,6 +22,9 @@ class PasskeyCredential {
   }
 }
 
+/// SWARM app passkey/WebAuthn API. Google Workspace OAuth is server-owned and
+/// shared via GoogleWorkspaceService; this class does not store Google login
+/// credentials or tokens on the client.
 class AuthService {
   static String get baseUrl => SwarmConfig.httpBase;
 

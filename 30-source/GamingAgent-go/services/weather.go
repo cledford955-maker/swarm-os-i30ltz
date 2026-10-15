@@ -24,6 +24,7 @@ var (
 	weatherMu       sync.Mutex
 	weatherCached   string
 	weatherCachedAt time.Time
+	weatherFetchMu  sync.Mutex
 	// Overridable in tests.
 	weatherBaseURL     = func() string {
 		if v := os.Getenv("WTTR_BASE_URL"); v != "" {
@@ -37,6 +38,18 @@ var (
 // fetchWeatherSummary returns a short "Current weather" block for Lucille's
 // context, or "" on any failure. Cached for weatherTTL.
 func fetchWeatherSummary() string {
+	weatherMu.Lock()
+	if weatherCached != "" && time.Since(weatherCachedAt) < weatherTTL {
+		s := weatherCached
+		weatherMu.Unlock()
+		return s
+	}
+	weatherMu.Unlock()
+
+	weatherFetchMu.Lock()
+	defer weatherFetchMu.Unlock()
+
+	// Double-check under fetch lock to prevent TOCTOU race
 	weatherMu.Lock()
 	if weatherCached != "" && time.Since(weatherCachedAt) < weatherTTL {
 		s := weatherCached

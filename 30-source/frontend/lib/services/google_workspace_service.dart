@@ -39,6 +39,11 @@ class GoogleAuthStatus {
 
 /// Thin client for LucyServer's Google OAuth proxy.
 ///
+/// OAuth credentials and refresh tokens belong to the shared Google Workspace
+/// service behind LucyServer. Flutter clients keep no Google password, access
+/// token, or refresh token locally, so the same server-side sign-in is visible
+/// to every app using this LucyServer instance.
+///
 /// Flow:
 ///   1. [uploadCredentials] — user supplies the OAuth client credentials.json
 ///      downloaded from Google Cloud Console.

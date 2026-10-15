@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-exec sudo python /mnt/Lucy/70-scripts/swarm_iso_manager.py migrate "$@"
+echo 'ISO migration from Ventoy or Downloads is retired. Keep only the selected current ISO in /mnt/Lucy/10-releases/.' >&2
+exit 2

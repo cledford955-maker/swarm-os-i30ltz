@@ -83,7 +83,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         final defaults = _buildInitialSpaces();
         for (int i = 0; i < saved.length; i++) {
           final name = saved[i]['name'] as String? ?? 'SPACE ${i + 1}';
-          final agents = i < defaults.length ? defaults[i].agents : <HexAgent>[];
+          final agents =
+              i < defaults.length ? defaults[i].agents : <HexAgent>[];
           rebuilt.add(_DesktopSpace(name: name, agents: agents));
         }
         if (rebuilt.isNotEmpty && mounted) {
@@ -137,24 +138,31 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
 
   void _scrollBy(int spaces) {
     if (!_ctrl.hasClients) return;
-    final target = (_ctrl.offset + spaces * 520)
-        .clamp(0.0, _ctrl.position.maxScrollExtent == 0
+    final target = (_ctrl.offset + spaces * 520).clamp(
+        0.0,
+        _ctrl.position.maxScrollExtent == 0
             ? double.infinity
             : double.infinity);
     _ctrl.animateTo(target < 0 ? 0 : target,
-        duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic);
   }
 
   List<_DesktopSpace> _buildInitialSpaces() => [
-    _DesktopSpace(name: 'ORIGIN', agents: [
-      ..._toHexAgents(SwarmAppCategory.origin),
-      ..._userAppTiles(),
-    ]),
-    _DesktopSpace(name: 'SYSTEM', agents: _toHexAgents(SwarmAppCategory.system)),
-    _DesktopSpace(name: 'GAMING & MEDIA', agents: _toHexAgents(SwarmAppCategory.gamingMedia)),
-    _DesktopSpace(name: 'DROID', agents: _toHexAgents(SwarmAppCategory.droid)),
-    _DesktopSpace(name: 'FORGE', agents: _toHexAgents(SwarmAppCategory.forge)),
-  ];
+        _DesktopSpace(name: 'ORIGIN', agents: [
+          ..._toHexAgents(SwarmAppCategory.origin),
+          ..._userAppTiles(),
+        ]),
+        _DesktopSpace(
+            name: 'SYSTEM', agents: _toHexAgents(SwarmAppCategory.system)),
+        _DesktopSpace(
+            name: 'GAMING & MEDIA',
+            agents: _toHexAgents(SwarmAppCategory.gamingMedia)),
+        _DesktopSpace(
+            name: 'DROID', agents: _toHexAgents(SwarmAppCategory.droid)),
+        _DesktopSpace(
+            name: 'FORGE', agents: _toHexAgents(SwarmAppCategory.forge)),
+      ];
 
   // ────────────────────────────────────────────────────────────
   // App definitions — pulled from the shared SwarmAppRegistry so this
@@ -165,24 +173,24 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       SwarmAppRegistry.byCategory(category).map(_toHexAgent).toList();
 
   HexAgent _toHexAgent(SwarmApp app) => HexAgent(
-    id: app.id,
-    name: app.name,
-    icon: app.icon,
-    color: app.color,
-    bgColor: _t,
-    execCommand: app.execCommand,
-    routePath: app.routePath,
-    mock: app.mock,
-    previewImagePath: app.previewImage,
-  );
+        id: app.id,
+        name: app.name,
+        icon: app.icon,
+        color: app.color,
+        bgColor: _t,
+        execCommand: app.execCommand,
+        routePath: app.routePath,
+        mock: app.mock,
+        previewImagePath: app.previewImage,
+      );
 
   // ────────────────────────────────────────────────────────────
   // User-installed apps (App Store) — real desktop tiles with the
   // package's actual icon file when one was found at install time.
   // ────────────────────────────────────────────────────────────
 
-  List<HexAgent> _userAppTiles() =>
-      UserAppsService.instance.apps.map((app) => HexAgent(
+  List<HexAgent> _userAppTiles() => UserAppsService.instance.apps
+      .map((app) => HexAgent(
             id: app.id,
             name: app.name,
             icon: Icons.apps_rounded,
@@ -193,7 +201,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
             // menu can offer Delete Icon / Uninstall App.
             packageName: app.packageName,
             iconFilePath: app.iconPath,
-          )).toList();
+          ))
+      .toList();
 
   bool _isUserApp(HexAgent agent) => agent.packageName != null;
 
@@ -212,7 +221,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         backgroundColor: SwarmColors.bgElevated,
         content: Text('🔜 ${agent.name} — coming soon',
-          style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12)),
+            style:
+                const TextStyle(color: SwarmColors.textPrimary, fontSize: 12)),
         duration: const Duration(seconds: 2),
       ));
       return;
@@ -223,21 +233,26 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     switch (agent.id) {
       case 'terminal':
         ref.read(windowProvider.notifier).openWindow(AppWindow(
-          id: agent.id, title: agent.name,
-          position: _centerWindowOffset(windowSize), size: windowSize,
-          content: const SwarmTerminal(initialPanes: 1),
-        ));
+              id: agent.id,
+              title: agent.name,
+              position: _centerWindowOffset(windowSize),
+              size: windowSize,
+              content: const SwarmTerminal(initialPanes: 1),
+            ));
         return;
       case 'sysmon':
         ref.read(windowProvider.notifier).openWindow(AppWindow(
-          id: agent.id, title: agent.name,
-          position: _centerWindowOffset(windowSize), size: windowSize,
-          content: const CompanionTelemetryPanel(),
-        ));
+              id: agent.id,
+              title: agent.name,
+              position: _centerWindowOffset(windowSize),
+              size: windowSize,
+              content: const CompanionTelemetryPanel(),
+            ));
         return;
     }
     if (agent.execCommand != null) {
-      SystemLauncher.launch(context, agent.execCommand!, displayName: agent.name, agentId: agent.id);
+      SystemLauncher.launch(context, agent.execCommand!,
+          displayName: agent.name, agentId: agent.id);
       return;
     }
     if (agent.routePath != null) {
@@ -245,12 +260,12 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       return;
     }
     ref.read(windowProvider.notifier).openWindow(AppWindow(
-      id: agent.id,
-      title: agent.name,
-      position: _centerWindowOffset(windowSize),
-      size: windowSize,
-      content: _placeholder(agent),
-    ));
+          id: agent.id,
+          title: agent.name,
+          position: _centerWindowOffset(windowSize),
+          size: windowSize,
+          content: _placeholder(agent),
+        ));
   }
 
   // ────────────────────────────────────────────────────────────
@@ -266,7 +281,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         child: Row(children: [
           Icon(Icons.launch_rounded, size: 15, color: SwarmColors.accent),
           SizedBox(width: 10),
-          Text('Open', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+          Text('Open',
+              style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
         ]),
       ),
       const PopupMenuDivider(),
@@ -276,7 +292,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         child: Row(children: [
           Icon(Icons.apps_rounded, size: 15, color: SwarmColors.accent),
           SizedBox(width: 10),
-          Text('App Store…', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+          Text('App Store…',
+              style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
         ]),
       ),
       if (isUserApp) ...[
@@ -285,18 +302,22 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
           value: 'delete_icon',
           height: 36,
           child: Row(children: [
-            Icon(Icons.delete_outline_rounded, size: 15, color: SwarmColors.statusIdle),
+            Icon(Icons.delete_outline_rounded,
+                size: 15, color: SwarmColors.statusIdle),
             SizedBox(width: 10),
-            Text('Delete Icon', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+            Text('Delete Icon',
+                style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
           ]),
         ),
         const PopupMenuItem(
           value: 'uninstall',
           height: 36,
           child: Row(children: [
-            Icon(Icons.delete_sweep_rounded, size: 15, color: SwarmColors.statusCritical),
+            Icon(Icons.delete_sweep_rounded,
+                size: 15, color: SwarmColors.statusCritical),
             SizedBox(width: 10),
-            Text('Uninstall App', style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
+            Text('Uninstall App',
+                style: TextStyle(fontSize: 12, color: SwarmColors.textPrimary)),
           ]),
         ),
       ],
@@ -307,8 +328,10 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(
-        position.dx, position.dy,
-        overlay.size.width - position.dx, overlay.size.height - position.dy,
+        position.dx,
+        position.dy,
+        overlay.size.width - position.dx,
+        overlay.size.height - position.dy,
       ),
       color: SwarmColors.bgElevated,
       elevation: 8,
@@ -341,7 +364,9 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
             side: const BorderSide(color: SwarmColors.border)),
         title: Text('Delete ${agent.name} icon?',
             style: const TextStyle(
-                color: SwarmColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+                color: SwarmColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
         content: const Text(
           'Removes the icon from your desktop only. The app stays installed — '
           'you can re-add it from the App Store.',
@@ -350,11 +375,13 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: SwarmColors.textMuted)),
+            child: const Text('Cancel',
+                style: TextStyle(color: SwarmColors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete Icon', style: TextStyle(color: SwarmColors.statusIdle)),
+            child: const Text('Delete Icon',
+                style: TextStyle(color: SwarmColors.statusIdle)),
           ),
         ],
       ),
@@ -365,7 +392,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         backgroundColor: SwarmColors.bgElevated,
         content: Text('🗑️ ${agent.name} icon removed — app still installed',
-            style: const TextStyle(color: SwarmColors.textPrimary, fontSize: 12)),
+            style:
+                const TextStyle(color: SwarmColors.textPrimary, fontSize: 12)),
         duration: const Duration(seconds: 3),
       ));
     }
@@ -383,20 +411,25 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
             side: const BorderSide(color: SwarmColors.border)),
         title: Text('Uninstall ${agent.name}?',
             style: const TextStyle(
-                color: SwarmColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+                color: SwarmColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
         content: Text(
           'Opens a terminal to remove the $pkg package (pacman -Rns) and '
           'deletes its desktop icon. Settings and user data are removed too.',
-          style: const TextStyle(color: SwarmColors.textSecondary, fontSize: 13),
+          style:
+              const TextStyle(color: SwarmColors.textSecondary, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: SwarmColors.textMuted)),
+            child: const Text('Cancel',
+                style: TextStyle(color: SwarmColors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Uninstall', style: TextStyle(color: SwarmColors.statusCritical)),
+            child: const Text('Uninstall',
+                style: TextStyle(color: SwarmColors.statusCritical)),
           ),
         ],
       ),
@@ -427,7 +460,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
 
   void _addSpace() {
     setState(() {
-      _spaces.add(_DesktopSpace(name: 'SPACE ${_spaces.length + 1}', agents: []));
+      _spaces
+          .add(_DesktopSpace(name: 'SPACE ${_spaces.length + 1}', agents: []));
     });
     _savePrefs();
   }
@@ -514,7 +548,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
           width: cell * 2,
           child: HexGrid(
             // Rebuild the grid when the cell size changes (zoom / resize).
-            key: ValueKey('${space.name}-$mirror-${cell.round()}-${agents.length}'),
+            key: ValueKey(
+                '${space.name}-$mirror-${cell.round()}-${agents.length}'),
             agents: agents,
             columns: 2,
             // Checker layout holds one icon per row.
@@ -545,6 +580,16 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
               ),
       ),
 
+      // Keep Gaming immediately visible on the opening ORIGIN desktop space;
+      // its regular hex tile remains in GAMING & MEDIA as well.
+      if (space.name == 'ORIGIN')
+        Positioned(
+          top: 42,
+          left: 0,
+          right: 0,
+          child: Center(child: _buildGamingFeature()),
+        ),
+
       // Space label badge (top-left)
       Positioned(
         top: 6,
@@ -566,23 +611,116 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
-              child: Icon(Icons.close, color: Colors.white.withValues(alpha: 0.25), size: 14),
+              child: Icon(Icons.close,
+                  color: Colors.white.withValues(alpha: 0.25), size: 14),
             ),
           ),
         ),
     ]);
   }
 
+  Widget _buildGamingFeature() {
+    final app = SwarmAppRegistry.byId('gaming');
+    if (app == null) return const SizedBox.shrink();
+    final agent = _toHexAgent(app);
+
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth.isFinite
+          ? constraints.maxWidth.clamp(0.0, 440.0)
+          : 440.0;
+      final compact = width < 360;
+      final iconSize = compact ? (width * 0.25).clamp(48.0, 82.0) : 112.0;
+      const height = 170.0;
+
+      Widget title({required bool centered}) => Text(
+            'THIS IS NOW GAMING',
+            maxLines: compact ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: centered ? TextAlign.center : TextAlign.start,
+            style: TextStyle(
+              color: const Color(0xFFFF8A00),
+              fontSize: compact ? 16 : 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.7,
+            ),
+          );
+
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openAgent(agent),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            width: width,
+            height: height,
+            padding: EdgeInsets.all(compact ? 12 : 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF050505).withValues(alpha: 0.96),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF76B900), width: 2.5),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x6676B900),
+                  blurRadius: 26,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: compact
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AppIconOrb(
+                          icon: app.icon, color: app.color, size: iconSize),
+                      const SizedBox(height: 6),
+                      title(centered: true),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      AppIconOrb(
+                          icon: app.icon, color: app.color, size: iconSize),
+                      const SizedBox(width: 18),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            title(centered: false),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Steam + GeForce NOW',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.72),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.play_arrow_rounded,
+                          color: Color(0xFF76B900), size: 36),
+                    ],
+                  ),
+          ),
+        ),
+      );
+    });
+  }
+
   Widget _buildEmptySpace() {
     return SizedBox(
       height: 160,
-      child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.add_circle_outline,
-          color: Colors.white.withValues(alpha: 0.1), size: 40),
+            color: Colors.white.withValues(alpha: 0.1), size: 40),
         const SizedBox(height: 10),
-        Text('Empty space', style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.15),
-          fontSize: 13, letterSpacing: 1)),
+        Text('Empty space',
+            style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.15),
+                fontSize: 13,
+                letterSpacing: 1)),
       ])),
     );
   }
@@ -595,18 +733,25 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Row(children: [
-        Expanded(child: Divider(color: const Color(0xFF00D4FF).withValues(alpha: 0.25))),
+        Expanded(
+            child: Divider(
+                color: const Color(0xFF00D4FF).withValues(alpha: 0.25))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             const Icon(Icons.loop_rounded, color: Color(0xFF00D4FF), size: 15),
             const SizedBox(width: 6),
-            Text('FULL CIRCLE', style: TextStyle(
-              color: const Color(0xFF00D4FF).withValues(alpha: 0.8),
-              fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 3)),
+            Text('FULL CIRCLE',
+                style: TextStyle(
+                    color: const Color(0xFF00D4FF).withValues(alpha: 0.8),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 3)),
           ]),
         ),
-        Expanded(child: Divider(color: const Color(0xFF00D4FF).withValues(alpha: 0.25))),
+        Expanded(
+            child: Divider(
+                color: const Color(0xFF00D4FF).withValues(alpha: 0.25))),
       ]),
     );
   }
@@ -621,11 +766,14 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFD700).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.55), width: 1.2),
-        boxShadow: const [BoxShadow(
-          color: Color(0xFFFFD700),
-          blurRadius: 12,
-        )],
+        border: Border.all(
+            color: const Color(0xFFFFD700).withValues(alpha: 0.55), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xFFFFD700),
+            blurRadius: 12,
+          )
+        ],
       ),
       child: const Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 13),
@@ -649,7 +797,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
       decoration: BoxDecoration(
         color: const Color(0xFF00D4FF).withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF00D4FF).withValues(alpha: 0.22)),
+        border:
+            Border.all(color: const Color(0xFF00D4FF).withValues(alpha: 0.22)),
       ),
       child: Text(
         name,
@@ -676,7 +825,8 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: const Color(0xFF00D4FF).withValues(alpha: 0.08),
-          border: Border.all(color: const Color(0xFF00D4FF).withValues(alpha: 0.35)),
+          border: Border.all(
+              color: const Color(0xFF00D4FF).withValues(alpha: 0.35)),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF00D4FF).withValues(alpha: 0.20),
@@ -699,13 +849,15 @@ class _HexDesktopPageState extends ConsumerState<HexDesktopPage> {
     final featured = getAgent(agent.id);
     return Container(
       color: const Color(0xFF0A0A18),
-      child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
         featured != null
             ? AgentAvatar(agentId: agent.id, size: 72)
             : AppIconOrb(icon: agent.icon, color: agent.color, size: 72),
         const SizedBox(height: 12),
-        Text(agent.name, style: TextStyle(
-          color: agent.color.withValues(alpha: 0.4), fontSize: 18)),
+        Text(agent.name,
+            style: TextStyle(
+                color: agent.color.withValues(alpha: 0.4), fontSize: 18)),
       ])),
     );
   }

@@ -3,6 +3,7 @@ package services
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -74,6 +75,12 @@ func (s *LucilleService) WithGamesService(g *GamesService) *LucilleService {
 
 // Eval builds context from real Steam + GFN data and asks the chat model for dashboard actions.
 func (s *LucilleService) Eval() (*models.LucilleEvalResult, error) {
+	return s.EvalContext(context.Background())
+}
+
+// EvalContext builds context from real Steam + GFN data and asks the chat model for dashboard actions,
+// cancelling if ctx is cancelled.
+func (s *LucilleService) EvalContext(ctx context.Context) (*models.LucilleEvalResult, error) {
 	steamGames, _ := s.steam.GetLibrary()
 	gfnGames, _ := s.gfn.GetCatalog()
 
@@ -115,7 +122,10 @@ There are no tools to call. Do not use snake_case field names or wrap this objec
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", chatEndpoint, bytes.NewReader(body))
+	if err != nil {
+		return &models.LucilleEvalResult{Error: err.Error()}, nil
+	}
 	req.Header.Set("Authorization", "Bearer "+os.Getenv(chatAPIKeyEnv))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("HTTP-Referer", "https://github.com/i30ltz/swarm-os")
@@ -157,6 +167,11 @@ There are no tools to call. Do not use snake_case field names or wrap this objec
 
 // Chat sends a multi-turn message to the chat model with Steam/GFN context injected.
 func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleChatResponse, error) {
+	return s.ChatContext(context.Background(), req)
+}
+
+// ChatContext sends a multi-turn message to the chat model with context cancellation support.
+func (s *LucilleService) ChatContext(ctx context.Context, req models.LucilleChatRequest) (*models.LucilleChatResponse, error) {
 	sessionId := req.SessionId
 	if sessionId == "" {
 		sessionId = fmt.Sprintf("session-%d", time.Now().UnixMilli())
@@ -165,7 +180,7 @@ func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleCha
 	messages := s.buildContextMessages()
 	messages = append(messages, req.Messages...)
 
-	reply, err := s.callChat(messages, false, nil)
+	reply, err := s.callChatContext(ctx, messages, false, nil)
 	if err != nil {
 		return &models.LucilleChatResponse{SessionId: sessionId, Error: err.Error()}, nil
 	}
@@ -179,6 +194,11 @@ func (s *LucilleService) Chat(req models.LucilleChatRequest) (*models.LucilleCha
 
 // ChatStream calls the chat model with streaming=true and writes SSE chunks to w.
 func (s *LucilleService) ChatStream(req models.LucilleChatRequest, w http.ResponseWriter) {
+	s.ChatStreamContext(context.Background(), req, w)
+}
+
+// ChatStreamContext calls the chat model with streaming=true and writes SSE chunks to w with context support.
+func (s *LucilleService) ChatStreamContext(ctx context.Context, req models.LucilleChatRequest, w http.ResponseWriter) {
 	sessionId := req.SessionId
 	if sessionId == "" {
 		sessionId = fmt.Sprintf("session-%d", time.Now().UnixMilli())
@@ -197,7 +217,7 @@ func (s *LucilleService) ChatStream(req models.LucilleChatRequest, w http.Respon
 	messages = append(messages, req.Messages...)
 
 	var fullReply strings.Builder
-	_, _ = s.callChat(messages, true, func(token string) {
+	_, _ = s.callChatContext(ctx, messages, true, func(token string) {
 		fullReply.WriteString(token)
 		fmt.Fprintf(w, "data: %s\n\n", token)
 		if f, ok := w.(http.Flusher); ok {
@@ -343,6 +363,10 @@ Valid verbs:
 Only ever use these exact verbs. Never invent a new verb. If the user is just chatting or asking a question, do not include an ACTION line at all.`
 
 func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, onToken func(string)) (string, error) {
+	return s.callChatContext(context.Background(), messages, stream, onToken)
+}
+
+func (s *LucilleService) callChatContext(ctx context.Context, messages []models.ChatMessage, stream bool, onToken func(string)) (string, error) {
 	msgs := make([]map[string]string, len(messages))
 	for i, m := range messages {
 		msgs[i] = map[string]string{"role": m.Role, "content": m.Content}
@@ -358,7 +382,10 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", chatEndpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", chatEndpoint, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
 	req.Header.Set("Authorization", "Bearer "+os.Getenv(chatAPIKeyEnv))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("HTTP-Referer", "https://github.com/i30ltz/swarm-os")
@@ -389,6 +416,11 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 	// SSE streaming
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+		}
 		line := scanner.Text()
 		if !strings.HasPrefix(line, "data: ") {
 			continue
@@ -408,6 +440,9 @@ func (s *LucilleService) callChat(messages []models.ChatMessage, stream bool, on
 				onToken(token)
 			}
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
 	}
 	return "", nil
 }

@@ -1,66 +1,28 @@
-# ISO storage policy — 2026-10-06 (supersedes 2026-09-24)
+# SWARM OS update and ISO policy — 2026-10-14
 
-User decision (2026-10-06): keep **five SWARM ISOs** and **five Recovery OS
-ISOs**, each OS counted separately. This replaces the 2026-09-24 rule of ten
-shared across all operating systems.
+**Current user decision:** Ventoy is destroyed and is no longer a release target.
+Keep exactly one current SWARM OS ISO in `/mnt/Lucy/10-releases/`. Do not write
+ISOs to Ventoy, `/mnt/boltz`, Downloads, the desktop, or other fallback stores.
+Do not run old Ventoy cleanup or weekly archive procedures.
 
-- SWARM: `70-scripts/swarm_iso_manager.py` keeps the five newest
-  `swarm-os-*.iso` images on Ventoy, by modification time. Stable labels do not
-  exempt an image. Other OSes on the stick are never counted or removed.
-- Recovery OS: `/mnt/recoverybuild/70-scripts/build.sh` writes ONLY to
-  `/mnt/ventoy/ISO/recovery-os/` (policy 2026-10-07; aborts if Ventoy UUID 5ABB-83DF
-  is not mounted, no local copy) and keeps the five newest `i30ltz-recovery-*.iso`
-  there after each build. Its `.sha256` sidecars go with it.
-- Weekly Boltz archives remain the explicit exception outside these sets.
-- SWARM releases live at `/mnt/ventoy/ISO/SWARM_OS/`.
-- Once per ISO calendar week, archive the newest SWARM image with a recorded
-  `boot_gate=pass` to `/mnt/boltz/ISO/SWARM_OS/weekly/YYYY-Www/`. Verify source and
-  destination SHA-256 checksums. Do not archive failed/untested builds, and do not
-  duplicate an unchanged build across weeks. Keep historical weekly archives.
-- Boltz must be the mounted ext4 filesystem UUID
-  `689e6547-b439-4e7f-93c9-a6dcfabed46b`. Never write into the empty mountpoint or
-  redirect an archive onto the project/system disk when Boltz is unavailable.
-- Ventoy must be mounted at `/mnt/ventoy` with UUID `5ABB-83DF`. Missing or wrong
-  media aborts release operations before version stamping.
-- Use only `70-scripts/build_swarm_iso.sh` as the normal user. It creates one
-  in-progress ISO directly in Ventoy `.incoming/`, publishes it on the same
-  filesystem, and enforces the five-SWARM-image limit. The temporary in-progress image
-  is removed on normal failure; the next locked build clears interrupted output.
-- No project-disk/desktop ISO copies, duplicate latest/fallback images, or separate
-  push-to-Ventoy workflow. `latest.txt` is a filename pointer, never a full copy.
-- A successful publication with a boot pass also attempts the weekly archive.
-  If Boltz is unavailable, report the pending archive; do not invent a fallback.
-- Do not modify read-only source mirrors. Never delete non-ISO source/build files
-  as part of retention.
+Normal software changes should be deployed live to the installed SWARM system
+using the reviewed update path and a pre-update snapshot. Build a new ISO only
+when the bootable installer/live image itself needs updating. The project ISO
+is for the current release and VM testing; QEMU must select it from
+`/mnt/Lucy/10-releases/` and must never fall back to old copies.
 
-## Current cleanup
+Electron is a Debian-only desktop test harness. Its package and launcher live
+under `30-source/swarm-electron/` and `70-scripts/launch_swarm_electron.sh`.
+Do not stamp Electron from the SWARM version, stage it into the ISO or installed
+SWARM system, or treat Electron testing as SWARM OS release evidence.
 
-`70-scripts/iso_cleanup_20260924.json` records the reviewed 49-file inventory:
-ten retained images and 39 deletion targets. It records exact paths, sizes,
-inodes, device IDs and modification times, and checksums for verified duplicates.
-Any changed file or missing retained source makes the cleanup refuse to proceed.
-The four writable surplus files have been removed (13,559,398,400 bytes).
-The remaining 35 deletions and three retained-image relocations require root.
+Before an in-place system update, run `70-scripts/snapshot_before_update.sh`.
+Retain the newest three snapshots. Do not prune or remove older ISOs outside
+the project as part of this policy change.
 
-Complete the prepared cleanup and mount/archive-directory setup:
-
-```sh
-sudo /mnt/Lucy/70-scripts/apply_iso_storage_policy.sh
-```
-
-This command validates Ventoy, preserves the ten reviewed images there, removes
-only the listed surplus ISOs, mounts the identified Boltz filesystem if needed,
-and prepares the weekly archive directory for the project owner. No current ISO
-has recorded boot-pass metadata, so no image is currently eligible for archiving.
-
-## Inspection and maintenance
-
-```sh
-python3 /mnt/Lucy/70-scripts/swarm_iso_manager.py prune --dry-run
-python3 /mnt/Lucy/70-scripts/swarm_iso_manager.py archive-weekly
-python3 -m unittest discover -s /mnt/Lucy/70-scripts/tests -p 'test_iso_*.py'
-```
-
-The existing VM launcher still reads Ventoy's canonical release store. The desktop
-build launcher uses the canonical builder. New code requires rebuilding before
-it appears in an ISO; a modified guest session is not proof of a new release.
+The canonical builder remains `70-scripts/build_swarm_iso.sh` and must be run
+as the normal user. It writes one temporary build under the project release
+directory, publishes one current ISO, and runs its configured boot gate unless
+explicitly skipped. The builder auto-increments `VERSION`; do not manually
+change it. Source/test evidence, VM boot evidence, ISO evidence, and physical
+hardware evidence remain separate.

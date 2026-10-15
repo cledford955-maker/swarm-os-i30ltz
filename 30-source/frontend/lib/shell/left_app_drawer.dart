@@ -1,13 +1,19 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../hub/hub_page.dart';
+import '../models/agent.dart';
 import '../theme/swarm_colors.dart';
 import '../services/system_launcher.dart';
 import '../models/swarm_apps.dart';
 import '../widgets/agent_avatar.dart';
 import 'companion_bridge_dialog.dart';
+import 'window_manager.dart';
 
 // ── "THIS is NOW" palette ──────────────────────────────────────────
-const _eBlue    = Color(0xFF0088FF); // electric blue primary
+const _eBlue = Color(0xFF0088FF); // electric blue primary
 const _drawerBg = Color(0xFF030810); // near-black with blue tint
 
 class AppItem {
@@ -55,7 +61,7 @@ class AppItem {
   }
 }
 
-class LeftAppDrawer extends StatefulWidget {
+class LeftAppDrawer extends ConsumerStatefulWidget {
   final bool isOpen;
   final VoidCallback onClose;
 
@@ -66,10 +72,10 @@ class LeftAppDrawer extends StatefulWidget {
   });
 
   @override
-  State<LeftAppDrawer> createState() => _LeftAppDrawerState();
+  ConsumerState<LeftAppDrawer> createState() => _LeftAppDrawerState();
 }
 
-class _LeftAppDrawerState extends State<LeftAppDrawer> {
+class _LeftAppDrawerState extends ConsumerState<LeftAppDrawer> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -94,6 +100,56 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
   }
 
   Future<void> _launchApp(AppItem app) async {
+    if (app.id == 'dr_boltz') {
+      final agent = getAgent('dr_boltz');
+      if (agent == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content:
+                  Text('Dr. Boltz is not available in the agent registry.')),
+        );
+        return;
+      }
+      ref.read(windowProvider.notifier).openWindow(
+            AppWindow(
+              id: 'agent_${agent.id}',
+              title: '${agent.name} · ${agent.role}',
+              position: const Offset(100, 50),
+              size: const Size(700, 500),
+              content: AgentWindowContent(agent: agent),
+            ),
+          );
+      Navigator.of(context).maybePop();
+      widget.onClose();
+      return;
+    }
+    // The package manager is already integrated into App Store, which can
+    // search, install, and report results without hiding yay's CLI output.
+    if (app.id == 'yay') {
+      Navigator.of(context).maybePop();
+      widget.onClose();
+      if (mounted) context.go('/appstore');
+      return;
+    }
+    if (app.id == 'droid_apk_installer') {
+      await _promptAndInstallApk();
+      return;
+    }
+    const terminalCommands = <String, String>{
+      'droid_emulator': 'waydroid session start',
+      'forge_docker': 'docker ps',
+      'forge_k3s': 'kubectl get nodes',
+      'forge_build': 'cmake --version',
+    };
+    final terminalCommand = terminalCommands[app.id];
+    if (terminalCommand != null) {
+      await SystemLauncher.launchTerminalCommand(
+        context,
+        terminalCommand,
+        displayName: app.name,
+      );
+      return;
+    }
     if (SwarmAppRegistry.byId(app.id)?.mock == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -121,6 +177,93 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
       return;
     }
     await SystemLauncher.launch(context, app.command, displayName: app.name);
+  }
+
+  Future<void> _promptAndInstallApk() async {
+    final pathController = TextEditingController();
+    try {
+      final path = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) {
+          var error = '';
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              Future<void> submit() async {
+                final candidate = pathController.text.trim();
+                if (!candidate.startsWith('/')) {
+                  setDialogState(
+                      () => error = 'Use the full absolute path to the APK.');
+                  return;
+                }
+                if (!candidate.toLowerCase().endsWith('.apk')) {
+                  setDialogState(
+                      () => error = 'Choose a file whose name ends in .apk.');
+                  return;
+                }
+                if (!await File(candidate).exists()) {
+                  setDialogState(() =>
+                      error = 'That file does not exist or is not readable.');
+                  return;
+                }
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext, candidate);
+                }
+              }
+
+              return AlertDialog(
+                title: const Text('Install APK'),
+                content: SizedBox(
+                  width: 440,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                          'Enter the full path to an APK on this device.'),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: pathController,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'APK file path',
+                          hintText: '/home/swarm/Downloads/app.apk',
+                          border: OutlineInputBorder(),
+                        ),
+                        onSubmitted: (_) => submit(),
+                      ),
+                      if (error.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(error,
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.error)),
+                      ],
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: submit,
+                    child: const Text('Install'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+      if (path == null || !mounted) return;
+      await SystemLauncher.launchTerminalCommand(
+        context,
+        'adb install ${SystemLauncher.shellQuote(path)}',
+        displayName: 'APK Installer',
+      );
+    } finally {
+      pathController.dispose();
+    }
   }
 
   List<AppItem> get _filteredApps {
@@ -152,25 +295,28 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
   }
 
   Widget _badge(IconData icon, String label, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(4),
-      border: Border.all(color: color.withValues(alpha: 0.5)),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: color),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold,
-              letterSpacing: 0.8, color: color),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
-      ],
-    ),
-  );
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                  color: color),
+            ),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +336,8 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
             opacity: 0.055,
           ),
           border: Border(
-            right: BorderSide(color: _eBlue.withValues(alpha: 0.45), width: 1.5),
+            right:
+                BorderSide(color: _eBlue.withValues(alpha: 0.45), width: 1.5),
           ),
           boxShadow: [
             BoxShadow(
@@ -250,8 +397,8 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                         decoration: BoxDecoration(
                           color: _eBlue.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(3),
-                          border: Border.all(
-                              color: _eBlue.withValues(alpha: 0.4)),
+                          border:
+                              Border.all(color: _eBlue.withValues(alpha: 0.4)),
                         ),
                         child: const Text(
                           'v1',
@@ -306,8 +453,8 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.1)),
+                    borderSide:
+                        BorderSide(color: Colors.white.withValues(alpha: 0.1)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -350,8 +497,7 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _favoriteApps.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(width: 10),
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
                         itemBuilder: (context, idx) {
                           final app = _favoriteApps[idx];
                           return InkWell(
@@ -477,7 +623,8 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.06),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.06),
                                       borderRadius: BorderRadius.circular(4),
                                       border: Border.all(
                                           color: Colors.white
@@ -489,8 +636,8 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                         letterSpacing: 0.8,
-                                        color: Colors.white
-                                            .withValues(alpha: 0.5),
+                                        color:
+                                            Colors.white.withValues(alpha: 0.5),
                                       ),
                                     ),
                                   ),
@@ -516,8 +663,7 @@ class _LeftAppDrawerState extends State<LeftAppDrawer> {
                                         : Icons.star_border,
                                     color: app.isFavorite
                                         ? Colors.amber
-                                        : Colors.white
-                                            .withValues(alpha: 0.25),
+                                        : Colors.white.withValues(alpha: 0.25),
                                     size: 18,
                                   ),
                                   onPressed: () {

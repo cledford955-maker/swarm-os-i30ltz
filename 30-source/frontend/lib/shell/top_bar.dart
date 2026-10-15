@@ -11,6 +11,7 @@ import 'osd_hud.dart';
 import 'power_controls.dart';
 import '../widgets/vital_tracker_dialog.dart';
 import '../services/lucille_voice_service.dart';
+import 'window_manager.dart';
 
 /// SWARM OS Top Navigation Bar
 /// Port of components/top-bar.tsx with global OpenRouter live balance
@@ -270,6 +271,8 @@ class SwarmTopBar extends ConsumerWidget {
                   const SizedBox(width: 8),
                   const HardwareControls(), // Gamepad, Wifi, BT, Audio
                   const SizedBox(width: 16),
+                  const _DesktopPageControls(),
+                  const SizedBox(width: 8),
                   const PowerControls(), // OS and Window Controls
                 ],
               ),
@@ -277,6 +280,53 @@ class SwarmTopBar extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DesktopPageControls extends ConsumerWidget {
+  const _DesktopPageControls();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final page = ref.watch(activeDesktopPageProvider);
+    final pageController = ref.read(activeDesktopPageProvider.notifier);
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      decoration: BoxDecoration(
+        color: SwarmColors.bgElevated,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: SwarmColors.border),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        IconButton(
+          tooltip: 'Previous desktop',
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          padding: EdgeInsets.zero,
+          iconSize: 16,
+          onPressed: page == 0 ? null : () => pageController.state = page - 1,
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Text(
+          'DESKTOP ${page + 1}',
+          style: SwarmTextStyles.codeSmall.copyWith(
+            color: SwarmColors.accent,
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        IconButton(
+          tooltip: 'Next desktop (creates a page when needed)',
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          padding: EdgeInsets.zero,
+          iconSize: 16,
+          onPressed: () => pageController.state = page + 1,
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ]),
     );
   }
 }

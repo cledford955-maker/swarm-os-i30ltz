@@ -488,7 +488,7 @@ fi
 # (non-live) system. Same treatment as swarm-ui.service.
 # (google-workspace.service was missed in the original fix for this same
 # bug on the other two services — found+added 2026-09-13.)
-for svc in gaming-agent.service lucy-server.service google-workspace.service lucille-wake-listener.service; do
+for svc in gaming-agent.service lucy-server.service google-workspace.service lucille-wake-listener.service lucille-core.service swarm-memory-tick.service i30ltz-recovery.service; do
     if [ -f "/etc/systemd/system/\$svc" ]; then
         sed -i 's/^Group=swarm$/Group=i30ltz/' "/etc/systemd/system/\$svc"
         sed -i 's/^User=swarm$/User=i30ltz/' "/etc/systemd/system/\$svc"

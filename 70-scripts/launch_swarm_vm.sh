@@ -24,14 +24,36 @@ PY
 done
 [[ $EUID != 0 ]] || { echo 'Launch the VM as your normal user.' >&2; exit 1; }
 if [[ -z $ISO_PATH ]]; then
- ISO_PATH=$(python "$PROJECT_DIR/70-scripts/swarm_iso_manager.py" latest)
+  if command -v python3 >/dev/null 2>&1 && [[ -f "$PROJECT_DIR/70-scripts/swarm_iso_manager.py" ]]; then
+    ISO_PATH=$(python3 "$PROJECT_DIR/70-scripts/swarm_iso_manager.py" latest 2>/dev/null || true)
+  fi
+  if [[ -z $ISO_PATH || ! -f $ISO_PATH ]]; then
+    echo "No current SWARM ISO found in $PROJECT_DIR/10-releases. Build or select one with --iso." >&2
+    exit 1
+  fi
 fi
 [[ -f $ISO_PATH ]] || { echo "Missing ISO: $ISO_PATH" >&2; exit 1; }
-command -v qemu-system-x86_64 >/dev/null
-command -v qemu-img >/dev/null
-FIRMWARE_DIR=/usr/share/edk2/x64
-[[ -f "$FIRMWARE_DIR/OVMF_CODE.4m.fd" ]] || FIRMWARE_DIR=/usr/share/edk2-ovmf/x64
-[[ -f "$FIRMWARE_DIR/OVMF_CODE.4m.fd" && -f "$FIRMWARE_DIR/OVMF_VARS.4m.fd" ]] || { echo 'Install edk2-ovmf first.' >&2; exit 1; }
+ISO_RELEASE="$(basename "$ISO_PATH" .iso)"
+ISO_RELEASE="${ISO_RELEASE#swarm-os-}"
+command -v qemu-system-x86_64 >/dev/null || { echo 'Install qemu: sudo apt install qemu-system-x86 (or pacman -S qemu-full)' >&2; exit 1; }
+command -v qemu-img >/dev/null || { echo 'Install qemu-utils: sudo apt install qemu-utils' >&2; exit 1; }
+
+OVMF_CODE=""
+OVMF_VARS=""
+for code in /usr/share/OVMF/OVMF_CODE_4M.fd /usr/share/edk2/x64/OVMF_CODE.4m.fd /usr/share/edk2-ovmf/x64/OVMF_CODE.4m.fd; do
+  if [[ -f "$code" ]]; then
+    OVMF_CODE="$code"
+    break
+  fi
+done
+for vars in /usr/share/OVMF/OVMF_VARS_4M.fd /usr/share/edk2/x64/OVMF_VARS.4m.fd /usr/share/edk2-ovmf/x64/OVMF_VARS.4m.fd; do
+  if [[ -f "$vars" ]]; then
+    OVMF_VARS="$vars"
+    break
+  fi
+done
+[[ -n "$OVMF_CODE" && -n "$OVMF_VARS" ]] || { echo 'Install OVMF firmware: sudo apt install ovmf (or pacman -S edk2-ovmf)' >&2; exit 1; }
+
 MEM=${SWARM_VM_RAM_MB:-4096}
 CPUS=${SWARM_VM_CPUS:-4}
 [[ $MEM =~ ^[0-9]+$ && $CPUS =~ ^[0-9]+$ ]] || exit 2
@@ -39,8 +61,8 @@ ACCEL=(-accel tcg -cpu max)
 [[ ! -w /dev/kvm ]] || ACCEL=(-accel kvm -cpu host)
 DISPLAY_FLAGS=(-display gtk,gl=off,show-menubar=on)
 (( ! HEADLESS )) || DISPLAY_FLAGS=(-display none)
-QEMU=(qemu-system-x86_64 -name 'SWARM OS — Development VM' "${ACCEL[@]}" -m "$MEM" -smp "$CPUS"
- -drive "if=pflash,format=raw,readonly=on,file=$FIRMWARE_DIR/OVMF_CODE.4m.fd"
+QEMU=(qemu-system-x86_64 -name "SWARM OS — Development VM v${ISO_RELEASE}" "${ACCEL[@]}" -m "$MEM" -smp "$CPUS"
+ -drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE"
  -drive "if=pflash,format=raw,file=$VM_DIR/OVMF_VARS.fd"
  -drive "file=$VM_DIR/swarm-development.qcow2,if=virtio,format=qcow2"
  -drive "file=$ISO_PATH,media=cdrom,readonly=on,format=raw"
@@ -56,7 +78,7 @@ fi
 mkdir -p "$VM_DIR"
 exec 9>"$VM_DIR/instance.lock"
 flock -n 9 || { echo 'SWARM development VM is already running.'; command -v notify-send >/dev/null && notify-send 'SWARM OS' 'The development VM is already running.'; exit 0; }
-[[ -f "$VM_DIR/OVMF_VARS.fd" ]] || cp "$FIRMWARE_DIR/OVMF_VARS.4m.fd" "$VM_DIR/OVMF_VARS.fd"
+[[ -f "$VM_DIR/OVMF_VARS.fd" ]] || cp "$OVMF_VARS" "$VM_DIR/OVMF_VARS.fd"
 [[ -f "$VM_DIR/swarm-development.qcow2" ]] || qemu-img create -f qcow2 "$VM_DIR/swarm-development.qcow2" 32G
-printf 'Opening %s\nOnly the VM virtual disk is writable. Ctrl+Alt+G releases the pointer.\n' "$ISO_PATH"
+printf 'Opening SWARM OS v%s from %s\nOnly the VM virtual disk is writable. Ctrl+Alt+G releases the pointer.\n' "$ISO_RELEASE" "$ISO_PATH"
 exec "${QEMU[@]}"

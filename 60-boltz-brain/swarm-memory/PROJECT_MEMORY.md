@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-13 18:13 UTC from 108 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-14 22:19 UTC from 113 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 54 entries
+- `debian@debian` — 59 entries
 
 ## Decisions
 
@@ -16,6 +16,16 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 _cachyos@cachyos-i30ltz · 2026-09-25T08:24:37_
 
 Multi-AI coordination (2026-09-25): before starting work from SWARM_OS_IMPLEMENTATION_CHECKLIST.md (the masterlist), mark the item [>] Item — CLAIMED by <agent> <YYYY-MM-DD HH:MM>. Other agents skip claimed items; a claim >24h old with no progress needs user OK before takeover. Replace the claim with [x]/[~] plus notes when done.
+
+### android-persona-switch
+_debian@debian · 2026-10-14T22:06:28_
+
+Wired queryI30ltzChatApi into Lucille Assistant MainActivity.kt with voice playback (Adam voice) alongside Lucille (Lily voice). Persona toggle and chat routing in Android app now complete in code.
+
+### api-keys-status
+_debian@debian · 2026-10-14T20:11:12_
+
+2026-10-14: OpenRouter and Steam API keys in /mnt/Lucy/20-runtime/.env WORK (both HTTP 200 against the providers, verified by swarm-claude). The user replaced them ~2026-10-05. Any brief saying 'keys dead / add OpenRouter + Steam keys' is stale; do not repeat it.
 
 ### app-build-partitions
 _debian@debian · 2026-10-09T18:52:00_
@@ -26,6 +36,11 @@ _debian@debian · 2026-10-09T18:52:00_
 _debian@debian · 2026-10-09T19:25:17_
 
 2026-10-09 user: /mnt/boltzbuild (sda9 'D. BOLTZ Recovery') was created NTFS by mistake - reformat it. Plan: ext4, label unchanged, fixed UUID e195839a-f617-4abd-9bf3-b64a679b7474 (PARTUUID 52545158-4886-4f7e-8fed-7556cebaaefd), applied with 'sudo /mnt/Lucy/70-scripts/apply_app_build_mounts.sh --reformat-boltz' (guarded: right PARTUUID, on the Micron, NTFS, empty). Also: SWARM OS must run standalone from the internal NVMe.
+
+### cloud-models-and-verbal-voices
+_debian@debian · 2026-10-14T21:04:56_
+
+Cloud models and distinct verbal voices unified across Lucille and Dr. I30LTZ: Lucille uses Kimi (moonshotai/kimi-k3) with ElevenLabs Lily voice; Dr. I30LTZ uses Qwen Coder (qwen/qwen-2.5-coder-32b-instruct) with ElevenLabs Adam voice. Both fallback to local Ollama. Verified live on Debian :8403.
 
 ### companion-identity
 _cachyos@cachyos-i30ltz · 2026-09-21T20:47:45_
@@ -51,6 +66,11 @@ Update 2026-10-09 (user said go ahead): LucyServer drop-in ~/.config/systemd/use
 _debian@debian · 2026-10-08T02:02:14_
 
 SWARM OS primary development environment transitioned from CachyOS to Debian 13 (trixie). Dev dependencies, Docker mkarchiso bridge, user timers, and dev daemons configured on Debian host.
+
+### gaming-agent-hardening
+_debian@debian · 2026-10-14T21:32:02_
+
+SW-05 resolved in GamingAgent-go: context cancellation on Eval/Chat/callChat, database ping health check (503 on failure), PriceAlertDaemon pace delay and stop guard, weather cache TOCTOU fix, and unit test coverage added for db, handlers, and models (all passing).
 
 ### gemini-daily-brief-and-audit
 _debian@debian · 2026-10-07T21:10:06_
@@ -116,6 +136,11 @@ _debian@debian · 2026-10-08T01:49:30_
 _cachyos@cachyos-i30ltz · 2026-09-25T10:32:12_
 
 SWARM OS NVIDIA policy (2026-09-25): current target is 16 GB RAM with Intel UHD integrated graphics and no NVIDIA GPU. Keep NVIDIA features on hosted HTTP APIs; do not add CUDA, cuDNN, TensorRT, NVIDIA drivers, NVIDIA Container Toolkit, or local NIM images to the base ISO. A future local NIM must run on a separate supported NVIDIA host after model-specific VRAM and platform validation. See 70-scripts/NVIDIA_RUNTIME.md.
+
+### rc-10-sse-backend
+_debian@debian · 2026-10-14T22:19:38_
+
+Merged overlapping Recovery OS SSE backends into canonical FastAPI sse_bridge.py (port 7300): added /boltz SSE streaming, /health, /sse/events, ntfy approval callbacks, dual Bearer/X-Swarm-Auth auth, and graceful non-root fallback; updated boltz_server.py as unified entrypoint; 17 pytest unit tests pass; updated SOUL.md capability table.
 
 ### recovery-os-install-target
 _debian@debian · 2026-10-08T03:30:03_

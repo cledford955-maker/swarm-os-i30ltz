@@ -13,19 +13,23 @@ const double _kEdge = 8.0;   // edge strip thickness
 /// The draggable, resizable floating window widget.
 class OsWindowWidget extends ConsumerWidget {
   final AppWindow window;
-  const OsWindowWidget({super.key, required this.window});
+  final bool isPageVisible;
+  const OsWindowWidget({super.key, required this.window, this.isPageVisible = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final offstage = !isPageVisible;
     if (window.isMaximized) {
-      return Positioned.fill(child: _windowBody(ref, context));
+      return Positioned.fill(
+        child: Offstage(offstage: offstage, child: _windowBody(ref, context)),
+      );
     }
     return Positioned(
       left: window.position.dx,
       top: window.position.dy,
       width: window.size.width,
       height: window.size.height,
-      child: _windowBody(ref, context),
+      child: Offstage(offstage: offstage, child: _windowBody(ref, context)),
     );
   }
 
@@ -139,16 +143,7 @@ class _TitleBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MouseRegion(
       cursor: SystemMouseCursors.move,
-      child: GestureDetector(
-        onPanStart: (_) {
-          if (!window.isFocused) {
-            ref.read(windowProvider.notifier).focusWindow(window.id);
-          }
-        },
-        onPanUpdate: (d) {
-          ref.read(windowProvider.notifier).updateWindowPosition(window.id, d.delta);
-        },
-        child: Container(
+      child: Container(
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: const BoxDecoration(
@@ -171,30 +166,45 @@ class _TitleBar extends ConsumerWidget {
                 _WaspSentinel(active: window.isFocused),
                 const SizedBox(width: 8),
 
-                // Window title + timestamp
-                Expanded(child: Row(children: [
-                  Flexible(
-                    child: Text(
-                      window.title,
-                      style: SwarmTextStyles.label.copyWith(
-                        color: window.isFocused
-                            ? SwarmColors.textPrimary
-                            : SwarmColors.textMuted,
+                // Keep drag gestures on the title area so the controls remain
+                // independent tap targets.
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onPanStart: (_) {
+                      if (!window.isFocused) {
+                        ref.read(windowProvider.notifier).focusWindow(window.id);
+                      }
+                    },
+                    onPanUpdate: (d) => ref.read(windowProvider.notifier)
+                        .updateWindowPosition(window.id, d.delta),
+                    onDoubleTap: () => ref.read(windowProvider.notifier)
+                        .toggleMaximize(window.id),
+                    child: Row(children: [
+                      Flexible(
+                        child: Text(
+                          window.title,
+                          style: SwarmTextStyles.label.copyWith(
+                            color: window.isFocused
+                                ? SwarmColors.textPrimary
+                                : SwarmColors.textMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _formatCreatedAt(window.createdAt),
+                        style: SwarmTextStyles.labelSmall.copyWith(
+                          fontSize: 9,
+                          color: SwarmColors.textMuted.withValues(alpha: 0.45),
+                          fontFamily: 'JetBrains Mono',
+                        ),
+                      ),
+                    ]),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _formatCreatedAt(window.createdAt),
-                    style: SwarmTextStyles.labelSmall.copyWith(
-                      fontSize: 9,
-                      color: SwarmColors.textMuted.withValues(alpha: 0.45),
-                      fontFamily: 'JetBrains Mono',
-                    ),
-                  ),
-                ])),
+                ),
 
                 // Maximize / restore
                 _TitleButton(
@@ -207,18 +217,20 @@ class _TitleBar extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
 
-                // Close
-                _TitleButton(
-                  icon: Icons.close,
-                  cursor: SystemMouseCursors.click,
-                  hoverColor: const Color(0xFFFF5F57),
-                  onTap: () =>
-                      ref.read(windowProvider.notifier).closeWindow(window.id),
+                // Keep the app alive and move its window to the next desktop.
+                Tooltip(
+                  message: 'Move window to next desktop',
+                  child: _TitleButton(
+                    icon: Icons.arrow_forward,
+                    cursor: SystemMouseCursors.click,
+                    onTap: () => ref
+                        .read(windowProvider.notifier)
+                        .moveWindowToNextPage(window.id),
+                  ),
                 ),
               ]),
             ],
           ),
-        ),
       ),
     );
   }
@@ -334,13 +346,11 @@ class _SentinelPainter extends CustomPainter {
 class _TitleButton extends StatefulWidget {
   final IconData icon;
   final MouseCursor cursor;
-  final Color? hoverColor;
   final VoidCallback onTap;
   const _TitleButton({
     required this.icon,
     required this.cursor,
     required this.onTap,
-    this.hoverColor,
   });
 
   @override
@@ -352,9 +362,7 @@ class _TitleButtonState extends State<_TitleButton> {
 
   @override
   Widget build(BuildContext context) {
-    final color = _hovered
-        ? (widget.hoverColor ?? SwarmColors.accent)
-        : SwarmColors.textMuted;
+    final color = _hovered ? SwarmColors.accent : SwarmColors.textMuted;
     return MouseRegion(
       cursor: widget.cursor,
       onEnter: (_) => setState(() => _hovered = true),

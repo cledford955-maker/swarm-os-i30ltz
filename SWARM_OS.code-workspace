@@ -4,7 +4,10 @@
     {"name": "Companion panel (Slint)", "path": "30-source/swarm-slint"},
     {"name": "LucyServer (Go)", "path": "30-source/LucyServer-go"},
     {"name": "Build and release scripts", "path": "70-scripts"},
-    {"name": "Live ISO profile", "path": "40-iso-profile/swarm_os_iso_profile"}
+    {"name": "Live ISO profile", "path": "40-iso-profile/swarm_os_iso_profile"},
+    {"name": "Recovery OS", "path": "../recoverybuild"},
+    {"name": "Lucille Assistant", "path": "../lucilleassistant"},
+    {"name": "I30LTZ Companion", "path": "../boltzbuild/src/I30LTZ-Recovery-companion"}
   ],
   "settings": {
     "dart.flutterSdkPath": "/mnt/Lucy/30-source/flutter-sdk",

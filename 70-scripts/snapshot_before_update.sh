@@ -10,7 +10,7 @@
 #   2. Snapshots @ → @snapshots/swarm-YYYYMMDD-HHMMSS[-label]
 #   3. Writes a GRUB entry for it into @/boot/grub/custom.cfg
 #      (GRUB auto-sources this file — no grub-mkconfig needed).
-#   4. Keeps the 5 newest snapshots; removes older ones + their GRUB entries.
+#   4. Keeps the 3 newest snapshots; removes older ones + their GRUB entries.
 #   5. Unmounts the scratch mount if this script created it.
 #
 # Run this BEFORE: deploying a new Flutter bundle, new Go binaries, system
@@ -38,7 +38,7 @@ ROOT_DEV="/dev/nvme0n1p2"
 ROOT_UUID="$(lsblk -no UUID "$ROOT_DEV" | head -n1)"
 [ -n "$ROOT_UUID" ] || { echo "Cannot read the UUID of $ROOT_DEV" >&2; exit 1; }
 BTRFS_MNT="/mnt/swarm_btrfs_top"    # scratch mount — Btrfs root, no subvol
-KEEP=5                               # how many snapshots to keep
+KEEP=3                               # user policy: keep the newest three snapshots
 
 LABEL="${1:-}"                       # optional human label, e.g. "pre-flutter-update"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)

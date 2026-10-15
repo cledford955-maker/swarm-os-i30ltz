@@ -3,7 +3,9 @@ using GoogleWorkspaceService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://0.0.0.0:8399");
+// Clients enter through authenticated LucyServer; keep the token-bearing
+// backend on loopback instead of exposing its Google API surface to the LAN.
+builder.WebHost.UseUrls("http://127.0.0.1:8399");
 
 builder.Services.AddOpenApi();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
@@ -28,20 +30,18 @@ T Agent<T>(HttpContext ctx, Func<GoogleAuthManager, T> factory)
 
 // ══════════ ROOT / HEALTH ══════════
 
-app.MapGet("/", (GoogleAuthManager auth) => new
+app.MapGet("/", async (GoogleAuthManager auth) => new
 {
     service = "Swarm OS Google Workspace Service",
     version = "1.0.0",
-    authenticated = auth.Authenticated,
-    email = auth.UserEmail,
+    session = await auth.GetStatusAsync(),
     agents = new[] { "gmail", "calendar", "drive", "tasks", "contacts", "keep" }
 });
 
-app.MapGet("/health", (GoogleAuthManager auth) => new
+app.MapGet("/health", async (GoogleAuthManager auth) => new
 {
     status = "ok",
-    authenticated = auth.Authenticated,
-    email = auth.UserEmail
+    session = await auth.GetStatusAsync()
 });
 
 // ══════════ AUTH ══════════
@@ -89,7 +89,7 @@ app.MapPost("/auth/exchange", async (ExchangeCodeRequest req, GoogleAuthManager 
         : Results.UnprocessableEntity(new { error = "Token exchange failed" });
 });
 
-app.MapGet("/auth/status", (GoogleAuthManager auth) => Results.Ok(auth.GetStatus()));
+app.MapGet("/auth/status", async (GoogleAuthManager auth) => Results.Ok(await auth.GetStatusAsync()));
 
 app.MapPost("/auth/logout", async (GoogleAuthManager auth) =>
 {

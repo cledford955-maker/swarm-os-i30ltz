@@ -330,10 +330,9 @@ if [ -n "$ROOTFS_ARCHIVE" ] || [ -d "$PROFILE_ROOT/airootfs/" ]; then
     cp -a "$MOUNT_POINT/etc/crypttab" "$MOUNT_POINT/etc/crypttab.sys" 2>/dev/null || true
 
     if [ -n "$ROOTFS_ARCHIVE" ]; then
-      # system files must end up root-owned: the sources are owned by whoever built them (uid 1000)
-      tar -xpf "$ROOTFS_ARCHIVE" --no-same-owner -C "$MOUNT_POINT"
+      tar -xpf "$ROOTFS_ARCHIVE" -C "$MOUNT_POINT"
     else
-      cp -a --no-preserve=ownership "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
+      cp -a "$PROFILE_ROOT/airootfs/"* "$MOUNT_POINT/"
     fi
 
     # Restore pristine system auth files (so users and render groups exist)
@@ -488,7 +487,7 @@ fi
 # (non-live) system. Same treatment as swarm-ui.service.
 # (google-workspace.service was missed in the original fix for this same
 # bug on the other two services — found+added 2026-09-13.)
-for svc in gaming-agent.service lucy-server.service google-workspace.service lucille-wake-listener.service; do
+for svc in gaming-agent.service lucy-server.service google-workspace.service lucille-wake-listener.service lucille-core.service swarm-memory-tick.service i30ltz-recovery.service; do
     if [ -f "/etc/systemd/system/\$svc" ]; then
         sed -i 's/^Group=swarm$/Group=i30ltz/' "/etc/systemd/system/\$svc"
         sed -i 's/^User=swarm$/User=i30ltz/' "/etc/systemd/system/\$svc"

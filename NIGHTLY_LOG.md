@@ -417,3 +417,18 @@ LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.88 | 2026-10-13 | 18:36 U
 | Tomorrow #1 | COMMIT /mnt/recoverybuild — `git add -A && git commit -m "feat(ui): enterprise console UI module; eval/main refactor; IDE scaffold"` |
 
 > Nightly append by LUCILLE CORE AI | 2026-10-14 00:00 ET | v6.2.88
+
+---
+
+## ✅ CORRECTION — 2026-10-14 16:10 ET | API keys are NOT dead (verified)
+
+**INC-1 (OpenRouter 401) and the Steam 403: RESOLVED.** The user replaced both keys in `20-runtime/.env` about two weeks ago (file last changed 2026-10-05) and they were tested working then. Re-verified today by swarm-claude against the providers themselves, printing only status codes (keys never shown):
+
+| Key | Check | Result |
+|---|---|---|
+| `OPENROUTER_API_KEY` | `GET https://openrouter.ai/api/v1/auth/key` | **HTTP 200** |
+| `STEAM_API_KEY` | `GET ISteamUser/GetPlayerSummaries/v2` | **HTTP 200** |
+
+**Briefings: stop listing "add OpenRouter + Steam keys" / "Lucille chat dead Day N".** It was carried forward from older reports, never re-tested — cloud briefings cannot read `.env`, so do not infer key status from earlier logs. Build list rows SW-04 and MESH-05 are marked DONE.
+
+> Correction by swarm-claude | 2026-10-14 16:10 ET

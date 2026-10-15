@@ -113,3 +113,31 @@ func TestFetchWeatherSummary_MissingCurrentConditionIsEmpty(t *testing.T) {
 		t.Errorf("empty current_condition should yield empty summary, got %q", got)
 	}
 }
+
+func TestFetchWeatherSummary_ConcurrentNoTOCTOU(t *testing.T) {
+	hits := 0
+	withMockWeather(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(10 * time.Millisecond) // simulate network latency
+		hits++
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"current_condition":[{"temp_F":"60","weatherDesc":[{"value":"Clear"}]}],
+			"nearest_area":[{"areaName":[{"value":"Nowhere"}]}]
+		}`))
+	}))
+
+	done := make(chan struct{})
+	for i := 0; i < 10; i++ {
+		go func() {
+			_ = fetchWeatherSummary()
+			done <- struct{}{}
+		}()
+	}
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+
+	if hits != 1 {
+		t.Errorf("expected exactly 1 upstream hit across concurrent callers, got %d", hits)
+	}
+}

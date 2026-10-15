@@ -48,12 +48,13 @@ type PriceAlert struct {
 }
 
 type PriceAlertDaemon struct {
-	steam    *SteamService
-	games    *GamesService
-	db       *sql.DB
-	http     *http.Client
-	interval time.Duration
+	steam     *SteamService
+	games     *GamesService
+	db        *sql.DB
+	http      *http.Client
+	interval  time.Duration
 	threshold float64
+	paceDelay time.Duration
 	// Guard so Start() is idempotent.
 	mu      sync.Mutex
 	started bool
@@ -68,8 +69,21 @@ func NewPriceAlertDaemon(steam *SteamService, games *GamesService, db *sql.DB) *
 		http:      &http.Client{Timeout: 6 * time.Second},
 		interval:  parseIntervalEnv(),
 		threshold: parseThresholdEnv(),
+		paceDelay: parsePaceDelayEnv(),
 		stop:      make(chan struct{}),
 	}
+}
+
+func parsePaceDelayEnv() time.Duration {
+	v := os.Getenv("PRICE_ALERT_PACE_MS")
+	if v == "" {
+		return 150 * time.Millisecond
+	}
+	ms, err := strconv.Atoi(v)
+	if err != nil || ms < 0 {
+		return 150 * time.Millisecond
+	}
+	return time.Duration(ms) * time.Millisecond
 }
 
 func parseIntervalEnv() time.Duration {
@@ -156,10 +170,22 @@ func (d *PriceAlertDaemon) CheckOnce() error {
 
 	alerts := 0
 	for _, g := range library {
+		select {
+		case <-d.stop:
+			return nil
+		default:
+		}
 		if triggered, ok := d.checkGame(g); ok {
 			alerts++
 			d.recordAlert(triggered)
 			d.pushWebhook(triggered)
+		}
+		if d.paceDelay > 0 {
+			select {
+			case <-d.stop:
+				return nil
+			case <-time.After(d.paceDelay):
+			}
 		}
 	}
 	log.Printf("[price-alert] check complete: %d games scanned, %d alerts", len(library), alerts)

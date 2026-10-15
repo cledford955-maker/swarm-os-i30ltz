@@ -1,10 +1,11 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/swarm_colors.dart';
 import 'top_bar.dart';
 import 'window_manager.dart';
 import 'os_window.dart';
-import '../widgets/draggable_osd.dart';
 import 'left_app_drawer.dart';
 import 'right_settings_drawer.dart';
 import '../services/gamepad_service.dart';
@@ -32,6 +33,8 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
   bool _isRightDrawerOpen = false;
   bool _isLeftHovered = false;
   bool _isRightHovered = false;
+  DateTime _lastDesktopScroll = DateTime.fromMillisecondsSinceEpoch(0);
+  double _desktopScrollDistance = 0;
 
   @override
   void initState() {
@@ -70,13 +73,53 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
     }
   }
 
+  void _handleDesktopScroll(PointerSignalEvent event, List<AppWindow> windows, int page) {
+    if (event is! PointerScrollEvent) return;
+    final now = DateTime.now();
+    if (now.difference(_lastDesktopScroll) < const Duration(milliseconds: 650)) {
+      _desktopScrollDistance = 0;
+      return;
+    }
+
+    final box = context.findRenderObject();
+    if (box is! RenderBox) return;
+    final localPosition = box.globalToLocal(event.position);
+    if (localPosition.dy <= 48) return; // Keep the top-bar controls scroll-safe.
+    try {
+      if (GoRouterState.of(context).uri.path != '/') return;
+    } catch (_) {
+      return;
+    }
+
+    for (final window in windows.where((w) => w.desktopPage == page)) {
+      if (window.isMaximized ||
+          (Rect.fromLTWH(window.position.dx, window.position.dy,
+                  window.size.width, window.size.height)
+              .contains(localPosition))) {
+        _desktopScrollDistance = 0;
+        return; // Preserve scrolling and gestures inside app windows.
+      }
+    }
+
+    _desktopScrollDistance += event.scrollDelta.dy;
+    if (_desktopScrollDistance.abs() < 48) return;
+    final direction = _desktopScrollDistance.sign;
+    _desktopScrollDistance = 0;
+    _lastDesktopScroll = now;
+    final pages = ref.read(activeDesktopPageProvider.notifier);
+    pages.state = direction > 0 ? page + 1 : (page > 0 ? page - 1 : 0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final windows = ref.watch(windowProvider);
+    final activePage = ref.watch(activeDesktopPageProvider);
 
     return Scaffold(
       backgroundColor: SwarmColors.bg,
-      body: Stack(
+      body: Listener(
+        onPointerSignal: (event) => _handleDesktopScroll(event, windows, activePage),
+        child: Stack(
         children: [
           // 1. Background Wallpaper — a random picture from
           //    /mnt/Lucy/images/websitebackgrounds, swapped every few minutes
@@ -130,7 +173,11 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
           // 5. Floating Window Overlay
           if (windows.isNotEmpty)
             Stack(
-              children: windows.map((w) => OsWindowWidget(window: w)).toList(),
+              children: windows.map((w) => OsWindowWidget(
+                key: ValueKey('window-${w.id}'),
+                window: w,
+                isPageVisible: w.desktopPage == activePage,
+              )).toList(),
             ),
 
           // 5. Backdrop barrier when either drawer is open
@@ -280,12 +327,10 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
             onClose: () => setState(() => _isRightDrawerOpen = false),
           ),
 
-          // 10. AI-Powered Draggable OSD
-          const DraggableOSD(),
-
-          // 11. Controller Virtual Mouse & Crosshair Overlay
+          // 10. Controller Virtual Mouse & Crosshair Overlay
           const VirtualCursorOverlay(),
         ],
+      ),
       ),
     );
   }
