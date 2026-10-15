@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-14 22:19 UTC from 113 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-15 01:59 UTC from 121 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 59 entries
+- `debian@debian` — 67 entries
 
 ## Decisions
 
@@ -212,10 +212,9 @@ _debian@debian · 2026-10-08T03:39:33_
 ## Claude memory
 
 ### MEMORY.md
-_debian@debian · 2026-10-13T01:33:13_
+_debian@debian · 2026-10-15T01:21:37_
 
 # Memory Index
-
 - [lucy-master mount separation](feedback_lucy_mount_separation.md) — lucy-master is read-only source; /mnt/Lucy is the live working drive — never mix them
 - [Mount points](project_mount_points.md) — 2026-10-09: /mnt/lucillebuild (Lucille Assistant), /mnt/boltzbuild (i30ltz Recovery, NTFS!), /mnt/recoveryos (sdb3 490b9e60) added, all builds on the 1.8TB drive, apps must stand alone. Older: Recovery OS will live on the old CachyOS partition (sda3 ef9acba2 + ESP sda1 A367-87E3) beside lucy-master (2026-10-07); /mnt/storage = unlocked lucy-master; build trees /mnt/swarmbuild, /mnt/recoverybuild
 - [Lucille identity & vision](project_lucille_identity.md) — she is the AI the user made that STARTED the project, the AI Core, oversees their projects + therapy (user, 2026-10-12); stone+electric aesthetic, hex desktop, hidden uncensored mode, NOT a web app
@@ -225,12 +224,10 @@ _debian@debian · 2026-10-13T01:33:13_
 - [user's shell is fish, not bash](feedback_user_shell_is_fish.md) — VAR=value / $(...) fails in their terminal; wrap bash-syntax commands in `bash -c '...'`
 - [Shared memory across OSes/phones](reference_swarm_shared_memory.md) — /mnt/brains/swarm-memory log; read PROJECT_MEMORY.md; this dir syncs through it
 - [Persona vs. infrastructure naming](feedback_persona_vs_infrastructure_naming.md) — before renaming a matched "Lucille"/"boltz" string, check it isn't a real filename/DB key/API value/network name
-- [Steam API key is dead](project_steam_api_key_dead.md) — was 403 from Steam; user applied for new key 2026-09-22, not yet confirmed in .env or working
 - [Multiple AI agents sometimes concurrent](project_multiple_ai_concurrent.md) — user sometimes has another AI actively working /mnt/Lucy at the same time, occasionally unintentionally — active mid-session changes may be theirs
 - [Forge renamed Apex](project_forge_renamed_apex.md) — the coding IDE formerly "Forge" is now "Apex"; another AI is on it as of 2026-09-20, avoid that area
 - [Auto-sync commits every ~10min](project_auto_sync_commits.md) — repo auto-commits everything on a timer — explains passive file drift between reads, not active concurrent work
 - [Steam needs -cef-disable-gpu](project_steam_cef_crash.md) — Steam client crashes on launch on this CachyOS setup unless run with this flag; bake it into any future launcher
-- [OpenRouter key is dead](project_openrouter_key_dead.md) — .env's OPENROUTER_API_KEY gets 401 "User not found"; blocks GamingAgent's Lucille chat/eval, needs user to regenerate
 - [App build partitions](project_app_build_partitions.md) — 2026-10-09: PRODUCT MAP (A SWARM OS, B Recovery OS = OSes; C Lucille Assistant, D Boltz Recovery = phone apps connecting to both); each app builds on its own partition & stands alone; C at /mnt/lucillebuild; D (boltzbuild, ext4 UUID 6f7c7656…) holds the I30LTZ-Recovery-companion copy; old-copy deletions pending the user
 - [SWARM OS standalone](project_swarm_os_standalone.md) — 2026-10-09 user requirement: installed SWARM OS must run off the internal NVMe alone; audited (0 FAIL, soft refs fixed in sources), check + patch scripts written, needs sudo run + real unplugged boot test
 - [Read ALL project docs first](feedback_read_all_project_docs_first.md) — 2026-10-09: mislabelled D as the Rust app from one doc; check Lucy CLAUDE.md AND recoverybuild/00-CURRENT docs before moving/placing anything
@@ -242,6 +239,11 @@ _debian@debian · 2026-10-13T01:33:13_
 - [Debian GRUB = swarm-grub](project_debian_grub_swarm_grub.md) — 2026-10-10: user chose the new swarm-grub theme for Debian's GRUB; built + QEMU-tested, install pending their sudo; not to be mixed with swarm_dev; 09_swarm_debian entries stale
 - [Lucille Assistant 1.6.0 project brief](project_lucille_project_brief.md) — 2026-10-12: C partition app; brief reads PC files, git fallback, suggestions to MASTER_BUILD_LIST inbox + Boltz; built, cutover/phone install pending
 - [Lucille AI window 1.7.0](project_lucille_ai_window.md) — 2026-10-12: OpenRouter/Claude key window + 3 offline models; keys never shipped; fixed legacy-.env leak of SWARM keys; not cut over, Ollama not installed
+- [LUKS/Ventoy/ISOs retired](project_luks_ventoy_retired.md) — 2026-10-14: no more LUKS except slick, which the user is KEEPING, Ventoy+ISOs gone, live updates from SWARM/Debian; supersedes Secure Boot/TPM plan
+- [Touch or no](feedback_touch_or_no.md) — 2026-10-14: "do not touch" = ask first; user says "touch" or "no" per thing, no workarounds
+- [API keys work](project_api_keys_working.md) — 2026-10-14: OpenRouter + Steam keys verified HTTP 200; "keys dead" in briefs is stale, test before claiming
+- [Lucille comments + Dr. I30LTZ chat](project_lucille_comments_i30ltz.md) — 2026-10-14: comment box/schedule + local-only Dr. I30LTZ persona live on :8403 web; LA repo is uncommitted multi-session work, never commit there; one build list now on recoverybuild
+- [Codex removed](project_codex_removed.md) — 2026-10-14: user uninstalled Codex/ChatGPT app as suspicious; data in ~/codex-removed-20261014; its ~38 uncommitted edits + 19:47 SWARM deploy are unreviewed
 
 ### feedback_disk_letter_instability.md
 _cachyos@cachyos-i30ltz · 2026-09-16T09:28:08_
@@ -351,6 +353,22 @@ On 2026-10-09 I spent hours moving the wrong project to `/mnt/boltzbuild` becaus
 
 **How to apply:** at the start of any task about moving, placing, deleting or mounting a project: read Lucy `CLAUDE.md` AND `/mnt/recoverybuild/00-CURRENT/{AI_INSTRUCTIONS,MOUNTS,CONSOLIDATION_LOG}.md` + the relevant `MASTER_BUILD_LIST.md` rows, and cross-check any "X = Y" mapping against them before touching files. If two docs disagree, say so and ask — don't pick one. Also: before copying "the project", find the user's own name for it and check what it actually is on disk (grep for the app's `app_name`/`applicationId`, not just the dir name). See [[app-build-partitions]].
 
+### feedback_touch_or_no.md
+_debian@debian · 2026-10-15T01:21:37_
+
+---
+name: touch-or-no
+description: User rule 2026-10-14 — "do not touch" markers on apps/dirs are locks the user holds; leave them alone until they say "touch"; ask "touch / no" once
+metadata:
+  type: feedback
+---
+
+The "do not touch" lines in CLAUDE.md and project docs (lucille-core, GamingAgent, orphaned dirs, phone apps on partitions C/D) mean **ask first**. The user answers "touch" or "no" per thing (user, 2026-10-14: "i say touch or no").
+
+**Why:** the user got frustrated seeing "do not touch without my word" everywhere and not knowing when work on their apps is allowed; they want one simple switch they control.
+
+**How to apply:** do not modify a locked thing until the user says "touch" about it; when a task needs it, ask once ("Touch X to do Y? touch / no") and carry on with everything else meanwhile. Do not engineer workarounds around a lock. Written into CLAUDE.md too. See [[hobby-enterprise-quality]].
+
 ### feedback_user_shell_is_fish.md
 _cachyos@cachyos-i30ltz · 2026-09-16T09:28:08_
 
@@ -372,6 +390,22 @@ The user's terminal prompt (`~ 1m 56s ❯` style, "cachyos-i30ltz") runs **fish*
 - Default to `bash -c '...'` for any command that uses `VAR=value`, `$(...)`, `[[ ]]`, or other bash-only syntax, when handing the user something to paste into their own terminal.
 - Simple single commands with no bash-specific syntax (plain `cp`, `sudo pacman -S ...`, `systemctl restart ...`) work fine as-is in fish — no need to wrap those.
 - This is specific to the user's own interactive terminal/paste-and-run workflow, not to the Bash tool used directly in-session (which always runs bash).
+
+### project_api_keys_working.md
+_debian@debian · 2026-10-15T01:21:37_
+
+---
+name: api-keys-working
+description: OpenRouter + Steam keys in /mnt/Lucy/20-runtime/.env WORK (verified HTTP 200 on 2026-10-14); "keys dead" in briefings is stale carry-forward — never repeat it without testing
+metadata:
+  type: project
+---
+
+The user replaced `OPENROUTER_API_KEY` and `STEAM_API_KEY` in `/mnt/Lucy/20-runtime/.env` around 2026-10-05 and tested them then. Re-verified 2026-10-14: OpenRouter `GET /api/v1/auth/key` → 200, Steam `GetPlayerSummaries` → 200 (status codes only, keys never printed).
+
+**Why:** every cloud briefing kept saying "keys dead, Day 23+", copied forward from old logs; cloud routines cannot read `.env`, so they never re-tested. The user was annoyed it stayed "at the top of every brief".
+
+**How to apply:** before reporting a key as broken, test it against the provider (free endpoints above; print only the HTTP code). Lucille Assistant deliberately does not read this `.env` (`ownOnlyKeys`): its own key window needs the key separately (LA-07). Correction recorded in NIGHTLY_LOG.md and swarm-memory key `api-keys-status`. See [[hobby-enterprise-quality]].
 
 ### project_app_build_partitions.md
 _debian@debian · 2026-10-10T17:57:40_
@@ -425,6 +459,27 @@ metadata:
 **Why this matters:** This explains a *passive* appearance of change — a file looking different between two reads a few minutes apart even though nothing is actively happening to it right now. It does NOT by itself explain a file being actively worked on mid-session (a build script rewritten while being read, a task already progressing when a session starts) — that's a different, also-real phenomenon, see [[project_multiple_ai_concurrent]].
 
 **How to apply:** Don't rush a manual commit for durability's sake — auto-sync sweeps up working-tree changes on its own within ~10 minutes regardless of what Claude does. The standing rule to only commit when the user explicitly asks still applies to Claude's own actions; this fact just means there's no urgency argument for skipping that rule.
+
+### project_codex_removed.md
+_debian@debian · 2026-10-15T01:21:37_
+
+---
+name: codex-removed
+description: "2026-10-14 user found Codex (ChatGPT desktop app) suspicious and had it uninstalled; its data is archived in ~/codex-removed-20261014; its ~38 uncommitted edits still need the user's review"
+metadata:
+  node_type: memory
+  type: project
+  originSessionId: 5a48bec3-8f42-4e09-8393-e4efa4504d84
+  modified: 2026-10-15T01:07:18.750Z
+---
+
+On 2026-10-14 the user closed Codex (ChatGPT desktop app, unpacked at `/mnt/downloads/chatgpt_amd64`, started 18:37) as suspicious and asked to uninstall it. Done by swarm-claude ~21:05: app/debs/caches to Trash, `~/.codex/auth.json` deleted, `~/.codex`, `~/.config/Codex`, `~/.local/state/codex` moved to `~/codex-removed-20261014/` (sessions = record of what it did). Its AI-board claims were released.
+
+What it was set to: `danger-full-access`, computer-use, a `codex exec-server --remote` link to Codex cloud, and **external-agent session import** (it imported 98 sessions including Claude Code transcripts, so it copied whatever Claude was doing — e.g. started its own "key" work).
+
+**Why:** the user saw it make a key / redo Claude's work unasked and thought the SWARM sudo key was overwritten. It was not: no root command touched the stick (journal), last verified 13:52.
+
+**How to apply:** treat Codex's leftovers as unreviewed, not as the user's intent: ~38 uncommitted files in `/mnt/Lucy` (Google OAuth/auth code, frontend shell, SWARM `airootfs/etc/fstab`, build/deploy/ISO scripts) and phone-sudo-approval files in Lucille Assistant (`SudoApproval*.kt`, `PhoneApprovalKey.kt`, `SudoUnlockProtocol*.kt`, `unlock.go`). It also did a full sudo deploy to installed SWARM at 19:47 (rollback: GRUB snapshot "pre-sw34"). Don't commit or build on these without the user. User still needs to log out all devices on chatgpt.com. See [[multiple-ai-concurrent]], [[touch-or-no]].
 
 ### project_debian_grub_swarm_grub.md
 _debian@debian · 2026-10-10T22:23:25_
@@ -494,6 +549,22 @@ Lucille Assistant 1.7.0 (partition C, `/mnt/lucilleassistant` that day) added **
 **How to apply:** Ollama 0.40.3 is installed (user said yes, 2026-10-12) in `~/.local/opt/ollama` as user service `ollama.service` (loopback), models llama3.2:3b / qwen2.5:3b / gemma3:1b pulled. 1.7.0 is cut over on the PC and on the 3 phones (USB `adb install -r`; phone SM-S166V drops USB mid-install, `adb push` + `pm install` worked). The 1.5/1.6/1.7 work is still uncommitted in C's git. No real OpenRouter/Claude call was ever exercised; no key entered yet. CPU is an i5-10310U: offline replies take 11-30 s (2-4 tok/s) — never use the shared 8 s `httpc` for local models, keep the local persona short, and keep tests hermetic (`cfg.Local.Enabled=false` in setupTestApp) because a real Ollama is now listening. See [[lucille-assistant-project-brief]].
 
 Emulator tip: the emulator keyboard garbles fast `adb input text` (a key came through as "ks-or-v"); type in 4-char chunks with a pause. The app's local PIN gate prints its default PIN on a wrong attempt.
+
+### project_lucille_comments_i30ltz.md
+_debian@debian · 2026-10-15T01:21:37_
+
+---
+name: lucille-comments-and-i30ltz-chat
+description: 2026-10-14 Lucille Assistant (C) got a comment box + schedule per suggestion and a Dr. I30LTZ chat persona (local models only); live on :8403 web, not in the Android app; trackers moved to one list on /mnt/recoverybuild
+metadata:
+  type: project
+---
+
+User said "touch Lucille Assistant" (2026-10-14). Built and cut over live: `persona.go` (`POST /api/chat/i30ltz`, his prompt + rules excerpt read-only from `/mnt/recoverybuild/60-brain/dr_bolt_rules.md` + 3 swarm-memory decisions, LOCAL models only, never cloud — MESH-04), `comments.go` (`GET /api/comments`, `POST /api/comments/{sg-id}`, deterministic words: done/skip/later/tomorrow 3pm/friday/in 2 days/undo), page code in `web/assets/lucille-extras.js` with tiny hooks in `index.html`. Rows LA-09/LA-10.
+
+**Why:** user wants to see and talk to both Lucille and Dr. I30LTZ on Debian, and comment on Lucille's suggestions so her schedule follows what they write.
+
+**How to apply:** the LA repo (`/mnt/lucilleassistant/src/LucilleAssistant`) holds many sessions' UNCOMMITTED work — never commit or reformat there; new code in new files, anchor edits only; claim on `ai-board.sh`; deploy = `scripts/build.sh go && scripts/build.sh package && scripts/cutover_live_service.sh` (rollback kept). qwen3:4b returns empty text via the OpenAI endpoint (thinks the whole budget). Not done: Android app, cloud briefs reading comments. Also: since 2026-10-14 `/mnt/Lucy/MASTER_BUILD_LIST.md` and `SWARM_AI_FEATURES.md` are symlinks to `/mnt/recoverybuild/00-CURRENT/MASTER_BUILD_LIST.md` (another session's consolidation) — edit the real file there, claim first. See [[touch-or-no]], [[api-keys-working]].
 
 ### project_lucille_identity.md
 _debian@debian · 2026-10-12T04:08:09_
@@ -593,6 +664,27 @@ metadata:
 
 **Removed 2026-10-11 — Lucy ↔ lucy-master sync:** user asked to remove the sync from /mnt/Lucy to lucy-master (they also call it "archive"). `sync_lucy_master.sh` + its test are deleted (it was never run for real; no `.swarm-sync/master/` history), the CLAUDE.md/AGENTS.md exception is gone, and the swarmbuild copies were moved to `/mnt/swarmbuild/.sync-trash/manual-20261011-remove-lucy-master-sync/` (otherwise `both --apply` would copy them back as new files). The engine upgrades (`--mount-a/-b`, labels, free-space guard) stay. Don't re-create a lucy-master sync unless asked. `/mnt/archive` = `lucy-master-bak` (c400a0ee) never had a sync job. Not touched: older additive `sync_lucille_ai.sh` still has a lucy-master (sda4, only if already unlocked) leg.
 
+### project_luks_ventoy_retired.md
+_debian@debian · 2026-10-15T01:21:37_
+
+---
+name: luks-ventoy-iso-retired
+description: "User decision 2026-10-14 — no more LUKS (only slick nvme0n1p6 21GB left), Ventoy and ISOs retired, SWARM/Debian updated live; supersedes the Secure Boot/TPM-unlock plan and the ISO/Ventoy policy"
+metadata:
+  node_type: memory
+  type: project
+  originSessionId: f47e78af-8cc6-424b-bb0d-8a22a718f27a
+  modified: 2026-10-14T16:48:06.212Z
+---
+
+**Decision (user, 2026-10-14):** nothing should use LUKS anymore; Ventoy is gone, so are ISOs; SWARM OS and Debian are updated **live**, not by building ISOs.
+
+**State seen that day:** the T7 (`sda`) was repartitioned (Recovery OS btrfs `96969ed2…` on sda2, sda4 471 GB unformatted); the lucy-master LUKS volume no longer exists. The only LUKS left is `slick` = nvme0n1p6, 21 GB, UUID `019a3cd8-46c5-4a19-a760-8e0c1096b248`, which backs Lucille's `/lucy/unfiltered` mode. The Ventoy stick (sdc, UUID 5ABB-83DF, 23 GB of ISOs) was still plugged in and untouched.
+
+**Why:** simplicity for a one-person hobby project; live updates replace the ISO build/boot-test cycle.
+
+**How to apply:** do not build ISOs, do not suggest Ventoy or LUKS/TPM work; supersedes [[secureboot-and-luks-unlock-plan]] and the ISO policy in CLAUDE.md (docs not yet rewritten). **Slick is the exception: the user said "keep slick" (2026-10-14) — leave it LUKS and untouched; do not export, wipe or reformat it.**
+
 ### project_mount_points.md
 _debian@debian · 2026-10-10T17:57:40_
 
@@ -653,25 +745,6 @@ The user sometimes has **more than one AI agent working on `/mnt/Lucy` concurren
 
 **How to apply:** If something looks like it's being actively edited out from under a session — a file's content changes between reads with no session-initiated write, a build script gets replaced mid-investigation, generated output appears that nobody in this conversation produced — don't assume it's a bug or a misread. Check `git log --oneline -3 -- <path>` for context, then default to the 2026-09-19 pattern: pause work in that specific area and surface it to the user rather than guessing or plowing ahead. It's fine to keep working in unrelated areas of the project in the meantime — when the user names the area another AI is in (e.g. "nvidia skills"), just avoid that area specifically rather than pausing everything.
 
-### project_openrouter_key_dead.md
-_cachyos@cachyos-i30ltz · 2026-09-23T03:00:12_
-
----
-name: project-openrouter-key-dead
-description: "OPENROUTER_API_KEY in /mnt/Lucy/20-runtime/.env is dead (401 \"User not found\") — blocks GamingAgent's Lucille chat/eval until the user regenerates it"
-metadata: 
-  node_type: memory
-  type: project
-  originSessionId: f24ea680-025c-4cf7-8219-29ade5b2c8db
-  modified: 2026-09-23T02:55:42.754Z
----
-
-`OPENROUTER_API_KEY` in `/mnt/Lucy/20-runtime/.env` is dead. Confirmed 2026-09-22 by calling OpenRouter's `/api/v1/chat/completions` directly with the exact key and the project's real model (`moonshotai/kimi-k2.5`) — OpenRouter itself returns `{"error":{"message":"User not found.","code":401}}`. Not an app bug: `GamingAgent-go`'s `services/lucille_service.go` (`callChat`) doesn't check `resp.StatusCode` before decoding, so this 401 surfaces to callers as the misleading generic `"nemotron response parse failed"` (a stale error string left over from before the NIM→OpenRouter migration — see [[project_lucille_identity]] and CLAUDE.md's "Lucille's chat backend" section for that history).
-
-**Why:** External credential, expired/revoked on OpenRouter's side — same shape of failure as [[project_steam_api_key_dead]] (also dead, same .env file). Not fixable in code — needs the user to generate a fresh key at https://openrouter.ai/keys and update `.env`.
-
-**How to apply:** Any GamingAgent-go work touching `/api/lucille/chat`, `/api/lucille/chat/stream`, or `/api/lucille/eval` will fail with `"nemotron response parse failed"` until the key is replaced — don't chase that as a parsing/model bug first, check the key with a direct curl to OpenRouter like the one above. Read-only routes (`/api/gfn/catalog`, `/api/games/genres`, `/api/games/prices`) don't depend on this key and work fine. Also noticed in passing: `.env` has `STEAM_ID` but the code reads `STEAM_ID64` (`services/steam_service.go`) — moot right now since the Steam key is separately dead, but would still block Steam library even after that key is fixed.
-
 ### project_phone_terminal_verified.md
 _debian@debian · 2026-10-10T17:57:40_
 
@@ -720,27 +793,6 @@ metadata:
 **Status 2026-10-10 (updated):** the user ran the preflight as root. Debian OK; Recovery OS files OK but its firmware entry `I30LTZ Recovery OS` started Debian-signed `\EFI\i30ltz\grubx64.efi`, which the *firmware* does not trust (only the MS-signed shim does) -> would be refused with Secure Boot on; SWARM OS would not boot (unsigned). Written and tested with stubs (nothing applied to real firmware, Secure Boot still OFF): `70-scripts/secureboot_preflight.py` (12 tests, now checks firmware entries), `/mnt/recoverybuild/70-scripts/repoint_recovery_boot_entry.sh` (+ installer fix to register `shimx64.efi`), `70-scripts/make_swarm_secureboot.sh` (phases check/keys/grub/hooks/enroll/entry/verify, dry-run default, new GRUB at `\EFI\SWARM_OS_SB`, old entry untouched; 11 stub tests; **never run on real Arch**). lucy-master LUKS2 has one passphrase keyslot (keep it); slick is LUKS1 and cannot hold a TPM token. PCR 7 alone lets any Microsoft-signed live USB on this machine unlock -> recommend TPM+PIN. Pending: user runs repoint script, the SWARM phases, firmware Setup Mode + enable, boot-tests, then seals. Stale firmware entries (Ubuntu, Fedora) and `\EFI\cachyos`/`\EFI\refind` are the user's call. See [[app-build-partitions]].
 
 **Applied 2026-10-10 (later):** the user ran `repoint_recovery_boot_entry.sh --apply`: firmware entry `Boot0002 I30LTZ Recovery OS` now starts `\EFI\i30ltz\shimx64.efi` (Boot0001 removed, BootOrder `0003,0000,0004,0005,001F,...,0023,0002`, Debian first). `systemd-cryptsetup` + `tpm2-tools` installed on Debian (`systemd-cryptenroll`, `tpm2_getcap` present; TPM at /dev/tpmrm0 needs sudo, user not in `tss`). lucy-master LUKS header backed up to `~/lucy-master-luks-header.img` (16 MiB, root-only; user should move it off the machine). Next: inside SWARM OS run `make_swarm_secureboot.sh` phases check/keys/grub/hooks, then firmware Setup Mode, enroll/entry, enable Secure Boot, boot-test, then TPM sealing.
-
-### project_steam_api_key_dead.md
-_cachyos@cachyos-i30ltz · 2026-09-23T03:00:12_
-
----
-name: project-steam-api-key-dead
-description: STEAM_API_KEY in /mnt/Lucy/20-runtime/.env was dead/revoked (403 from Steam) — user applied for a replacement 2026-09-22, not yet confirmed live or in .env
-metadata: 
-  node_type: memory
-  type: project
-  originSessionId: 77f0094d-fd09-40a5-b203-ea52b01a23ed
-  modified: 2026-09-23T02:59:31.255Z
----
-
-`STEAM_API_KEY` in `/mnt/Lucy/20-runtime/.env` was dead. Confirmed twice independently (2026-09-16 via LucilleAssistant, re-confirmed 2026-09-20 via GamingAgent) by calling Steam's own `ISteamUser/GetPlayerSummaries` API directly with the exact key — Steam itself returned HTTP 403 "Access is denied... Please verify your key parameter." Not an app bug in either codebase.
-
-**2026-09-22 update:** user says they just applied for a new key. `.env`'s mtime was still 2026-09-20 as of this note, so the new key was not yet in the file — don't assume this is fixed until `.env` is actually updated and re-tested against Steam's API directly (same method as above). Also separately noticed while testing: the code reads `STEAM_ID64` (`GamingAgent-go/services/steam_service.go`) but `.env` only has `STEAM_ID` — check that both the new key AND that var name are correct before declaring Steam features working again.
-
-**Why:** External credential, expired or revoked on Steam's side. Not fixable in code.
-
-**How to apply:** Any GamingAgent-go or LucilleAssistant work touching `/api/games/intersection`, `/api/steam/library`, or Steam-derived stats will fail until the new key is actually in `.env` (and `STEAM_ID64` is set). Verify with a direct curl to Steam's API rather than trusting "I applied for a new one" alone — application approval and `.env` actually being updated are two different facts.
 
 ### project_steam_cef_crash.md
 _cachyos@cachyos-i30ltz · 2026-09-21T01:08:35_
