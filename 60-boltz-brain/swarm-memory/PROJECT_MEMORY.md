@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-15 10:54 UTC from 126 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-15 11:59 UTC from 129 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 72 entries
+- `debian@debian` — 75 entries
 
 ## Decisions
 
@@ -106,6 +106,11 @@ Lucille Assistant v1.0.0 (2026-09-16): personal-assistant jobs (daily brief, med
 _debian@debian · 2026-10-10T00:45:11_
 
 2026-10-09 (user request): the Lucille Assistant briefings are status briefings: STATUS (dated, health colour), NEXT STEPS & SCHEDULE (each step [YOU] or [AI]), 3 SUGGESTIONS, REFERENCE, for SWARM OS / Recovery OS / I30LTZ Companion (Boltz Recovery, D) / Lucille Assistant. They are a snapshot: when a project's state changes, update its briefing (edit in the phone app, or PUT /api/briefings/<id> on :8403) and the seed/*.md copy under /mnt/lucillebuild/src/LucilleAssistant.
+
+### lucille-catalog-every-project
+_debian@debian · 2026-10-15T11:08:36_
+
+User 2026-10-15: the LUCILLE catalog page (LUCILLE_Catalog_Standalone_v1.0.0_2026-10-15.html, source /mnt/downloads; copy in /mnt/Lucy lucille-ui/) goes in every project from now on. Ship it unchanged next to the project's files.
 
 ### lucille-clipboard
 _debian@debian · 2026-10-15T09:06:19_
@@ -217,7 +222,7 @@ _debian@debian · 2026-10-08T03:39:33_
 ## Claude memory
 
 ### MEMORY.md
-_debian@debian · 2026-10-15T09:35:04_
+_debian@debian · 2026-10-15T11:11:49_
 
 # Memory Index
 - [lucy-master mount separation](feedback_lucy_mount_separation.md) — lucy-master is read-only source; /mnt/Lucy is the live working drive — never mix them
@@ -250,6 +255,7 @@ _debian@debian · 2026-10-15T09:35:04_
 - [Lucille comments + Dr. I30LTZ chat](project_lucille_comments_i30ltz.md) — 2026-10-14: comment box/schedule + local-only Dr. I30LTZ persona live on :8403 web; LA repo is uncommitted multi-session work, never commit there; one build list now on recoverybuild
 - [Codex removed](project_codex_removed.md) — 2026-10-14: user uninstalled Codex/ChatGPT app as suspicious; data in ~/codex-removed-20261014; its ~38 uncommitted edits + 19:47 SWARM deploy are unreviewed
 - [Lucille 1.13/1.14](project_lucille_1_13_clipboard_prompts.md) — 2026-10-15: Game Mode live deals, phone→PC clipboard (Klipper, X11), one formal prompt shape, Approve-and-start on suggestions via the launcher; mixed uncommitted sudo work
+- [LUCILLE catalog in every project](feedback_lucille_catalog_every_project.md) — 2026-10-15: ship LUCILLE_Catalog_Standalone html unchanged in every new project/kit; user sells LUCILLE kits on Ko-fi ($5/$15/$30/$50 tiers); catalog hard-codes "$5 what you bought"
 
 ### feedback_disk_letter_instability.md
 _cachyos@cachyos-i30ltz · 2026-09-16T09:28:08_
@@ -272,6 +278,28 @@ On i30ltz's machine, `/dev/sda` and `/dev/sdb` are not stable identities across 
 - Never suggest or run `install_swarm_os.sh` without `--disk /dev/nvme0n1` explicitly passed.
 - Never reason about which disk is which using `sda`/`sdb` letters alone on this machine — always cross-check size/partition layout (nvme0n1: 476.9GB total, p1/p2/p3/p4 = EFI/root/swap/LUCILLE) or ask the user to confirm via `lsblk` first.
 - The auto-detect "largest non-removable disk" heuristic in the installer is a latent landmine on this hardware specifically because of the 1.8TB drive — worth hardening the script itself (e.g. require `--disk` always, or exclude disks with a `lucy-master`/known-UUID signature) as a follow-up, not just working around it by habit.
+
+### feedback_lucille_catalog_every_project.md
+_debian@debian · 2026-10-15T11:11:49_
+
+---
+name: lucille-catalog-every-project
+description: 2026-10-15 user rule — the LUCILLE catalog HTML ships in every new project; user sells LUCILLE kits on Ko-fi in tiers
+metadata:
+  node_type: memory
+  type: feedback
+  originSessionId: a5484596-c548-4141-93f1-145a6f5c8204
+  modified: 2026-10-15T11:08:36.594Z
+---
+
+The LUCILLE catalog page goes in **every project from now on** (user, 2026-10-15: "this will go in every project from now on"). Copy it unchanged into the project folder.
+
+- Source: `/mnt/downloads/LUCILLE_Catalog_Standalone_v1.0.0_2026-10-15.html`. Downloads is not a safe long-term home, so a byte-identical copy is also in `/mnt/Lucy` → `lucille-ui/` (branch `LUCILLE/lucille-local-web-ui-98b259`, uncommitted as of 2026-10-15). If a newer `LUCILLE_Catalog_*` exists, ask which one to ship.
+- Context: the user sells LUCILLE kits on Ko-fi (ko-fi.com/i320k3n, signs "Broken (i320k3n)"). Catalog tiers are $5 AI Config Bundle (basic chat; the `LUCILLE_StarterKit_v1.0.0_2026-10-15.zip` in Downloads, which creates the `lucille` Ollama model), $15 Core Bundle (chat + system stats), $30 Dev Pack, $50 Full Environment, plus commissioned Electron/mobile/NVIDIA builds.
+- Caveat: the catalog hard-codes the $5 tier as "← What you bought", which reads wrong inside a higher-tier kit. Some of its figures are unmeasured (e.g. llama3:70b at 82 ms on an RTX 4070, a model that doesn't fit in 12 GB VRAM). Flag these; don't edit the file unasked.
+
+**Why:** the catalog is the upsell page every buyer should see, whatever they bought.
+**How to apply:** when starting or packaging any project or kit, include the catalog file. Keep price/tier wording out of code and filenames unless the user sets it. Related: [[user-hobby-enterprise-quality]], [[project-lucille-identity]].
 
 ### feedback_lucy_mount_separation.md
 _cachyos@cachyos-i30ltz · 2026-09-16T09:28:08_
