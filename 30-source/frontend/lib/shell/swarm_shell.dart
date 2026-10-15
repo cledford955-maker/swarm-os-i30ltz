@@ -168,9 +168,6 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
           // 4. Full-Screen Transparent Seductive Lips Visualizer
           const SeductiveLipsVisualizer(),
 
-          // 4b. Persistent Floating Lucille Voice Controller (Stop Speaking / Wait / Mute)
-          const LucilleVoiceHudButton(),
-
           // 5. Floating Window Overlay
           if (windows.isNotEmpty)
             Stack(
@@ -185,6 +182,13 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
           // in the same place. The one way back to a window buried behind
           // a maximized app or on another desktop page.
           const DesktopTaskbar(),
+
+          // 4b. Persistent Floating Lucille Voice Controller (Stop Speaking /
+          // Wait / Mute) — kept ABOVE the window overlay and taskbar on
+          // purpose: it used to sit underneath them in the stack, so any
+          // window placed over it (maximized ones especially) silently
+          // covered the one always-available way to talk to Lucille.
+          const LucilleVoiceHudButton(),
 
           // 5. Backdrop barrier when either drawer is open
           if (_isLeftDrawerOpen || _isRightDrawerOpen)

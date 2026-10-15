@@ -147,6 +147,34 @@ class _TitleBar extends ConsumerWidget {
   final AppWindow window;
   const _TitleBar({required this.window});
 
+  // Drag-to-edge snapping: drop a window near the left/right edge of the
+  // window zone to snap it to that half; drop it near the top to maximize.
+  // Reads fresh state rather than the widget's `window` field, which may be
+  // one frame behind the last onPanUpdate.
+  static const double _snapThreshold = 36.0;
+
+  void _snapIfNearEdge(WidgetRef ref) {
+    final notifier = ref.read(windowProvider.notifier);
+    final current = ref.read(windowProvider).where((w) => w.id == window.id).firstOrNull;
+    if (current == null || current.isMaximized) return;
+    final zone = DesktopGeometry.windowZone;
+
+    if ((current.position.dy - zone.top).abs() < _snapThreshold) {
+      notifier.toggleMaximize(current.id);
+      return;
+    }
+    if ((current.position.dx - zone.left).abs() < _snapThreshold) {
+      notifier.snapWindow(current.id,
+          Rect.fromLTWH(zone.left, zone.top, zone.width / 2, zone.height));
+      return;
+    }
+    final right = current.position.dx + current.size.width;
+    if ((right - zone.right).abs() < _snapThreshold) {
+      notifier.snapWindow(current.id,
+          Rect.fromLTWH(zone.left + zone.width / 2, zone.top, zone.width / 2, zone.height));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MouseRegion(
@@ -186,6 +214,7 @@ class _TitleBar extends ConsumerWidget {
                     },
                     onPanUpdate: (d) => ref.read(windowProvider.notifier)
                         .updateWindowPosition(window.id, d.delta),
+                    onPanEnd: (_) => _snapIfNearEdge(ref),
                     onDoubleTap: () => ref.read(windowProvider.notifier)
                         .toggleMaximize(window.id),
                     child: Row(children: [

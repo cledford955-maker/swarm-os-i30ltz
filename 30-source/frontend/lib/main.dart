@@ -28,6 +28,8 @@ import 'services/wake_word_service.dart';
 import 'services/google_hub_service.dart';
 import 'services/auth_service.dart';
 import 'services/lucy_server_client.dart';
+import 'services/volume_service.dart';
+import 'services/bluetooth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,12 +74,16 @@ void main() async {
   final authService = AuthService();
   final lucyServerClient = LucyServerClient();
   final uiScaleService = UiScaleService();
+  final volumeService = VolumeService();
+  final bluetoothService = BluetoothService();
 
   runApp(
     ProviderScope(
       child: p.MultiProvider(
         providers: [
           p.ChangeNotifierProvider.value(value: uiScaleService),
+          p.ChangeNotifierProvider.value(value: volumeService),
+          p.ChangeNotifierProvider.value(value: bluetoothService),
           p.Provider.value(value: aiClient),
           p.Provider.value(value: telemetryService),
           p.Provider.value(value: memoryService),
@@ -167,11 +173,11 @@ class _SwarmAppState extends State<SwarmApp> {
               child: Stack(
                 children: [
                   if (child != null) WholeShellZoom(scale: ui.scale, child: child),
-                  Positioned(
+                  const Positioned(
                     left: 0,
                     right: 0,
                     bottom: 10 + DesktopGeometry.taskbarHeight,
-                    child: const Material(
+                    child: Material(
                       color: Colors.transparent,
                       child: SafeArea(
                         child: Center(child: OpenRouterBalanceWidget()),

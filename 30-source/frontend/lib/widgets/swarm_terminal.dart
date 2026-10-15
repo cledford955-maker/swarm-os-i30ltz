@@ -305,17 +305,29 @@ class _SwarmTerminalState extends State<SwarmTerminal> with SingleTickerProvider
   // paste, window titles) would show up as junk text — drop them.
   static final _nonColorEscapes = RegExp(r'\x1B\[[0-9;?]*[A-Za-ln-z]|\x1B\][^\x07]*(\x07|\x1B\\)|\x1B[()][A-Z0-9]|\x1B[=>]');
 
+  // A bare \r (not part of \r\n, already normalized away) means "return to
+  // the start of this line" — progress bars, spinners and download meters
+  // (apt, pip, curl, docker pull...) all redraw this way. Simply deleting
+  // \r instead of honoring it concatenates every redraw onto one
+  // ever-growing line of mush, which is the garbled output this terminal
+  // used to show for exactly that class of command.
+  String _collapseCr(String s) {
+    final i = s.lastIndexOf('\r');
+    return i == -1 ? s : s.substring(i + 1);
+  }
+
   void _emit(TPane pane, String chunk, {bool err = false}) {
-    final text = pane.partial + chunk.replaceAll('\r\n', '\n').replaceAll('\r', '').replaceAll(_nonColorEscapes, '');
+    final text = pane.partial + chunk.replaceAll('\r\n', '\n').replaceAll(_nonColorEscapes, '');
     final parts = text.split('\n');
     if (pane.partialShown) {
       pane.lines.removeLast();
       pane.partialShown = false;
     }
     for (final line in parts.sublist(0, parts.length - 1)) {
-      pane.lines.add(err ? TermLine('\x1B[31m$line\x1B[0m', isErr: true) : TermLine(line));
+      final collapsed = _collapseCr(line);
+      pane.lines.add(err ? TermLine('\x1B[31m$collapsed\x1B[0m', isErr: true) : TermLine(collapsed));
     }
-    pane.partial = parts.last;
+    pane.partial = _collapseCr(parts.last);
     if (pane.partial.isNotEmpty) {
       pane.lines.add(TermLine(pane.partial));
       pane.partialShown = true;
