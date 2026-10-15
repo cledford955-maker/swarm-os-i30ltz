@@ -40,7 +40,7 @@ BOLTZ_EXT4_UUID=6f7c7656-2984-4fb0-81c8-bfc11ca81461   # the UUID actually on th
 PARTS=(
   "/mnt/lucillebuild|d3bc74a6-018f-4529-96e2-7392bf698fd6"
   "/mnt/boltzbuild|$BOLTZ_PARTUUID"
-  "/mnt/recoveryos|993d0098-1b2f-44a2-b51d-11c2bfeddc40"
+  "/mnt/recoveryos|92e15d58-ee1a-4893-9ecf-0225023d36e2"
 )
 DROP_MPS=(/mnt/llucillebuild /mnt/lucillebuild /mnt/boltzbuild /mnt/recoveryos)
 
