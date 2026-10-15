@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ui_scale_service.dart';
 import '../theme/swarm_colors.dart';
+import '../shell/desktop_geometry.dart';
 
 class UiZoomControl extends StatelessWidget {
   const UiZoomControl({super.key});
@@ -18,7 +19,8 @@ class UiZoomControl extends StatelessWidget {
       builder: (context, ui, _) {
         return Positioned(
           left: 12,
-          bottom: 12,
+          // Clear the static taskbar at the bottom of the screen.
+          bottom: 12 + DesktopGeometry.taskbarHeight,
           child: Material(
             color: Colors.transparent,
             child: SafeArea(

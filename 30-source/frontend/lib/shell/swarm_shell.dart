@@ -6,6 +6,7 @@ import '../theme/swarm_colors.dart';
 import 'top_bar.dart';
 import 'window_manager.dart';
 import 'os_window.dart';
+import 'desktop_taskbar.dart';
 import 'left_app_drawer.dart';
 import 'right_settings_drawer.dart';
 import '../services/gamepad_service.dart';
@@ -179,6 +180,11 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
                 isPageVisible: w.desktopPage == activePage,
               )).toList(),
             ),
+
+          // 5b. Static taskbar — every open window, minimized or not, always
+          // in the same place. The one way back to a window buried behind
+          // a maximized app or on another desktop page.
+          const DesktopTaskbar(),
 
           // 5. Backdrop barrier when either drawer is open
           if (_isLeftDrawerOpen || _isRightDrawerOpen)

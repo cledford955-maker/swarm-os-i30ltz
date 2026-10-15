@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'window_manager.dart';
+import 'desktop_geometry.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../widgets/swarm_motifs.dart';
@@ -20,7 +21,14 @@ class OsWindowWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final offstage = !isPageVisible || window.isMinimized;
     if (window.isMaximized) {
-      return Positioned.fill(
+      // Leave room for the static taskbar — a maximized window should
+      // never cover the one place you can always get back to another
+      // window from.
+      return Positioned(
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: DesktopGeometry.taskbarHeight,
         child: Offstage(offstage: offstage, child: _windowBody(ref, context)),
       );
     }

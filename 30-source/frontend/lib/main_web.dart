@@ -14,6 +14,7 @@ import 'theme/swarm_theme.dart';
 import 'widgets/openrouter_balance_widget.dart';
 import 'widgets/ui_zoom_control.dart';
 import 'services/ui_scale_service.dart';
+import 'shell/desktop_geometry.dart';
 import 'services/ai_client.dart';
 import 'services/telemetry_service.dart';
 import 'services/memory_service.dart';
@@ -134,22 +135,28 @@ class _SwarmAppState extends State<SwarmApp> {
       builder: (context, child) {
         return p.Consumer<UiScaleService>(
           builder: (context, ui, _) {
-            return Stack(
-              children: [
-                if (child != null) WholeShellZoom(scale: ui.scale, child: child),
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 10,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: SafeArea(
-                      child: Center(child: OpenRouterBalanceWidget()),
+            final mq = MediaQuery.of(context);
+            return MediaQuery(
+              data: mq.copyWith(
+                textScaler: MinimumFontSizeTextScaler(mq.textScaler),
+              ),
+              child: Stack(
+                children: [
+                  if (child != null) WholeShellZoom(scale: ui.scale, child: child),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 10 + DesktopGeometry.taskbarHeight,
+                    child: const Material(
+                      color: Colors.transparent,
+                      child: SafeArea(
+                        child: Center(child: OpenRouterBalanceWidget()),
+                      ),
                     ),
                   ),
-                ),
-                const UiZoomControl(),
-              ],
+                  const UiZoomControl(),
+                ],
+              ),
             );
           },
         );
