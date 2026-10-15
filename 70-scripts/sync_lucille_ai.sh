@@ -57,7 +57,10 @@ sync_lucille() {
     fi
     mkdir -p "$dest"
     log "START Lucille-AI $label → $dest"
-    if rsync -a --checksum --no-delete --human-readable --info=stats1 \
+    # --no-delete was removed: rsync is additive by default (never deletes unless
+    # --delete is explicitly passed), so the flag was both redundant and broken
+    # on rsync 3.5.0 which rejects it (INC-5, broken for weeks).
+    if rsync -a --checksum --human-readable --info=stats1 \
         "$SRC/" "$dest/" >> "$LOG_FILE" 2>&1; then
         log "OK    Lucille-AI $label (checksum-verified)"
         ((ok++)) || true

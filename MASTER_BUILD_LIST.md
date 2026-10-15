@@ -123,3 +123,46 @@
 | 2026-10-12 | v6.2.22 | HIGH | BRAND-THEME: Apply red #cc1a1a / yellow #f0c020 / void #050508 to Color.kt + Theme.kt | PENDING |
 
 > Nightly append by LUCILLE CORE AI | 2026-10-12 00:00 ET | v6.2.88
+
+---
+
+## 2026-10-15 | Health Check Audit | v6.2.88
+
+### Active Incidents (carried forward + newly confirmed)
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-12 | v6.2.88 | **[CRITICAL]** | INC-1: API-KEYS — OpenRouter key 401 + Steam key 403. Lucille chat DEAD 25+ days. Fix: new keys to `20-runtime/.env` | 🔴 PENDING Day 25+ |
+| 2026-10-12 | v6.2.88 | **[CRITICAL]** | INC-3: swarm-ui.service crash on live ISO — Day 28+. Fix: rebuild ISO + boot via Ventoy | 🔴 PENDING Day 28+ |
+| 2026-10-12 | v6.2.88 | **[CRITICAL]** | INC-4: /mnt/archive 100% full. Fix: dedupe_archive.py or manual rotation | 🔴 PENDING |
+| 2026-10-12 | v0.3.0-alpha | **[CRITICAL]** | BOOT-TEST RC-11: Recovery OS physical boot unconfirmed — Day 6+ | 🔴 PENDING |
+| 2026-10-15 | v6.2.88 | **[HIGH]** | INC-5 FIXED: Removed `--no-delete` from `sync_lucille_ai.sh` (unsupported on rsync 3.5.0, broke sync pipeline for weeks) | ✅ FIXED 2026-10-15 |
+| 2026-10-15 | v6.2.88 | **[HIGH]** | BUG FIX: `LucyServer-go/handlers/google_oauth.go` hardcoded port 8402 (memory LAN listener) instead of 8399 (GoogleWorkspaceService). All OAuth proxy calls were hitting the wrong service silently. Fixed. | ✅ FIXED 2026-10-15 |
+| 2026-10-15 | v6.2.88 | **[HIGH]** | BUG FIX: `LucyServer-go/main.go` healthHandler probed port 8402 for `google_workspace` status (should be 8399). Health endpoint was reporting memory-sync as google_workspace. Fixed. | ✅ FIXED 2026-10-15 |
+| 2026-10-12 | v6.2.88 | **[HIGH]** | INC-6: sda4 LUKS locked — AI sync skips every run | 🔴 ONGOING (needs user action: `sudo cryptsetup open /dev/sda4 luks-a24202ce-...`) |
+| 2026-10-12 | v6.2.22 | **[HIGH]** | COMPANION: Wire RecoveryAiScreen to live MAD IT AI SSE endpoint `/api/chat` | 🔴 PENDING |
+
+### Code Audit Findings (2026-10-15)
+
+| Severity | File | Issue |
+|----------|------|-------|
+| **BUG** | `LucyServer-go/handlers/google_oauth.go:29` | Wrong default port 8402 → fixed to 8399 |
+| **BUG** | `LucyServer-go/main.go:555` | Health probe used 8402 for google_workspace → fixed to 8399 |
+| **BUG** | `70-scripts/sync_lucille_ai.sh:60` | `--no-delete` unsupported on rsync 3.5.0 → removed |
+| **WIRING GAP** | `LucyServer-go/handlers/google_oauth.go:3,8` | Comments still said port 8402 — corrected |
+| **MOCK/STUB** | `LucyServer-go/services/devplatform.go:260` | `ExtCheckUpdates()` returns empty slice always — real implementation needed |
+| **MOCK/STUB** | `LucyServer-go/services/devplatform.go:329` | `GitListRepos()` returns empty slice when git scan finds nothing — low severity |
+| **KNOWN CRASH** | `40-iso-profile/.../swarm-ui.service` | labwc dies silently in <3s; WLR_LOG_LEVEL=debug left in, root cause still unknown. ISO not rebuilt with any fix. |
+| **MISSING WIRING** | `GamingAgent-go/services/lucille_service.go:250` | Calendar comment says port 8402 but GWS is 8399; also `GOOGLE_WORKSPACE_URL` env var is never set in `gaming-agent.service` — calendar context silently never loads |
+| **SECURITY NOTE** | `GamingAgent-go/main.go:209` | `swarm-token-2026` fallback hardcoded as PSK — if `SWARM_AUTH_TOKEN` env var not set in production, anyone who reads the source code has the token |
+
+### Improvement Suggestions
+
+1. **Add startup key-validation in GamingAgent-go** — on boot log a WARNING if `OPENROUTER_API_KEY` is empty/short so failures surface immediately instead of silently returning HTTP 401 at runtime.
+2. **Set `GOOGLE_WORKSPACE_URL=http://127.0.0.1:8399` in `gaming-agent.service`** — currently it relies only on the hardcoded default (which was wrong until today's fix). Making it explicit in the unit file is self-documenting.
+3. **Add a `SWARM_AUTH_TOKEN` check to `swarm-secrets.service`** — log a WARNING if it is not set after unseal, so the fallback `swarm-token-2026` PSK exposure is visible in the journal.
+4. **Implement `ExtCheckUpdates()`** — it always returns empty, so the Flutter extension-update flow is permanently broken. A real impl would scan `/mnt/Lucy` extension manifests against a version store.
+5. **Wire `swarm-ui.service` crash root cause** — `WLR_LOG_LEVEL=debug` is a diagnostic left on from 2026-09-22. The underlying crash (labwc dies in <3s, PAM/seatd/DRM timing) is still unresolved and the ISO has never been rebuilt with any candidate fix. This blocks all live desktop testing.
+6. **ISO rebuild** — v6.2.88 has never been built into a bootable ISO. All service fixes (swarm-ui, lucy-server, gaming-agent) are staged in source but unverified in a real live boot. Priority: sync Lucy → swarmbuild → `build_swarm_iso.sh` → Ventoy boot.
+
+> Health check audit by LUCILLE CORE AI | 2026-10-15 | v6.2.88

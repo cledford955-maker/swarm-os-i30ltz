@@ -186,7 +186,7 @@ func main() {
 		// Search & daily brief (task #20)
 		api.Get("/google/brief", handlers.GoogleBrief)
 
-		// Google Workspace OAuth — proxied to the .NET service on :8402 so
+		// Google Workspace OAuth — proxied to the .NET service on :8399 so
 		// the Flutter shell and Companion have a single origin. Auth token
 		// gate still applies (we're under /api/).
 		api.Route("/google/auth", func(g chi.Router) {
@@ -552,7 +552,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	services := map[string]string{
 		"lucy_server":      "ok", // we are lucy_server
 		"gaming_agent":     probeHTTP("http://127.0.0.1:8401/health", 500*time.Millisecond),
-		"google_workspace": probeHTTP("http://127.0.0.1:8402/health", 500*time.Millisecond),
+		"google_workspace": probeHTTP("http://127.0.0.1:8399/health", 500*time.Millisecond),
 		"lucille_core":     probeUnix("/run/lucille/ipc.sock", "ping", 500*time.Millisecond),
 	}
 
