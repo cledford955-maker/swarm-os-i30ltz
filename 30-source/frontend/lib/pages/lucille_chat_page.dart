@@ -7,8 +7,17 @@ import '../providers/lucille_engine_providers.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../services/lucille_voice_service.dart';
+import '../widgets/lucille_team_brief_tab.dart';
+import '../widgets/lucille_games_tab.dart';
 
 /// LUCILLE CORE: DEDICATED VOICE & CHAT WORKSTATION
+///
+/// Full native app, not just a chat box: Chat / Team Brief (every
+/// statement commentable, Ask Lucille/Boltz/Claude) / Games, talking to
+/// Lucille Assistant's own API (services/lucille_assistant_client.dart,
+/// :8403) rather than LucyServer's lucille_engine_service.dart (:5000,
+/// which stays as the "ENGINE" status chip — a different, GamingAgent-side
+/// Lucille, kept as-is).
 class LucilleChatPage extends ConsumerStatefulWidget {
   const LucilleChatPage({super.key});
 
@@ -16,8 +25,16 @@ class LucilleChatPage extends ConsumerStatefulWidget {
   ConsumerState<LucilleChatPage> createState() => _LucilleChatPageState();
 }
 
-class _LucilleChatPageState extends ConsumerState<LucilleChatPage> {
+class _LucilleChatPageState extends ConsumerState<LucilleChatPage>
+    with SingleTickerProviderStateMixin {
   final LucilleVoiceService _voiceService = LucilleVoiceService();
+  late final TabController _tabController = TabController(length: 3, vsync: this);
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -211,9 +228,28 @@ class _LucilleChatPageState extends ConsumerState<LucilleChatPage> {
                 ),
               ),
 
-              // ─── Lucille Tabbed Chat & Terminal ───────────────────
+              // ─── Section Tabs: Chat / Team Brief / Games ──────────
+              TabBar(
+                controller: _tabController,
+                labelColor: SwarmColors.accent,
+                unselectedLabelColor: SwarmColors.textMuted,
+                indicatorColor: SwarmColors.accent,
+                labelStyle: SwarmTextStyles.label,
+                tabs: const [
+                  Tab(text: 'CHAT'),
+                  Tab(text: 'TEAM BRIEF'),
+                  Tab(text: 'GAMES'),
+                ],
+              ),
               Expanded(
-                child: AgentWindowContent(agent: lucille),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    AgentWindowContent(agent: lucille),
+                    const LucilleTeamBriefTab(),
+                    const LucilleGamesTab(),
+                  ],
+                ),
               ),
             ],
           ),
