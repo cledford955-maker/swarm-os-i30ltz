@@ -512,7 +512,9 @@ func AiCoderDispatch(title, prompt, filePath, language, role string) (AiCodingTa
 	}
 	model := os.Getenv("SWARM_CODER_MODEL")
 	if model == "" {
-		model = "openrouter/auto"
+		// "openrouter/auto" is not a valid OpenRouter model ID and returns 400/422.
+		// Default to the same model Lucille chat uses; override with SWARM_CODER_MODEL.
+		model = "moonshotai/kimi-k2.5"
 	}
 	system := "You are Forge, an enterprise software engineer. Return only valid JSON with keys generated_code, execution_steps, risks, and tests. Never claim code was compiled, tested, security-reviewed, or applied unless the request explicitly provides evidence. Preserve existing APIs and call out assumptions."
 	user := fmt.Sprintf("Task: %s\nRole: %s\nLanguage: %s\nFile: %s\nRequest: %s", title, role, language, filePath, prompt)
@@ -592,7 +594,7 @@ func AiCoderSuggestFixes(filePath, fileContent, compilerOutput string) []Suggest
 	}
 	model := os.Getenv("SWARM_CODER_MODEL")
 	if model == "" {
-		model = "openrouter/auto"
+		model = "moonshotai/kimi-k2.5"
 	}
 
 	snippet := fileContent
@@ -708,20 +710,10 @@ var (
 
 func initWorkspaces() {
 	wsOnce.Do(func() {
-		workspaces = []CloudWorkspace{
-			{WorkspaceID: "cloud-us-east-gpu", Name: "NVIDIA Tensor Swarm Cluster (US-East)",
-				RemoteHost: "cluster-east.swarm-os.cloud", SSHPort: 2222, Username: "swarm-developer",
-				RemotePath: "/opt/swarm/ai-workspace", Status: "Connected",
-				LatencyMs: 24, MemoryUsedMB: 24576, MemoryTotalMB: 65536, CPUUsagePercent: 18.5},
-			{WorkspaceID: "cloud-eu-west-arm", Name: "Ampere Arm64 Enterprise Sandbox (Frankfurt)",
-				RemoteHost: "arm-eu.swarm-os.cloud", SSHPort: 22, Username: "i30ltz",
-				RemotePath: "/home/i30ltz/src/lucille", Status: "Connected",
-				LatencyMs: 68, MemoryUsedMB: 8192, MemoryTotalMB: 32768, CPUUsagePercent: 9.2},
-			{WorkspaceID: "cloud-edge-baremetal", Name: "Baremetal Microk8s Development Node",
-				RemoteHost: "edge-node-01.local", SSHPort: 22, Username: "root",
-				RemotePath: "/var/swarm/k8s", Status: "Disconnected",
-				LatencyMs: 3, MemoryUsedMB: 4096, MemoryTotalMB: 16384, CPUUsagePercent: 2.4},
-		}
+		// Start empty — fake hostnames were removed (cluster-east.swarm-os.cloud,
+		// arm-eu.swarm-os.cloud, edge-node-01.local). Real workspaces are added
+		// via WorkspaceCreate when the user configures them.
+		workspaces = []CloudWorkspace{}
 	})
 }
 
@@ -868,7 +860,7 @@ func MarketplaceGetAnalytics() MarketplaceAnalytics {
 	}
 	return MarketplaceAnalytics{
 		TotalGrossRevenue: round2(gross), TotalDeveloperPayouts: round2(dev),
-		TotalTransactions: len(billing), ActivePaidSubs: 142,
+		TotalTransactions: len(billing), ActivePaidSubs: 0,
 		RecentTransactions: recent,
 	}
 }
