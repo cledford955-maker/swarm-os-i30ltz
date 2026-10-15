@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-15 18:57 UTC from 129 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-15 19:56 UTC from 131 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 75 entries
+- `debian@debian` — 77 entries
 
 ## Decisions
 
@@ -222,7 +222,7 @@ _debian@debian · 2026-10-08T03:39:33_
 ## Claude memory
 
 ### MEMORY.md
-_debian@debian · 2026-10-15T11:11:49_
+_debian@debian · 2026-10-15T19:14:51_
 
 # Memory Index
 - [lucy-master mount separation](feedback_lucy_mount_separation.md) — lucy-master is read-only source; /mnt/Lucy is the live working drive — never mix them
@@ -256,6 +256,7 @@ _debian@debian · 2026-10-15T11:11:49_
 - [Codex removed](project_codex_removed.md) — 2026-10-14: user uninstalled Codex/ChatGPT app as suspicious; data in ~/codex-removed-20261014; its ~38 uncommitted edits + 19:47 SWARM deploy are unreviewed
 - [Lucille 1.13/1.14](project_lucille_1_13_clipboard_prompts.md) — 2026-10-15: Game Mode live deals, phone→PC clipboard (Klipper, X11), one formal prompt shape, Approve-and-start on suggestions via the launcher; mixed uncommitted sudo work
 - [LUCILLE catalog in every project](feedback_lucille_catalog_every_project.md) — 2026-10-15: ship LUCILLE_Catalog_Standalone html unchanged in every new project/kit; user sells LUCILLE kits on Ko-fi ($5/$15/$30/$50 tiers); catalog hard-codes "$5 what you bought"
+- [Build tracker artifact](project_build_tracker_artifact.md) — 2026-10-15: "the build tracker" = artifact NBYPSjpo…, now a read-only db view of MASTER_BUILD_LIST + ai-board; refresh = snapshot script + ArtifactData batch
 
 ### feedback_disk_letter_instability.md
 _cachyos@cachyos-i30ltz · 2026-09-16T09:28:08_
@@ -493,6 +494,30 @@ metadata:
 **Why this matters:** This explains a *passive* appearance of change — a file looking different between two reads a few minutes apart even though nothing is actively happening to it right now. It does NOT by itself explain a file being actively worked on mid-session (a build script rewritten while being read, a task already progressing when a session starts) — that's a different, also-real phenomenon, see [[project_multiple_ai_concurrent]].
 
 **How to apply:** Don't rush a manual commit for durability's sake — auto-sync sweeps up working-tree changes on its own within ~10 minutes regardless of what Claude does. The standing rule to only commit when the user explicitly asks still applies to Claude's own actions; this fact just means there's no urgency argument for skipping that rule.
+
+### project_build_tracker_artifact.md
+_debian@debian · 2026-10-15T19:14:51_
+
+---
+name: build-tracker-artifact
+description: "2026-10-15 \"the build tracker\" = SWARM OS Build Tracker artifact (NBYPSjpo…), now a read-only db-backed view of MASTER_BUILD_LIST.md + ai-board.tsv; how to refresh it"
+metadata:
+  node_type: memory
+  type: project
+  originSessionId: 56d65ef5-0b8a-44c8-8b8e-5fd678fa116b
+  modified: 2026-10-15T19:11:16.842Z
+---
+
+When the user says "the build tracker" they mean the claude.ai artifact **SWARM OS Build Tracker**, https://claude.ai/artifact/NBYPSjpoK2mWx4R9ZoKcJp (desktop link `/mnt/Lucy/swarm_os_build_tracker.desktop`). On 2026-10-15 it was rebuilt from the old 301-item September checklist into a **read-only view of the one list** (`/mnt/recoverybuild/00-CURRENT/MASTER_BUILD_LIST.md`) plus the AI board (`ai-board.tsv`). It shows project gauges, "Today's goals" (open P0s nobody is on), the G1–G7 goal tracker, who is where (6 h ghost rule, same as Lucille's dispatch.go), the full filterable list and the idea inbox.
+
+**Why:** the user decided on 2026-10-14 that there is only one build list, so the tracker must never become a second board with its own statuses.
+
+**How to apply:**
+- Refresh: `python3 70-scripts/build_tracker/build_tracker_snapshot.py --out <scratch dir>` (it only reads, and redacts key-like strings), then `ArtifactData` batch `set` each JSON file into collection `snapshot` (doc_id = file name without .json). Read the docs first and pin each write with `if_version`.
+- The page source is `70-scripts/build_tracker/build_tracker.html`; republish to the same URL. Tests: `70-scripts/tests/test_build_tracker_snapshot.py`.
+- The old checkbox state is still kept in db `state/checklist`; its September content lives in the SWARM OS Master List artifact (SNfWViWjiL2CYKvxY7gLCr).
+- The user's cowork `daily-brief` skill says "add suggestions to the build tracker / divide it into daily goals". New items belong in MASTER_BUILD_LIST's Idea inbox, not in the page. Do not edit that skill unless the user asks.
+- Related: [[lucille-comments-and-i30ltz-chat]], [[project-multiple-ai-concurrent]].
 
 ### project_codex_removed.md
 _debian@debian · 2026-10-15T01:21:37_
