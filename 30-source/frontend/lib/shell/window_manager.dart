@@ -11,6 +11,7 @@ class AppWindow {
   final Size size;
   final bool isFocused;
   final bool isMaximized;
+  final bool isMinimized;
   final int desktopPage;
   final Widget content;
   final DateTime createdAt;
@@ -22,6 +23,7 @@ class AppWindow {
     required this.size,
     this.isFocused = true,
     this.isMaximized = false,
+    this.isMinimized = false,
     this.desktopPage = 0,
     required this.content,
     DateTime? createdAt,
@@ -32,6 +34,7 @@ class AppWindow {
     Size? size,
     bool? isFocused,
     bool? isMaximized,
+    bool? isMinimized,
     int? desktopPage,
     Widget? content,
   }) {
@@ -42,6 +45,7 @@ class AppWindow {
       size: size ?? this.size,
       isFocused: isFocused ?? this.isFocused,
       isMaximized: isMaximized ?? this.isMaximized,
+      isMinimized: isMinimized ?? this.isMinimized,
       desktopPage: desktopPage ?? this.desktopPage,
       content: content ?? this.content,
       createdAt: createdAt,
@@ -70,8 +74,9 @@ class WindowManager extends StateNotifier<List<AppWindow>> {
       final existing = updated.removeAt(existingIndex);
       updated.add(existing.copyWith(
         isFocused: true,
+        isMinimized: false,
         desktopPage: page,
-      )); // Move the existing instance to this desktop and bring it forward
+      )); // Move the existing instance to this desktop, unminimize, and bring it forward
     } else {
       // Every new window starts centered between the desktop icon rails,
       // whatever position the caller asked for.
@@ -80,17 +85,42 @@ class WindowManager extends StateNotifier<List<AppWindow>> {
         position: spot.topLeft,
         size: spot.size,
         isFocused: true,
+        isMinimized: false,
         desktopPage: page,
       ));
     }
     state = updated;
   }
 
+  void closeWindow(String id) {
+    LaunchStatusRegistry.setClosed(id);
+    final updated = state.where((w) => w.id != id).toList();
+    if (updated.isNotEmpty && state.any((w) => w.id == id && w.isFocused)) {
+      // Focus the new top window if the closed one was focused
+      final last = updated.removeLast();
+      updated.add(last.copyWith(isFocused: true));
+    }
+    state = updated;
+  }
+
+  void toggleMinimize(String id) {
+    state = [
+      for (final w in state)
+        if (w.id == id)
+          w.copyWith(
+            isMinimized: !w.isMinimized,
+            isFocused: w.isMinimized,
+          )
+        else
+          w
+    ];
+  }
+
   void toggleMaximize(String id) {
     state = [
       for (final w in state)
         if (w.id == id)
-          w.copyWith(isMaximized: !w.isMaximized, isFocused: true)
+          w.copyWith(isMaximized: !w.isMaximized, isFocused: true, isMinimized: false)
         else if (w.desktopPage == _readCurrentPage())
           w.copyWith(isFocused: false)
         else
@@ -117,6 +147,7 @@ class WindowManager extends StateNotifier<List<AppWindow>> {
     if (target == null) return;
     final updated = state.map((w) => w.copyWith(
       isFocused: w.id == id ? true : (w.desktopPage == target.desktopPage ? false : w.isFocused),
+      isMinimized: w.id == id ? false : w.isMinimized,
     )).toList();
     
     final index = updated.indexWhere((w) => w.id == id);

@@ -53,7 +53,12 @@
 
   <windowRules>
     <!-- Flutter desktop shell: full-screen, no compositor title bar (Flutter draws its own top bar) -->
-    <windowRule title="SWARM OS*" serverDecoration="no" maximized="yes"/>
+    <windowRule identifier="com.swarmos.swarm_flutter" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes" fixedPosition="yes">
+      <action name="Maximize"/>
+    </windowRule>
+    <windowRule title="SWARM OS*" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes" fixedPosition="yes">
+      <action name="Maximize"/>
+    </windowRule>
     <!-- Lucille panel (swarm-slint): floating companion, no compositor title bar -->
     <windowRule title="Lucille" serverDecoration="no"/>
     <!-- Gaming overlay (swarm-overlay, 2026-09-20): dashboard + browser-widget

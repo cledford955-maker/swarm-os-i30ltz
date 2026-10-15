@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:window_manager/window_manager.dart' as wm;
 import '../theme/swarm_colors.dart';
+import 'window_manager.dart';
 
-class PowerControls extends StatelessWidget {
+class PowerControls extends ConsumerWidget {
   const PowerControls({super.key});
 
   void _shutdownOS() async {
@@ -11,21 +13,44 @@ class PowerControls extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final windows = ref.watch(windowProvider);
+    final activeWindow =
+        windows.where((w) => w.isFocused && !w.isMinimized).firstOrNull;
+
     return Row(
       children: [
+        // Fullscreen toggle / recovery button (F11)
         IconButton(
-          icon: const Icon(Icons.minimize, size: 18),
+          icon: const Icon(Icons.fullscreen, size: 18),
           color: SwarmColors.textMuted,
           hoverColor: SwarmColors.accent,
-          onPressed: () => windowManager.minimize(),
+          tooltip: 'Toggle Fullscreen (F11)',
+          onPressed: () async {
+            final isFs = await wm.windowManager.isFullScreen();
+            await wm.windowManager.setFullScreen(!isFs);
+          },
         ),
-        IconButton(
-          icon: const Icon(Icons.close, size: 18),
-          color: SwarmColors.textMuted,
-          hoverColor: Colors.redAccent,
-          onPressed: () => windowManager.close(),
-        ),
+        if (activeWindow != null) ...[
+          IconButton(
+            icon: const Icon(Icons.remove, size: 18),
+            color: SwarmColors.textMuted,
+            hoverColor: SwarmColors.accent,
+            tooltip: 'Minimize ${activeWindow.title}',
+            onPressed: () => ref
+                .read(windowProvider.notifier)
+                .toggleMinimize(activeWindow.id),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            color: SwarmColors.textMuted,
+            hoverColor: Colors.redAccent,
+            tooltip: 'Close ${activeWindow.title}',
+            onPressed: () => ref
+                .read(windowProvider.notifier)
+                .closeWindow(activeWindow.id),
+          ),
+        ],
         const SizedBox(width: 8),
         Container(
           width: 1,

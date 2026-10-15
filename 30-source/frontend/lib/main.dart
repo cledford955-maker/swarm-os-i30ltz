@@ -119,12 +119,18 @@ class _SwarmAppState extends State<SwarmApp> {
     super.dispose();
   }
 
-  // Ctrl+= / Ctrl+- / Ctrl+0 — whole-shell zoom, works from any screen.
+  // Ctrl+= / Ctrl++ / Ctrl+- / Ctrl+0 — whole-shell zoom, works from any screen.
+  // F11 — toggle fullscreen.
   bool _onKey(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
+    if (event.logicalKey == LogicalKeyboardKey.f11) {
+      windowManager.isFullScreen().then((fs) => windowManager.setFullScreen(!fs));
+      return true;
+    }
     if (!HardwareKeyboard.instance.isControlPressed) return false;
     final ui = context.read<UiScaleService>();
     if (event.logicalKey == LogicalKeyboardKey.equal ||
+        event.logicalKey == LogicalKeyboardKey.add ||
         event.logicalKey == LogicalKeyboardKey.numpadAdd) {
       ui.zoomIn();
       return true;

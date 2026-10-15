@@ -18,7 +18,7 @@ class OsWindowWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final offstage = !isPageVisible;
+    final offstage = !isPageVisible || window.isMinimized;
     if (window.isMaximized) {
       return Positioned.fill(
         child: Offstage(offstage: offstage, child: _windowBody(ref, context)),
@@ -206,14 +206,29 @@ class _TitleBar extends ConsumerWidget {
                   ),
                 ),
 
+                // Minimize
+                Tooltip(
+                  message: 'Minimize window',
+                  child: _TitleButton(
+                    icon: Icons.remove,
+                    cursor: SystemMouseCursors.click,
+                    onTap: () =>
+                        ref.read(windowProvider.notifier).toggleMinimize(window.id),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
                 // Maximize / restore
-                _TitleButton(
-                  icon: window.isMaximized
-                      ? Icons.close_fullscreen
-                      : Icons.open_in_full,
-                  cursor: SystemMouseCursors.click,
-                  onTap: () =>
-                      ref.read(windowProvider.notifier).toggleMaximize(window.id),
+                Tooltip(
+                  message: window.isMaximized ? 'Restore window' : 'Maximize window',
+                  child: _TitleButton(
+                    icon: window.isMaximized
+                        ? Icons.close_fullscreen
+                        : Icons.open_in_full,
+                    cursor: SystemMouseCursors.click,
+                    onTap: () =>
+                        ref.read(windowProvider.notifier).toggleMaximize(window.id),
+                  ),
                 ),
                 const SizedBox(width: 8),
 
@@ -226,6 +241,19 @@ class _TitleBar extends ConsumerWidget {
                     onTap: () => ref
                         .read(windowProvider.notifier)
                         .moveWindowToNextPage(window.id),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Close window
+                Tooltip(
+                  message: 'Close window',
+                  child: _TitleButton(
+                    icon: Icons.close,
+                    cursor: SystemMouseCursors.click,
+                    hoverColor: const Color(0xFFFF5F57),
+                    onTap: () =>
+                        ref.read(windowProvider.notifier).closeWindow(window.id),
                   ),
                 ),
               ]),
@@ -347,10 +375,12 @@ class _TitleButton extends StatefulWidget {
   final IconData icon;
   final MouseCursor cursor;
   final VoidCallback onTap;
+  final Color? hoverColor;
   const _TitleButton({
     required this.icon,
     required this.cursor,
     required this.onTap,
+    this.hoverColor,
   });
 
   @override
@@ -362,7 +392,9 @@ class _TitleButtonState extends State<_TitleButton> {
 
   @override
   Widget build(BuildContext context) {
-    final color = _hovered ? SwarmColors.accent : SwarmColors.textMuted;
+    final color = _hovered
+        ? (widget.hoverColor ?? SwarmColors.accent)
+        : SwarmColors.textMuted;
     return MouseRegion(
       cursor: widget.cursor,
       onEnter: (_) => setState(() => _hovered = true),

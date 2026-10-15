@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-15 03:00 UTC from 121 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-15 10:54 UTC from 126 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 67 entries
+- `debian@debian` — 72 entries
 
 ## Decisions
 
@@ -106,6 +106,11 @@ Lucille Assistant v1.0.0 (2026-09-16): personal-assistant jobs (daily brief, med
 _debian@debian · 2026-10-10T00:45:11_
 
 2026-10-09 (user request): the Lucille Assistant briefings are status briefings: STATUS (dated, health colour), NEXT STEPS & SCHEDULE (each step [YOU] or [AI]), 3 SUGGESTIONS, REFERENCE, for SWARM OS / Recovery OS / I30LTZ Companion (Boltz Recovery, D) / Lucille Assistant. They are a snapshot: when a project's state changes, update its briefing (edit in the phone app, or PUT /api/briefings/<id> on :8403) and the seed/*.md copy under /mnt/lucillebuild/src/LucilleAssistant.
+
+### lucille-clipboard
+_debian@debian · 2026-10-15T09:06:19_
+
+Lucille Assistant 1.13.0 (2026-10-15): anything copied in the phone app also goes to the PC clipboard via POST /api/clipboard -> KDE Klipper. One direction only (phone -> PC; the PC clipboard is never readable from a phone), key/password-shaped text is blanked first (Klipper keeps history), persons only, text never logged, kill switch LUCILLE_CLIPBOARD=0 or ~/.config/lucille-assistant/clipboard.disabled.
 
 ### lucille-core-consensus-gate
 _cachyos@cachyos-i30ltz · 2026-09-25T12:24:34_
@@ -212,7 +217,7 @@ _debian@debian · 2026-10-08T03:39:33_
 ## Claude memory
 
 ### MEMORY.md
-_debian@debian · 2026-10-15T01:21:37_
+_debian@debian · 2026-10-15T09:35:04_
 
 # Memory Index
 - [lucy-master mount separation](feedback_lucy_mount_separation.md) — lucy-master is read-only source; /mnt/Lucy is the live working drive — never mix them
@@ -244,6 +249,7 @@ _debian@debian · 2026-10-15T01:21:37_
 - [API keys work](project_api_keys_working.md) — 2026-10-14: OpenRouter + Steam keys verified HTTP 200; "keys dead" in briefs is stale, test before claiming
 - [Lucille comments + Dr. I30LTZ chat](project_lucille_comments_i30ltz.md) — 2026-10-14: comment box/schedule + local-only Dr. I30LTZ persona live on :8403 web; LA repo is uncommitted multi-session work, never commit there; one build list now on recoverybuild
 - [Codex removed](project_codex_removed.md) — 2026-10-14: user uninstalled Codex/ChatGPT app as suspicious; data in ~/codex-removed-20261014; its ~38 uncommitted edits + 19:47 SWARM deploy are unreviewed
+- [Lucille 1.13/1.14](project_lucille_1_13_clipboard_prompts.md) — 2026-10-15: Game Mode live deals, phone→PC clipboard (Klipper, X11), one formal prompt shape, Approve-and-start on suggestions via the launcher; mixed uncommitted sudo work
 
 ### feedback_disk_letter_instability.md
 _cachyos@cachyos-i30ltz · 2026-09-16T09:28:08_
@@ -524,6 +530,31 @@ User confirmed 2026-09-20: "forge has been renamed Apex other ai now working on 
 **Why this matters:** Earlier the same day (2026-09-19 pass), a swarm-slint Lucille panel tab was built and explicitly named "Forge" (`forge_controller.rs`, `ui/forge_state.slint`, `ui/views/forge.slint` — a general coding-focused Lucille chat tab, NOT necessarily the same "IDE" this rename refers to). It's unconfirmed whether this rename applies to that swarm-slint tab specifically, to the separate `CoderPage`/`/coder`/`/ide` AI-coding-assistant area in the Flutter frontend, or to something else entirely called an "IDE" elsewhere in the project. Don't assume which one without checking current code/asking.
 
 **How to apply:** Before referring to anything as "Forge" going forward, check whether the current name should be "Apex" instead — search current code/`SWARM_AI_FEATURES.md` rather than trusting older memories or this session's own earlier "Forge" work as still-accurate naming. Since another AI is confirmed actively working on whichever area this rename applies to, avoid touching it until the user says otherwise, per the standing multiple-concurrent-AI guidance.
+
+### project_lucille_1_13_clipboard_prompts.md
+_debian@debian · 2026-10-15T09:35:04_
+
+---
+name: lucille-1-13-gamemode-clipboard-prompts
+description: "2026-10-15 Lucille Assistant 1.13/1.14 — Game Mode live deals, phone→PC clipboard, one formal prompt shape, Approve-and-start on brief suggestions (launcher reuse)"
+metadata:
+  node_type: memory
+  type: project
+  originSessionId: 385b7245-ddba-415f-b70a-7d669632a697
+  modified: 2026-10-15T09:04:05.128Z
+---
+
+Lucille Assistant 1.13.0 (service + app vc 9, both versioned 1.13.0 now) shipped 2026-10-15: live service cut over (rollback unit kept), APK on all 3 phones. Rows LA-11..LA-14 in the master build list.
+
+- **Game Mode** reads `/api/deals` + `/api/gaming` (`GameDealsApi.kt`), dedupes per game, shuffles per open. Its old "GamingAgent :8401 · Nemotron" row was fake; it now only reports what Lucille on the PC checked. The 3 phones use 3-button nav; on gesture nav the left-edge swipe is Android Back (seen on the emulator).
+- **Clipboard**: `PcClipboardBridge.kt` → `POST /api/clipboard` (`clipboard.go`) → KDE Klipper via `busctl --user` (Debian runs KDE Plasma on **X11**; no xclip/wl-copy installed). Phone→PC only; secret-shaped text redacted because Klipper keeps history; kill switch `LUCILLE_CLIPBOARD=0` / `clipboard.disabled`. A cold Klipper call once took ~5 s, hence the 10 s timeout.
+- **Formal prompts**: `formalprompt.go` is the single shape; phone mirror is `briefingText` in `LucilleApi.kt` — keep headings equal.
+
+**Why:** user asks 2026-10-15 (Game Mode "same games forever"; "formal prompt to any AI"; "if I copy on her app it should be on my PC keyboard").
+
+**Run commands (1.14.0, same day):** the user chose option 1 — "Approve and start" on brief suggestions reuses the 1.12 launcher (job with `launch: true` on the suggestion's `sg-` anchor; limits unchanged). They did NOT ask for raw phone-typed commands; keep those out (actions.go rationale, [[lucille-assistant-project-brief]]). The launcher's project folder must go through `liveFor` (partition C is mounted at /mnt/lucilleassistant on Debian). No real launch was ever run in testing — test the start path with `launch.disabled` touched, then remove it.
+
+**How to apply:** The LA repo now has commits from sessions, but this session's work and another session's phone-sudo-approval files (`Sudo*.kt`, `PhoneApprovalKey.kt`, and the PIN-keypad removal in `MainActivity.kt`) are uncommitted together — don't commit them as one change without the user. Emulator testing: throwaway AVD + `adb reverse tcp:8403 tcp:8403` (app default is 127.0.0.1:8403) + `locksettings set-pin` to pass the gate; switch it to 3-button nav. In UTF-8 locale `grep` misses strings in .dex files — search with Python bytes. See [[lucille-comments-and-i30ltz-chat]].
 
 ### project_lucille_ai_window.md
 _debian@debian · 2026-10-13T02:34:07_
