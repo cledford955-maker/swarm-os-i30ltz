@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -84,7 +85,20 @@ func SyncClaudeMemory(s *Store, device, claudeDir string) (ClaudeResult, error) 
 	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
 		return res, err
 	}
-	statePath := filepath.Join(s.Dir(), "state", "claude-"+device+".json")
+	// The log key used to be the bare filename ("MEMORY.md"), which collides
+	// the moment a second, independent Claude Code project memory (a
+	// different claudeDir — e.g. a Debian-homedir session alongside the
+	// /mnt/Lucy one) gets synced from the same or another device: every
+	// project has its own MEMORY.md, and the bare-filename key treated them
+	// as the same document, so the newer one would silently overwrite the
+	// older project's file on its next sync. project namespaces the key (and
+	// the per-sync state file) by the Claude Code project directory
+	// (claudeDir's parent — "-mnt-Lucy", "-home-i30ltz", ...), so independent
+	// memories never collide even when synced from the same device.
+	project := claudeProjectID(claudeDir)
+	logKey := func(name string) string { return project + "/" + name }
+
+	statePath := filepath.Join(s.Dir(), "state", "claude-"+device+"-"+project+".json")
 	state := map[string]string{}
 	if data, err := os.ReadFile(statePath); err == nil {
 		_ = json.Unmarshal(data, &state)
@@ -94,11 +108,16 @@ func SyncClaudeMemory(s *Store, device, claudeDir string) (ClaudeResult, error) 
 	if err != nil {
 		return res, err
 	}
-	latest := map[string]Entry{} // including tombstones
+	latest := map[string]Entry{} // including tombstones, keyed by bare filename (prefix stripped)
 	for _, e := range all {
-		if e.Kind == KindClaudeMemory && e.Key != "" {
-			latest[e.Key] = e
+		if e.Kind != KindClaudeMemory || e.Key == "" {
+			continue
 		}
+		name, ok := strings.CutPrefix(e.Key, project+"/")
+		if !ok {
+			continue // another project's entry (or pre-fix bare-filename entry) — not ours
+		}
+		latest[name] = e
 	}
 
 	local := map[string]string{}
@@ -141,7 +160,7 @@ func SyncClaudeMemory(s *Store, device, claudeDir string) (ClaudeResult, error) 
 		case haveLocal && (!synced || hashOf(content) != lastHash):
 			// Changed or created here since the last sync.
 			if !(logLive && logE.Content == content) {
-				batch = append(batch, NewEntry(device, KindClaudeMemory, name, content))
+				batch = append(batch, NewEntry(device, KindClaudeMemory, logKey(name), content))
 				res.Imported = append(res.Imported, name)
 			}
 			newState[name] = hashOf(content)
@@ -164,7 +183,7 @@ func SyncClaudeMemory(s *Store, device, claudeDir string) (ClaudeResult, error) 
 
 		case synced: // existed at last sync, gone now: deleted here
 			if logLive {
-				t := NewEntry(device, KindClaudeMemory, name, "")
+				t := NewEntry(device, KindClaudeMemory, logKey(name), "")
 				t.Deleted = true
 				batch = append(batch, t)
 				res.Deleted = append(res.Deleted, name)
@@ -186,6 +205,21 @@ func SyncClaudeMemory(s *Store, device, claudeDir string) (ClaudeResult, error) 
 	}
 	data, _ := json.MarshalIndent(newState, "", "  ")
 	return res, writeFileAtomic(statePath, string(data))
+}
+
+// claudeProjectID identifies which Claude Code project a memory directory
+// belongs to, so two different projects' entries never collide under the
+// same log key (see the comment in SyncClaudeMemory). Claude Code lays
+// memory out as .../projects/<project>/memory, so the project segment is
+// the parent directory's name ("-mnt-Lucy", "-home-i30ltz", ...), already
+// filesystem-safe; anything else that could slip into a log key is dropped.
+func claudeProjectID(claudeDir string) string {
+	project := filepath.Base(filepath.Dir(filepath.Clean(claudeDir)))
+	project = regexp.MustCompile(`[^A-Za-z0-9._-]`).ReplaceAllString(project, "-")
+	if project == "" || project == "." || project == string(filepath.Separator) {
+		return "unknown-project"
+	}
+	return project
 }
 
 // validClaudeName keeps a log entry from writing outside the memory directory.

@@ -153,6 +153,50 @@ func TestClaudeSyncBothWays(t *testing.T) {
 	}
 }
 
+// Two independent Claude Code projects (different .../projects/<name>/memory
+// directories — e.g. one session working in /mnt/Lucy, another in the
+// Debian homedir) each have their own MEMORY.md. Before project-namespacing
+// the log key, syncing both from the same device collided: the second
+// project's MEMORY.md silently overwrote the first's in the log, and the
+// first project's local file on its next sync.
+func TestClaudeSyncDoesNotCollideAcrossProjects(t *testing.T) {
+	s, _ := Open(t.TempDir())
+	root := t.TempDir()
+	lucyMem := filepath.Join(root, "projects", "-mnt-Lucy", "memory")
+	homeMem := filepath.Join(root, "projects", "-home-i30ltz", "memory")
+	os.MkdirAll(lucyMem, 0o755)
+	os.MkdirAll(homeMem, 0o755)
+
+	os.WriteFile(filepath.Join(lucyMem, "MEMORY.md"), []byte("lucy project index"), 0o644)
+	os.WriteFile(filepath.Join(homeMem, "MEMORY.md"), []byte("home project index"), 0o644)
+
+	// Same device syncing both projects, as one Debian machine running two
+	// Claude Code sessions in different working directories would.
+	if res, err := SyncClaudeMemory(s, "debian@debian", lucyMem); err != nil || len(res.Imported) != 1 {
+		t.Fatalf("lucy import: %+v %v", res, err)
+	}
+	if res, err := SyncClaudeMemory(s, "debian@debian", homeMem); err != nil || len(res.Imported) != 1 {
+		t.Fatalf("home import: %+v %v", res, err)
+	}
+
+	// Each project's sync should leave the OTHER project's file untouched.
+	got, _ := os.ReadFile(filepath.Join(lucyMem, "MEMORY.md"))
+	if string(got) != "lucy project index" {
+		t.Fatalf("lucy MEMORY.md was clobbered by the home project's sync: %q", got)
+	}
+	got, _ = os.ReadFile(filepath.Join(homeMem, "MEMORY.md"))
+	if string(got) != "home project index" {
+		t.Fatalf("home MEMORY.md was clobbered: %q", got)
+	}
+
+	// Re-syncing lucy again must still see it as unchanged, not pull in the
+	// home project's content.
+	res, _ := SyncClaudeMemory(s, "debian@debian", lucyMem)
+	if len(res.Imported)+len(res.Exported)+len(res.Deleted) != 0 {
+		t.Fatalf("idle re-sync of lucy did work (cross-project leak?): %+v", res)
+	}
+}
+
 func TestClaudeSyncRefusesEscapingNames(t *testing.T) {
 	s, _ := Open(t.TempDir())
 	bad := NewEntry("phone-x", KindClaudeMemory, "../../.bashrc", "evil")
