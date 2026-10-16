@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-16 19:05 UTC from 189 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-16 19:55 UTC from 190 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 135 entries
+- `debian@debian` — 136 entries
 
 ## Decisions
 
@@ -1303,7 +1303,7 @@ Debian (this dev PC, hostname `debian`) is **100.82.1.19** on the tailnet (`tail
 The phone app (Boltz Recovery / I30LTZ Companion) knows Debian through `data/nodes/KnownMachines.kt` — address and name only, never a token (CP-05); add more machines there. See [[app-build-partitions]].
 
 ### -mnt-Lucy/reference_github_repos.md
-_debian@debian · 2026-10-16T18:27:12_
+_debian@debian · 2026-10-16T19:10:51_
 
 ---
 name: github-repos-swarm-os-suite
@@ -1317,9 +1317,9 @@ metadata:
 
 - SWARM OS (`/mnt/Lucy`): GitHub repo **SWARM-OS-SUITE/SWARM-OS-LUCILLE** (moved from `cledford955-maker/swarm-os-i30ltz`; the old URL still redirects). **Public.**
 - Lucille Assistant: **SWARM-OS-SUITE/lucille-assistant** (moved from `cledford955-maker/i30ltz-lucille-assistant`). **Public.**
-- `70-scripts/auto_sync_github.sh` (`swarm-lucy-sync.timer`, hourly) commits everything in `/mnt/Lucy` and pushes `origin main`, including `60-boltz-brain/swarm-memory/docs/users.json`, `memory.json` and the persona memory. Its comment says "private remotes": that is wrong, both are public.
+- `70-scripts/auto_sync_github.sh` (`swarm-lucy-sync.timer`, hourly) commits everything in `/mnt/Lucy` and pushes `origin main`, including `60-boltz-brain/swarm-memory/docs/users.json`, `memory.json` and the persona memory. Its comment and GITHUB_AUTOSYNC.md used to say "private"; corrected 2026-10-16 to say public.
 - Incident: `origin` in `/mnt/Lucy/.git/config` was changed on 2026-10-12 04:53 to the lucille-assistant repo, by an unknown session; no script does it. Three hourly pushes then put SWARM history on lucille-assistant's `main`, and every push was rejected after the user's web edit to FUNDING.yml. On 2026-10-16 the user approved restoring it: `origin` now points at swarm-os-i30ltz (redirected), the 4 FUNDING.yml web commits were merged, and the push succeeded (`98ba0f7`). Re-pointing `origin` to the new org URL needs the user's OK.
-- Still open (LA lane, the user's call): lucille-assistant's public `main` and many branches hold SWARM history; the real LA repo (`/mnt/lucilleassistant/src/LucilleAssistant`) has no remote; the `lucille-companion` subtree leg of the auto-sync fails every hour ("remote history changed"), so the unit stays failed.
+- Still open (LA lane, the user's call): lucille-assistant's public `main` and many branches hold SWARM history; the real LA repo (`/mnt/lucilleassistant/src/LucilleAssistant`) has no remote; the `lucille-companion` -> lucille-assistant leg of the auto-sync was RETIRED 2026-10-16 (user), so `swarm-lucy-sync.service` is green again; don't revive it without the user.
 - Never force-push either repo, and never change visibility, without the user's explicit yes. See [[project-auto-sync-commits]].
 
 ### -mnt-Lucy/reference_swarm_shared_memory.md
