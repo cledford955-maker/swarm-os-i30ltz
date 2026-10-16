@@ -1,6 +1,6 @@
 # SWARM OS Shared Memory
 
-_Generated 2026-10-16 18:22 UTC from 187 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
+_Generated 2026-10-16 19:00 UTC from 189 log entries. Do not edit — add memories with `swarm-memory add`, the companion app, or `POST /api/memory/entries`._
 
 Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md` in /mnt/Lucy.
 
@@ -8,7 +8,7 @@ Log: `log/<device>.jsonl` (append-only, one file per device). Spec: `90-docs/SWA
 
 - `cachyos@cachyos-i30ltz` — 53 entries
 - `copilot-test` — 1 entries
-- `debian@debian` — 133 entries
+- `debian@debian` — 135 entries
 
 ## Decisions
 
@@ -532,7 +532,7 @@ User asked 2026-10-14: a pretty interactive Brief inside Lucille; comment on any
 **How to apply:** don't claim "any device to any device" is done; say which of the open pieces remain. Don't `git stash` in the Lucille Assistant tree (another session has uncommitted sudo-approval files there). See [[project-session-handoff-2026-10-14]] and [[project-lucille-orchestrates-swarm]].
 
 ### -mnt-Lucy/MEMORY.md
-_debian@debian · 2026-10-16T03:17:41_
+_debian@debian · 2026-10-16T18:27:12_
 
 # Memory Index
 - [lucy-master mount separation](feedback_lucy_mount_separation.md) — lucy-master is read-only source; /mnt/Lucy is the live working drive — never mix them
@@ -567,6 +567,7 @@ _debian@debian · 2026-10-16T03:17:41_
 - [Lucille 1.13/1.14](project_lucille_1_13_clipboard_prompts.md) — 2026-10-15: Game Mode live deals, phone→PC clipboard (Klipper, X11), one formal prompt shape, Approve-and-start on suggestions via the launcher; mixed uncommitted sudo work
 - [LUCILLE catalog in every project](feedback_lucille_catalog_every_project.md) — 2026-10-15: ship LUCILLE_Catalog_Standalone html unchanged in every new project/kit; user sells LUCILLE kits on Ko-fi ($5/$15/$30/$50 tiers); catalog hard-codes "$5 what you bought"
 - [Build tracker artifact](project_build_tracker_artifact.md) — 2026-10-15: "the build tracker" = artifact NBYPSjpo…, now a read-only db view of MASTER_BUILD_LIST + ai-board; refresh = snapshot script + ArtifactData batch
+- [GitHub repos (SWARM-OS-SUITE, public)](reference_github_repos.md) — 2026-10-16: SWARM = SWARM-OS-SUITE/SWARM-OS-LUCILLE, LA = SWARM-OS-SUITE/lucille-assistant, both PUBLIC; origin was mis-pointed 10-12, restored 10-16; LA repo still holds SWARM history
 
 ### -mnt-Lucy/feedback_disk_letter_instability.md
 _debian@debian · 2026-10-16T03:17:41_
@@ -1300,6 +1301,26 @@ metadata:
 Debian (this dev PC, hostname `debian`) is **100.82.1.19** on the tailnet (`tailscale0`, user-confirmed and verified 2026-10-09). On that address: LucyServer dev `:5000`, Lucille Assistant `:8403`; the `i30ltz-node` agent (`:7437`) was NOT running on 2026-10-09. Phones on the tailnet: A16 `100.82.1.16`, A17 `100.82.1.17`.
 
 The phone app (Boltz Recovery / I30LTZ Companion) knows Debian through `data/nodes/KnownMachines.kt` — address and name only, never a token (CP-05); add more machines there. See [[app-build-partitions]].
+
+### -mnt-Lucy/reference_github_repos.md
+_debian@debian · 2026-10-16T18:27:12_
+
+---
+name: github-repos-swarm-os-suite
+description: "2026-10-16 GitHub remotes for /mnt/Lucy: repos moved to the SWARM-OS-SUITE org and are PUBLIC; origin had been wrongly pointed at lucille-assistant on 10-12"
+metadata:
+  node_type: memory
+  type: reference
+  originSessionId: 56d65ef5-0b8a-44c8-8b8e-5fd678fa116b
+  modified: 2026-10-16T18:22:58.936Z
+---
+
+- SWARM OS (`/mnt/Lucy`): GitHub repo **SWARM-OS-SUITE/SWARM-OS-LUCILLE** (moved from `cledford955-maker/swarm-os-i30ltz`; the old URL still redirects). **Public.**
+- Lucille Assistant: **SWARM-OS-SUITE/lucille-assistant** (moved from `cledford955-maker/i30ltz-lucille-assistant`). **Public.**
+- `70-scripts/auto_sync_github.sh` (`swarm-lucy-sync.timer`, hourly) commits everything in `/mnt/Lucy` and pushes `origin main`, including `60-boltz-brain/swarm-memory/docs/users.json`, `memory.json` and the persona memory. Its comment says "private remotes": that is wrong, both are public.
+- Incident: `origin` in `/mnt/Lucy/.git/config` was changed on 2026-10-12 04:53 to the lucille-assistant repo, by an unknown session; no script does it. Three hourly pushes then put SWARM history on lucille-assistant's `main`, and every push was rejected after the user's web edit to FUNDING.yml. On 2026-10-16 the user approved restoring it: `origin` now points at swarm-os-i30ltz (redirected), the 4 FUNDING.yml web commits were merged, and the push succeeded (`98ba0f7`). Re-pointing `origin` to the new org URL needs the user's OK.
+- Still open (LA lane, the user's call): lucille-assistant's public `main` and many branches hold SWARM history; the real LA repo (`/mnt/lucilleassistant/src/LucilleAssistant`) has no remote; the `lucille-companion` subtree leg of the auto-sync fails every hour ("remote history changed"), so the unit stays failed.
+- Never force-push either repo, and never change visibility, without the user's explicit yes. See [[project-auto-sync-commits]].
 
 ### -mnt-Lucy/reference_swarm_shared_memory.md
 _debian@debian · 2026-10-16T03:17:41_
