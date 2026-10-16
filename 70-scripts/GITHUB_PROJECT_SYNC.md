@@ -3,7 +3,9 @@
 The existing user timer `swarm-lucy-sync.timer` runs every ten minutes while this
 computer is running and `/mnt/Lucy` is available. No AI subscription is used.
 
-- `lucille-companion` ↔ `cledford955-maker/i30ltz-lucille-assistant` main
+- ~~`lucille-companion` ↔ `cledford955-maker/i30ltz-lucille-assistant` main~~ **Retired 2026-10-16 (user):**
+  Lucille Assistant lives on partition C now and `lucille-companion/` is a frozen copy. The
+  helper and `refs/swarm-sync/i30ltz-lucille-assistant/base` are kept in case it is ever revived.
 - (Recovery OS projects moved to `/mnt/recoverybuild` on 2026-10-06 and sync from there on their own.)
 
 The wrapper also preserves its existing SWARM main and companion destinations.

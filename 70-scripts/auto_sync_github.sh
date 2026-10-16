@@ -1,9 +1,10 @@
 #!/bin/bash
-# Auto-sync /mnt/Lucy to its private GitHub remotes so claude.ai/code on other
-# devices sees recent work. Runs on a timer (swarm-lucy-sync.timer), no-ops
-# when there's nothing to commit.
-#   origin                  -> cledford955-maker/swarm-os-i30ltz (whole project)
-#   i30ltz-lucille-assistant -> cledford955-maker/i30ltz-lucille-assistant (lucille-companion/ subtree)
+# Auto-sync /mnt/Lucy to GitHub so claude.ai/code on other devices sees recent
+# work. Runs on a timer (swarm-lucy-sync.timer), no-ops when there's nothing to
+# commit. The repo is PUBLIC (checked 2026-10-16): everything committed here is published.
+#   origin -> SWARM-OS-SUITE/SWARM-OS-LUCILLE (was cledford955-maker/swarm-os-i30ltz; GitHub redirects)
+# The lucille-companion/ -> i30ltz-lucille-assistant leg was retired 2026-10-16 (user):
+# Lucille Assistant lives on partition C now and lucille-companion/ is a frozen copy.
 set -euo pipefail
 
 REPO_DIR="${SWARM_SYNC_REPO_DIR:-/mnt/Lucy}"
@@ -85,7 +86,10 @@ sync_subtree() {
     status=1
   fi
 }
-sync_subtree "lucille-companion" i30ltz-lucille-assistant
+# Retired 2026-10-16 (user): Lucille Assistant moved to partition C (/mnt/lucillebuild) and
+# lucille-companion/ has been frozen since 2026-10-10, so this leg had nothing left to send; it
+# failed every hour because origin was mis-pointed at that repo on 10-12 and overwrote its main.
+# sync_subtree "lucille-companion" i30ltz-lucille-assistant
 # Recovery OS projects moved to /mnt/recoverybuild (own git repos, 2026-10-06); not synced here.
 # Always retry origin: an earlier failed push can leave a clean but unpushed tree.
 if git push origin main; then

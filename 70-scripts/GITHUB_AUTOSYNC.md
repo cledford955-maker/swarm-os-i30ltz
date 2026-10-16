@@ -1,11 +1,13 @@
 # Project repositories and automatic sync
 
-All repositories are private under `cledford955-maker`.
+**2026-10-16:** both repositories below are **public**, not private, and now live in the
+`SWARM-OS-SUITE` org (the old `cledford955-maker/...` URLs redirect). Everything the timer
+commits is published.
 
 | Project | GitHub repository | Source on LUCILLE |
 | --- | --- | --- |
-| SWARM OS | `swarm-os-i30ltz` | `/mnt/Lucy` |
-| Lucille Assistant | `i30ltz-lucille-assistant` | `/mnt/Lucy/lucille-companion` |
+| SWARM OS | `SWARM-OS-SUITE/SWARM-OS-LUCILLE` (was `swarm-os-i30ltz`) | `/mnt/Lucy` |
+| Lucille Assistant | `SWARM-OS-SUITE/lucille-assistant` (was `i30ltz-lucille-assistant`) | partition C, `/mnt/lucillebuild/src/LucilleAssistant`; **no longer synced from `/mnt/Lucy`** (leg retired 2026-10-16) |
 
 `swarm-lucy-sync.timer` runs `70-scripts/auto_sync_github.sh` every ten minutes
 while the development host's user service manager is running. One timer serves
