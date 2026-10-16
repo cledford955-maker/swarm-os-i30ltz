@@ -123,3 +123,56 @@
 | 2026-10-12 | v6.2.22 | HIGH | BRAND-THEME: Apply red #cc1a1a / yellow #f0c020 / void #050508 to Color.kt + Theme.kt | PENDING |
 
 > Nightly append by LUCILLE CORE AI | 2026-10-12 00:00 ET | v6.2.88
+
+---
+
+## 2026-10-16 | Scheduled Health Check | v6.2.88
+
+### Status Update — Previous Queue
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-12 | v0.3.0-alpha | CRITICAL | BOOT-TEST RC-11 | ❓ UNKNOWN — no log entry confirming completion |
+| 2026-10-12 | v6.2.88 | CRITICAL | API-KEYS: OpenRouter + Steam → 20-runtime/.env | 🔴 STILL PENDING — Day 25+ |
+| 2026-10-12 | v6.2.22 | HIGH | COMPANION: Wire RecoveryAiScreen to MAD IT SSE | 🔴 STILL PENDING |
+| 2026-10-12 | v6.2.88 | HIGH | SYNC-FIX: Drop --no-delete from sync_lucille_ai.sh | ✅ FIXED 2026-10-16 (scheduled audit) |
+| 2026-10-12 | v6.2.22 | HIGH | BRAND-THEME: Color.kt + Theme.kt | ❓ UNKNOWN |
+
+### Fixes Applied This Session
+
+| Date | Version | Priority | Task | Status |
+|------|---------|----------|------|--------|
+| 2026-10-16 | v6.2.88 | HIGH | INC-5 FIXED: Removed `--no-delete` from `70-scripts/sync_lucille_ai.sh` (rsync 3.5.0 rejected the flag; additive behavior unchanged) | ✅ DONE |
+| 2026-10-16 | v6.2.88 | MEDIUM | GamingAgent context cancellation: `callChat()` now uses `http.NewRequestWithContext`; `Chat()`/`ChatStream()` accept `context.Context` from handler. Disconnected SSE client now cancels upstream OpenRouter call instead of leaking goroutine/quota for 120s. `go build + go vet` clean. | ✅ DONE |
+
+### Confirmed Still Open (require user action)
+
+| # | Severity | Issue | Duration | Fix |
+|---|----------|-------|----------|-----|
+| INC-1 | CRITICAL | OpenRouter API key 401 — Lucille chat DEAD | Day 25+ | New key → `20-runtime/.env` OPENROUTER_API_KEY |
+| INC-2 | HIGH | Steam Web API key 403 | Day 25+ | Regen at steamcommunity.com/dev/apikey |
+| INC-3 | HIGH | swarm-ui.service crashes on live ISO boot | Day 30+ | Build fresh ISO from /mnt/swarmbuild, boot via Ventoy |
+| INC-4 | CRITICAL | /mnt/archive 100% full, /mnt/storage 97% full | Day 9+ | Run dedupe_archive.py or archive rotation |
+| INC-6 | MEDIUM | sda4 (lucy-master) LUKS locked — AI sync skips every run | Ongoing | `sudo cryptsetup open /dev/sda4 luks-a24202ce-...` |
+
+### Persistent Code Bugs (open, no API keys in audit env)
+
+| Priority | File | Bug | Fix |
+|----------|------|-----|-----|
+| MEDIUM | `GamingAgent-go/handlers/health.go` | `/health` always returns `{"status":"ok"}` regardless of DB state or missing API keys | Add DB ping + `os.Getenv(chatAPIKeyEnv) != ""` check |
+| MEDIUM | `GamingAgent-go/services/price_alert.go:CheckOnce()` | ~734 CheapShark calls fired in tight loop per 24h cycle with zero inter-call sleep | Add `time.Sleep(150 * time.Millisecond)` between `checkGame` calls |
+| LOW | `GamingAgent-go/handlers/` | Zero test coverage on all handlers (only services/ has tests) | Add httptest smoke tests for Eval/Chat/ChatStream/Health |
+| LOW | `GamingAgent-go/services/lucille_service.go:lucilleActionProtocol` | Verb list never audited against `dashboard.html dispatchAction()` — mismatch silently breaks ACTION dispatch | Cross-reference and add a comment linking the two |
+
+### Improvement Suggestions for SWARM OS
+
+| # | Suggestion | Why |
+|---|------------|-----|
+| 1 | **Add a LUKS unlock desktop notification** — systemd user unit at login that checks `cryptsetup status luks-a24202ce-...` and fires `notify-send` if locked; blocks AI sync silently every night without it | Easy one-service fix, unblocks INC-6 / AI sync permanently |
+| 2 | **Real GamingAgent /health** — probe DB + chatAPIKeyEnv + STEAM_API_KEY; return `{"status":"degraded","missing":["OPENROUTER_API_KEY"]}` so INC-1/INC-2 are immediately visible in the LucyServer health cascade | One-file fix, surfaces the active incidents in the dashboard |
+| 3 | **PriceAlertDaemon CheapShark rate-limiting** — add `time.Sleep(150ms)` between `checkGame` calls; 734 tight requests in one burst is unfriendly to a free public API and risks an IP block | Two-line fix |
+| 4 | **Context-aware Eval** — `Eval()` (the gaming evaluation endpoint) still uses a bare `http.NewRequest` without a context, unlike `callChat()` (now fixed). A long /lucille/eval request also leaks a goroutine on client disconnect | Same one-line `NewRequestWithContext` pattern already applied to callChat |
+| 5 | **PRICE_ALERT_WEBHOOK_URL documented in CLAUDE.md** — three undocumented env vars (`PRICE_ALERT_WEBHOOK_URL`, `PRICE_ALERT_THRESHOLD`, `WEATHER_LOCATION`) exist only in code comments; add them to CLAUDE.md "API keys available" section | Prevents future AIs from thinking the webhook is broken |
+| 6 | **Nightly ISO build check** — add a step to the nightly health check that runs `sha256sum` on the latest ISO in `/mnt/ventoy/ISO/SWARM_OS/` and compares to `swarm_os_out/` to detect if the staged ISO is stale vs the last build | INC-3 has been open 30+ days partly because it's hard to know the ISO is stale without booting |
+
+> Scheduled health check by Claude Sonnet 4.6 | 2026-10-16 | v6.2.88

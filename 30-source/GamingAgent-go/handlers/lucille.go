@@ -40,7 +40,7 @@ func (h *LucilleHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "messages required", http.StatusBadRequest)
 		return
 	}
-	resp, err := h.lucille.Chat(req)
+	resp, err := h.lucille.Chat(r.Context(), req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -62,7 +62,7 @@ func (h *LucilleHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	h.lucille.ChatStream(req, w)
+	h.lucille.ChatStream(r.Context(), req, w)
 }
 
 func (h *LucilleHandler) History(w http.ResponseWriter, r *http.Request) {
