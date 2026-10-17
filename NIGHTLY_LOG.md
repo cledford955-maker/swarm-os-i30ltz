@@ -451,3 +451,121 @@ LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.88 | 2026-10-13 | 18:36 U
 
 > Nightly append by LUCILLE CORE AI | 2026-10-16 00:00 ET | v6.2.90
 
+
+---
+
+## 🔍 SWARM_OS Health Check — 2026-10-17 | v6.2.90 | 10:59 UTC
+
+**Triggered by:** Scheduled audit (Claude Code remote session)
+**Overall Suite Health: 🟡 YELLOW**
+*(Codebase structurally sound. Two critical infrastructure incidents open. Three code-level wiring gaps found.)*
+
+---
+
+### ✅ Resolved Since Last Report (corrections / confirmed fixed)
+
+| ID | Summary | Resolved |
+|----|---------|---------|
+| INC-1 | OpenRouter API key 401 — **CONFIRMED RESOLVED** 2026-10-14; HTTP 200 verified | ✅ CLOSED |
+| INC-2 | Steam Web API key 403 — **CONFIRMED RESOLVED** 2026-10-14; HTTP 200 verified | ✅ CLOSED |
+| INC-5 | rsync `--no-delete` flag — **ALREADY FIXED** in `70-scripts/sync_lucille_ai.sh` (additive-only comment confirms; flag was removed) | ✅ CLOSED |
+
+---
+
+### 🔴 Active Incidents (2026-10-17)
+
+| ID | Sev | Age | Incident | Fix |
+|----|-----|-----|---------|-----|
+| INC-3 | 🟠 HIGH | **Day 29+** | `swarm-ui.service` exits on live ISO boot — drops to tty1; desktop never appears. Fix staged (service file updated, WLR_LOG_LEVEL diagnostic added) but ISO never rebuilt with it. | Sync to `/mnt/swarmbuild`, run `70-scripts/build_swarm_iso.sh`, boot via Ventoy — cannot confirm fix without a real boot |
+| INC-4 | 🔴 CRITICAL | Day 8+ | `/mnt/archive` 100% full, `/mnt/storage` 97% full — write failures on any sync touching those paths | `python3 dedupe_archive.py` or manual rotation; add disk-space alert to nightly routine |
+| INC-6 | 🟡 MEDIUM | Ongoing | `sda4` lucy-master LUKS locked — AI sync skips its backup leg every run | `sudo cryptsetup open /dev/sda4 luks-a24202ce-4d76-4eb7-8923-8e8ddbacdaa7` before any sync needing it |
+| INC-8 | 🟠 HIGH | **Day 8+** | **Recovery OS RC-11 zero physical boots** — installed 2026-10-09 on sda3 (UUID `71287bbf`), standalone bootloader on sda1 (`A367-87E3`) — never confirmed in a real unattended boot with Debian disk unplugged | Unplug Debian drive → F12 → select "I30LTZ Recovery OS" → log in → verify LAN |
+
+---
+
+### 🔎 Code Audit Findings (new this run)
+
+#### FINDING-1 — 🟠 HIGH | Hardcoded Tailscale IPs in Flutter UI
+
+**File:** `30-source/frontend/lib/shell/companion_bridge_dialog.dart:71,186`
+**Also:** `30-source/frontend/lib/pages/telemetry_page.dart:40`
+
+`companion_bridge_dialog.dart` hardcodes `100.82.252.34` as the companion download server IP. `telemetry_page.dart` hardcodes `100.82.1.19` (the Debian dev PC's Tailscale IP). If either address changes (Tailscale re-issue, new device, IP rotation) these fail silently with no useful error.
+
+**Fix:** Use `tailscale ip -4` dynamically (the same way `TelemetryService._tailscaleIp()` already does it for its own path). Replace the hardcoded literals with a runtime lookup or a named constant loaded from `.env`/service config.
+
+---
+
+#### FINDING-2 — 🟡 MEDIUM | `sendNotification` always returns false — mesh ping button is dead
+
+**File:** `30-source/frontend/lib/services/telemetry_service.dart:275–279`
+**Caller:** `30-source/frontend/lib/widgets/companion_telemetry.dart:510`
+
+```dart
+Future<bool> sendNotification(...) async {
+  return false;   // ← placeholder, no real push infrastructure
+}
+```
+
+The "Ping" button in `CompanionTelemetry` calls this and always gets back `false`. No user feedback, no error. The method is documented as "placeholder — needs real push infrastructure."
+
+**Wiring status:** UNWIRED. Document as mock or implement a simple HTTP POST to the companion's `/api/notification` endpoint (the companion bridge already has the IP logic).
+
+---
+
+#### FINDING-3 — 🟡 MEDIUM | Apple panel "Clean" button starts a build instead of cleaning
+
+**File:** `30-source/frontend/lib/coder/panels/apple_panel.dart:310`
+
+```dart
+_IconBtn(Icons.cleaning_services_rounded, 'Clean', () async {
+  svc.build(AppleBuildTarget.iosDebug, ...); // placeholder
+}),
+```
+
+Pressing the "Clean" icon starts an iOS debug build. This is a behavioral bug: the user expects a `xcodebuild clean` or equivalent, but gets a full build instead. Marked `// placeholder` in the source.
+
+**Fix:** Add `AppleBuildService.clean()` method calling `xcodebuild clean -scheme <app>` and wire it here, or hide the button behind `mock: true` until implemented.
+
+---
+
+### 📊 Code Quality Scan Summary
+
+| Check | Result | Notes |
+|-------|--------|-------|
+| `go vet ./...` — LucyServer-go | ✅ CLEAN | Zero warnings |
+| `go vet ./...` — GamingAgent-go | ✅ CLEAN | Zero warnings |
+| Hardcoded secrets in Go source | ✅ CLEAN | All keys read via `os.Getenv`; TOTP/WebAuthn use crypto/rand + bcrypt |
+| NotImplemented stub routes (LucyServer-go) | ✅ CLEAN | Zero `NotImplemented()` calls in main.go — all .NET routes ported |
+| Mock apps in SwarmAppRegistry | ⚠️ 4 mocks | Task Master, Code Sentry, Voice Bridge, SwarmCast — all `mock:true`, show "coming soon", intentional |
+| sendNotification (TelemetryService) | 🔴 UNWIRED | Always returns false; called from visible UI button |
+| Apple "Clean" button | 🔴 WRONG WIRE | Calls `svc.build(iosDebug)` instead of clean action |
+| Hardcoded Tailscale IPs in Flutter | 🟠 FRAGILE | 2 locations: `companion_bridge_dialog.dart`, `telemetry_page.dart` |
+| SWARM_AI_FEATURES.md | ⚠️ DANGLING SYMLINK | Points to `/mnt/recoverybuild/00-CURRENT/MASTER_BUILD_LIST.md` — unavailable in cloud/remote sessions |
+
+---
+
+### 💡 Improvement Suggestions
+
+1. **Disk space alerting** — Add a check to the nightly routine: if `/mnt/archive` or `/mnt/storage` is >90% full, notify before writes fail. One `df -h` check + conditional exit/warn in the cron.
+2. **ISO boot test automation** — The INC-3 hang is now Day 29+. Add a step to `build_swarm_iso.sh` that, after a successful build, launches the QEMU VM (`80-vm/`) and runs a smoke-test: confirms `swarm-ui.service` shows `active (running)` within 60s. Would have caught this weeks ago.
+3. **Tailscale IP registry** — Create a single `SwarmNetConfig` class (or a `.env` entry `TAILSCALE_SELF_IP`) and replace all three hardcoded IP sites with dynamic lookups. The `TelemetryService._tailscaleIp()` method already does this correctly — just centralize it.
+4. **Mock app graduation path** — Voice Bridge and SwarmCast are in the app drawer visible to the user. Add a `launchUrl`/backend stub returning a friendly "Beta soon" rather than a silent no-op tap.
+5. **LucyServer binary age** — The binary at `20-runtime/LucyServer/LucyServer` was last built Sep 8. Source has continued to evolve. Schedule a nightly `go build` check (or at minimum a `go vet`) on the CI/auto-sync path so the binary doesn't silently drift from source.
+6. **SWARM_AI_FEATURES.md symlink** — The symlink works on the local machine but breaks in every cloud session (can't reach `/mnt/recoverybuild`). Add a local copy or README redirect so remote Claude sessions have the feature tracker.
+
+---
+
+### 🎯 Priority Queue (2026-10-17)
+
+| Rank | Task | Why |
+|------|------|-----|
+| 1 | **RC-11 physical boot test** — unplug Debian drive, F12, i30LTZ Recovery | Day 8 zero boots; entire Recovery testing pipeline blocked |
+| 2 | **Free /mnt/archive** — `python3 dedupe_archive.py` | 100% full blocks all sync writes; CRITICAL disk pressure |
+| 3 | **ISO rebuild + VM smoke test** — sync to swarmbuild, build, QEMU boot | Day 29+ desktop crash; fix is staged but untested |
+| 4 | **Fix Apple panel "Clean" button** — wire `clean()` or mark mock | Behavioral bug: pressing Clean starts a build |
+| 5 | **Harden Tailscale IP refs** — replace 2 hardcoded IPs with dynamic lookup | Fragile; breaks silently on IP rotation |
+
+---
+
+> Audit by Claude Code (swarm-claude) | 2026-10-17 10:59 UTC | v6.2.90
