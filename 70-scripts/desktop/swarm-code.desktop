@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SWARM OS — Code
+Comment=Open the SWARM source workspace
+Exec=/mnt/Lucy/70-scripts/open_swarm_code.sh
+Path=/mnt/Lucy
+Icon=applications-development
+Terminal=false
+Categories=Development;

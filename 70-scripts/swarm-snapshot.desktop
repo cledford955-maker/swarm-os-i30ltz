@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=SWARM Snapshot
+Comment=Take a Btrfs snapshot of the installed SWARM OS before applying changes
+Exec=bash -c 'konsole -e bash -c "sudo /mnt/Lucy/70-scripts/snapshot_before_update.sh; echo; read -p \"Press Enter to close...\"" || xterm -e bash -c "sudo /mnt/Lucy/70-scripts/snapshot_before_update.sh; echo; read -p \"Press Enter to close...\""'
+Icon=system-run
+Terminal=false
+Categories=System;

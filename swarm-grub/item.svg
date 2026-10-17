@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- swarm-grub unselected-row pixmap: fully transparent 17x17 master with the same 8 px corners as
+     selection.svg. GRUB insets a row's contents by its pixmap's padding; giving every row a pixmap with
+     the same padding as the selected one stops the selected row jumping down a few pixels. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17 17" width="17" height="17"/>

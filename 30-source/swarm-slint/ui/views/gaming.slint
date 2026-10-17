@@ -1,0 +1,265 @@
+import { SwarmTheme } from "../globals.slint";
+import { GamingState } from "../gaming_state.slint";
+import { StatTile, GenreChip, SubTabButton, GameCardWidget } from "../components/cards.slint";
+
+export component GamingView inherits Rectangle {
+    background: SwarmTheme.gaming-bg;
+
+    // Ambient background art — dimmed so the stat tiles, game grid and text
+    // stay readable over a genuinely busy photo, not a flat color.
+    Image {
+        source: @image-url("../assets/gaming_bg.jpg");
+        image-fit: cover;
+        width: 100%;
+        height: 100%;
+        opacity: 0.24;
+    }
+    Rectangle {
+        // Extra scrim on top of the dimmed image for text contrast.
+        background: #000000a8;
+    }
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        Text {
+            text: "🎮 THIS IS NOW Gaming";
+            color: SwarmTheme.gaming-accent;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        // ── Stats bar + Lucille button ──────────────────────────────────────
+        HorizontalLayout {
+            height: 60px;
+            spacing: 10px;
+
+            StatTile { label: "ON GFN";    value: GamingState.stat-gfn-count; }
+            StatTile { label: "LIBRARY";   value: GamingState.stat-library-count; }
+            StatTile { label: "FAVORITES"; value: GamingState.stat-favorites-count; }
+            StatTile { label: "ON SALE";   value: GamingState.stat-onsale-count; }
+
+            Rectangle { horizontal-stretch: 1; }
+
+            if GamingState.lucille-active : TouchArea {
+                width: 36px;
+                clicked => { GamingState.lucille-reset-requested(); }
+                Rectangle {
+                    background: SwarmTheme.gaming-card;
+                    border-radius: SwarmTheme.radius;
+                    Text {
+                        text: "↺";
+                        color: SwarmTheme.text-dim;
+                        font-size: 16px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            TouchArea {
+                width: 150px;
+                clicked => { GamingState.lucille-eval-requested(); }
+                Rectangle {
+                    background: GamingState.lucille-loading ? SwarmTheme.gaming-card : SwarmTheme.gaming-accent;
+                    border-radius: SwarmTheme.radius;
+                    Text {
+                        text: GamingState.lucille-loading ? "Thinking..." : "✨ Ask Lucille";
+                        color: GamingState.lucille-loading ? SwarmTheme.text-dim : #0d0d0d;
+                        font-weight: 700;
+                        font-size: 13px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        // ── Lucille summary + action badges ─────────────────────────────────
+        if GamingState.lucille-summary != "" : Rectangle {
+            background: SwarmTheme.gaming-card;
+            border-radius: SwarmTheme.radius;
+            border-width: 1px;
+            border-color: SwarmTheme.gaming-accent;
+
+            VerticalLayout {
+                padding: 12px;
+                spacing: 6px;
+                Text {
+                    text: GamingState.lucille-summary;
+                    color: SwarmTheme.text;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 6px;
+                    for badge[i] in GamingState.action-badges : Rectangle {
+                        background: #2979ff20;
+                        border-radius: 10px;
+                        Text {
+                            text: badge;
+                            color: SwarmTheme.gaming-accent;
+                            font-size: 10px;
+                        }
+                    }
+                }
+
+                if GamingState.system-suggestions.length > 0 : VerticalLayout {
+                    spacing: 3px;
+                    Text {
+                        text: "System suggestions:";
+                        color: SwarmTheme.text-dim;
+                        font-size: 10px;
+                    }
+                    for suggestion[i] in GamingState.system-suggestions : Text {
+                        text: "• " + suggestion;
+                        color: SwarmTheme.text-dim;
+                        font-size: 11px;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+        }
+
+        // ── Sub-tabs ─────────────────────────────────────────────────────────
+        HorizontalLayout {
+            height: 32px;
+            spacing: 8px;
+
+            SubTabButton {
+                label: "GFN Games";
+                active: GamingState.sub-tab == 0;
+                selected => { GamingState.sub-tab = 0; GamingState.sub-tab-changed(0); }
+            }
+            SubTabButton {
+                label: "My Library";
+                active: GamingState.sub-tab == 1;
+                selected => { GamingState.sub-tab = 1; GamingState.sub-tab-changed(1); }
+            }
+            SubTabButton {
+                label: "Favorites";
+                active: GamingState.sub-tab == 2;
+                selected => { GamingState.sub-tab = 2; GamingState.sub-tab-changed(2); }
+            }
+            Rectangle { horizontal-stretch: 1; }
+        }
+
+        // ── Genre chips (GFN tab only) ───────────────────────────────────────
+        if GamingState.sub-tab == 0 : Flickable {
+            height: 34px;
+            chip-content := HorizontalLayout {
+                spacing: 6px;
+                for g[i] in GamingState.genre-list : GenreChip {
+                    label: g.name;
+                    active: g.active;
+                    toggled => { GamingState.genre-toggled(g.name); }
+                }
+            }
+            viewport-width: chip-content.preferred-width;
+        }
+
+        // ── Scrollable content: pinned rail, sale rail, main grid ────────────
+        Flickable {
+            vertical-stretch: 1;
+            grid := VerticalLayout {
+                spacing: 14px;
+
+                if GamingState.sub-tab == 0 && GamingState.pinned-rows.length > 0 : VerticalLayout {
+                    spacing: 6px;
+                    Text { text: "📌 Pinned"; color: SwarmTheme.text-dim; font-size: 11px; }
+                    for row[r] in GamingState.pinned-rows : HorizontalLayout {
+                        spacing: 10px;
+                        for card[c] in row.cards : GameCardWidget {
+                            card: card;
+                            favorite-clicked => { GamingState.favorite-toggled(card.app-id); }
+                            card-clicked => { GamingState.card-clicked(card.app-id); }
+                        }
+                    }
+                }
+
+                if GamingState.sub-tab == 0 && GamingState.onsale-rows.length > 0 : VerticalLayout {
+                    spacing: 6px;
+                    Text { text: "🔥 On Sale Now"; color: SwarmTheme.warn; font-size: 11px; }
+                    for row[r] in GamingState.onsale-rows : HorizontalLayout {
+                        spacing: 10px;
+                        for card[c] in row.cards : GameCardWidget {
+                            card: card;
+                            favorite-clicked => { GamingState.favorite-toggled(card.app-id); }
+                            card-clicked => { GamingState.card-clicked(card.app-id); }
+                        }
+                    }
+                }
+
+                for row[r] in GamingState.display-rows : HorizontalLayout {
+                    spacing: 10px;
+                    for card[c] in row.cards : GameCardWidget {
+                        card: card;
+                        favorite-clicked => { GamingState.favorite-toggled(card.app-id); }
+                        card-clicked => { GamingState.card-clicked(card.app-id); }
+                    }
+                }
+            }
+            viewport-height: grid.preferred-height;
+        }
+    }
+
+    // ── Deal modal overlay ────────────────────────────────────────────────────
+    if GamingState.show-deal-modal : Rectangle {
+        background: #000000c0;
+
+        TouchArea { clicked => { GamingState.close-deal-modal(); } }
+
+        Rectangle {
+            width: 420px;
+            height: 320px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            background: SwarmTheme.surface;
+            border-radius: SwarmTheme.radius;
+            border-width: 1px;
+            border-color: SwarmTheme.border;
+
+            VerticalLayout {
+                padding: 16px;
+                spacing: 8px;
+
+                Text {
+                    text: GamingState.deal-game-name;
+                    color: SwarmTheme.text-bright;
+                    font-size: 16px;
+                    font-weight: 700;
+                }
+
+                if GamingState.deal-loading : Text {
+                    text: "Loading prices...";
+                    color: SwarmTheme.text-dim;
+                    font-size: 12px;
+                }
+
+                for price[i] in GamingState.deal-prices : Text {
+                    text: price;
+                    color: SwarmTheme.text;
+                    font-size: 13px;
+                }
+
+                Rectangle { vertical-stretch: 1; }
+
+                TouchArea {
+                    height: 32px;
+                    clicked => { GamingState.close-deal-modal(); }
+                    Rectangle {
+                        background: SwarmTheme.gaming-card;
+                        border-radius: SwarmTheme.radius;
+                        Text {
+                            text: "Close";
+                            color: SwarmTheme.text;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

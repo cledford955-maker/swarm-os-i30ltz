@@ -1,0 +1,44 @@
+# swarm_dev — Debian GRUB. Background is 1920x1080; the menu sits in the glowing frame of the artwork.
+desktop-image: "background.png"
+desktop-color: "#05090d"
+title-text: ""
+terminal-font: "DejaVu Sans Bold 16"
+
++ boot_menu {
+ left = 29%
+ top = 34%
+ width = 42%
+ height = 39%
+ item_font = "DejaVu Sans Bold 26"
+ selected_item_font = "DejaVu Sans Bold 26"
+ item_color = "#a9c8ff"
+ selected_item_color = "#ffffff"
+ icon_width = 56
+ icon_height = 56
+ item_height = 58
+ item_padding = 2
+ item_spacing = 6
+ item_icon_space = 22
+ selected_item_pixmap_style = "select_*.png"
+ scrollbar = false
+}
++ progress_bar {
+ id = "__timeout__"
+ left = 35%
+ top = 75%
+ width = 30%
+ height = 8
+ show_text = false
+ fg_color = "#4fa2ff"
+ bg_color = "#0a1220"
+ border_color = "#2a5ca8"
+}
++ label {
+ left = 15%
+ top = 91%
+ width = 70%
+ align = "center"
+ text = "↑ ↓ choose    Enter boot    e edit    c console    ·    Power & firmware ▸ reboot · power off · UEFI setup"
+ color = "#7fa8e0"
+ font = "DejaVu Sans Bold 16"
+}

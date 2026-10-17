@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# /usr/bin/swarm-session — SWARM OS desktop session launcher
+# Version: 6.2.72 · 2026-09-25
+#
+# Default: exec labwc directly (the verified kiosk path).
+#
+# Optional, EXPERIMENTAL: SWARM_GAMESCOPE=1 wraps labwc inside Gamescope for
+# FSR upscaling, adaptive sync and HDR. Opt-in only — a machine with gaming
+# packages installed (e.g. cachyos-gaming-applications) has gamescope on PATH,
+# and auto-enabling it there once broke the whole desktop: the first version
+# of this wrapper passed flags gamescope does not have (--width, --nested,
+# ...), gamescope exited 1, and swarm-ui fell back to the text getty
+# (2026-09-25). labwc nested in gamescope's --expose-wayland socket has not
+# been boot-verified yet.
+#
+# Environment overrides (all optional, Gamescope mode only):
+#   SWARM_GAMESCOPE=1                        — enable the Gamescope wrapper
+#   SWARM_WIDTH / SWARM_HEIGHT               — render resolution  (default: 1920×1080)
+#   SWARM_OUTPUT_WIDTH / SWARM_OUTPUT_HEIGHT — output resolution (default: same)
+#   SWARM_REFRESH                            — nested refresh rate (default: 60)
+#   SWARM_FSR_SHARPNESS                      — 0 (max) – 20 (min); set to enable FSR
+#   SWARM_GAMESCOPE_EXTRA                    — any extra gamescope flags
+#
+# SWARM_LABWC_BIN / SWARM_GAMESCOPE_BIN exist so tests can substitute stubs.
+
+set -euo pipefail
+
+LABWC="${SWARM_LABWC_BIN:-/usr/bin/labwc}"
+GAMESCOPE="${SWARM_GAMESCOPE_BIN:-/usr/bin/gamescope}"
+
+if [[ "${SWARM_GAMESCOPE:-0}" != 1 ]]; then
+    exec "$LABWC" "$@"
+fi
+if [[ ! -x "$GAMESCOPE" ]]; then
+    echo "[swarm-session] SWARM_GAMESCOPE=1 but $GAMESCOPE is missing — starting labwc directly" >&2
+    exec "$LABWC" "$@"
+fi
+
+RENDER_W="${SWARM_WIDTH:-1920}"
+RENDER_H="${SWARM_HEIGHT:-1080}"
+OUTPUT_W="${SWARM_OUTPUT_WIDTH:-$RENDER_W}"
+OUTPUT_H="${SWARM_OUTPUT_HEIGHT:-$RENDER_H}"
+REFRESH="${SWARM_REFRESH:-60}"
+
+# Flag names checked against `gamescope --help` (3.16.25) by
+# 70-scripts/tests/test_desktop_boot_contract.py whenever gamescope exists.
+GAMESCOPE_FLAGS=(
+    --nested-width  "$RENDER_W"
+    --nested-height "$RENDER_H"
+    --output-width  "$OUTPUT_W"
+    --output-height "$OUTPUT_H"
+    --nested-refresh "$REFRESH"
+    --adaptive-sync
+    --hdr-enabled
+    # labwc is a Wayland compositor; gamescope must offer it a Wayland socket.
+    --expose-wayland
+)
+
+if [[ -n "${SWARM_FSR_SHARPNESS:-}" ]]; then
+    GAMESCOPE_FLAGS+=(--filter fsr --fsr-sharpness "$SWARM_FSR_SHARPNESS")
+fi
+
+# Honour caller-supplied extra flags (split on spaces).
+if [[ -n "${SWARM_GAMESCOPE_EXTRA:-}" ]]; then
+    # shellcheck disable=SC2206
+    GAMESCOPE_FLAGS+=($SWARM_GAMESCOPE_EXTRA)
+fi
+
+echo "[swarm-session] launching: gamescope ${GAMESCOPE_FLAGS[*]} -- labwc" >&2
+exec "$GAMESCOPE" "${GAMESCOPE_FLAGS[@]}" -- "$LABWC" "$@"

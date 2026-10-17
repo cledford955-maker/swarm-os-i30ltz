@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>GoogleWorkspaceService</RootNamespace>
+    <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Apis.Auth"              Version="*" />
+    <PackageReference Include="Google.Apis.Gmail.v1"          Version="*" />
+    <PackageReference Include="Google.Apis.Calendar.v3"       Version="*" />
+    <PackageReference Include="Google.Apis.Drive.v3"          Version="*" />
+    <PackageReference Include="Google.Apis.Tasks.v1"          Version="*" />
+    <PackageReference Include="Google.Apis.PeopleService.v1"  Version="*" />
+    <PackageReference Include="Microsoft.Data.Sqlite"         Version="*" />
+    <PackageReference Include="MimeKit"                       Version="*" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi"  Version="10.0.11" />
+  </ItemGroup>
+
+</Project>

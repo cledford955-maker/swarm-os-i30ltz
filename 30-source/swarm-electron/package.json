@@ -1,0 +1,12 @@
+{
+  "name": "swarm-os-desktop",
+  "version": "6.2.89",
+  "description": "SWARM OS Desktop Window on Debian",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "44.7.2"
+  }
+}

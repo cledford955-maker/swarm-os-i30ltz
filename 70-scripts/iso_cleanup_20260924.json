@@ -1,0 +1,364 @@
+{
+  "policy": "2026-09-24: newest ten operating-system ISOs on Ventoy; verified weekly archives only on Boltz",
+  "keep": [
+    {
+      "path": "/mnt/ventoy/swarm-os-v6.2.72-9f142fdf-2026.09.24-x86_64.iso",
+      "bytes": 4995702784,
+      "device": 2049,
+      "inode": 129,
+      "mtime_ns": 1790225845490000000,
+      "sha256": "ecf14b650e619b9bcfaa8e0994dd916e11a0d7898026daf11827f2826d2df712",
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.72-9f142fdf-2026.09.24-x86_64.iso"
+    },
+    {
+      "path": "/mnt/Lucy/_to_delete/duplicate-isos-2026-09-12/swarm-os-v6.2.44-529dc998-2026.09.12-x86_64.iso",
+      "bytes": 3384934400,
+      "device": 66308,
+      "inode": 9699330,
+      "mtime_ns": 1789233714300066331,
+      "sha256": "f92843691662a3b5f0e35676cdf1caff26b58e7ff9e61a8624cbe857f1b0b986",
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.44-529dc998-2026.09.12-x86_64.iso"
+    },
+    {
+      "path": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.70-622e4129-2026.09.22-x86_64.iso",
+      "bytes": 4995702784,
+      "device": 2049,
+      "inode": 25,
+      "mtime_ns": 1790052629780000000,
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.70-622e4129-2026.09.22-x86_64.iso"
+    },
+    {
+      "path": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.69.iso",
+      "bytes": 4860098560,
+      "device": 2049,
+      "inode": 8,
+      "mtime_ns": 1789832029480000000,
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.69.iso"
+    },
+    {
+      "path": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.66.iso",
+      "bytes": 4855324672,
+      "device": 2049,
+      "inode": 22,
+      "mtime_ns": 1789826948350000000,
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.66.iso"
+    },
+    {
+      "path": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.54.iso",
+      "bytes": 3377790976,
+      "device": 2049,
+      "inode": 21,
+      "mtime_ns": 1789427075020000000,
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.54.iso"
+    },
+    {
+      "path": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.49.iso",
+      "bytes": 3377790976,
+      "device": 2049,
+      "inode": 20,
+      "mtime_ns": 1789299503910000000,
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.49.iso"
+    },
+    {
+      "path": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.41.iso",
+      "bytes": 3348398080,
+      "device": 2049,
+      "inode": 19,
+      "mtime_ns": 1789232422590000000,
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.41.iso"
+    },
+    {
+      "path": "/mnt/ventoy/ISO/SWARM_OS/.incoming/build.wnuncrza/swarm-os-v6.2.71-7eb3ee9e-2026.09.22-x86_64.iso",
+      "bytes": 4995702784,
+      "device": 2049,
+      "inode": 164,
+      "mtime_ns": 1790130347650000000,
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.71-7eb3ee9e-2026.09.22-x86_64.iso"
+    },
+    {
+      "path": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.50-cc49de3a-2026.09.13-x86_64.iso",
+      "bytes": 3377790976,
+      "device": 2049,
+      "inode": 18,
+      "mtime_ns": 1789342519410000000,
+      "destination": "/mnt/ventoy/ISO/SWARM_OS/swarm-os-v6.2.50-cc49de3a-2026.09.13-x86_64.iso"
+    }
+  ],
+  "delete": [
+    {
+      "path": "/mnt/Lucy/_to_delete/duplicate-isos-2026-09-12/swarm-os-v6.2.iso",
+      "bytes": 3384934400,
+      "device": 66308,
+      "inode": 9699335,
+      "mtime_ns": 1789233723553188594,
+      "sha256": "f92843691662a3b5f0e35676cdf1caff26b58e7ff9e61a8624cbe857f1b0b986"
+    },
+    {
+      "path": "/mnt/Lucy/80-vm/grub-theme-check/themes.iso",
+      "bytes": 36769792,
+      "device": 66308,
+      "inode": 13631551,
+      "mtime_ns": 1789836022939251840
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Windows/Win11_25H2_English_x64_v2.iso",
+      "bytes": 8471603200,
+      "device": 2049,
+      "inode": 130,
+      "mtime_ns": 1774100573620000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Windows/Win10_22H2_English_x64v1.iso",
+      "bytes": 6140975104,
+      "device": 2049,
+      "inode": 131,
+      "mtime_ns": 1770652576000000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Windows/Win11_25H2_English_x64.iso",
+      "bytes": 7736125440,
+      "device": 2049,
+      "inode": 132,
+      "mtime_ns": 1770598513310000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/archlinux-2026.08.13-x86_64.iso",
+      "bytes": 1743683584,
+      "device": 2049,
+      "inode": 133,
+      "mtime_ns": 1786611330850000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/archlinux-2026.04.01-x86_64.iso",
+      "bytes": 1536851968,
+      "device": 2049,
+      "inode": 134,
+      "mtime_ns": 1782884329990000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/kubuntu-26.04-desktop-amd64.iso",
+      "bytes": 5068847104,
+      "device": 2049,
+      "inode": 135,
+      "mtime_ns": 1779299083050000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/Zorin-OS-18-Core-64-bit-r3.iso",
+      "bytes": 3787948032,
+      "device": 2049,
+      "inode": 136,
+      "mtime_ns": 1771127147570000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/ubuntu-24.04.3-desktop-amd64.iso",
+      "bytes": 6345887744,
+      "device": 2049,
+      "inode": 137,
+      "mtime_ns": 1770798372000000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/pop-os_24.04_amd64_generic_23.iso",
+      "bytes": 3120562176,
+      "device": 2049,
+      "inode": 138,
+      "mtime_ns": 1770798476000000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/openSUSE-Tumbleweed-DVD-x86_64-Snapshot20260213-Media (1).iso",
+      "bytes": 4598005760,
+      "device": 2049,
+      "inode": 139,
+      "mtime_ns": 1771238144000000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/linuxmint-22.3-cinnamon-64bit (1).iso",
+      "bytes": 3091660800,
+      "device": 2049,
+      "inode": 140,
+      "mtime_ns": 1771106473000000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/Leap-16.0-offline-installer-x86_64.install.iso",
+      "bytes": 717225984,
+      "device": 2049,
+      "inode": 141,
+      "mtime_ns": 1771246575290000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/archlinux-2026.05.01-x86_64.iso",
+      "bytes": 1545814016,
+      "device": 2049,
+      "inode": 142,
+      "mtime_ns": 1778846195390000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/garuda-kde-lite-linux-zen-260309.iso",
+      "bytes": 2046361600,
+      "device": 2049,
+      "inode": 143,
+      "mtime_ns": 1776211408790000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/Fedora-Workstation-Live-43-1.6.x86_64.iso",
+      "bytes": 2742190080,
+      "device": 2049,
+      "inode": 144,
+      "mtime_ns": 1774101760420000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Stable/Fedora-KDE-Desktop-Live-43-1.6.x86_64.iso",
+      "bytes": 3265843200,
+      "device": 2049,
+      "inode": 145,
+      "mtime_ns": 1770398190000000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/garuda-dr460nized-gaming-linux-garuda-260819.iso",
+      "bytes": 4979345408,
+      "device": 2049,
+      "inode": 146,
+      "mtime_ns": 1788764831260000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/cachyos-desktop-linux-260809.iso",
+      "bytes": 3188850688,
+      "device": 2049,
+      "inode": 147,
+      "mtime_ns": 1788764836440000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/Nobara-43-Steam-HTPC-2026-03-28.iso",
+      "bytes": 8299638784,
+      "device": 2049,
+      "inode": 148,
+      "mtime_ns": 1775943215050000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/garuda-hyprland-linux-zen-260309.iso",
+      "bytes": 3060987904,
+      "device": 2049,
+      "inode": 149,
+      "mtime_ns": 1775942088200000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/garuda-mokka-linux-zen-260309.iso",
+      "bytes": 3386759168,
+      "device": 2049,
+      "inode": 150,
+      "mtime_ns": 1775941993810000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/manjaro.iso",
+      "bytes": 5646249984,
+      "device": 2049,
+      "inode": 151,
+      "mtime_ns": 1774991789700000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/EndeavourOS_Titan.iso",
+      "bytes": 3699195904,
+      "device": 2049,
+      "inode": 152,
+      "mtime_ns": 1774717210970000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/xubuntu.iso",
+      "bytes": 4721451008,
+      "device": 2049,
+      "inode": 153,
+      "mtime_ns": 1770798653000000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/Nobara.iso",
+      "bytes": 6908923904,
+      "device": 2049,
+      "inode": 154,
+      "mtime_ns": 1770757656000000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/nixos-graphical.iso",
+      "bytes": 1293942784,
+      "device": 2049,
+      "inode": 155,
+      "mtime_ns": 1771101939510000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/Fedora-Silverblue-ostree.iso",
+      "bytes": 3175817216,
+      "device": 2049,
+      "inode": 156,
+      "mtime_ns": 1774102171230000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/Nobara-deck.iso",
+      "bytes": 8870875136,
+      "device": 2049,
+      "inode": 157,
+      "mtime_ns": 1775134166130000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/bazzite.iso",
+      "bytes": 7907770368,
+      "device": 2049,
+      "inode": 158,
+      "mtime_ns": 1770814156620000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Gaming experimenting/bazzite-deck.iso",
+      "bytes": 9589096448,
+      "device": 2049,
+      "inode": 159,
+      "mtime_ns": 1771235219000000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Tools/gparted-live-1.8.1-2-amd64.iso",
+      "bytes": 646971392,
+      "device": 2049,
+      "inode": 160,
+      "mtime_ns": 1774097802370000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Tools/KNOPPIX_V8.6.1-2019-10-14-EN.iso",
+      "bytes": 4646207488,
+      "device": 2049,
+      "inode": 161,
+      "mtime_ns": 1774101365540000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Tools/systemrescue-12.03-amd64.iso",
+      "bytes": 1222344704,
+      "device": 2049,
+      "inode": 162,
+      "mtime_ns": 1774097780610000000
+    },
+    {
+      "path": "/mnt/ventoy/ISO/Linux/Tools/rescuezilla-2.6.1-64bit.oracular.iso",
+      "bytes": 1498515456,
+      "device": 2049,
+      "inode": 163,
+      "mtime_ns": 1770678545000000000
+    },
+    {
+      "path": "/mnt/endeavor/lucy_backup/bolt/kubuntu-26.04-desktop-amd64.iso",
+      "bytes": 5068847104,
+      "device": 66,
+      "inode": 490,
+      "mtime_ns": 1779299083058458700
+    },
+    {
+      "path": "/mnt/recoverybuild/AI/kubuntu-26.04-desktop-amd64.iso",
+      "bytes": 5068847104,
+      "device": 65,
+      "inode": 273857,
+      "mtime_ns": 1779299083058458700
+    },
+    {
+      "path": "/mnt/Lucy/swarm_os_out/swarm-os-v6.2.72-9f142fdf-2026.09.24-x86_64.iso",
+      "bytes": 4995702784,
+      "device": 66308,
+      "inode": 11272194,
+      "mtime_ns": 1790225679799962499,
+      "sha256": "ecf14b650e619b9bcfaa8e0994dd916e11a0d7898026daf11827f2826d2df712"
+    }
+  ]
+}

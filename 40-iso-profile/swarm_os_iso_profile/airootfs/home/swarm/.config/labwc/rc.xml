@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.5/rc">
+
+  <core>
+    <gap>4</gap>
+    <adaptiveSync>yes</adaptiveSync>
+  </core>
+
+  <!-- New app windows open centered, between the Flutter desktop's icon
+       rails (1 free column + 2 staggered icon columns on each side). -->
+  <placement>
+    <policy>center</policy>
+  </placement>
+
+  <theme>
+    <!-- Minimal dark chrome; swarm-slint draws its own top bar -->
+    <cornerRadius>0</cornerRadius>
+    <font place="ActiveWindow">
+      <name>Inter</name>
+      <size>9</size>
+    </font>
+    <font place="InactiveWindow">
+      <name>Inter</name>
+      <size>9</size>
+    </font>
+  </theme>
+
+  <keyboard>
+    <keybind key="A-F4">
+      <action name="Close"/>
+    </keybind>
+    <keybind key="A-Tab">
+      <action name="NextWindow"/>
+    </keybind>
+    <keybind key="A-S-Tab">
+      <action name="PreviousWindow"/>
+    </keybind>
+    <!-- Super+Return: foot terminal (lightweight, no Electron) -->
+    <keybind key="W-Return">
+      <action name="Execute">
+        <command>foot</command>
+      </action>
+    </keybind>
+    <!-- Shift+Tab: toggle the SWARM Overlay dashboard, Steam's own overlay
+         hotkey convention (2026-09-20). Kill-and-relaunch via the toggle
+         script — see its own comment for why. -->
+    <keybind key="S-Tab">
+      <action name="Execute">
+        <command>/usr/local/bin/swarm-overlay-toggle.sh</command>
+      </action>
+    </keybind>
+  </keyboard>
+
+  <windowRules>
+    <!-- Flutter desktop shell: full-screen, no compositor title bar (Flutter draws its own top bar) -->
+    <windowRule identifier="com.swarmos.swarm_flutter" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes" fixedPosition="yes">
+      <action name="Maximize"/>
+    </windowRule>
+    <windowRule title="SWARM OS*" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes" fixedPosition="yes">
+      <action name="Maximize"/>
+    </windowRule>
+    <!-- Lucille panel (swarm-slint): floating companion, no compositor title bar -->
+    <windowRule title="Lucille" serverDecoration="no"/>
+    <!-- Gaming overlay (swarm-overlay, 2026-09-20): dashboard + browser-widget
+         windows, floating and resizable over a running game, same chromeless
+         style as the Lucille panel above (title starts "SWARM Overlay —"). -->
+    <windowRule title="SWARM Overlay*" serverDecoration="no"/>
+  </windowRules>
+
+</openbox_config>

@@ -1,0 +1,7 @@
+# Lets LucyServer (runs as User=swarm) launch the graphical installer
+# non-interactively from the Flutter "Install SWARM OS" flow, without a
+# password prompt that nothing in that headless subprocess could ever answer.
+# Scoped to exactly this one script — NOT a blanket NOPASSWD grant — so it
+# can't be used as a general privilege-escalation path for anything else
+# swarm-server might run.
+swarm ALL=(root) NOPASSWD: /usr/local/bin/install_swarm_os.sh

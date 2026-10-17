@@ -1,0 +1,38 @@
+# SWARM OS — AppArmor profile for LucyServer-go (Task #3, hardening)
+#
+# DELIBERATELY complain-mode, not enforcing. Unlike GamingAgent, LucyServer's
+# feature surface intentionally includes broad host access by design: arbitrary
+# shell exec (/api/system/run_command, /api/sandbox/execute), a filesystem
+# browser rooted anywhere the caller asks (/api/fs, /api/code/*), QEMU VM
+# management (services/virtualization.go), `git init --bare` for the dev
+# platform (services/devplatform.go), and WebSocket terminal access. A tight
+# enforcing profile would need to special-case nearly the whole filesystem to
+# avoid breaking those features outright — worse than no profile, since a
+# silently-broken feature is harder to notice than a logged AppArmor denial.
+# complain mode still gets this on record (all denials logged to the audit
+# trail, visible via `journalctl` / `aa-logprof`) without an enforcing
+# ruleset that requires reverse-engineering the full behavior of a dev-tools
+# platform to get right. Tighten to `flags=(enforce)` only after collecting
+# real complain-mode logs from actual use (aa-logprof) — a profile written
+# from firstprinciples reasoning instead of observed access is the kind of
+# thing that ships broken.
+#include <tunables/global>
+
+/opt/swarm_os/LucyServer/lucy-server flags=(complain) {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+
+  network,
+
+  /opt/swarm_os/LucyServer/lucy-server mr,
+  /etc/swarm_os.env r,
+  /etc/ssl/certs/** r,
+  /etc/resolv.conf r,
+
+  /etc/swarm_os/lucy/ rw,
+  /etc/swarm_os/lucy/** rwk,
+
+  # Explicitly documented broad-access surface (see file header) — logged,
+  # not blocked, until real usage data justifies a tighter enforcing ruleset.
+  /** rwklx,
+}

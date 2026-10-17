@@ -1,0 +1,6 @@
+# Canonical source and read-only mirror. Override these paths on hosts whose
+# encrypted mirror is mounted elsewhere.
+SWARM_PARITY_SOURCE=/mnt/Lucy
+SWARM_PARITY_MIRROR=/run/media/i30ltz/lucy-master
+SWARM_PARITY_OUTPUT=/var/lib/swarm/workspace-parity
+

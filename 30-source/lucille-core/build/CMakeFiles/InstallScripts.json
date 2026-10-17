@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/mnt/Lucy/30-source/lucille-core/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

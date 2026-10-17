@@ -1,0 +1,60 @@
+# What the Lucy <-> swarmbuild two-way sync (swarm_twoway_sync.py) NEVER reads, copies or deletes, in either direction.
+# Syntax (gitignore-like): '/x' is anchored at the tree root, 'x/' matches directories only, '*' stays inside one path
+# component, '**/x' matches at any depth, '!x' re-includes. The last matching rule wins.
+# Built into the tool regardless of this file: /.git/  /.sync-trash/  /.swarm-sync/
+#
+# Rule of thumb: source, scripts, docs, images and config sync both ways. Anything the build produces, and anything that
+# only exists on one side by design, stays out, so it can neither flow into the source tree nor be mistaken for a deletion.
+
+## housekeeping
+# Claude Code worktrees: full repo copies of other sessions' branches (GBs), never part of either tree
+/.claude/
+lost+found/
+.Trash-*/
+.swarm-build.lock
+
+## only exists, or only matters, on the build side
+/swarm_os_build_work/
+/install-env/
+/swarm_os_out/
+/30-source/flutter-sdk/
+/logs/
+
+## moved to its own build partition (/mnt/lucillebuild) on 2026-10-09; never sync it back
+/30-source/LucilleAssistant/
+
+## build output and generated files: rebuilt on swarmbuild, must never flow back into the source tree
+**/target/
+**/node_modules/
+**/.dart_tool/
+**/.gradle/
+**/__pycache__/
+**/ephemeral/
+*.pyc
+*.pyo
+*.o
+/30-source/frontend/build/
+/30-source/lucille-core/build/
+/30-source/lucille-core/build.old-from-Lucy/
+/30-source/*/obj/
+
+## untracked build products compiled into the source tree by the build (the dev server runs from ~/.local/bin, not from these)
+/30-source/GamingAgent-go/gaming-agent
+/30-source/LucyServer-go/lucy-server
+/30-source/LucyServer-go/swarm-memory
+
+## root-owned backups written by the grub scripts (some files unreadable by the normal user)
+/grub_themes/backups/
+
+## the ISO profile's staged copies of built programs (gitignored for the same reason); usr/lib/swarm is real source
+/40-iso-profile/*/airootfs/opt/
+/40-iso-profile/*/airootfs/var/cache/
+/40-iso-profile/*/airootfs/usr/lib/*
+!/40-iso-profile/*/airootfs/usr/lib/swarm/
+/40-iso-profile/*/airootfs/usr/local/share/swarm-os/airootfs.tar
+
+## disk images and ISOs live on Ventoy / in VMs, never in the trees
+*.iso
+*.sfs
+*.qcow2
+*.img

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": [
+      "Write(/run/media/i30ltz/lucy-master/**)",
+      "Edit(/run/media/i30ltz/lucy-master/**)",
+      "Bash(rm * /run/media/i30ltz/lucy-master*)",
+      "Write(/mnt/lucy/**)",
+      "Edit(/mnt/lucy/**)"
+    ]
+  }
+}

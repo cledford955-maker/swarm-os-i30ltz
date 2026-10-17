@@ -1,0 +1,165 @@
+#!/usr/bin/python3 -I
+"""swarm-key-sudo-auth: let the SWARM hardware key stand in for the sudo password.
+
+Run by pam_exec from /etc/pam.d/sudo ONLY (never login, su, polkit or the lock
+screen):
+
+    auth  sufficient  pam_exec.so quiet seteuid /usr/lib/swarm/swarm-key-sudo-auth
+
+Exit 0 = the key is present and genuine, so PAM stops with success. Any other
+outcome exits 1 and PAM falls through to the normal password prompt, so a
+missing, wrong or broken key can never lock anyone out. sudoers still decides
+WHO may use sudo; this only replaces the password check.
+
+The credential is a 256-bit random secret in a raw partition on the stick. Each
+registered key is one file in /etc/swarm_key/keys.d/ (root:root 0600; the folder
+root-owned and not writable by others) holding the secret's SHA-256, the
+partition's PARTUUID and the stick's USB serial. ANY registered key unlocks
+sudo, so a spare key is just another file (provision_swarm_key.sh --add-key). The PARTUUID and serial are
+readable by anyone and can be copied; they only narrow the search. Only the
+secret is the proof. Fails closed, prints nothing, no environment overrides,
+no arguments (python -I also ignores PYTHON* variables and the cwd).
+"""
+import hashlib
+import hmac
+import os
+import re
+import signal
+import stat
+import subprocess
+import sys
+
+KEYS_DIR = "/etc/swarm_key/keys.d"
+PARTUUID_DIR = "/dev/disk/by-partuuid"
+UDEVADM = "/usr/bin/udevadm"
+RECORD_LEN = 70  # b"SWK1:" + 64 hex chars + b"\n"
+RECORD_RE = re.compile(rb"\ASWK1:([0-9a-f]{64})\n\Z")
+UUID_RE = re.compile(r"\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z")
+SERIAL_RE = re.compile(r"\A[A-Za-z0-9_.:-]{1,64}\Z")  # "NONE" = stick reports no USB serial
+SHA_RE = re.compile(r"\A[0-9a-f]{64}\Z")
+TIMEOUT_S = 3
+
+
+class _Timeout(Exception):
+    pass
+
+
+def _on_alarm(_sig, _frm):
+    raise _Timeout()
+
+
+def _load_registry(path, require_root):
+    st = os.lstat(path)
+    if not stat.S_ISREG(st.st_mode):
+        return None
+    if require_root and st.st_uid != 0:
+        return None
+    if st.st_mode & 0o077:  # anything readable/writable by group or others
+        return None
+    vals = {}
+    with open(path, "r", encoding="ascii") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            vals[k.strip()] = v.strip()
+    partuuid = vals.get("PARTUUID", "").lower()
+    hwserial = vals.get("HWSERIAL", "")
+    sha = vals.get("SECRET_SHA256", "").lower()
+    if not (UUID_RE.match(partuuid) and SERIAL_RE.match(hwserial) and SHA_RE.match(sha)):
+        return None
+    return partuuid, hwserial, sha
+
+
+def _udev_props(udevadm, dev):
+    out = subprocess.run(
+        [udevadm, "info", "--query=property", "--name=" + dev],
+        env={}, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, timeout=TIMEOUT_S, check=True,
+    ).stdout.decode("ascii", "replace")
+    props = {}
+    for line in out.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            props[k] = v
+    return props
+
+
+def _verify_key(registry, partuuid_dir, udevadm, require_block, require_root):
+    reg = _load_registry(registry, require_root)
+    if reg is None:
+        return False
+    partuuid, hwserial, want_sha = reg
+
+    dev = os.path.realpath(os.path.join(partuuid_dir, partuuid))
+    if not os.path.exists(dev):
+        return False
+    if require_block and not stat.S_ISBLK(os.stat(dev).st_mode):
+        return False
+
+    props = _udev_props(udevadm, dev)
+    if props.get("ID_BUS") != "usb":
+        return False
+    if hwserial != "NONE" and props.get("ID_SERIAL_SHORT") != hwserial:
+        return False
+    if props.get("ID_PART_ENTRY_UUID", "").lower() != partuuid:
+        return False
+
+    signal.signal(signal.SIGALRM, _on_alarm)
+    signal.alarm(TIMEOUT_S)
+    try:
+        fd = os.open(dev, os.O_RDONLY | os.O_CLOEXEC)
+        try:
+            data = b""
+            while len(data) < RECORD_LEN:
+                chunk = os.read(fd, RECORD_LEN - len(data))
+                if not chunk:
+                    return False
+                data += chunk
+        finally:
+            os.close(fd)
+    finally:
+        signal.alarm(0)
+
+    m = RECORD_RE.match(data)
+    if not m:
+        return False
+    got_sha = hashlib.sha256(m.group(1)).hexdigest()
+    return hmac.compare_digest(got_sha, want_sha)
+
+
+def verify(keys_dir=KEYS_DIR, partuuid_dir=PARTUUID_DIR, udevadm=UDEVADM,
+           require_block=True, require_root=True):
+    """True if ANY registered key is plugged in and genuine. Parameters exist
+    for the tests; the PAM entry point below always uses the production defaults."""
+    try:
+        if require_root and os.geteuid() != 0:
+            return False
+        st = os.lstat(keys_dir)
+        if not stat.S_ISDIR(st.st_mode) or st.st_mode & 0o022:
+            return False
+        if require_root and st.st_uid != 0:
+            return False
+        for name in sorted(os.listdir(keys_dir)):
+            if not name.endswith(".conf"):
+                continue
+            try:
+                if _verify_key(os.path.join(keys_dir, name), partuuid_dir, udevadm,
+                               require_block, require_root):
+                    return True
+            except Exception:  # one broken entry must not hide a good one
+                continue
+        return False
+    except BaseException:  # fail closed on ANY error, including timeouts
+        return False
+
+
+def main():
+    if os.environ.get("PAM_TYPE") != "auth" or os.environ.get("PAM_SERVICE") != "sudo":
+        return 1
+    return 0 if verify() else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

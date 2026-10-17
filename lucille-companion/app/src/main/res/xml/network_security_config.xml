@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Allow HTTP to Tailscale IPs (100.x.x.x) and LAN IPs (192.168.x.x, 10.x.x.x)
+     for connecting to Lucille Assistant. All other traffic uses HTTPS. -->
+<network-security-config>
+    <!-- Tailscale 100.x range + common LAN ranges -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

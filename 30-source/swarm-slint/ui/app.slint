@@ -1,0 +1,159 @@
+import { SwarmTheme } from "globals.slint";
+import { NavButton } from "components/nav_button.slint";
+import { GamingView } from "views/gaming.slint";
+import { ForgeView } from "views/forge.slint";
+import { MonitorView } from "views/monitor.slint";
+
+// Re-export globals used by nested views so slint-build generates Rust bindings
+// for them (Slint only exposes to Rust what the ENTRY file itself exports —
+// a global merely used transitively by an imported view is not enough).
+export { GamingState } from "gaming_state.slint";
+export { ForgeState } from "forge_state.slint";
+export { MonitorState } from "monitor_state.slint";
+
+// Tabs: 0=Forge (default — the real coding/general Lucille) 1=Gaming
+// 2=Monitor 3=Settings. Forge replaced the old "Chat" tab 2026-09-19: this
+// panel used to open on Gaming by default with no non-gaming chat at all —
+// both "Gaming" and the old Chat tab were GamingAgent-backed (Steam/GFN
+// context), so there was no real coding-focused Lucille here at all. Forge
+// talks to LucyServer's general /lucy instead. The old gaming-chat tab
+// (chat_controller.rs, views/chat.slint, chat_state.slint) was deleted
+// rather than left mounted-but-unreachable — recoverable from git history
+// if a standalone gaming-chat UI is ever wanted again.
+export component AppWindow inherits Window {
+    title: "Lucille";
+    background: SwarmTheme.bg;
+    // labwc (rc.xml windowRule) removes the compositor title bar and auto-maximizes
+    // this window on launch — no kiosk flags needed here.
+
+    // Exposed to Rust
+    in-out property <int>    active-tab: 0;
+    in     property <string> clock-text: "00:00";
+    in     property <string> version-text: "v0.0.0";
+
+    callback tab-selected(int);
+
+    VerticalLayout {
+        spacing: 0;
+
+        // ── Top bar ──────────────────────────────────────────────────────────
+        Rectangle {
+            height: SwarmTheme.top-bar-h;
+            background: SwarmTheme.surface;
+
+            // bottom border line
+            Rectangle {
+                y: parent.height - 1px;
+                height: 1px;
+                background: SwarmTheme.border;
+            }
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 20px;
+                alignment: stretch;
+
+                // Logo
+                Text {
+                    text: "⬡ SWARM OS";
+                    color: SwarmTheme.accent;
+                    font-size: 16px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+
+                // Spacer
+                Rectangle { horizontal-stretch: 1; }
+
+                // Version
+                Text {
+                    text: version-text;
+                    color: SwarmTheme.text-dim;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+
+                // Separator
+                Rectangle { width: 16px; }
+
+                // Clock
+                Text {
+                    text: clock-text;
+                    color: SwarmTheme.text-dim;
+                    font-size: 13px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // ── Body (sidebar + content) ──────────────────────────────────────────
+        HorizontalLayout {
+            spacing: 0;
+            vertical-stretch: 1;
+
+            // Left sidebar
+            Rectangle {
+                width: SwarmTheme.sidebar-w;
+                background: SwarmTheme.surface;
+
+                // right border line
+                Rectangle {
+                    x: parent.width - 1px;
+                    width: 1px;
+                    height: parent.height;
+                    background: SwarmTheme.border;
+                }
+
+                VerticalLayout {
+                    alignment: start;
+                    spacing: 0;
+                    padding-top: 8px;
+
+                    NavButton {
+                        icon: "🛠"; label: "FORGE";
+                        active: active-tab == 0;
+                        selected => { active-tab = 0; tab-selected(0); }
+                    }
+                    NavButton {
+                        icon: "🎮"; label: "GAMING";
+                        active: active-tab == 1;
+                        selected => { active-tab = 1; tab-selected(1); }
+                    }
+                    NavButton {
+                        icon: "📊"; label: "MONITOR";
+                        active: active-tab == 2;
+                        selected => { active-tab = 2; tab-selected(2); }
+                    }
+
+                    // Push settings to bottom
+                    Rectangle { vertical-stretch: 1; }
+
+                    NavButton {
+                        icon: "⚙"; label: "SETTINGS";
+                        active: active-tab == 3;
+                        selected => { active-tab = 3; tab-selected(3); }
+                    }
+                }
+            }
+
+            // Main content area
+            Rectangle {
+                horizontal-stretch: 1;
+                background: SwarmTheme.bg;
+
+                if active-tab == 0 : ForgeView {}
+                if active-tab == 1 : GamingView {}
+                if active-tab == 2 : MonitorView {}
+                if active-tab == 3 : Rectangle {
+                    Text {
+                        text: "Settings";
+                        color: SwarmTheme.text-dim;
+                        font-size: 16px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

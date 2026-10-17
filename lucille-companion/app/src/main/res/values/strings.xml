@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lucille Companion — strings.xml  v1.0.0  2026-09-24 -->
+<resources>
+    <string name="app_name">Lucille</string>
+    <string name="app_version">v1.0.0</string>
+    <string name="app_subtitle">SWARM OS Companion</string>
+
+    <!-- Bottom nav tabs -->
+    <string name="nav_brief">Brief</string>
+    <string name="nav_inbox">Inbox</string>
+    <string name="nav_voice">Voice</string>
+    <string name="nav_workspace">Workspace</string>
+    <string name="nav_swarm">SWARM</string>
+
+    <!-- Settings -->
+    <string name="pref_server_url">Lucille Server URL</string>
+    <string name="pref_auth_token">Auth Token</string>
+    <string name="pref_server_hint">e.g. http://100.x.x.x:8403</string>
+    <string name="pref_token_hint">Your SWARM_AUTH_TOKEN</string>
+
+    <!-- Connect screen -->
+    <string name="connect_title">Connect to Lucille</string>
+    <string name="connect_subtitle">Enter your Tailscale IP and auth token</string>
+    <string name="connect_btn">Connect</string>
+
+    <!-- Generic -->
+    <string name="loading">Loading…</string>
+    <string name="error_network">Cannot reach Lucille server. Check your Tailscale connection.</string>
+    <string name="retry">Retry</string>
+    <string name="send">Send</string>
+    <string name="refresh">Refresh</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="version_label">Lucille Companion v1.0.0 · 2026-09-24</string>
+</resources>

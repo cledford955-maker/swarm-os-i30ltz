@@ -1,0 +1,106 @@
+#!/bin/sh
+# SUPERSEDED 2026-10-10 by swarm-grub/entries/20_swarm_entries (install: sudo bash swarm-grub/install.sh --with-entries).
+# This older script still names CachyOS (decommissioned) and Recovery OS on Debian's ESP (it now has its own ESP A367-87E3).
+# It is kept only because 70-scripts/install_debian_grub_theme.sh (swarm_dev, never installed) copies it. Do not use both.
+# /etc/grub.d/09_swarm_debian — top-level menu for the DEBIAN GRUB (sda1 ESP, removable path).
+# Order: Debian, SWARM OS, Recovery OS, CachyOS, Ventoy, Power & firmware (submenu: reboot / power off / UEFI setup).
+# IDs: swarm-native (Debian kernels submenu), swarm-swarmos, swarm-recovery, swarm-cachyos, swarm-ventoy.
+# UUIDs (2026-10-07 `lsblk`): SWARM root nvme0n1p2 f6f706d0…, SWARM ESP nvme0n1p1 FE19-A70F,
+#   CachyOS root sdb3 ef9acba2…, Cachy ESP sdb1 A367-87E3, Debian/Recovery ESP sda1 362A-E48F,
+#   Ventoy VTOYEFI sdc2 626B-4255.  Re-check with `lsblk -o NAME,LABEL,UUID` if a disk is reinstalled.
+set -eu
+
+printf 'submenu "Debian" --class debian --id swarm-native {\n'
+sh /etc/grub.d/10_linux
+printf '}\n'
+
+cat <<'GRUB'
+# swarm_msg <title> <detail>
+function swarm_msg {
+  echo ''
+  echo "  $1"
+  echo "  $2"
+  echo ''
+  sleep 8
+}
+
+# swarm_other_os <name> <root-fs-uuid> <esp-fs-uuid> <efi-binary>...
+# 1) load that OS's own grub.cfg (so its theme/kernels show), 2) else chainload an EFI binary on its ESP.
+function swarm_other_os {
+  set sw_name="$1"; set sw_root_uuid="$2"; set sw_esp_uuid="$3"
+  shift 3
+  insmod btrfs; insmod ext2; insmod fat; insmod chain
+  if search --no-floppy --fs-uuid --set=sw_root "$sw_root_uuid"; then
+    for sw_cfg in /@/boot/grub/grub.cfg /boot/grub/grub.cfg; do
+      if [ -f ($sw_root)$sw_cfg ]; then
+        configfile ($sw_root)$sw_cfg
+        return
+      fi
+    done
+  fi
+  if search --no-floppy --fs-uuid --set=sw_esp "$sw_esp_uuid"; then
+    for sw_efi in "$@"; do
+      if [ -f ($sw_esp)$sw_efi ]; then
+        chainloader --force ($sw_esp)$sw_efi
+        boot
+        return
+      fi
+    done
+  fi
+  swarm_msg "$sw_name: nothing bootable found." "Looked for its grub.cfg (UUID $sw_root_uuid) and EFI files on ESP $sw_esp_uuid."
+}
+
+menuentry 'SWARM OS' --class swarm_os --id swarm-swarmos {
+  swarm_other_os 'SWARM OS' f6f706d0-236a-4f7f-9c6d-948a90a509c5 FE19-A70F \
+    /EFI/BOOT/BOOTX64.EFI /EFI/SWARM/grubx64.efi /EFI/GRUB/grubx64.efi /EFI/arch/grubx64.efi
+}
+
+menuentry 'Recovery OS' --class recovery_os --id swarm-recovery {
+  # Recovery OS shares Debian's ESP (sda1) under \EFI\i30ltz (see RC-11); not present until it is installed.
+  insmod fat; insmod chain
+  if search --no-floppy --fs-uuid --set=rec_esp 362A-E48F; then
+    for rec_efi in /EFI/i30ltz/grubx64.efi /EFI/i30ltz/shimx64.efi /EFI/i30ltz/BOOTX64.EFI /EFI/i30ltz/systemd-bootx64.efi; do
+      if [ -f ($rec_esp)$rec_efi ]; then
+        chainloader --force ($rec_esp)$rec_efi
+        boot
+        return
+      fi
+    done
+  fi
+  swarm_msg 'Recovery OS is not installed on this disk yet (no \EFI\i30ltz on the ESP).' 'Boot the Ventoy stick and pick ISO/recovery-os for the live Recovery OS.'
+}
+
+menuentry 'CachyOS' --class cachyos --id swarm-cachyos {
+  swarm_other_os 'CachyOS' ef9acba2-3816-4fd7-bdd7-a9526816d3f0 A367-87E3 \
+    /EFI/BOOT/BOOTX64.EFI /EFI/CachyOS/grubx64.efi /EFI/cachyos/grubx64.efi /EFI/systemd/systemd-bootx64.efi
+}
+
+menuentry 'Ventoy' --class ventoy --id swarm-ventoy {
+  if [ "$grub_platform" != efi ]; then
+    swarm_msg 'Ventoy entry needs UEFI boot.' ''
+    return
+  fi
+  insmod fat; insmod chain
+  if search --no-floppy --fs-uuid --set=ventoy_efi 626B-4255; then true
+  elif search --no-floppy --label --set=ventoy_efi VTOYEFI; then true
+  else
+    swarm_msg 'Ventoy stick not found (VTOYEFI / 626B-4255).' 'Plug it in, then pick Ventoy again.'
+    return
+  fi
+  if [ -f ($ventoy_efi)/EFI/BOOT/BOOTX64.EFI ]; then
+    chainloader --force ($ventoy_efi)/EFI/BOOT/BOOTX64.EFI
+  elif [ -f ($ventoy_efi)/EFI/ventoy/grubx64.efi ]; then
+    chainloader --force ($ventoy_efi)/EFI/ventoy/grubx64.efi
+  else
+    swarm_msg 'Ventoy EFI binary missing on VTOYEFI.' 'Expected /EFI/BOOT/BOOTX64.EFI.'
+    return
+  fi
+  boot
+}
+
+submenu 'Power & firmware' --class tools --id swarm-tools {
+  menuentry 'Reboot' --hotkey=r --class restart --id swarm-reboot { reboot }
+  menuentry 'Power off' --hotkey=p --class shutdown --id swarm-poweroff { halt }
+  menuentry 'UEFI firmware setup' --hotkey=f --class efi --id swarm-fwsetup { fwsetup }
+}
+GRUB

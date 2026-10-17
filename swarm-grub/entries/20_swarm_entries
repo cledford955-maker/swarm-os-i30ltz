@@ -1,0 +1,90 @@
+#!/bin/sh
+# swarm-grub boot entries - installed as /etc/grub.d/20_swarm_entries by `swarm-grub/install.sh --with-entries`.
+# It replaces grub_themes/09_swarm_debian (stale: it still named CachyOS and an older Recovery OS layout).
+#
+# Runs between 10_linux (Debian + Advanced options) and 30_os-prober / 30_uefi-firmware, so the menu reads:
+#   Debian, Advanced options, SWARM OS, Recovery OS, Ventoy, Power options, UEFI Firmware Settings.
+#
+# Each OS is started by chainloading its OWN EFI bootloader, so it keeps its own menu, kernel options and
+# Secure Boot chain. The EFI system partition is found by filesystem UUID, because drive letters swap
+# between boots. Values below are from `lsblk -o NAME,LABEL,UUID` on 2026-10-10 and the firmware entries
+# in `efibootmgr -v`; re-check them after a disk is reinstalled:
+#   SWARM OS     ESP nvme0n1p1                      FE19-A70F   \EFI\SWARM_OS\grubx64.efi  (firmware entry Boot0000)
+#   Recovery OS  ESP of the Samsung T7 (old Cachy)  A367-87E3   \EFI\i30ltz\shimx64.efi    (firmware entry Boot0002)
+#   Ventoy       VTOYEFI on the Ventoy stick        626B-4255   \EFI\BOOT\BOOTX64.EFI      (label VTOYEFI also accepted)
+#
+# (GRUB's script language has no && or ||, hence the if/then.)
+# A missing disk or boot file prints what it looked for and returns to the menu; it never hangs the menu.
+# The Debian GRUB cannot know whether another OS boots until you choose it: boot-test each entry once.
+set -eu
+
+cat <<'GRUB'
+# swarm-grub boot entries
+function swarm_msg {
+  echo ''
+  echo "  $1"
+  echo "  $2"
+  echo ''
+  sleep 8
+}
+
+# swarm_find_esp <name> <fs-uuid> [<fs-label>]: set $sw_esp to that EFI partition, or say why not.
+function swarm_find_esp {
+  insmod part_gpt
+  insmod part_msdos
+  insmod fat
+  if search --no-floppy --fs-uuid --set=sw_esp "$2"; then
+    return 0
+  fi
+  if [ -n "$3" ]; then
+    if search --no-floppy --label --set=sw_esp "$3"; then
+      return 0
+    fi
+  fi
+  swarm_msg "$1: its EFI partition ($2) was not found." "Is the disk plugged in? The firmware boot menu (F12) can still start it."
+  return 1
+}
+
+# swarm_chain <name> <efi-file>...: chainload the first of these files that exists on $sw_esp.
+function swarm_chain {
+  set sw_name="$1"
+  shift
+  insmod chain
+  for sw_efi in "$@"; do
+    if [ -f ($sw_esp)$sw_efi ]; then
+      chainloader ($sw_esp)$sw_efi
+      boot
+      return 0
+    fi
+  done
+  swarm_msg "$sw_name: its EFI partition is there but has none of the expected boot files." "Looked for: $*"
+  return 1
+}
+
+menuentry 'SWARM OS' --class swarm_os --id swarm-swarmos {
+  if swarm_find_esp 'SWARM OS' FE19-A70F; then
+    swarm_chain 'SWARM OS' /EFI/SWARM_OS/grubx64.efi /EFI/BOOT/BOOTX64.EFI
+  fi
+}
+
+menuentry 'Recovery OS' --class recovery_os --id swarm-recovery {
+  if swarm_find_esp 'Recovery OS' A367-87E3; then
+    swarm_chain 'Recovery OS' /EFI/i30ltz/shimx64.efi /EFI/i30ltz/grubx64.efi /EFI/BOOT/BOOTX64.EFI
+  fi
+}
+
+menuentry 'Ventoy' --class ventoy --id swarm-ventoy {
+  if [ "$grub_platform" != efi ]; then
+    swarm_msg 'Ventoy needs a UEFI boot.' 'This menu was started in legacy BIOS mode.'
+    return
+  fi
+  if swarm_find_esp 'Ventoy' 626B-4255 VTOYEFI; then
+    swarm_chain 'Ventoy' /EFI/BOOT/BOOTX64.EFI /EFI/BOOT/grubx64.efi /EFI/ventoy/grubx64.efi
+  fi
+}
+
+submenu 'Power options' --class tools --id swarm-power {
+  menuentry 'Reboot' --hotkey=r --class restart --id swarm-reboot { reboot }
+  menuentry 'Power off' --hotkey=p --class shutdown --id swarm-poweroff { halt }
+}
+GRUB

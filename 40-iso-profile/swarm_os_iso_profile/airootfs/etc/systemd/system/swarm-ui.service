@@ -1,0 +1,94 @@
+[Unit]
+Description=SWARM OS Desktop (labwc compositor + Flutter hex-grid shell)
+After=systemd-user-sessions.service NetworkManager.service seatd.service systemd-logind.service
+# Finish releasing the console and boot splash before claiming tty1.
+After=getty@tty1.service plymouth-quit.service plymouth-quit-wait.service
+Wants=NetworkManager.service seatd.service
+Conflicts=getty@tty1.service
+StartLimitBurst=3
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+# control-group only reaches (sd-pam): pam_systemd moves the desktop itself
+# into a logind session scope. swarm-ui-cleanup.sh (below) ends that scope.
+KillMode=control-group
+KillSignal=SIGTERM
+TimeoutStopSec=10
+User=swarm
+Group=swarm
+# Explicitly set all device groups so they are active regardless of PAM group lookup timing.
+SupplementaryGroups=seat video render input audio
+WorkingDirectory=/home/swarm
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Environment=XDG_SEAT=seat0
+Environment=XDG_VTNR=1
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=XDG_SESSION_TYPE=wayland
+Environment=XDG_CURRENT_DESKTOP=labwc
+# labwc uses libseat for DRM/input device access. PAMName=login registers a
+# real logind session on seat0/vt1 before ExecStart runs, so libseat can claim
+# it via the logind backend (see SWARM_AI_FEATURES.md for the history of the
+# seatd-vs-logind fix this project already went through once).
+Environment=LIBSEAT_BACKEND=logind
+# Temporary diagnostic (2026-09-22): labwc has been dying silently within
+# 1-3s of PAM session open, on both real hardware and the QEMU dev VM,
+# repeatedly since at least 2026-09-15 (see /var/log/swarm-ui/swarm-ui-*.log; copied to /mnt/Lucy/logs when that drive is mounted) —
+# no crash reason has ever reached the journal, just "Deactivated
+# successfully" with nothing in between. WLR_LOG_LEVEL is wlroots' own
+# verbosity knob (labwc is wlroots-based) — set independently of labwc's own
+# CLI flags so it works regardless of the installed labwc version. Remove
+# once the real cause is captured.
+Environment=WLR_LOG_LEVEL=debug
+# If Flutter's GTK3 embedder has trouble with GDK's native-Wayland backend,
+# uncomment this to force it through XWayland instead (xorg-xwayland package
+# provides the compat layer; libxkbcommon-x11 handles its keyboard input):
+#Environment=GDK_BACKEND=x11
+# NOTE: Do NOT set LIBGL_ALWAYS_SOFTWARE or GALLIUM_DRIVER=softpipe here.
+# softpipe only supports OpenGL 3.3 — Flutter needs ES 3.2+ and will SIGSEGV.
+# llvmpipe supports ES 3.1 and is the correct software fallback if no GPU is
+# found. On real hardware (vulkan-intel here, since this targets integrated
+# graphics) Mesa auto-selects the right driver.
+# End any desktop session left on tty1 by a crash, so a restart never runs two
+# compositors. Runs without PAM ("+"), so it cannot touch this start's session.
+ExecStartPre=+/usr/lib/swarm/swarm-ui-cleanup.sh
+ExecStartPre=+/usr/bin/mkdir -p /run/user/1000
+ExecStartPre=+/usr/bin/chown -R swarm:swarm /run/user/1000
+ExecStartPre=+/usr/bin/chmod 0700 /run/user/1000
+# Logs live on the OS's own disk so the system is standalone (2026-10-09): /mnt/Lucy is optional and may be absent.
+ExecStartPre=+/usr/bin/mkdir -p /var/log/swarm-ui
+# labwc starts the compositor; its autostart script (~/.config/labwc/autostart)
+# launches the Flutter shell as a normal Wayland client inside it.
+ExecStart=/usr/bin/dbus-run-session -- /usr/bin/swarm-session
+# Terminate the tty1 logind session scope (labwc, Flutter, swarm-slint, and
+# anything else autostart launched) before the log dump and tty reset below;
+# a still-running compositor would own the VT and undo the reset.
+ExecStopPost=+/usr/lib/swarm/swarm-ui-cleanup.sh
+# The 1s sleep and systemctl-status snapshot exist because the plain
+# journalctl dump below was losing the crash reason entirely on a fast
+# exit (see the WLR_LOG_LEVEL comment above) — likely a journald flush race
+# on a sub-3-second-lived unit. `systemctl status` reads systemd's own
+# already-updated unit state directly, no journal round-trip needed, so it
+# can't lose the exit code/signal to that race. The extra grep widens the
+# net to kernel/seatd/wlroots lines outside this unit's own journal lines,
+# in case the real failure is a DRM/seat handoff denial labwc never logs.
+ExecStopPost=+/usr/bin/bash -c 'sleep 1; f=/var/log/swarm-ui/swarm-ui-$(date +%%Y%%m%%d-%%H%%M%%S).log; { echo "=== systemctl status ==="; systemctl status swarm-ui.service --no-pager -l; echo; echo "=== journalctl -u swarm-ui.service -b ==="; journalctl -u swarm-ui.service -b --no-pager; echo; echo "=== related drm/seat/wlroots/labwc lines, this boot ==="; journalctl -b --no-pager -g "drm|seat|wlroots|labwc" -n 200; } > "$$f" 2>&1 || true; if mountpoint -q /mnt/Lucy; then mkdir -p /mnt/Lucy/logs && cp -f "$$f" /mnt/Lucy/logs/ || true; fi'
+# TTYVTDisallocate (above) deallocates tty1 on stop, but that race isn't airtight
+# against a fast restart: labwc drives the VT directly via DRM/KMS, and if fbcon
+# hasn't finished re-initializing text mode before the next reader (getty, or a
+# shell you're sitting in on tty1) writes to it, you get garbled/unreadable
+# leftover graphics-mode noise on screen. Force a full VT100 reset after every
+# stop so tty1 always comes back clean before anything else touches it.
+ExecStopPost=+/usr/bin/sh -c 'TERM=linux /usr/bin/reset > /dev/tty1 2>&1 < /dev/tty1 || true'
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target graphical.target

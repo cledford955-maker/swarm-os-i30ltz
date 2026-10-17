@@ -1,0 +1,509 @@
+#!/usr/bin/env bash
+# ── Build identity ─────────────────────────────────────────
+COMMIT=$(git -C "$(dirname "$0")" rev-parse --short=8 HEAD 2>/dev/null || echo nogit)
+echo "[swarm-build] commit=$COMMIT"
+# ────────────────────────────────────────────────────────────
+# =============================================================================
+# 🚀 build_swarm_iso.sh (Auto-Version Bump Engine)
+# Automatically bumps the version (e.g. v6.2.1 -> v6.2.2 -> v6.2.3...) on
+# every single build, syncs version labels across all apps and profiles,
+# keeps one current ISO in the project. Normal changes go to the running system.
+#
+# Run WITHOUT sudo:  ./build_swarm_iso.sh
+# (it will ask for sudo password only when mkarchiso runs)
+# =============================================================================
+set -euo pipefail
+
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+PURPLE='\033[0;35m'
+RED='\033[0;31m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+# Flutter SDK lives on LUCILLE — self-contained, no host dependency.
+# Go/cargo/dotnet are pacman packages; see 70-scripts/setup-dev-deps.sh to install them.
+# ALL BUILDING happens on /mnt/swarmbuild (policy 2026-10-07); /mnt/Lucy is the source of truth.
+# Sync first with `70-scripts/sync_lucy_swarmbuild.sh both --apply` (two-way: new files from each side are kept, deletions are propagated);
+# run it again after the build so VERSION and source edits flow back to Lucy. (The older one-way to-build/to-lucy modes still exist.)
+BUILD_ROOT="${SWARM_BUILD_ROOT:-/mnt/swarmbuild}"
+[ -d "$BUILD_ROOT/70-scripts" ] && mountpoint -q "$BUILD_ROOT" || { echo "ERROR: $BUILD_ROOT is not a mounted SWARM build tree. Run 70-scripts/check_mounts.sh" >&2; exit 1; }
+FLUTTER_SDK="$BUILD_ROOT/30-source/flutter-sdk"
+export PATH="$HOME/.cargo/bin:$HOME/.dotnet:$FLUTTER_SDK/bin:$HOME/.dotnet/tools:$HOME/.local/bin:$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$PATH"
+export FLUTTER_ROOT="$FLUTTER_SDK"
+
+if [ "$EUID" -eq 0 ]; then
+    echo -e "${RED}ERROR: Do NOT run this script with sudo.${NC}"
+    echo "Run as your normal user:  $0"
+    echo "It will request sudo permissions only when needed for mkarchiso."
+    exit 1
+fi
+
+LUCY="$BUILD_ROOT"   # historical variable name; this is the BUILD tree
+SCRIPT_DIR="/run/media/i30ltz/lucy-master/Luccile-v+"   # read-only reference; do not write here
+VERSION_FILE="$LUCY/VERSION"
+PROFILE_DIR="$LUCY/40-iso-profile/swarm_os_iso_profile"
+AIROOTFS="$PROFILE_DIR/airootfs"
+FLUTTER_DIR="$LUCY/30-source/frontend"
+SLINT_DIR="$LUCY/30-source/swarm-slint"
+OVERLAY_DIR="$LUCY/30-source/swarm-overlay"
+SOURCE_DIR="$LUCY/30-source"
+LUCY_SERVER_GO_DIR="$SOURCE_DIR/LucyServer-go"
+GOOGLE_WORKSPACE_DIR="$SOURCE_DIR/GoogleWorkspaceService"
+WORK_DIR="$LUCY/swarm_os_build_work"
+RELEASE_DIR="/mnt/Lucy/10-releases"
+ISO_MANAGER="$LUCY/70-scripts/swarm_iso_manager.py"
+# Fail before bumping VERSION if the project release directory is unavailable.
+python3 "$ISO_MANAGER" check
+exec 8>"$LUCY/70-scripts/.swarm-build.lock"
+flock -n 8 || { echo 'A SWARM ISO build is already running.' >&2; exit 1; }
+# Fail before version stamping or privileged work if tty ownership or runtime
+# executable modes would recreate the desktop boot regression.
+python3 "$LUCY/70-scripts/tests/test_desktop_boot_contract.py"
+mkdir -p "$RELEASE_DIR/.incoming"
+# The build lock above proves no canonical build is active. Remove orphaned ISO
+# output from interrupted runs before creating this run's one temporary image.
+find "$RELEASE_DIR/.incoming" -mindepth 2 -maxdepth 2 -type f -iname '*.iso' -delete
+OUT_DIR=$(mktemp -d "$RELEASE_DIR/.incoming/build.XXXXXXXX")
+cleanup_build() {
+ # Only this run's temporary output. No published release is touched here.
+ if [[ -n ${OUT_DIR:-} && $OUT_DIR == "$RELEASE_DIR/.incoming/build."* ]]; then
+  sudo find "$OUT_DIR" -maxdepth 1 -type f -name '*.iso' -delete
+  sudo rmdir "$OUT_DIR" 2>/dev/null || true
+ fi
+ if [[ -d $WORK_DIR ]]; then
+  sudo chown -R "$(id -u):$(id -g)" "$WORK_DIR" 2>/dev/null || true
+ fi
+}
+trap cleanup_build EXIT
+
+# -----------------------------------------------------------------------------
+# Step 0: Auto-Increment Version
+# -----------------------------------------------------------------------------
+if [ ! -f "$VERSION_FILE" ]; then
+    echo "6.2.1" > "$VERSION_FILE"
+fi
+
+CURRENT_VER=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VER"
+MAJOR=${MAJOR:-6}
+MINOR=${MINOR:-2}
+PATCH=${PATCH:-1}
+NEW_PATCH=$((PATCH + 1))
+NEW_VER="${MAJOR}.${MINOR}.${NEW_PATCH}"
+
+echo "$NEW_VER" > "$VERSION_FILE"
+
+echo -e "\n${CYAN}${BOLD}======================================================================${NC}"
+echo -e "${CYAN}${BOLD}  🛸 SWARM OS :: AUTO-VERSION ISO BUILD ENGINE${NC}"
+echo -e "  Previous Version: ${YELLOW}v${CURRENT_VER}${NC}"
+echo -e "  New Build Version: ${GREEN}${BOLD}v${NEW_VER}${NC} (Auto-Incremented)"
+echo -e "${CYAN}${BOLD}======================================================================${NC}\n"
+
+# -----------------------------------------------------------------------------
+# Step 0b: Pin the Arch snapshot and prove it resolves  (au1 — 2026-09-12 v1.0.0)
+#
+# The package set is pinned to ONE archive.archlinux.org date so two builds of
+# the same commit produce the same OS. Before this, every rebuild silently
+# resolved against whatever upstream Arch shipped that morning, which is how a
+# shell that worked yesterday breaks today with nothing changed here.
+# -----------------------------------------------------------------------------
+SNAPSHOT_FILE="$PROFILE_DIR/ARCH_SNAPSHOT"
+[ -f "$SNAPSHOT_FILE" ] || { echo -e "${RED}✗ Missing $SNAPSHOT_FILE — nothing is pinned.${NC}"; exit 1; }
+ARCH_SNAPSHOT="$(grep -v '^[[:space:]]*#' "$SNAPSHOT_FILE" | grep -v '^[[:space:]]*$' | head -n1 | tr -d '[:space:]')"
+
+echo -e "${CYAN}[0b/8] Pinning Arch snapshot ${BOLD}$ARCH_SNAPSHOT${NC}${CYAN} and verifying it...${NC}"
+
+# mirrorlist is generated, never hand-edited — ARCH_SNAPSHOT is the only source of truth.
+cat > "$PROFILE_DIR/mirrorlist" <<MIRRORLIST
+# SWARM OS — dedicated mirrorlist for the ISO build (core/extra only)
+# GENERATED by build_swarm_iso — do not hand-edit.
+# Regenerated from 40-iso-profile/swarm_os_iso_profile/ARCH_SNAPSHOT on every build.
+#
+# Pinned snapshot: $ARCH_SNAPSHOT   (generated $(date +%Y-%m-%d\ %H:%M:%S))
+#
+# Deliberately NOT the build host's /etc/pacman.d/mirrorlist — on a CachyOS host
+# that lists archlinux.cachyos.org first, which is not a complete copy of
+# upstream Arch's [core]/[extra] (found 2026-09-11).
+Server = https://archive.archlinux.org/repos/$ARCH_SNAPSHOT/\$repo/os/\$arch
+MIRRORLIST
+
+"$LUCY/70-scripts/check_snapshot.sh" "$PROFILE_DIR" || {
+    echo -e "${RED}✗ Snapshot preflight failed — aborting before mkarchiso wastes 20 minutes.${NC}"
+    exit 1
+}
+echo -e "  ${GREEN}✓ Snapshot $ARCH_SNAPSHOT verified; mirrorlist regenerated.${NC}"
+
+# -----------------------------------------------------------------------------
+# Step 1: Update Version Across Codebases & ISO Profile
+# -----------------------------------------------------------------------------
+echo -e "${CYAN}[1/8] Stamping v${NEW_VER} across all configs & headers...${NC}"
+
+# 1a. Stamp Flutter pubspec and top bar version badge
+sed -i "s|^version: .*|version: ${NEW_VER}+${NEW_PATCH}|" "$FLUTTER_DIR/pubspec.yaml"
+sed -i "s|'v[0-9]\+\.[0-9]\+\.[0-9]\+'|'v${NEW_VER}'|g" "$FLUTTER_DIR/lib/shell/top_bar.dart"
+
+# 1b. Stamp swarm-slint Cargo.toml crate version (SWARM_VERSION env also baked at compile time)
+sed -i "s|^version = \".*\"|version = \"${NEW_VER}\"|" "$SLINT_DIR/Cargo.toml"
+
+# 1c. Update profiledef.sh
+sed -i "s|^iso_name=.*|iso_name=\"swarm-os-v${NEW_VER}-${COMMIT}\"|" "$PROFILE_DIR/profiledef.sh"
+sed -i "s|^iso_application=.*|iso_application=\"SWARM OS · Lucille v${NEW_VER}\"|" "$PROFILE_DIR/profiledef.sh"
+
+# 1d. Update Companion App build.gradle.kts if present
+COMPANION_GRADLE="$LUCY/30-source/android_companion/app/build.gradle.kts"
+if [ -f "$COMPANION_GRADLE" ]; then
+    sed -i "s|versionName = \".*\"|versionName = \"${NEW_VER}\"|" "$COMPANION_GRADLE"
+    sed -i "s|versionCode = [0-9]\+|versionCode = $((60 + NEW_PATCH))|" "$COMPANION_GRADLE"
+fi
+
+# Electron is a Debian-only test harness and is not version-stamped or staged in SWARM OS.
+
+echo -e "  ${GREEN}✓ All application badges and ISO profiles stamped with v${NEW_VER}.${NC}"
+
+# -----------------------------------------------------------------------------
+# Step 2: Build Flutter shell + swarm-slint Lucille panel
+# -----------------------------------------------------------------------------
+echo -e "\n${CYAN}[2/8] Compiling Flutter desktop shell (v${NEW_VER})...${NC}"
+# CLEAN rebuild (b1 — 2026-09-12). An incremental `flutter build linux` keeps
+# plugin .so files for packages that are no longer in pubspec.yaml. That is how
+# lib/libdartjni.so survived after the `jni` package was dropped, still carrying
+# a DT_NEEDED on libjvm.so that no package in the ISO provides — the dynamic
+# loader fails, and the kiosk "starts" and dies with a blank screen. Wiping the
+# output directory is a minute of build time against a class of bug that costs
+# a boot cycle to even see.
+rm -rf "$FLUTTER_DIR/build/linux"
+(cd "$FLUTTER_DIR" && flutter build linux --release)
+echo -e "  ${GREEN}✓ Flutter desktop shell compiled.${NC}"
+
+echo -e "\n  Compiling swarm-slint Lucille panel (v${NEW_VER})..."
+# SWARM_VERSION is read at compile time by option_env!() in main.rs — must be
+# in the same command as cargo, not just exported earlier in the script.
+(cd "$SLINT_DIR" && SWARM_VERSION="${NEW_VER}" cargo build --release)
+echo -e "  ${GREEN}✓ swarm-slint Lucille panel compiled.${NC}"
+
+echo -e "\n  Compiling swarm-overlay gaming overlay (v${NEW_VER})..."
+(cd "$OVERLAY_DIR" && cargo build --release)
+echo -e "  ${GREEN}✓ swarm-overlay compiled.${NC}"
+
+# -----------------------------------------------------------------------------
+# Step 3: Build LucyServer Subsystem (Go — task #23, ported from .NET LucyServer)
+# -----------------------------------------------------------------------------
+echo -e "\n${CYAN}[3/8] Compiling LucyServer Subsystem (Go)...${NC}"
+(cd "$LUCY_SERVER_GO_DIR" && go build -o lucy-server .)
+# Shared memory (2026-09-16): the log format is shared by every OS and phone,
+# so its tests gate the build — a broken merge rule must never ship.
+(cd "$LUCY_SERVER_GO_DIR" && go test ./memory/ && go build -o swarm-memory ./cmd/swarm-memory)
+echo -e "  ${GREEN}✓ LucyServer (Go) compiled.${NC}"
+
+echo -e "\n  Compiling Google Workspace Service (.NET)..."
+rm -rf "$WORK_DIR/google-workspace-publish"
+mkdir -p "$WORK_DIR/google-workspace-publish"
+# -r linux-x64: without a runtime identifier, a framework-dependent publish
+# stays RID-agnostic and bundles every platform's native assets from NuGet
+# packages that ship them (found 2026-09-13: SQLitePCLRaw.provider.e_sqlite3
+# alone dragged in linux-arm64/riscv64/armel/arm/musl-*/win-*/osx-* copies of
+# libe_sqlite3.so). The ISO only ever runs this on x86_64 Arch Linux with
+# dotnet-runtime-10.0 installed, so scope the publish to that one platform —
+# this is still framework-dependent (--self-contained false), just RID-pinned.
+(cd "$GOOGLE_WORKSPACE_DIR" && dotnet publish -c Release -r linux-x64 -o "$WORK_DIR/google-workspace-publish" --self-contained false)
+echo -e "  ${GREEN}✓ Google Workspace Service published.${NC}"
+
+# -----------------------------------------------------------------------------
+# Step 4: Stage Bundles, Themes, and Backgrounds into airootfs
+# -----------------------------------------------------------------------------
+echo -e "\n${CYAN}[4/8] Staging app bundles and GRUB themes into ISO profile...${NC}"
+
+# 4a. Flutter shell bundle -> /opt/swarm_os/swarm_flutter/
+FLUTTER_BUNDLE="$FLUTTER_DIR/build/linux/x64/release/bundle"
+rm -rf "$AIROOTFS/opt/swarm_os/swarm_flutter"
+mkdir -p "$AIROOTFS/opt/swarm_os/swarm_flutter"
+cp -a "$FLUTTER_BUNDLE/." "$AIROOTFS/opt/swarm_os/swarm_flutter/"
+chmod +x "$AIROOTFS/opt/swarm_os/swarm_flutter/swarm_flutter"
+echo -e "  ${GREEN}✓ Flutter desktop shell staged.${NC}"
+
+# 4a2. swarm-slint Lucille panel binary -> /opt/swarm_os/swarm-slint/
+# Single static binary — .slint files compiled in via build.rs, no bundle dir needed.
+rm -rf "$AIROOTFS/opt/swarm_os/swarm-slint"
+mkdir -p "$AIROOTFS/opt/swarm_os/swarm-slint"
+cp -f "$SLINT_DIR/target/release/swarm-slint" "$AIROOTFS/opt/swarm_os/swarm-slint/swarm-slint"
+chmod +x "$AIROOTFS/opt/swarm_os/swarm-slint/swarm-slint"
+echo -e "  ${GREEN}✓ swarm-slint Lucille panel staged.${NC}"
+
+# 4a3. swarm-overlay gaming overlay binary -> /opt/swarm_os/swarm-overlay/
+# Single static binary — dashboard HTML is compiled in via include_str!, no
+# bundle dir needed. Summoned by Shift+Tab (see labwc/rc.xml + the toggle
+# script in airootfs/usr/local/bin), not autostarted.
+rm -rf "$AIROOTFS/opt/swarm_os/swarm-overlay"
+mkdir -p "$AIROOTFS/opt/swarm_os/swarm-overlay"
+cp -f "$OVERLAY_DIR/target/release/swarm-overlay" "$AIROOTFS/opt/swarm_os/swarm-overlay/swarm-overlay"
+chmod +x "$AIROOTFS/opt/swarm_os/swarm-overlay/swarm-overlay"
+echo -e "  ${GREEN}✓ swarm-overlay staged.${NC}"
+
+# 4b. LucyServer (Go binary) -> /opt/swarm_os/LucyServer/
+rm -rf "$AIROOTFS/opt/swarm_os/LucyServer"
+mkdir -p "$AIROOTFS/opt/swarm_os/LucyServer"
+cp -f "$LUCY_SERVER_GO_DIR/lucy-server" "$AIROOTFS/opt/swarm_os/LucyServer/lucy-server"
+chmod +x "$AIROOTFS/opt/swarm_os/LucyServer/lucy-server"
+echo -e "  ${GREEN}✓ LucyServer (Go) staged to /opt/swarm_os/LucyServer/.${NC}"
+
+# 4b1. Google Workspace Service -> /opt/swarm_os/GoogleWorkspaceService/
+# OAuth credentials are runtime state and must never be copied from the build host.
+rm -rf "$AIROOTFS/opt/swarm_os/GoogleWorkspaceService"
+mkdir -p "$AIROOTFS/opt/swarm_os/GoogleWorkspaceService"
+cp -a "$WORK_DIR/google-workspace-publish/." "$AIROOTFS/opt/swarm_os/GoogleWorkspaceService/"
+chmod +x "$AIROOTFS/opt/swarm_os/GoogleWorkspaceService/GoogleWorkspaceService"
+echo -e "  ${GREEN}✓ Google Workspace Service staged to /opt/swarm_os/GoogleWorkspaceService/.${NC}"
+
+# 4b2. GamingAgent -> /opt/swarm_os/GamingAgent/ (Go — replaces .NET build)
+GAMING_DIR="$SOURCE_DIR/GamingAgent-go"
+if [ -d "$GAMING_DIR" ]; then
+    echo -e "  Compiling GamingAgent (Go)..."
+    (cd "$GAMING_DIR" && go build -o gaming-agent .)
+    rm -rf "$AIROOTFS/opt/swarm_os/GamingAgent"
+    mkdir -p "$AIROOTFS/opt/swarm_os/GamingAgent"
+    cp -f "$GAMING_DIR/gaming-agent" "$AIROOTFS/opt/swarm_os/GamingAgent/gaming-agent"
+    chmod +x "$AIROOTFS/opt/swarm_os/GamingAgent/gaming-agent"
+    echo -e "  ${GREEN}✓ GamingAgent (Go) staged.${NC}"
+fi
+
+# 4b3. (removed 2026-10-09, user) The I30LTZ Recovery program (Rust/Raylib) is Recovery OS content and is NOT shipped with
+# SWARM OS. sync_lucy_swarmbuild.sh never deletes, so purge any stale copy a build tree still carries before mkarchiso sees it.
+rm -f "$AIROOTFS/opt/swarm_os/i30ltz-recovery" "$AIROOTFS/etc/systemd/system/i30ltz-recovery.service"
+
+# 4c. Lucille-Core Engine -> /usr/bin/lucille-core
+echo -e "  Compiling native C++20 lucille-core..."
+mkdir -p "$SOURCE_DIR/lucille-core/build"
+(cd "$SOURCE_DIR/lucille-core/build" && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PROJECT_lucille_core_INCLUDE="$LUCY/70-scripts/lucille_core_cmake_shim.cmake" && make -j"$(nproc)")
+mkdir -p "$AIROOTFS/usr/bin"
+cp -f "$SOURCE_DIR/lucille-core/build/lucille-core" "$AIROOTFS/usr/bin/lucille-core"
+chmod +x "$AIROOTFS/usr/bin/lucille-core"
+echo -e "  ${GREEN}✓ lucille-core staged to /usr/bin/lucille-core.${NC}"
+
+# 4d. Stage OS Foundation configs
+"$SOURCE_DIR/deploy_swarm_os_foundation.sh" "$AIROOTFS"
+
+# Local diagnostic export, shared by Telemetry UI and CLI.
+install -Dm755 "$LUCY/70-scripts/collect_swarm_diagnostics.py" "$AIROOTFS/usr/local/bin/swarm-diagnostics"
+
+# Read-only source/mirror SHA-256 parity checker. The timer skips cleanly when
+# the encrypted mirror is not mounted and writes reports outside both trees.
+install -Dm755 "$LUCY/70-scripts/swarm_workspace_parity.py" "$AIROOTFS/usr/local/bin/swarm-workspace-parity"
+
+# Lucille's OS-wide wake-word listener (lucille-wake-listener.service). The
+# Vosk model is fetched once into a persistent cache outside $WORK_DIR (which
+# gets wiped every run) so repeat builds don't re-download ~40MB every time.
+WAKE_MODEL_NAME="vosk-model-small-en-us-0.15"
+WAKE_MODEL_CACHE="$LUCY/20-runtime/vosk-model-cache"
+if [ ! -d "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME" ]; then
+    echo -e "  Fetching Vosk wake-word model (first run only, ~40MB)..."
+    mkdir -p "$WAKE_MODEL_CACHE"
+    curl -fsSL -o "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME.zip" \
+        "https://alphacephei.com/vosk/models/$WAKE_MODEL_NAME.zip"
+    (cd "$WAKE_MODEL_CACHE" && unzip -q "$WAKE_MODEL_NAME.zip" && rm -f "$WAKE_MODEL_NAME.zip")
+fi
+# Reject incomplete cached downloads and symlinked staging destinations.
+for model_file in am/final.mdl conf/model.conf graph/HCLr.fst graph/Gr.fst; do
+    test -s "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME/$model_file" || {
+        echo "Incomplete Vosk model cache: missing $model_file" >&2; exit 1;
+    }
+done
+for model_dir in "$AIROOTFS/opt" "$AIROOTFS/opt/swarm_os" "$AIROOTFS/opt/swarm_os/models" "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us"; do
+    [[ ! -L "$model_dir" ]] || { echo "Refusing symlinked model destination: $model_dir" >&2; exit 1; }
+done
+mkdir -p "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us"
+cp -a "$WAKE_MODEL_CACHE/$WAKE_MODEL_NAME/." "$AIROOTFS/opt/swarm_os/models/vosk-small-en-us/"
+install -Dm755 "$LUCY/70-scripts/lucille_wake_listener.py" "$AIROOTFS/usr/local/bin/lucille_wake_listener.py"
+echo -e "  ${GREEN}✓ Lucille wake-word listener + Vosk model staged.${NC}"
+
+# 4e-installer. Stage install script into live ISO so it can be run from TTY
+mkdir -p "$AIROOTFS/usr/local/bin"
+cp -f "$LUCY/install_swarm_os.sh" "$AIROOTFS/usr/local/bin/install_swarm_os.sh"
+# swarm-memory CLI — shared memory at /mnt/brains/swarm-memory (2026-09-16)
+cp -f "$LUCY_SERVER_GO_DIR/swarm-memory" "$AIROOTFS/usr/local/bin/swarm-memory"
+chmod +x "$AIROOTFS/usr/local/bin/swarm-memory"
+chmod +x "$AIROOTFS/usr/local/bin/install_swarm_os.sh"
+# The installer runs from /usr/local/bin inside the live ISO, so stage the
+# package manifest beside it instead of relying on the build tree being present.
+mkdir -p "$AIROOTFS/usr/local/share/swarm-os"
+cp -f "$PROFILE_DIR/packages.x86_64" "$AIROOTFS/usr/local/share/swarm-os/packages.x86_64"
+chmod 0644 "$AIROOTFS/usr/local/share/swarm-os/packages.x86_64"
+# The installer runs from the live ISO, so include the complete custom root
+# tree required for the installed graphical shell and backend services. Exclude
+# the staging directory itself to avoid recursively archiving this archive.
+tar -C "$AIROOTFS" --exclude='./usr/local/share/swarm-os' -cpf \
+    "$AIROOTFS/usr/local/share/swarm-os/airootfs.tar" .
+chmod 0644 "$AIROOTFS/usr/local/share/swarm-os/airootfs.tar"
+# pacstrap must use the ISO's official Arch core/extra repositories. Using the
+# live host's CachyOS pacman.conf can pull mesa-git and conflict with mesa.
+cp -f "$PROFILE_DIR/mirrorlist" "$AIROOTFS/usr/local/share/swarm-os/mirrorlist"
+sed "s|$PROFILE_DIR/mirrorlist|/usr/local/share/swarm-os/mirrorlist|g" \
+    "$PROFILE_DIR/pacman.conf" > "$AIROOTFS/usr/local/share/swarm-os/pacman.conf"
+chmod 0644 "$AIROOTFS/usr/local/share/swarm-os/mirrorlist" "$AIROOTFS/usr/local/share/swarm-os/pacman.conf"
+
+# mkarchiso's ISO GRUB runs from the image boot tree, not airootfs. Mirror the
+# theme there as well as in the installed root so the live boot menu can load it.
+mkdir -p "$PROFILE_DIR/grub/themes/swarm_os"
+cp -a "$AIROOTFS/boot/grub/themes/swarm_os/." "$PROFILE_DIR/grub/themes/swarm_os/"
+
+# 4f. Seal secrets into the ISO — encrypted, never plaintext  (2026-09-12 v1.0.0)
+#
+# This step used to write $LUCY/20-runtime/.env straight into
+# airootfs/etc/swarm_os.env: every API key you own, in the clear, inside every
+# ISO. Anyone who booted, mounted, or was handed one had all of them. Now the
+# ISO carries only an AES-256 blob, and swarm-secrets.service unseals it into
+# tmpfs at boot. See 70-scripts/seal_secrets.sh.
+ROOT_ENV="$LUCY/20-runtime/.env"
+
+# Belt and braces: never let a plaintext env survive into the image, whatever
+# put it there.
+rm -f "$AIROOTFS/etc/swarm_os.env"
+
+if [ -f "$ROOT_ENV" ]; then
+    if [ -n "${SWARM_SECRETS_PASSPHRASE:-}" ]; then
+        "$LUCY/70-scripts/seal_secrets.sh" "$AIROOTFS"
+    elif [ -t 0 ]; then
+        echo -e "  ${CYAN}Sealing API keys into the ISO (AES-256).${NC}"
+        echo -e "  ${YELLOW}Press Enter with no passphrase to build a key-less ISO.${NC}"
+        "$LUCY/70-scripts/seal_secrets.sh" "$AIROOTFS" || {
+            echo -e "  ${YELLOW}⚠ Secrets not sealed — building a key-less ISO.${NC}"
+            rm -f "$AIROOTFS/etc/swarm_os.env.gpg" "$AIROOTFS/etc/swarm_os.env.manifest"
+        }
+    else
+        echo -e "  ${YELLOW}⚠ Non-interactive build and no SWARM_SECRETS_PASSPHRASE set.${NC}"
+        echo -e "  ${YELLOW}  Building a key-less ISO. AI features will report unavailable.${NC}"
+        rm -f "$AIROOTFS/etc/swarm_os.env.gpg" "$AIROOTFS/etc/swarm_os.env.manifest"
+    fi
+else
+    echo -e "  ${YELLOW}⚠ No .env at $ROOT_ENV — building a key-less ISO.${NC}"
+fi
+
+# Hard gate: refuse to build an ISO that contains cleartext credentials.
+if [ -f "$AIROOTFS/etc/swarm_os.env" ]; then
+    echo -e "${RED}✗ Plaintext $AIROOTFS/etc/swarm_os.env exists. Refusing to build.${NC}"
+    exit 1
+fi
+# Note: sk-ant-/sk-or-v1-/nvapi- require real key-shaped content after the
+# prefix (matching how gsk_/AIza already worked) so UI placeholder/masked-key
+# display strings (e.g. 'sk-or-v1-...' hint text, 'sk-or-v1-••••…' masked
+# display in the Flutter settings UI) don't false-positive this gate — found
+# 2026-09-13 when a real build tripped on exactly those two strings baked
+# into libapp.so, neither of which is an actual credential.
+SECRET_PATTERN='sk-ant-[A-Za-z0-9_-]{20,}|sk-or-v1-[A-Za-z0-9]{20,}|nvapi-[A-Za-z0-9-]{20,}|gsk_[A-Za-z0-9]{20}|AIza[0-9A-Za-z_-]{35}'
+if grep -rlE "$SECRET_PATTERN" \
+        "$AIROOTFS/etc" "$AIROOTFS/opt/swarm_os" 2>/dev/null | grep -v '\.gpg$' | head -5 | grep -q .; then
+    echo -e "${RED}✗ Cleartext API keys found under airootfs. Refusing to build:${NC}"
+    grep -rlE "$SECRET_PATTERN" \
+        "$AIROOTFS/etc" "$AIROOTFS/opt/swarm_os" 2>/dev/null | grep -v '\.gpg$' | sed 's/^/    /'
+    exit 1
+fi
+echo -e "  ${GREEN}✓ No cleartext credentials anywhere in the ISO payload.${NC}"
+
+# 4e. Android Studio -> /opt/android-studio/
+ANDROID_STUDIO_DIR="/run/media/i30ltz/lucy-master/android-studio"
+if [ -d "$ANDROID_STUDIO_DIR" ]; then
+    rm -rf "$AIROOTFS/opt/android-studio"
+    cp -a "$ANDROID_STUDIO_DIR" "$AIROOTFS/opt/android-studio"
+fi
+
+# 4f. Stage Custom GRUB Themes -> /boot/grub/themes/
+mkdir -p "$AIROOTFS/boot/grub/themes/swarm_os"
+if [ -d "$SOURCE_DIR/../40-iso-profile/swarm_os_iso_profile/airootfs/boot/grub/themes/swarm_os" ]; then
+    : # themes already staged in airootfs
+fi
+echo -e "  ${GREEN}✓ Staging complete.${NC}"
+
+# -----------------------------------------------------------------------------
+# Step 5: Build ISO using mkarchiso
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Step 4g: Native dependency gate  (b1 — 2026-09-12 v1.0.0)
+#
+# Everything is staged now, so prove every shared library the staged binaries
+# ask for is actually provided by the pinned snapshot. An unresolved soname is
+# invisible on the build host (the library is there) and fatal in the ISO: the
+# unit reports "Started", the loader fails, nothing draws.
+# -----------------------------------------------------------------------------
+echo -e "\n${CYAN}[4g/8] Verifying native dependencies against snapshot $ARCH_SNAPSHOT...${NC}"
+"$LUCY/70-scripts/verify_bundle_deps.sh" "$PROFILE_DIR" || {
+    echo -e "${RED}✗ Dependency gate failed — this ISO would boot to a blank screen. Aborting.${NC}"
+    exit 1
+}
+
+echo -e "\n${CYAN}[5/8] Building Bootable ISO with mkarchiso (sudo required)...${NC}"
+echo "  Work Directory:   $WORK_DIR"
+echo "  Output Directory: $OUT_DIR"
+
+sudo rm -rf "$WORK_DIR"
+mkdir -p "$WORK_DIR"
+
+# mkarchiso (below) leaves $WORK_DIR root/nobody-owned. Step 3 of the *next*
+# run (dotnet publish for Google Workspace, unprivileged) writes into this
+# same WORK_DIR before this script ever reaches the rm -rf above, so a
+# leftover root-owned tree from this run breaks the next run's mkdir with
+# "Permission denied" (found 2026-09-14). Hand the tree back to the invoking
+# user on ANY exit from here on — including a failed/interrupted mkarchiso —
+# so the next run always starts clean.
+# cleanup_build owns the EXIT trap, including failed builds.
+
+# Bake build identity into installed system
+printf 'SWARM_VERSION=%s\nSWARM_COMMIT=%s\nSWARM_DATE=%s\n' "$NEW_VER" "$COMMIT" "$(date +%Y%m%d)" > "$AIROOTFS/etc/swarm-release"
+
+# This host is Ubuntu. A host mkarchiso validates the profile against Arch's own
+# grub package, which Ubuntu does not have, so it aborts before building. The
+# Arch container builds the same profile with its own packages. Native mode
+# stays available only on request: SWARM_NATIVE_MKARCHISO=1.
+if [ "${SWARM_NATIVE_MKARCHISO:-0}" = 1 ] && command -v mkarchiso &>/dev/null; then
+    sudo SYSTEMD_LOG_LEVEL=err mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
+else
+    echo -e "  ${YELLOW}Building in the Arch container (mkarchiso-docker.sh)${NC}"
+    sudo SYSTEMD_LOG_LEVEL=err "$LUCY/70-scripts/mkarchiso-docker.sh" -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
+fi
+
+# Step 6: only accept an ISO produced in this run's unique incoming directory.
+mapfile -d '' BUILT_IMAGES < <(find "$OUT_DIR" -maxdepth 1 -type f -name '*.iso' -print0)
+[[ ${#BUILT_IMAGES[@]} == 1 ]] || { echo 'Expected exactly one new ISO.' >&2; exit 1; }
+TARGET_ISO=${BUILT_IMAGES[0]}
+RESULT=untested
+if [[ ${SWARM_SKIP_BOOT_GATE:-0} == 1 ]]; then
+ echo 'Boot gate explicitly skipped. This build is UNTESTED, never automatically stable.'
+else
+ [[ -x "$LUCY/70-scripts/vm_boot_gate.sh" ]] || { echo 'Boot gate missing.' >&2; exit 1; }
+ if "$LUCY/70-scripts/vm_boot_gate.sh" "$TARGET_ISO"; then
+  RESULT=pass
+ else
+  RESULT=failed
+ fi
+fi
+# mkarchiso runs as root and may leave the image root-owned. Hand ownership back
+# before publishing so the release store and manager lock stay user-writable.
+sudo chown "$(id -u):$(id -g)" "$TARGET_ISO"
+# Keep one project ISO and a small latest.txt pointer; no full-size aliases.
+python3 "$ISO_MANAGER" publish "$TARGET_ISO" "swarm-os-v${NEW_VER}-${COMMIT}.iso" --result "$RESULT"
+TARGET_ISO="$RELEASE_DIR/swarm-os-v${NEW_VER}-${COMMIT}.iso"
+echo "One current ISO stored in $RELEASE_DIR; normal updates are deployed live."
+if [[ $RESULT == failed ]]; then
+ echo 'Boot gate failed. The previous latest pointer was not promoted to this build.' >&2
+ exit 1
+fi
+echo "Build complete ($RESULT). Stable status requires an explicit user decision."
+
+# ── SHA-256 checksum + optional GPG signature ────────────────────────────────
+# Generated immediately after a successful publish so VM and live-update
+# consumers can verify the image.
+# GPG signing is skipped if no signing key is configured — checksums alone
+# already protect against silent bit-rot and corrupted flashes.
+# (daily-audit upgrade #2, 2026-09-24)
+CHECKSUM_FILE="${TARGET_ISO%.iso}.sha256"
+sha256sum "$TARGET_ISO" | awk "{print \$1}" > "$CHECKSUM_FILE"
+echo "[build] SHA-256: $(cat "$CHECKSUM_FILE")  →  $(basename "$CHECKSUM_FILE")"
+
+if command -v gpg &>/dev/null && gpg --list-secret-keys swarm-sign@swarmos.dev &>/dev/null 2>&1; then
+    SIG_FILE="${TARGET_ISO%.iso}.sha256.asc"
+    gpg --batch --yes --local-user swarm-sign@swarmos.dev \
+        --detach-sign --armor "$CHECKSUM_FILE" --output "$SIG_FILE"
+    echo "[build] GPG signature: $(basename "$SIG_FILE")"
+else
+    echo "[build] GPG signing key swarm-sign@swarmos.dev not found — skipping signature (checksum only)."
+fi

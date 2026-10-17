@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LucyServer Test Client</title>
+<style>
+        body { font-family: sans-serif; margin: 20px; max-width: 800px; margin: 0 auto; padding: 20px; }
+        #chatbox { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: auto; margin-bottom: 10px; background: #f9f9f9; }
+        .message { margin-bottom: 10px; padding: 10px; border-radius: 5px; }
+        .message.user { background: #d1e7dd; text-align: right; }
+        .message.lucy { background: #e2e3e5; }
+        input[type="text"] { width: 80%; padding: 10px; }
+        button { padding: 10px; }
+    </style>
+<meta content="Swarm Os I30Ltz — built and maintained with AUREM." name="description"/><meta content="Swarm Os I30Ltz" property="og:title"/><meta content="Swarm Os I30Ltz — built and maintained with AUREM." property="og:description"/><meta content="website" property="og:type"/><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Swarm Os I30Ltz",
+  "description": "Swarm Os I30Ltz — built and maintained with AUREM."
+}</script></head>
+<body>
+<h1>Lucy Server Test</h1>
+<div id="chatbox"></div>
+<div>
+<input id="userInput" placeholder="Say something to Lucy..." type="text"/>
+<button id="sendBtn">Send</button>
+</div>
+<script>
+        const chatbox = document.getElementById("chatbox");
+        const userInput = document.getElementById("userInput");
+        const sendBtn = document.getElementById("sendBtn");
+
+        let messages = [];
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendMessage("user", text);
+            userInput.value = "";
+            
+            messages.push({ role: "user", content: text });
+
+            const lucyMsgDiv = document.createElement("div");
+            lucyMsgDiv.className = "message lucy";
+            chatbox.appendChild(lucyMsgDiv);
+
+            try {
+                const response = await fetch("/lucy", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        ModelId: "nomic-embed-text", // Doesn't matter if orchestrator overrides
+                        Messages: messages,
+                        AutoRoute: true
+                    })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let completeResponse = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split("\n");
+
+                    for (let line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const data = line.substring(6).replace(/\\n/g, "\n");
+                            if (data.trim() === "[DONE]") {
+                                break;
+                            }
+                            if (data.startsWith("[ERROR]")) {
+                                completeResponse += `\n**Error:** ${data.substring(7)}`;
+                                break;
+                            }
+                            completeResponse += data;
+                            lucyMsgDiv.innerText = completeResponse;
+                            chatbox.scrollTop = chatbox.scrollHeight;
+                        }
+                    }
+                }
+                
+                messages.push({ role: "assistant", content: completeResponse });
+
+            } catch (err) {
+                lucyMsgDiv.innerText += "\n[Connection Error: " + err.message + "]";
+            }
+        }
+
+        function appendMessage(role, text) {
+            const div = document.createElement("div");
+            div.className = `message ${role}`;
+            div.innerText = text;
+            chatbox.appendChild(div);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        sendBtn.addEventListener("click", sendMessage);
+        userInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendMessage();
+        });
+    </script>
+</body>
+</html>

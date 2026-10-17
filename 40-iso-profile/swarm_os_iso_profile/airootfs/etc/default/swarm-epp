@@ -1,0 +1,3 @@
+# Only preferences advertised by each CPU policy will be applied.
+SWARM_EPP_AC=balance_performance
+SWARM_EPP_BATTERY=balance_power

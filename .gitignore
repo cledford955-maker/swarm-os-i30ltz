@@ -1,0 +1,113 @@
+# SWARM OS / Luccile-v+ — .gitignore
+# v1.0.0 · 2026-09-12
+# Tracks source, scripts, configs and docs. Excludes build output,
+# vendored SDKs, ISO payloads and anything holding credentials.
+
+# --- release + build artifacts -------------------------------------
+10-releases/
+swarm_os_build_work/
+99-archive/
+logs/
+lost+found/
+*.iso
+*.sfs
+*.img
+*.qcow2
+*.fd
+
+# --- downloaded model caches (fetched fresh by build_swarm_iso.sh) --
+20-runtime/vosk-model-cache/
+
+# --- ISO profile payload (configs kept, bundled apps excluded) ------
+40-iso-profile/*/airootfs/opt/
+40-iso-profile/*/airootfs/usr/lib/*
+# usr/lib/swarm holds hand-written boot/power scripts, not bundled apps.
+!40-iso-profile/*/airootfs/usr/lib/swarm/
+40-iso-profile/*/airootfs/var/cache/
+40-iso-profile/*/airootfs/usr/local/share/swarm-os/airootfs.tar
+
+# --- vendored SDKs / nested repos -----------------------------------
+30-source/flutter-sdk/
+
+# --- language build output ------------------------------------------
+**/target/
+**/node_modules/
+**/.dart_tool/
+**/.gradle/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# --- binaries -------------------------------------------------------
+*.apk
+*.aab
+*.jar
+*.so
+*.a
+*.o
+*.zst
+*.pack
+*.deb
+
+# --- media blobs ----------------------------------------------------
+images/
+
+# --- credentials — never commit -------------------------------------
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+.env
+.env.*
+**/secrets/
+**/service-account*.json
+**/credentials*.json
+**/client_secret*.json
+.claude/settings.local.json
+
+# --- compiled binaries (rebuildable) --------------------------------
+*.zip
+*.dll
+30-source/GamingAgent-go/gaming-agent
+30-source/LucyServer-go/lucy-server
+
+# --- credential-bearing app settings (v1.1.0 · 2026-09-12) ----------
+# appsettings.Development.json carries a live OpenRouterApiKey.
+appsettings.Development.json
+**/appsettings.Development.json
+appsettings.*.Development.json
+# runaway recursive publish output (nests 21 levels deep)
+20-runtime/LucyServer/publish/
+**/publish/publish/
+
+# quarantine holding area - never commit
+_to_delete/
+30-source/LucyServer-go/swarm-memory
+
+# Local release locks, migration logs, and VM state
+70-scripts/.iso-manager.lock
+70-scripts/.swarm-build.lock
+70-scripts/**/__pycache__/
+80-vm/desktop/
+80-vm/boot-repair-*/
+grub_themes/backups/
+# Local boot-repair backups are not release inputs (some are root-readable).
+40-iso-profile/swarm_os_iso_profile/grub/*.bak
+40-iso-profile/swarm_os_iso_profile/grub/*.before-ui-fix
+70-scripts/.github-sync.lock
+
+# Local diagnostic archives may contain identifying system details.
+10-releases/diagnostics/
+
+# Recovery OS lives on /mnt/recoverybuild (own repos)
+30-source/android_companion/
+30-source/i30ltz-recovery*/
+
+# Local IDE installs & desktop launchers
+/Antigravity IDE/
+/*.desktop
+
+# two-way sync state and trash (swarm_twoway_sync.py)
+/.swarm-sync/
+/.sync-trash/

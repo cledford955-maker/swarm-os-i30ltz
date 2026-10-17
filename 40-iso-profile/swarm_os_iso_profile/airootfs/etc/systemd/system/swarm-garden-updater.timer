@@ -1,0 +1,12 @@
+[Unit]
+Description=SWARM OS — periodically sync strain photos from local source
+
+[Timer]
+# 3 min after boot so we don't pile onto the boot-shell startup, then every 6h.
+OnBootSec=3min
+OnUnitActiveSec=6h
+Persistent=true
+Unit=swarm-garden-updater.service
+
+[Install]
+WantedBy=timers.target

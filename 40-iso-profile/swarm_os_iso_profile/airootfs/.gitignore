@@ -1,0 +1,9 @@
+# Never commit baked secrets or build artifacts
+etc/swarm_os.env
+root/.env
+opt/swarm_os/swarm_flutter
+opt/swarm_os/LucyServer
+opt/swarm_os/data
+opt/swarm_os/lib
+opt/android-studio
+usr/bin/lucille-core

@@ -1,0 +1,9 @@
+# =============================================================================
+# 🚀 SWARM OS — Storage I/O Scheduler Rules
+# =============================================================================
+
+# Set I/O scheduler to 'none' (bypass hardware controller queuing) for NVMe drives
+ACTION=="add|change", KERNEL=="nvme[0-9]*n[0-9]*", ATTR{queue/scheduler}="none"
+
+# Set I/O scheduler to 'bfq' (Budget Fair Queueing) for SATA SSD/HDD, eMMC, and USB devices
+ACTION=="add|change", KERNEL=="sd[a-z]*|mmcblk[0-9]*", ATTR{queue/scheduler}="bfq"

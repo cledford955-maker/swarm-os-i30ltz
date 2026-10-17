@@ -1,0 +1,2 @@
+# Re-publish the key status when the SWARM key's secret partition appears or goes away.
+ACTION=="add|remove", SUBSYSTEM=="block", ENV{ID_PART_ENTRY_NAME}=="SWARM-KEY-SECRET", RUN+="/usr/bin/systemctl --no-block start swarm-key-status.service"

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- swarm-grub background, 1920x1080. Obsidian + electric: hex "wasp nest" cells, neon frame, glass menu panel.
+     The panel rectangle must match boot_menu in theme.txt.in (27%..73% x 25%..81%). No text here:
+     titles are real GRUB labels so they stay crisp and take the theme font. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#080d18"/><stop offset="1" stop-color="#03050a"/>
+    </linearGradient>
+    <radialGradient id="glowCy" cx="0.1" cy="0.95" r="0.55">
+      <stop offset="0" stop-color="#19d3ff" stop-opacity="0.26"/><stop offset="1" stop-color="#19d3ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowVi" cx="0.92" cy="0.06" r="0.55">
+      <stop offset="0" stop-color="#8a4dff" stop-opacity="0.28"/><stop offset="1" stop-color="#8a4dff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowMid" cx="0.5" cy="0.55" r="0.45">
+      <stop offset="0" stop-color="#1b4a8a" stop-opacity="0.32"/><stop offset="1" stop-color="#1b4a8a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.78">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.65"/>
+    </radialGradient>
+    <radialGradient id="edgeFade" cx="0.5" cy="0.5" r="0.72">
+      <stop offset="0.25" stop-color="#000"/><stop offset="1" stop-color="#fff"/>
+    </radialGradient>
+    <mask id="hexMask"><rect width="1920" height="1080" fill="url(#edgeFade)"/></mask>
+    <pattern id="hexGrid" width="69.282" height="120" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke="#2f9fd0" stroke-width="1.2" stroke-opacity="0.38">
+      <path d="M34.6 0.0 L69.3 20.0 L69.3 60.0 L34.6 80.0 L-0.0 60.0 L0.0 20.0 Z"/>
+      <path d="M0.0 60.0 L34.6 80.0 L34.6 120.0 L0.0 140.0 L-34.6 120.0 L-34.6 80.0 Z"/>
+      <path d="M69.3 60.0 L103.9 80.0 L103.9 120.0 L69.3 140.0 L34.6 120.0 L34.6 80.0 Z"/>
+      <path d="M0.0 -60.0 L34.6 -40.0 L34.6 -0.0 L0.0 20.0 L-34.6 -0.0 L-34.6 -40.0 Z"/>
+      <path d="M69.3 -60.0 L103.9 -40.0 L103.9 -0.0 L69.3 20.0 L34.6 -0.0 L34.6 -40.0 Z"/>
+      </g>
+    </pattern>
+    <linearGradient id="panelEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#19d3ff"/><stop offset="0.55" stop-color="#4b7bff"/><stop offset="1" stop-color="#8a4dff"/>
+    </linearGradient>
+    <linearGradient id="panelFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a1426" stop-opacity="0.90"/><stop offset="1" stop-color="#04070e" stop-opacity="0.90"/>
+    </linearGradient>
+    <linearGradient id="ruleL" gradientUnits="userSpaceOnUse" x1="150" y1="0" x2="700" y2="0">
+      <stop offset="0" stop-color="#19d3ff" stop-opacity="0"/><stop offset="1" stop-color="#19d3ff" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="ruleR" gradientUnits="userSpaceOnUse" x1="1220" y1="0" x2="1770" y2="0">
+      <stop offset="0" stop-color="#8a4dff" stop-opacity="0.9"/><stop offset="1" stop-color="#8a4dff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur14" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="11" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.55  0 0 0 0 0.68  0 0 0 0 0.9  0 0 0 0.9 -0.34"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#base)"/>
+  <rect width="1920" height="1080" fill="url(#glowMid)"/>
+  <rect width="1920" height="1080" fill="url(#glowCy)"/>
+  <rect width="1920" height="1080" fill="url(#glowVi)"/>
+  <rect width="1920" height="1080" filter="url(#grain)" opacity="0.10"/>
+  <rect width="1920" height="1080" fill="url(#hexGrid)" mask="url(#hexMask)"/>
+
+  <!-- wasp-nest clusters -->
+  <g filter="url(#glow)" opacity="0.9">
+  <g id="nestAmber" fill="none" stroke="#ffb020" stroke-width="2.2" stroke-linejoin="round">
+    <path d="M236.0 800.0 L275.8 823.0 L275.8 869.0 L236.0 892.0 L196.2 869.0 L196.2 823.0 Z" fill="#ffb020" fill-opacity="0.16"/>
+    <path d="M321.3 800.0 L361.1 823.0 L361.1 869.0 L321.3 892.0 L281.4 869.0 L281.4 823.0 Z" fill="#ffb020" fill-opacity="0.05"/>
+    <path d="M278.6 873.8 L318.5 896.8 L318.5 942.8 L278.6 965.8 L238.8 942.8 L238.8 896.8 Z" fill="#ffb020" fill-opacity="0.05"/>
+    <path d="M193.4 873.8 L233.2 896.8 L233.2 942.8 L193.4 965.8 L153.5 942.8 L153.5 896.8 Z" fill="#ffb020" fill-opacity="0.05"/>
+    <path d="M150.7 800.0 L190.6 823.0 L190.6 869.0 L150.7 892.0 L110.9 869.0 L110.9 823.0 Z" fill="#ffb020" fill-opacity="0.05"/>
+    <path d="M193.4 726.2 L233.2 749.2 L233.2 795.2 L193.4 818.2 L153.5 795.2 L153.5 749.2 Z" fill="#ffb020" fill-opacity="0.05"/>
+    <path d="M278.6 726.2 L318.5 749.2 L318.5 795.2 L278.6 818.2 L238.8 795.2 L238.8 749.2 Z" fill="#ffb020" fill-opacity="0.05"/>
+  </g>
+  <g id="nestCyan" fill="none" stroke="#19d3ff" stroke-width="2.2" stroke-linejoin="round">
+    <path d="M1706.0 196.0 L1740.6 216.0 L1740.6 256.0 L1706.0 276.0 L1671.4 256.0 L1671.4 216.0 Z" fill="#19d3ff" fill-opacity="0.12"/>
+    <path d="M1780.1 196.0 L1814.8 216.0 L1814.8 256.0 L1780.1 276.0 L1745.5 256.0 L1745.5 216.0 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M1743.1 260.2 L1777.7 280.2 L1777.7 320.2 L1743.1 340.2 L1708.4 320.2 L1708.4 280.2 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M1668.9 260.2 L1703.6 280.2 L1703.6 320.2 L1668.9 340.2 L1634.3 320.2 L1634.3 280.2 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M1631.9 196.0 L1666.5 216.0 L1666.5 256.0 L1631.9 276.0 L1597.2 256.0 L1597.2 216.0 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M1668.9 131.8 L1703.6 151.8 L1703.6 191.8 L1668.9 211.8 L1634.3 191.8 L1634.3 151.8 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M1743.1 131.8 L1777.7 151.8 L1777.7 191.8 L1743.1 211.8 L1708.4 191.8 L1708.4 151.8 Z" fill="#19d3ff" fill-opacity="0.05"/>
+  </g>
+  <g id="nestViolet" fill="none" stroke="#8a4dff" stroke-width="2.2" stroke-linejoin="round">
+    <path d="M1740.0 854.0 L1762.5 867.0 L1762.5 893.0 L1740.0 906.0 L1717.5 893.0 L1717.5 867.0 Z" fill="#8a4dff" fill-opacity="0.14"/>
+    <path d="M1788.2 854.0 L1810.7 867.0 L1810.7 893.0 L1788.2 906.0 L1765.7 893.0 L1765.7 867.0 Z" fill="#8a4dff" fill-opacity="0.05"/>
+    <path d="M1764.1 895.7 L1786.6 908.7 L1786.6 934.7 L1764.1 947.7 L1741.6 934.7 L1741.6 908.7 Z" fill="#8a4dff" fill-opacity="0.05"/>
+    <path d="M1715.9 895.7 L1738.4 908.7 L1738.4 934.7 L1715.9 947.7 L1693.4 934.7 L1693.4 908.7 Z" fill="#8a4dff" fill-opacity="0.05"/>
+    <path d="M1691.8 854.0 L1714.3 867.0 L1714.3 893.0 L1691.8 906.0 L1669.3 893.0 L1669.3 867.0 Z" fill="#8a4dff" fill-opacity="0.05"/>
+    <path d="M1715.9 812.3 L1738.4 825.3 L1738.4 851.3 L1715.9 864.3 L1693.4 851.3 L1693.4 825.3 Z" fill="#8a4dff" fill-opacity="0.05"/>
+    <path d="M1764.1 812.3 L1786.6 825.3 L1786.6 851.3 L1764.1 864.3 L1741.6 851.3 L1741.6 825.3 Z" fill="#8a4dff" fill-opacity="0.05"/>
+  </g>
+  <g id="nestSmall" fill="none" stroke="#19d3ff" stroke-width="2.2" stroke-linejoin="round">
+    <path d="M168.0 238.0 L188.8 250.0 L188.8 274.0 L168.0 286.0 L147.2 274.0 L147.2 250.0 Z" fill="#19d3ff" fill-opacity="0.1"/>
+    <path d="M212.5 238.0 L233.3 250.0 L233.3 274.0 L212.5 286.0 L191.7 274.0 L191.7 250.0 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M190.2 276.5 L211.0 288.5 L211.0 312.5 L190.2 324.5 L169.5 312.5 L169.5 288.5 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M145.8 276.5 L166.5 288.5 L166.5 312.5 L145.8 324.5 L125.0 312.5 L125.0 288.5 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M123.5 238.0 L144.3 250.0 L144.3 274.0 L123.5 286.0 L102.7 274.0 L102.7 250.0 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M145.8 199.5 L166.5 211.5 L166.5 235.5 L145.8 247.5 L125.0 235.5 L125.0 211.5 Z" fill="#19d3ff" fill-opacity="0.05"/>
+    <path d="M190.2 199.5 L211.0 211.5 L211.0 235.5 L190.2 247.5 L169.5 235.5 L169.5 211.5 Z" fill="#19d3ff" fill-opacity="0.05"/>
+  </g>
+  </g>
+
+  <!-- frame -->
+  <path d="M72 32 H1848 L1888 72 V1008 L1848 1048 H72 L32 1008 V72 Z" fill="none" stroke="#19d3ff" stroke-opacity="0.30" stroke-width="2"/>
+  <g filter="url(#glow)" fill="none" stroke="#19d3ff" stroke-width="5" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M32 170 L32 72 L72 32 L170 32"/>
+    <path d="M1750 32 L1848 32 L1888 72 L1888 170"/>
+    <path d="M1888 910 L1888 1008 L1848 1048 L1750 1048"/>
+    <path d="M170 1048 L72 1048 L32 1008 L32 910"/>
+  </g>
+
+  <!-- title rules (the title itself is a GRUB label centred at the top) -->
+  <g filter="url(#glow)">
+    <path d="M150 98 H700" stroke="url(#ruleL)" stroke-width="3"/>
+    <path d="M1220 98 H1770" stroke="url(#ruleR)" stroke-width="3"/>
+    <path d="M716.0 89.0 L723.8 93.5 L723.8 102.5 L716.0 107.0 L708.2 102.5 L708.2 93.5 Z" fill="#19d3ff" fill-opacity="0.7" stroke="#19d3ff" stroke-width="2"/>
+    <path d="M1204.0 89.0 L1211.8 93.5 L1211.8 102.5 L1204.0 107.0 L1196.2 102.5 L1196.2 93.5 Z" fill="#8a4dff" fill-opacity="0.7" stroke="#8a4dff" stroke-width="2"/>
+  </g>
+
+  <!-- menu panel -->
+  <rect x="518" y="268" width="884" height="610" rx="26" fill="none" stroke="#19d3ff" stroke-width="12" stroke-opacity="0.38" filter="url(#blur14)"/>
+  <rect x="518" y="268" width="884" height="610" rx="26" fill="url(#panelFill)"/>
+  <rect x="518" y="268" width="884" height="610" rx="26" fill="none" stroke="url(#panelEdge)" stroke-width="2.6"/>
+  <path d="M552 269.5 H1368" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.4"/>
+  <g stroke="#19d3ff" stroke-width="3" stroke-linecap="round" opacity="0.9" filter="url(#glow)">
+    <path d="M562 876.5 H678"/>
+    <path d="M1242 876.5 H1358" stroke="#8a4dff"/>
+  </g>
+
+  <!-- footer rule above the key hints -->
+  <path d="M518 982 H1402" stroke="#19d3ff" stroke-opacity="0.22" stroke-width="1.5"/>
+
+  <rect width="1920" height="1080" fill="url(#vignette)"/>
+</svg>

@@ -1,0 +1,23 @@
+// Coder Droid workspace — keeps phone sync small.
+// Rebuilt 2026-09-12 after the LUCILLE mount moved from
+// /run/media/i30ltz/LUCILLE to /mnt/Lucy (see CLAUDE.md).
+.dart_tool
+build
+bin
+obj
+target
+.gradle
+.idea
+.kotlin
+node_modules
+flutter-sdk
+*.iso
+*.apk
+*.zip
+*.qcow2
+*.gguf
+.env
+# swarm-secrets.key unseals every API key baked into the ISO's AES-256 blob
+# (see 70-scripts/seal_secrets.sh / swarm-unseal-secrets) — never sync it.
+*.key
+swarm-secrets.key

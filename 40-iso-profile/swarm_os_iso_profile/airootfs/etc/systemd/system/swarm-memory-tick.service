@@ -1,0 +1,14 @@
+[Unit]
+Description=SWARM OS shared memory — import core docs and Claude memory, sync peers, render PROJECT_MEMORY.md
+# v1.0.0 2026-09-16. Spec: /mnt/Lucy/90-docs/SWARM_MEMORY_SYNC_v1.0.0_2026-09-16.md
+ConditionPathIsMountPoint=/mnt/brains
+After=network-online.target swarm-secrets.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=swarm
+EnvironmentFile=-/run/swarm_os.env
+ExecStart=/usr/local/bin/swarm-memory tick
+# An unreachable phone is normal; don't mark the unit failed for it.
+SuccessExitStatus=1

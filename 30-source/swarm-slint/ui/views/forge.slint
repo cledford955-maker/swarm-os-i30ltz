@@ -1,0 +1,125 @@
+import { LineEdit } from "std-widgets.slint";
+import { SwarmTheme } from "../globals.slint";
+import { ForgeState } from "../forge_state.slint";
+
+component ForgeBubbleWidget inherits Rectangle {
+    in property <string> role;
+    in property <string> content;
+
+    property <bool> is-user: role == "user";
+
+    // Bubble hugs its content but caps at ~60% of the view for readability.
+    width: min(self.preferred-width, 900px);
+    height: self.preferred-height;
+
+    HorizontalLayout {
+        alignment: is-user ? end : start;
+
+        Rectangle {
+            background: is-user ? SwarmTheme.accent : SwarmTheme.card;
+            border-radius: SwarmTheme.radius;
+            border-width: is-user ? 0px : 1px;
+            border-color: SwarmTheme.border;
+
+            VerticalLayout {
+                padding: 10px;
+                Text {
+                    text: content;
+                    color: is-user ? #0d0d0d : SwarmTheme.text;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                    width: 700px;
+                }
+            }
+        }
+    }
+}
+
+export component ForgeView inherits Rectangle {
+    background: SwarmTheme.bg;
+
+    // Ambient background art — dimmed so chat bubbles and input stay readable
+    // over a genuinely busy photo, not a flat color.
+    Image {
+        source: @image-url("../assets/forge_bg.jpg");
+        image-fit: cover;
+        width: 100%;
+        height: 100%;
+        opacity: 0.28;
+    }
+    Rectangle {
+        // Extra scrim on top of the dimmed image for text contrast.
+        background: #000000a0;
+    }
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 10px;
+
+        Text {
+            text: "🛠 Forge — Lucille's Coding Core";
+            color: SwarmTheme.accent;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        // ── Message history ──────────────────────────────────────────────────
+        Flickable {
+            vertical-stretch: 1;
+            msg-col := VerticalLayout {
+                spacing: 10px;
+                for bubble[i] in ForgeState.messages : ForgeBubbleWidget {
+                    role: bubble.role;
+                    content: bubble.content;
+                }
+
+                if ForgeState.is-streaming && ForgeState.messages.length == 0 : Text {
+                    text: "Forge is thinking...";
+                    color: SwarmTheme.text-dim;
+                    font-size: 12px;
+                }
+            }
+            viewport-height: msg-col.preferred-height;
+        }
+
+        // ── Input bar ────────────────────────────────────────────────────────
+        HorizontalLayout {
+            height: 40px;
+            spacing: 8px;
+
+            input := LineEdit {
+                placeholder-text: "Ask Forge to write, review, or debug code...";
+                enabled: !ForgeState.is-streaming;
+                accepted(text) => {
+                    if text != "" {
+                        ForgeState.send-message(text);
+                        input.text = "";
+                    }
+                }
+            }
+
+            TouchArea {
+                width: 80px;
+                enabled: !ForgeState.is-streaming;
+                clicked => {
+                    if input.text != "" {
+                        ForgeState.send-message(input.text);
+                        input.text = "";
+                    }
+                }
+                Rectangle {
+                    background: ForgeState.is-streaming ? SwarmTheme.card : SwarmTheme.accent;
+                    border-radius: SwarmTheme.radius;
+                    Text {
+                        text: "Send";
+                        color: ForgeState.is-streaming ? SwarmTheme.text-dim : #0d0d0d;
+                        font-weight: 700;
+                        font-size: 13px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

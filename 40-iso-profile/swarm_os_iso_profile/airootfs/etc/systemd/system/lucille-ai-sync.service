@@ -1,0 +1,11 @@
+[Unit]
+Description=SWARM OS — Sync /mnt/Lucy to Lucille-AI backup drives
+After=local-fs.target
+ConditionPathIsMountPoint=/mnt/Lucy
+
+[Service]
+Type=oneshot
+ExecStart=/mnt/Lucy/70-scripts/sync_lucille_ai.sh
+User=root
+StandardOutput=journal
+StandardError=journal

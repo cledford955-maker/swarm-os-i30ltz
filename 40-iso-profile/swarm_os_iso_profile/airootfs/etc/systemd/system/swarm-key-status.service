@@ -1,0 +1,11 @@
+[Unit]
+Description=SWARM OS - publish whether the hardware key is plugged in (for the lock screen)
+# Optional: does nothing (and never blocks boot) unless a key has been registered.
+ConditionPathExists=/etc/swarm_key/keys.d
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/swarm/swarm-key-status
+
+[Install]
+WantedBy=multi-user.target

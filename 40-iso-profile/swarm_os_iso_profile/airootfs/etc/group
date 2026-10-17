@@ -1,0 +1,8 @@
+root:x:0:root
+swarm:x:1000:swarm
+wheel:x:10:swarm
+video:x:986:swarm
+audio:x:985:swarm
+input:x:984:swarm
+render:x:983:swarm
+seat:x:982:swarm
