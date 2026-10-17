@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GoogleWorkspaceService")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+857ba1af688018195bfee7b2450b94a712c8591d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+18d2f444f1d5aa67b97d139969660754ded2e7c9")]
 [assembly: System.Reflection.AssemblyProductAttribute("GoogleWorkspaceService")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GoogleWorkspaceService")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

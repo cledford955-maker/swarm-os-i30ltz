@@ -10,6 +10,7 @@ RED='\033[0;31m'; GRN='\033[0;32m'; YLW='\033[1;33m'; CYN='\033[0;36m'; NC='\033
 info()  { echo -e "${GRN}  ✓ $1${NC}"; }
 warn()  { echo -e "${YLW}  ⚠ $1${NC}"; }
 banner(){ echo -e "\n${CYN}  === $1 ===${NC}\n"; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Disk detection ────────────────────────────────────────────────────────────
 # Usage: install_swarm_os.sh [--disk /dev/sdX] [--non-interactive]
@@ -274,30 +275,42 @@ info "pacstrap complete"
 
 banner "Generating fstab..."
 genfstab -U "$MOUNT_POINT" >> "$MOUNT_POINT/etc/fstab"
-mkdir -p "$MOUNT_POINT/mnt/Lucy"
-# Add Lucy drive entry only if not already present
-LUCY_UUID="62f0e009-43c2-4760-8d6c-d7c445f5f3df"
-if ! grep -q "$LUCY_UUID\|/mnt/Lucy" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
-    echo "UUID=${LUCY_UUID}  /mnt/Lucy  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2" >> "$MOUNT_POINT/etc/fstab"
-    info "Lucy drive (LUCILLE) added to fstab → /mnt/Lucy"
+
+# Append canonical shared mounts from 70-scripts/fstab.canonical
+CANONICAL_FSTAB=""
+for p in "$SCRIPT_DIR/70-scripts/fstab.canonical" "/mnt/Lucy/70-scripts/fstab.canonical" "/mnt/recoverybuild/70-scripts/fstab.canonical"; do
+    if [ -r "$p" ]; then CANONICAL_FSTAB="$p"; break; fi
+done
+
+if [ -n "$CANONICAL_FSTAB" ]; then
+    echo "" >> "$MOUNT_POINT/etc/fstab"
+    cat "$CANONICAL_FSTAB" >> "$MOUNT_POINT/etc/fstab"
+    while read -r mp || [ -n "$mp" ]; do
+        [ -n "$mp" ] && [[ $mp == /mnt/* ]] && mkdir -p "$MOUNT_POINT$mp"
+    done < <(grep '^UUID=' "$CANONICAL_FSTAB" | awk '{print $2}')
+    info "Canonical shared mounts appended from $(basename "$CANONICAL_FSTAB")"
 else
-    info "Lucy drive already in fstab — skipping"
-fi
+    # Fallback to embedded canonical shared mounts (see mounts.manifest)
+    cat >> "$MOUNT_POINT/etc/fstab" << 'EOF'
 
-# i30ltz-brains (Lucille memory, nvme0n1p5)
-BRAINS_UUID="fba1b27f-407b-4385-9dfa-851833f249db"
-mkdir -p "$MOUNT_POINT/mnt/brains"
-if ! grep -q "$BRAINS_UUID\|/mnt/brains" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
-    echo "UUID=${BRAINS_UUID}  /mnt/brains  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2" >> "$MOUNT_POINT/etc/fstab"
-    info "brains partition added to fstab → /mnt/brains"
-fi
-
-# i30ltz-AI backup drive (sdb8)
-AIBACKUP_UUID="689e6547-b439-4e7f-93c9-a6dcfabed46b"
-mkdir -p "$MOUNT_POINT/mnt/boltz"
-if ! grep -q "$AIBACKUP_UUID\|/mnt/boltz" "$MOUNT_POINT/etc/fstab" 2>/dev/null; then
-    echo "UUID=${AIBACKUP_UUID}  /mnt/boltz  ext4  defaults,noatime,noauto,nofail,x-systemd.device-timeout=5  0 2" >> "$MOUNT_POINT/etc/fstab"
-    info "Dr. Boltz drive (sdb8 i30ltz-AI) added to fstab → /mnt/boltz"
+# ==== CANONICAL SHARED MOUNTS (mounts.manifest) ====
+UUID=2de6ca36-421c-4c3e-8bc4-fbe3e6f66238	/mnt/storage	ext4	defaults,nofail,x-systemd.automount	0	2
+UUID=c400a0ee-6710-4fe7-ad7a-c80dc3f402ca	/mnt/archive	ext4	defaults,nofail,x-systemd.automount	0	2
+UUID=62f0e009-43c2-4760-8d6c-d7c445f5f3df	/mnt/Lucy	ext4	defaults,nofail,x-systemd.automount	0	2
+UUID=5c84ef0e-d7b8-4b36-b1c4-58817b483dda	/mnt/swarmbuild	ext4	defaults,nofail,x-systemd.automount	0	2
+UUID=a409250b-3973-4448-aeda-94a911538eb4	/mnt/recoverybuild	btrfs	defaults,nofail,x-systemd.automount	0	2
+UUID=acde635e-ac49-4bec-ac69-a6b12a2478e4	/mnt/downloads	ext4	defaults,nofail,x-systemd.automount	0	2
+UUID=5ABB-83DF	/mnt/ventoy	exfat	defaults,nofail,uid=1000,gid=1000,x-systemd.automount	0	2
+UUID=fba1b27f-407b-4385-9dfa-851833f249db	/mnt/brains	ext4	defaults,nofail,x-systemd.automount	0	2
+UUID=93037d5a-5b82-484c-ac20-28211c09e1c0	/mnt/lucillebuild	ext4	defaults,nofail,x-systemd.automount	0	2
+UUID=6f7c7656-2984-4fb0-81c8-bfc11ca81461	/mnt/boltzbuild	ext4	defaults,nofail,x-systemd.automount	0	2
+UUID=96969ed2-15b1-48e6-815e-20fa87d1fb5b	/mnt/recoveryos	btrfs	defaults,nofail,x-systemd.automount	0	2
+# ==== end canonical shared mounts ====
+EOF
+    for mp in /mnt/storage /mnt/archive /mnt/Lucy /mnt/swarmbuild /mnt/recoverybuild /mnt/downloads /mnt/ventoy /mnt/brains /mnt/lucillebuild /mnt/boltzbuild /mnt/recoveryos; do
+        mkdir -p "$MOUNT_POINT$mp"
+    done
+    info "Canonical shared mounts added to fstab"
 fi
 
 # Slick — encrypted vault (nvme0n1p6, noauto — unlock_slick.sh required)

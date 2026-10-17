@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/mnt/Lucy/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj": {}
+    "/mnt/swarmbuild/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj": {}
   },
   "projects": {
-    "/mnt/Lucy/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj": {
+    "/mnt/swarmbuild/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/mnt/Lucy/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
+        "projectUniqueName": "/mnt/swarmbuild/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
         "projectName": "GoogleWorkspaceService",
-        "projectPath": "/mnt/Lucy/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
+        "projectPath": "/mnt/swarmbuild/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
         "packagesPath": "/home/i30ltz/.nuget/packages/",
-        "outputPath": "/mnt/Lucy/30-source/GoogleWorkspaceService/obj/",
+        "outputPath": "/mnt/swarmbuild/30-source/GoogleWorkspaceService/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/home/i30ltz/.nuget/NuGet/NuGet.Config"
@@ -20,11 +20,11 @@
           "net10.0"
         ],
         "sources": {
-          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
+            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {}
           }
@@ -39,10 +39,11 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.100"
+        "SdkAnalysisLevel": "10.0.400"
       },
       "frameworks": {
         "net10.0": {
+          "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
             "Google.Apis.Auth": {
@@ -93,12 +94,6 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.NETCore.App.Host.linux-x64",
-              "version": "[10.0.12, 10.0.12]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -107,7 +102,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.112/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/home/i30ltz/.dotnet/sdk/10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

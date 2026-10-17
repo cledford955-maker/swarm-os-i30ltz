@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "targets": {
     "net10.0": {
       "BouncyCastle.Cryptography/2.7.0": {
@@ -49,11 +49,11 @@
           }
         }
       },
-      "Google.Apis.Calendar.v3/1.75.0.4206": {
+      "Google.Apis.Calendar.v3/1.77.0.4285": {
         "type": "package",
         "dependencies": {
-          "Google.Apis": "1.75.0",
-          "Google.Apis.Auth": "1.75.0"
+          "Google.Apis": "1.77.0",
+          "Google.Apis.Auth": "1.77.0"
         },
         "compile": {
           "lib/net6.0/Google.Apis.Calendar.v3.dll": {
@@ -493,11 +493,11 @@
           }
         }
       },
-      "Google.Apis.Calendar.v3/1.75.0.4206": {
+      "Google.Apis.Calendar.v3/1.77.0.4285": {
         "type": "package",
         "dependencies": {
-          "Google.Apis": "1.75.0",
-          "Google.Apis.Auth": "1.75.0"
+          "Google.Apis": "1.77.0",
+          "Google.Apis.Auth": "1.77.0"
         },
         "compile": {
           "lib/net6.0/Google.Apis.Calendar.v3.dll": {
@@ -856,16 +856,16 @@
         "lib/netstandard2.0/Google.Apis.Auth.xml"
       ]
     },
-    "Google.Apis.Calendar.v3/1.75.0.4206": {
-      "sha512": "cmO57WIZbu1azbmPi+6ak7oOMVitehx/WrcUIp97t6ZLlkXZz/zcsZInrYPcdS6maSQPvncy98gHqN7dSPHSmQ==",
+    "Google.Apis.Calendar.v3/1.77.0.4285": {
+      "sha512": "luetW/3LeflQj8VBetNX8+pBDo2w2Z8slKlE2+nsI8ZkGZ6ZW5bgCq0OouhHuRo37VNikZCxwYNft0fYR6xGHw==",
       "type": "package",
-      "path": "google.apis.calendar.v3/1.75.0.4206",
+      "path": "google.apis.calendar.v3/1.77.0.4285",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "LICENSE",
         "NuGetIcon.png",
-        "google.apis.calendar.v3.1.75.0.4206.nupkg.sha512",
+        "google.apis.calendar.v3.1.77.0.4285.nupkg.sha512",
         "google.apis.calendar.v3.nuspec",
         "lib/net462/Google.Apis.Calendar.v3.dll",
         "lib/net462/Google.Apis.Calendar.v3.pdb",
@@ -1321,11 +1321,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/mnt/Lucy/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
+      "projectUniqueName": "/mnt/swarmbuild/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
       "projectName": "GoogleWorkspaceService",
-      "projectPath": "/mnt/Lucy/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
+      "projectPath": "/mnt/swarmbuild/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
       "packagesPath": "/home/i30ltz/.nuget/packages/",
-      "outputPath": "/mnt/Lucy/30-source/GoogleWorkspaceService/obj/",
+      "outputPath": "/mnt/swarmbuild/30-source/GoogleWorkspaceService/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/home/i30ltz/.nuget/NuGet/NuGet.Config"
@@ -1334,11 +1334,11 @@
         "net10.0"
       ],
       "sources": {
-        "/usr/lib/dotnet/library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "net10.0": {
+          "framework": "net10.0",
           "targetAlias": "net10.0",
           "projectReferences": {}
         }
@@ -1353,10 +1353,11 @@
         "auditLevel": "low",
         "auditMode": "all"
       },
-      "SdkAnalysisLevel": "10.0.100"
+      "SdkAnalysisLevel": "10.0.400"
     },
     "frameworks": {
       "net10.0": {
+        "framework": "net10.0",
         "targetAlias": "net10.0",
         "dependencies": {
           "Google.Apis.Auth": {
@@ -1407,12 +1408,6 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
-        "downloadDependencies": [
-          {
-            "name": "Microsoft.NETCore.App.Host.linux-x64",
-            "version": "[10.0.12, 10.0.12]"
-          }
-        ],
         "frameworkReferences": {
           "Microsoft.AspNetCore.App": {
             "privateAssets": "none"
@@ -1421,7 +1416,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.112/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "/home/i30ltz/.dotnet/sdk/10.0.401/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

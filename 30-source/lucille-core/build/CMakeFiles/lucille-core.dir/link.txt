@@ -1,1 +1,0 @@
-/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/lucille-core.dir/link.d "CMakeFiles/lucille-core.dir/src/main.cpp.o" -o lucille-core  liblucille_engine_lib.a /usr/lib/x86_64-linux-gnu/libcrypto.so /usr/lib/x86_64-linux-gnu/libsqlite3.so /usr/lib/x86_64-linux-gnu/libcurl.so /usr/lib/x86_64-linux-gnu/libcurl.so -lstdc++fs -lm -lrt

@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "MwzD6QLfAYo=",
+  "dgSpecHash": "P1o+vKuFh0s=",
   "success": true,
-  "projectFilePath": "/mnt/Lucy/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
+  "projectFilePath": "/mnt/swarmbuild/30-source/GoogleWorkspaceService/GoogleWorkspaceService.csproj",
   "expectedPackageFiles": [
     "/home/i30ltz/.nuget/packages/bouncycastle.cryptography/2.7.0/bouncycastle.cryptography.2.7.0.nupkg.sha512",
     "/home/i30ltz/.nuget/packages/google.apis/1.77.0/google.apis.1.77.0.nupkg.sha512",
     "/home/i30ltz/.nuget/packages/google.apis.auth/1.77.0/google.apis.auth.1.77.0.nupkg.sha512",
-    "/home/i30ltz/.nuget/packages/google.apis.calendar.v3/1.75.0.4206/google.apis.calendar.v3.1.75.0.4206.nupkg.sha512",
+    "/home/i30ltz/.nuget/packages/google.apis.calendar.v3/1.77.0.4285/google.apis.calendar.v3.1.77.0.4285.nupkg.sha512",
     "/home/i30ltz/.nuget/packages/google.apis.core/1.77.0/google.apis.core.1.77.0.nupkg.sha512",
     "/home/i30ltz/.nuget/packages/google.apis.drive.v3/1.77.0.4276/google.apis.drive.v3.1.77.0.4276.nupkg.sha512",
     "/home/i30ltz/.nuget/packages/google.apis.gmail.v1/1.75.0.4225/google.apis.gmail.v1.1.75.0.4225.nupkg.sha512",
@@ -25,8 +25,7 @@
     "/home/i30ltz/.nuget/packages/sqlitepclraw.provider.e_sqlite3/2.1.12/sqlitepclraw.provider.e_sqlite3.2.1.12.nupkg.sha512",
     "/home/i30ltz/.nuget/packages/system.codedom/7.0.0/system.codedom.7.0.0.nupkg.sha512",
     "/home/i30ltz/.nuget/packages/system.management/7.0.2/system.management.7.0.2.nupkg.sha512",
-    "/home/i30ltz/.nuget/packages/system.security.cryptography.pkcs/10.0.0/system.security.cryptography.pkcs.10.0.0.nupkg.sha512",
-    "/home/i30ltz/.nuget/packages/microsoft.netcore.app.host.linux-x64/10.0.12/microsoft.netcore.app.host.linux-x64.10.0.12.nupkg.sha512"
+    "/home/i30ltz/.nuget/packages/system.security.cryptography.pkcs/10.0.0/system.security.cryptography.pkcs.10.0.0.nupkg.sha512"
   ],
   "logs": []
 }
