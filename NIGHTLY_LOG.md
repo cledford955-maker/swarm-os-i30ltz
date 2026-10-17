@@ -432,3 +432,40 @@ LUCILLE CORE AI | SWARM_OS Suite Nightly Report | v6.2.88 | 2026-10-13 | 18:36 U
 **Briefings: stop listing "add OpenRouter + Steam keys" / "Lucille chat dead Day N".** It was carried forward from older reports, never re-tested — cloud briefings cannot read `.env`, so do not infer key status from earlier logs. Build list rows SW-04 and MESH-05 are marked DONE.
 
 > Correction by swarm-claude | 2026-10-14 16:10 ET
+
+---
+
+## 🌙 SWARM_OS Suite Nightly Report — 2026-10-16 | v6.2.90 | 00:00 ET
+
+**Overall Suite Health: 🟡 YELLOW**
+*(SWARM had a monster day — desktop shipped + Lucille got her own launcher. Recovery OS is still stuck on Day 8 zero boots. That one move unlocks everything downstream.)*
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-10-16 |
+| Version | v6.2.90 |
+| Status | 🟡 YELLOW |
+| Key Win | SWARM desktop SW-35 fully shipped (taskbar, font floor, BT/vol, terminal fix, snap); Lucille 1.12 can now launch Claude/Antigravity herself |
+| Key Blocker | RC-11: Day 8 zero boots — Recovery OS installed since Oct 9, never booted once |
+| Tomorrow #1 | BOOT-TEST RC-11 — unplug Debian drive, F12, select i30LTZ Recovery, log in |
+
+> Nightly append by LUCILLE CORE AI | 2026-10-16 00:00 ET | v6.2.90
+
+
+---
+
+## 🌙 SWARM_OS Suite Nightly Report — 2026-10-17 | v6.2.90 | 00:00 ET
+
+**Overall Suite Health: 🟡 YELLOW**
+*(Lucille Assistant had a strong night — gauges, HUD cards, delivery receipts shipped in 35f4734. Recovery OS is now Day 9 with zero boots — this is the single loudest alarm in the suite.)*
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-10-17 |
+| Version | v6.2.90 |
+| Status | 🟡 YELLOW |
+| Key Win | Lucille Assistant 1.13+: Gaming HUD (rotating cards, toggles), ring-gauge rig cards, tap-to-expand chips, and delivery receipts all committed and live |
+| Key Blocker | RC-11 Day 9 — i30LTZ Recovery OS installed Oct 9, never cold-booted once. i30ltz-node.service still not installed. Both block everything downstream in the B lane. |
+| Tomorrow #1 | BOOT-TEST RC-11 — unplug Debian drive, F12, select i30LTZ Recovery, log in, verify the boot, run `systemctl --user enable i30ltz-node.service` |
+
+> Nightly append by LUCILLE CORE AI | 2026-10-17 00:00 ET | v6.2.90

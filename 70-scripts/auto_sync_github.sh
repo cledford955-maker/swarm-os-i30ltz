@@ -1,9 +1,9 @@
 #!/bin/bash
-# Auto-sync /mnt/Lucy to its private GitHub remotes so claude.ai/code on other
-# devices sees recent work. Runs on a timer (swarm-lucy-sync.timer), no-ops
-# when there's nothing to commit.
-#   origin                  -> cledford955-maker/swarm-os-i30ltz (whole project)
-#   i30ltz-lucille-assistant -> cledford955-maker/i30ltz-lucille-assistant (lucille-companion/ subtree)
+# Hourly local checkpoint of /mnt/Lucy (swarm-lucy-sync.timer): commits everything locally, no-ops
+# when there's nothing to commit. Since 2026-10-17 it does NOT push (see the end of this file):
+# /mnt/Lucy holds personal files and the GitHub repos are public.
+# The lucille-companion/ -> i30ltz-lucille-assistant leg was retired 2026-10-16 (user):
+# Lucille Assistant lives on partition C now and lucille-companion/ is a frozen copy.
 set -euo pipefail
 
 REPO_DIR="${SWARM_SYNC_REPO_DIR:-/mnt/Lucy}"
@@ -85,14 +85,23 @@ sync_subtree() {
     status=1
   fi
 }
-sync_subtree "lucille-companion" i30ltz-lucille-assistant
+# Retired 2026-10-16 (user): Lucille Assistant moved to partition C (/mnt/lucillebuild) and
+# lucille-companion/ has been frozen since 2026-10-10, so this leg had nothing left to send; it
+# failed every hour because origin was mis-pointed at that repo on 10-12 and overwrote its main.
+# sync_subtree "lucille-companion" i30ltz-lucille-assistant
 # Recovery OS projects moved to /mnt/recoverybuild (own git repos, 2026-10-06); not synced here.
-# Always retry origin: an earlier failed push can leave a clean but unpushed tree.
-if git push origin main; then
-  echo 'SYNC OK: swarm-os-i30ltz'
+# /mnt/Lucy is local-only (user, 2026-10-17): it holds personal files, so it is never pushed. The
+# SWARM GitHub repo (A-SWARM-OS-Trifecta) is published from the build partition /mnt/swarmbuild.
+# Commits above stay local as a safety net. SWARM_SYNC_PUSH=1 re-enables the push, deliberately.
+if [ "${SWARM_SYNC_PUSH:-0}" = 1 ]; then
+  if git push origin main; then
+    echo 'SYNC OK: pushed'
+  else
+    echo 'SYNC FAILED: push' >&2
+    status=1
+  fi
 else
-  echo 'SYNC FAILED: swarm-os-i30ltz' >&2
-  status=1
+  echo 'LOCAL ONLY: /mnt/Lucy committed locally, not pushed (by design)'
 fi
 
 exit "$status"

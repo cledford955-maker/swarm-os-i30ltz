@@ -4,7 +4,7 @@ set -euo pipefail
 project_roots=(
  /mnt/Lucy
  /mnt/recoverybuild
- /mnt/lucilleassistant
+ /mnt/lucillebuild
  /mnt/boltzbuild/src/I30LTZ-Recovery-companion
 )
 missing=()

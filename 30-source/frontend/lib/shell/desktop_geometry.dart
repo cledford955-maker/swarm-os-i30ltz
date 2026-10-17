@@ -17,6 +17,7 @@ class DesktopGeometry {
   static Size screen = const Size(1440, 900);
 
   static const double topBarHeight = 44;
+  static const double taskbarHeight = 40;
   static const double _gap = 16;
 
   /// One icon cell. Scales with screen width, within readable bounds.
@@ -30,7 +31,7 @@ class DesktopGeometry {
         railWidth + _gap,
         topBarHeight + _gap,
         math.max(railWidth + _gap + 320, screen.width - railWidth - _gap),
-        math.max(topBarHeight + _gap + 240, screen.height - _gap),
+        math.max(topBarHeight + _gap + 240, screen.height - taskbarHeight - _gap),
       );
 
   /// Center a new window in the zone, shrinking it to fit. [stackIndex]

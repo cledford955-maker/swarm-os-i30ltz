@@ -6,6 +6,7 @@ import '../theme/swarm_colors.dart';
 import 'top_bar.dart';
 import 'window_manager.dart';
 import 'os_window.dart';
+import 'desktop_taskbar.dart';
 import 'left_app_drawer.dart';
 import 'right_settings_drawer.dart';
 import '../services/gamepad_service.dart';
@@ -167,9 +168,6 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
           // 4. Full-Screen Transparent Seductive Lips Visualizer
           const SeductiveLipsVisualizer(),
 
-          // 4b. Persistent Floating Lucille Voice Controller (Stop Speaking / Wait / Mute)
-          const LucilleVoiceHudButton(),
-
           // 5. Floating Window Overlay
           if (windows.isNotEmpty)
             Stack(
@@ -179,6 +177,18 @@ class _SwarmShellState extends ConsumerState<SwarmShell> {
                 isPageVisible: w.desktopPage == activePage,
               )).toList(),
             ),
+
+          // 5b. Static taskbar — every open window, minimized or not, always
+          // in the same place. The one way back to a window buried behind
+          // a maximized app or on another desktop page.
+          const DesktopTaskbar(),
+
+          // 4b. Persistent Floating Lucille Voice Controller (Stop Speaking /
+          // Wait / Mute) — kept ABOVE the window overlay and taskbar on
+          // purpose: it used to sit underneath them in the stack, so any
+          // window placed over it (maximized ones especially) silently
+          // covered the one always-available way to talk to Lucille.
+          const LucilleVoiceHudButton(),
 
           // 5. Backdrop barrier when either drawer is open
           if (_isLeftDrawerOpen || _isRightDrawerOpen)

@@ -14,6 +14,7 @@ import 'theme/swarm_theme.dart';
 import 'widgets/openrouter_balance_widget.dart';
 import 'widgets/ui_zoom_control.dart';
 import 'services/ui_scale_service.dart';
+import 'shell/desktop_geometry.dart';
 import 'services/ai_client.dart';
 import 'services/telemetry_service.dart';
 import 'services/memory_service.dart';
@@ -28,6 +29,8 @@ import 'services/wake_word_service.dart';
 import 'services/google_hub_service.dart';
 import 'services/auth_service.dart';
 import 'services/lucy_server_client.dart';
+import 'services/volume_service.dart';
+import 'services/bluetooth_service.dart';
 
 void main() {
   http.runWithClient(_start, createMockClient);
@@ -53,12 +56,16 @@ Future<void> _start() async {
   final authService = AuthService();
   final lucyServerClient = LucyServerClient();
   final uiScaleService = UiScaleService();
+  final volumeService = VolumeService();
+  final bluetoothService = BluetoothService();
 
   runApp(
     ProviderScope(
       child: p.MultiProvider(
         providers: [
           p.ChangeNotifierProvider.value(value: uiScaleService),
+          p.ChangeNotifierProvider.value(value: volumeService),
+          p.ChangeNotifierProvider.value(value: bluetoothService),
           p.Provider.value(value: aiClient),
           p.Provider.value(value: telemetryService),
           p.Provider.value(value: memoryService),
@@ -134,22 +141,28 @@ class _SwarmAppState extends State<SwarmApp> {
       builder: (context, child) {
         return p.Consumer<UiScaleService>(
           builder: (context, ui, _) {
-            return Stack(
-              children: [
-                if (child != null) WholeShellZoom(scale: ui.scale, child: child),
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 10,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: SafeArea(
-                      child: Center(child: OpenRouterBalanceWidget()),
+            final mq = MediaQuery.of(context);
+            return MediaQuery(
+              data: mq.copyWith(
+                textScaler: MinimumFontSizeTextScaler(mq.textScaler),
+              ),
+              child: Stack(
+                children: [
+                  if (child != null) WholeShellZoom(scale: ui.scale, child: child),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 10 + DesktopGeometry.taskbarHeight,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: SafeArea(
+                        child: Center(child: OpenRouterBalanceWidget()),
+                      ),
                     ),
                   ),
-                ),
-                const UiZoomControl(),
-              ],
+                  const UiZoomControl(),
+                ],
+              ),
             );
           },
         );

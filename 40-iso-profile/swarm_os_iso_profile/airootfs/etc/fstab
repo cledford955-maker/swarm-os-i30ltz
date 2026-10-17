@@ -18,5 +18,5 @@ UUID=689e6547-b439-4e7f-93c9-a6dcfabed46b  /mnt/boltz  ext4  defaults,noatime,no
 # them when present so SWARM Code can open all four project roots.
 UUID=5c84ef0e-d7b8-4b36-b1c4-58817b483dda  /mnt/swarmbuild  ext4   defaults,noatime,nofail,x-systemd.device-timeout=5  0 2
 UUID=a409250b-3973-4448-aeda-94a911538eb4  /mnt/recoverybuild  btrfs  defaults,noatime,nofail,x-systemd.device-timeout=5  0 0
-UUID=93037d5a-5b82-484c-ac20-28211c09e1c0  /mnt/lucilleassistant  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2
+UUID=93037d5a-5b82-484c-ac20-28211c09e1c0  /mnt/lucillebuild  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2
 UUID=6f7c7656-2984-4fb0-81c8-bfc11ca81461  /mnt/boltzbuild  ext4  defaults,noatime,nofail,x-systemd.device-timeout=5  0 2

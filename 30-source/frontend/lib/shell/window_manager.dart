@@ -158,6 +158,15 @@ class WindowManager extends StateNotifier<List<AppWindow>> {
     state = updated;
   }
 
+  // Snaps a window to an exact rect (left-half / right-half of the window
+  // zone). Used when a drag ends near a screen edge.
+  void snapWindow(String id, Rect rect) {
+    state = state.map((w) {
+      if (w.id != id) return w;
+      return w.copyWith(position: rect.topLeft, size: rect.size, isMaximized: false);
+    }).toList();
+  }
+
   void updateWindowPosition(String id, Offset delta) {
     state = state.map((w) {
       if (w.id == id) {

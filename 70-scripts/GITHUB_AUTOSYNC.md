@@ -1,11 +1,19 @@
 # Project repositories and automatic sync
 
-All repositories are private under `cledford955-maker`.
+**2026-10-17 (user): GitHub holds only clean repos, one per build partition, named
+`<letter>-<app>-Trifecta`. `/mnt/Lucy` is local-only and is never pushed** (it holds personal
+files; its push URL is disabled and the hourly job only commits locally). All four repos are
+**public** and live in the `SWARM-OS-SUITE` org; each got one clean commit on 2026-10-17 and the
+old histories are kept on the PC under `~/.local/share/git-history-backups/`.
 
-| Project | GitHub repository | Source on LUCILLE |
+| Project | GitHub repository | Published from |
 | --- | --- | --- |
-| SWARM OS | `swarm-os-i30ltz` | `/mnt/Lucy` |
-| Lucille Assistant | `i30ltz-lucille-assistant` | `/mnt/Lucy/lucille-companion` |
+| A SWARM OS | `SWARM-OS-SUITE/A-SWARM-OS-Trifecta` (was `SWARM-OS-LUCILLE` / `swarm-os-i30ltz`) | `/mnt/swarmbuild`, without `60-boltz-brain/swarm-memory/` |
+| B Recovery OS | `SWARM-OS-SUITE/B-Recovery-OS-Trifecta` (was `I30LTZ-Recovery-OS`) | `/mnt/recoverybuild` (hourly `recovery-sync.timer`) |
+| C Lucille Assistant | `SWARM-OS-SUITE/C-Lucille-Assistant-Trifecta` (was `lucille-assistant`) | snapshot of `/mnt/lucillebuild/src/{LucilleAssistant,LucilleMobile}` |
+| D Boltz Recovery | `SWARM-OS-SUITE/D-Boltz-Recovery-Trifecta` (was `I30LTZ-Recovery-companion`) | `/mnt/boltzbuild/src/I30LTZ-Recovery-companion` (hourly `recovery-sync.timer`) |
+
+The rest of this file describes the older setup and is kept for history.
 
 `swarm-lucy-sync.timer` runs `70-scripts/auto_sync_github.sh` every ten minutes
 while the development host's user service manager is running. One timer serves

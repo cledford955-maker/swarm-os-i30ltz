@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'window_manager.dart';
+import 'desktop_geometry.dart';
 import '../theme/swarm_colors.dart';
 import '../theme/swarm_text_styles.dart';
 import '../widgets/swarm_motifs.dart';
@@ -20,7 +21,14 @@ class OsWindowWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final offstage = !isPageVisible || window.isMinimized;
     if (window.isMaximized) {
-      return Positioned.fill(
+      // Leave room for the static taskbar — a maximized window should
+      // never cover the one place you can always get back to another
+      // window from.
+      return Positioned(
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: DesktopGeometry.taskbarHeight,
         child: Offstage(offstage: offstage, child: _windowBody(ref, context)),
       );
     }
@@ -139,6 +147,34 @@ class _TitleBar extends ConsumerWidget {
   final AppWindow window;
   const _TitleBar({required this.window});
 
+  // Drag-to-edge snapping: drop a window near the left/right edge of the
+  // window zone to snap it to that half; drop it near the top to maximize.
+  // Reads fresh state rather than the widget's `window` field, which may be
+  // one frame behind the last onPanUpdate.
+  static const double _snapThreshold = 36.0;
+
+  void _snapIfNearEdge(WidgetRef ref) {
+    final notifier = ref.read(windowProvider.notifier);
+    final current = ref.read(windowProvider).where((w) => w.id == window.id).firstOrNull;
+    if (current == null || current.isMaximized) return;
+    final zone = DesktopGeometry.windowZone;
+
+    if ((current.position.dy - zone.top).abs() < _snapThreshold) {
+      notifier.toggleMaximize(current.id);
+      return;
+    }
+    if ((current.position.dx - zone.left).abs() < _snapThreshold) {
+      notifier.snapWindow(current.id,
+          Rect.fromLTWH(zone.left, zone.top, zone.width / 2, zone.height));
+      return;
+    }
+    final right = current.position.dx + current.size.width;
+    if ((right - zone.right).abs() < _snapThreshold) {
+      notifier.snapWindow(current.id,
+          Rect.fromLTWH(zone.left + zone.width / 2, zone.top, zone.width / 2, zone.height));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MouseRegion(
@@ -178,6 +214,7 @@ class _TitleBar extends ConsumerWidget {
                     },
                     onPanUpdate: (d) => ref.read(windowProvider.notifier)
                         .updateWindowPosition(window.id, d.delta),
+                    onPanEnd: (_) => _snapIfNearEdge(ref),
                     onDoubleTap: () => ref.read(windowProvider.notifier)
                         .toggleMaximize(window.id),
                     child: Row(children: [
